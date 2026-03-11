@@ -638,3 +638,153 @@ body {
   padding: 8px 0 6px;   /* 左端を他要素と揃える */
 }
 .sim-bar::-webkit-scrollbar { display: none; }
+
+/* ══════════════════════════════════════════════
+   ウォッチリスト（タブ3）
+   ══════════════════════════════════════════════ */
+
+/* ── 検索エリア ── */
+.wl-search-wrap {
+  position: relative;
+  padding: 10px 0 4px;
+}
+.wl-search-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.wl-search-icon {
+  color: var(--text2);
+  flex-shrink: 0;
+}
+.wl-search-input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-size: 14px;
+  min-width: 0;
+}
+.wl-search-input::placeholder { color: var(--text2); }
+
+/* ── 検索ドロップダウン ── */
+.wl-search-dropdown {
+  position: absolute;
+  left: 0; right: 0;
+  top: calc(100% - 2px);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 0 0 10px 10px;
+  z-index: 200;
+  max-height: 320px;
+  overflow-y: auto;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+}
+.wl-search-msg {
+  padding: 12px 14px;
+  color: var(--text2);
+  font-size: 13px;
+}
+.wl-search-item {
+  display: grid;
+  grid-template-columns: 72px 36px 36px 1fr auto auto;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.1s;
+}
+.wl-search-item:last-child { border-bottom: none; }
+.wl-search-item:hover { background: var(--bg2, rgba(128,128,128,0.08)); }
+.wl-search-item.wl-already { opacity: 0.55; cursor: default; }
+.wl-sym {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wl-market-label {
+  font-size: 11px;
+  color: var(--text2);
+  white-space: nowrap;
+}
+.wl-item-name {
+  font-size: 12px;
+  color: var(--text2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.wl-status-tag {
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  font-weight: 600;
+}
+.wl-add-tag {
+  background: var(--accent, #0a84ff);
+  color: #fff;
+}
+.wl-registered {
+  background: var(--border);
+  color: var(--text2);
+}
+
+/* ── 銘柄タイプバッジ ── */
+.wl-type-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.wl-badge-ETF,
+.wl-badge-株,
+.wl-badge-投信,
+.wl-badge-通貨  { background: var(--border); color: var(--text2); }
+
+/* ── テーブル ── */
+.wl-empty-msg {
+  text-align: center;
+  padding: 32px 16px;
+  color: var(--text2);
+  font-size: 14px;
+}
+.wl-table .wl-market-cell { text-align: center; white-space: nowrap; }
+.wl-table .wl-price-cell  { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.wl-del-cell { text-align: center; width: 32px; padding: 0 4px; }
+.wl-del-btn {
+  background: none;
+  border: none;
+  color: var(--text2);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1;
+  transition: background 0.1s, color 0.1s;
+}
+.wl-del-btn:hover { background: rgba(255,59,48,0.15); color: #ff3b30; }
+
+/* ウォッチリスト検索ドロップダウン：価格・騰落率 */
+.wl-item-price {
+  margin-left: auto;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.wl-item-pct { font-weight: 600; }
+.wl-item-pct.pos { color: #FF3B30; }
+.wl-item-pct.neg { color: #34C759; }

@@ -66,9 +66,12 @@ const state = {
   currentRange:     '3m',
   statsVisible:     false,  // 起動時はデフォルト非表示
   themeMode:        localStorage.getItem('hm-theme') || 'auto',
-  listSortCol:      'value',    // 銘柄リストのデフォルトソート列
+  listSortCol:      '1d',       // 銘柄リストのデフォルトソート列
   listSortDir:      'desc',
   slDetailVisible:  false,      // 詳細列の表示状態（起動時はデフォルト非表示）
-  activeTab:        'heatmap',  // 'heatmap' | 'list'
+  activeTab:        'heatmap',  // 'heatmap' | 'list' | 'watchlist'
   lastUpdateText:   null,       // refreshPrices 成功時のステータス文字列（履歴取得後に復元用）
+  // ウォッチリスト
+  watchlist:        JSON.parse(localStorage.getItem('hm-watchlist') || '[]'),
+  watchlistPrices:  {},         // symbol → { price, dayPct }
 };

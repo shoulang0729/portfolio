@@ -248,9 +248,11 @@ function init() {
   document.querySelectorAll('.period-btn[data-period]').forEach(b =>
     b.classList.toggle('active', b.dataset.period === '1d'));
 
-  // 初期タブ状態を適用（ヒートマップを表示、銘柄リストを非表示）
-  const panelList = document.getElementById('panel-list');
-  if (panelList) panelList.hidden = true;
+  // 初期タブ状態を適用（ヒートマップのみ表示、他は非表示）
+  const panelList      = document.getElementById('panel-list');
+  const panelWatchlist = document.getElementById('panel-watchlist');
+  if (panelList)      panelList.hidden      = true;
+  if (panelWatchlist) panelWatchlist.hidden = true;
 
   renderStats();
 
@@ -303,14 +305,16 @@ function updateListHeight() {
 
 // ── タブ切替 ──
 function switchTab(name) {
-  // 'heatmap' | 'list'
+  // 'heatmap' | 'list' | 'watchlist'
   if (state.activeTab === name) return;
   state.activeTab = name;
 
-  const panelHeatmap = document.getElementById('panel-heatmap');
-  const panelList    = document.getElementById('panel-list');
-  if (panelHeatmap) panelHeatmap.hidden = (name !== 'heatmap');
-  if (panelList)    panelList.hidden    = (name !== 'list');
+  const panelHeatmap   = document.getElementById('panel-heatmap');
+  const panelList      = document.getElementById('panel-list');
+  const panelWatchlist = document.getElementById('panel-watchlist');
+  if (panelHeatmap)   panelHeatmap.hidden   = (name !== 'heatmap');
+  if (panelList)      panelList.hidden      = (name !== 'list');
+  if (panelWatchlist) panelWatchlist.hidden = (name !== 'watchlist');
 
   // タブボタンの active 状態を更新
   document.querySelectorAll('.tab-btn[data-tab]').forEach(b =>
@@ -323,6 +327,12 @@ function switchTab(name) {
   if (name === 'list') {
     renderStockList();
     requestAnimationFrame(() => requestAnimationFrame(updateListHeight));
+  }
+
+  // ウォッチリストに切り替えたとき価格データを取得・描画
+  if (name === 'watchlist') {
+    renderWatchlist();
+    fetchWatchlistData();
   }
 }
 

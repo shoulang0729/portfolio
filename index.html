@@ -15,7 +15,7 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='5' fill='%230d1117'/><rect x='2'  y='2'  width='9' height='9' rx='1.5' fill='%230E6B2E'/><rect x='13' y='2'  width='9' height='9' rx='1.5' fill='%233fb950'/><rect x='24' y='2'  width='6' height='9' rx='1.5' fill='%238B1A1A'/><rect x='2'  y='13' width='9' height='9' rx='1.5' fill='%238B1A1A'/><rect x='13' y='13' width='9' height='9' rx='1.5' fill='%230E6B2E'/><rect x='24' y='13' width='6' height='9' rx='1.5' fill='%233fb950'/><rect x='2'  y='24' width='9' height='6' rx='1.5' fill='%233fb950'/><rect x='13' y='24' width='9' height='6' rx='1.5' fill='%238B1A1A'/><rect x='24' y='24' width='6' height='6' rx='1.5' fill='%230E6B2E'/></svg>">
 
 <!-- スタイルシート -->
-<link rel="stylesheet" href="portfolio.css?v=20260311b">
+<link rel="stylesheet" href="portfolio.css?v=20260311l">
 <!-- 銘柄リスト列表示制御（JS が動的に書き込む） -->
 <style id="sl-col-style"></style>
 <!-- ★ モバイルレイアウト CSS フォールバック
@@ -85,6 +85,8 @@
             onclick="switchTab('heatmap')">ヒートマップ</button>
     <button class="tab-btn" data-tab="list" role="tab"
             onclick="switchTab('list')">銘柄リスト</button>
+    <button class="tab-btn" data-tab="watchlist" role="tab"
+            onclick="switchTab('watchlist')">ウォッチリスト</button>
   </div>
 </div><!-- /sticky-top -->
 
@@ -144,6 +146,26 @@
 <div id="stock-list-wrap"></div>
 </section><!-- /panel-list -->
 
+<!-- ウォッチリストパネル（タブ3） -->
+<section id="panel-watchlist" class="tab-panel">
+<div id="wl-search-wrap" class="wl-search-wrap">
+  <div class="wl-search-inner">
+    <svg class="wl-search-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.5"/>
+      <line x1="10.5" y1="10.5" x2="14" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+    <input type="text" id="wl-search-input" class="wl-search-input"
+           placeholder="例: VWO（米国）/ 7203.T（日本）/ 0700.HK（香港）"
+           oninput="onWatchlistSearch(this.value)"
+           autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+  </div>
+  <div id="wl-search-dropdown" class="wl-search-dropdown" hidden></div>
+</div>
+<div id="watchlist-table-wrap">
+  <div class="wl-empty-msg">上の検索欄から銘柄を追加してください</div>
+</div>
+</section><!-- /panel-watchlist -->
+
 <div class="tooltip" id="tooltip"></div>
 
 <!-- ── Chart Modal ── -->
@@ -174,15 +196,16 @@
 
 
 <!-- ★ 保有データ（銘柄の追加・変更はこのファイルのみ編集すれば OK） -->
-<script src="positions.js?v=20260311b"></script>
+<script src="positions.js?v=20260311l"></script>
 <!-- アプリロジック（分割ファイル） -->
-<script src="state.js?v=20260311b"></script>
-<script src="utils.js?v=20260311b"></script>
-<script src="data.js?v=20260311b"></script>
-<script src="heatmap.js?v=20260311b"></script>
-<script src="chart.js?v=20260311b"></script>
-<script src="stock-list.js?v=20260311b"></script>
-<script src="app.js?v=20260311b"></script>
+<script src="state.js?v=20260311l"></script>
+<script src="utils.js?v=20260311l"></script>
+<script src="data.js?v=20260311l"></script>
+<script src="heatmap.js?v=20260311l"></script>
+<script src="chart.js?v=20260311l"></script>
+<script src="stock-list.js?v=20260311l"></script>
+<script src="watchlist.js?v=20260311l"></script>
+<script src="app.js?v=20260311l"></script>
 
 <!-- フォールバック JS：旧版 portfolio.js でもヒートマップが描画されるよう保証 -->
 <script>

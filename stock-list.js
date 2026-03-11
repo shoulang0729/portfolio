@@ -57,6 +57,13 @@ function getPctForPeriod(p, periodId) {
   return getHistoricalChangePct(p.ySymbol, periodId);
 }
 
+// 市場ラベルを cat から取得
+function slMarketLabel(p) {
+  if (p.cat === '日本株・ETF') return '東証';
+  if (p.cat === '投資信託')    return '投信';
+  return 'US';
+}
+
 function renderStockList() {
   const wrap = document.getElementById('stock-list-wrap');
   if (!wrap) return;
@@ -81,6 +88,8 @@ function renderStockList() {
       va = a.shares; vb = b.shares;
     } else if (state.listSortCol === 'avgCost') {
       va = a.avgCost; vb = b.avgCost;
+    } else if (state.listSortCol === 'market') {
+      va = slMarketLabel(a); vb = slMarketLabel(b);
     } else {
       va = a.symbol; vb = b.symbol;
     }
@@ -123,9 +132,10 @@ function renderStockList() {
       return `<td data-col="${pc.id}" class="sl-pct-cell" style="background:${bg};color:${fg}">${str}</td>`;
     }).join('');
 
-    // 列順：ティッカー(+銘柄名) / 時価評価額 / 保有数 / 取得単価 / 現在値 / 騰落率×6 / 含み損益 / 損益率
+    // 列順：ティッカー(+銘柄名) / 市場 / 時価評価額 / 保有数 / 取得単価 / 現在値 / 騰落率×10 / 含み損益 / 損益率
     return `<tr data-bar="${barPct.toFixed(4)}">
       <td data-col="symbol" class="sl-sym">${p.symbol}<span class="sl-inline-name">${p.name}</span></td>
+      <td data-col="market"><span class="wl-type-badge">${slMarketLabel(p)}</span></td>
       <td data-col="value">${valStr}</td>
       <td data-col="shares">${sharesStr}</td>
       <td data-col="avgCost">${costStr}</td>
@@ -139,6 +149,7 @@ function renderStockList() {
   wrap.innerHTML = `<table class="sl-table">
     <thead><tr>
       ${th('ティッカー<br><span class="sl-th-sub">銘柄名</span>','symbol')}
+      ${th('市場','market','center')}
       ${th('時価評価額','value')}
       ${th('保有数','shares')}
       ${th('取得単価','avgCost')}
