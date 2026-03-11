@@ -139,9 +139,8 @@ async function handleRefreshSelect(val) {
 
   if (val === 'now') {
     await refreshPrices();
-    // Reset to OFF after live shot
-    document.querySelectorAll('.refresh-btn').forEach(b =>
-      b.classList.toggle('active', b.dataset.val === '0'));
+    // After live shot, switch to 1分 auto-refresh
+    handleRefreshSelect('60');
     return;
   }
 
