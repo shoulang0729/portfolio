@@ -747,6 +747,8 @@ body {
   padding: 1px 5px;
   border-radius: 4px;
   flex-shrink: 0;
+  background: var(--border);
+  color: var(--text2);
 }
 .wl-badge-ETF,
 .wl-badge-株,

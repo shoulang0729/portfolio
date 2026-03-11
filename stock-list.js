@@ -75,7 +75,9 @@ function renderStockList() {
     } else if (state.listSortCol === 'avgCost') {
       va = a.avgCost; vb = b.avgCost;
     } else if (state.listSortCol === 'market') {
-      va = slMarketLabel(a); vb = slMarketLabel(b);
+      // localeCompare で正しく 0 を返す（同一市場内での矛盾比較を防ぐ）
+      const cmp = slMarketLabel(a).localeCompare(slMarketLabel(b), 'ja');
+      return state.listSortDir === 'desc' ? -cmp : cmp;
     } else {
       va = a.symbol; vb = b.symbol;
     }

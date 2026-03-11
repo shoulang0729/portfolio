@@ -317,7 +317,7 @@ function renderWatchlist() {
 
     return `<tr>
       <td class="sl-sym">${item.symbol}<span class="sl-inline-name">${item.name}</span></td>
-      <td class="wl-market-cell"><span class="wl-type-badge wl-badge-${item.type}">${item.exchange}</span></td>
+      <td class="wl-market-cell"><span class="wl-type-badge">${item.exchange}</span></td>
       <td class="wl-price-cell">${priceStr}</td>
       ${periodCells}
       <td class="wl-del-cell">
