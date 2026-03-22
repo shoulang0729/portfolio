@@ -19,27 +19,32 @@ function fetchWithTimeout(url, ms = 7000, opts = {}) {
   return fetch(url, { signal: ctrl.signal, ...opts }).finally(() => clearTimeout(timer));
 }
 
+/** 指定ミリ秒待機する */
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
 /**
- * Yahoo Finance API を CORS プロキシ経由で取得する（3段フォールバック）
- * @param {string} url - Yahoo Finance API URL
- * @param {number} [timeoutMs=7000] 1プロキシあたりのタイムアウトミリ秒
+ * Yahoo Finance API を CORS プロキシ経由で取得する（4段フォールバック）
+ * query1 直接 → query2 直接 → corsproxy.io → allorigins の順に試行
+ * @param {string} url - Yahoo Finance API URL（query1.finance.yahoo.com）
+ * @param {number} [timeoutMs=7000] 1試行あたりのタイムアウトミリ秒
  * @returns {Promise<Object|null>} パースされた JSON、失敗時は null
  */
 async function fetchViaProxy(url, timeoutMs = 7000) {
-  const proxies = [
-    { fn: u => u,                                                          opts: { credentials: 'include' } },
-    { fn: u => `https://corsproxy.io/?${encodeURIComponent(u)}`,          opts: {} },
-    { fn: u => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`, opts: {} },
+  const q2url = url.replace('query1.finance.yahoo.com', 'query2.finance.yahoo.com');
+  const attempts = [
+    { url,                                                                      opts: { credentials: 'include' } },
+    { url: q2url,                                                               opts: { credentials: 'include' } },
+    { url: `https://corsproxy.io/?${encodeURIComponent(url)}`,                 opts: {} },
+    { url: `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,    opts: {} },
   ];
-  for (const { fn, opts } of proxies) {
+  for (const { url: u, opts } of attempts) {
     try {
-      const proxiedUrl = fn(url);
-      const res = await fetchWithTimeout(proxiedUrl, timeoutMs, opts);
+      const res = await fetchWithTimeout(u, timeoutMs, opts);
       if (!res.ok) continue;
       const raw = await res.json();
       // allorigins wraps content in { contents: "..." }
       return raw?.contents ? JSON.parse(raw.contents) : raw;
-    } catch { /* try next proxy */ }
+    } catch { /* try next */ }
   }
   return null;
 }
@@ -83,7 +88,21 @@ async function fetchAllHistorical(neededRange = '1y') {
     const toFetch = symbols.filter(s => !state.historicalCache[neededRange][s]);
     if (toFetch.length === 0) return;
     setStatus(`履歴データ取得中（${toFetch.length}銘柄 / ${neededRange}）...`, 'yellow');
-    await Promise.all(toFetch.map(s => fetchSymbolHistory(s, neededRange)));
+
+    // 5銘柄ずつバッチ取得（レートリミット対策）
+    const BATCH = 5;
+    for (let i = 0; i < toFetch.length; i += BATCH) {
+      await Promise.all(toFetch.slice(i, i + BATCH).map(s => fetchSymbolHistory(s, neededRange)));
+      if (i + BATCH < toFetch.length) await sleep(300);
+    }
+
+    // 失敗した銘柄（キャッシュに入らなかったもの）を2秒後にリトライ
+    const failed = toFetch.filter(s => !state.historicalCache[neededRange][s]);
+    if (failed.length > 0) {
+      await sleep(2000);
+      await Promise.all(failed.map(s => fetchSymbolHistory(s, neededRange)));
+    }
+
     // 取得完了後はライブ更新ステータスを復元（あれば緑、なければ "未更新"）
     if (state.lastUpdateText) {
       setStatus(state.lastUpdateText, 'green');
@@ -146,14 +165,30 @@ async function refreshPrices() {
   setStatus(`ライブ価格を取得中（0/${targets.length}）...`, 'yellow');
   let done = 0;
 
-  // 銘柄ごとに v8/finance/chart で並列取得（v7/quote より安定）
-  const fetched = await Promise.all(
-    targets.map(async p => {
-      const live = await fetchLivePrice(p.ySymbol);
-      setStatus(`ライブ価格を取得中（${++done}/${targets.length}）...`, 'yellow');
-      return { pos: p, live };
-    })
-  );
+  // 5銘柄ずつバッチ取得（レートリミット対策）
+  const BATCH = 5;
+  const fetched = [];
+  for (let i = 0; i < targets.length; i += BATCH) {
+    const batch = targets.slice(i, i + BATCH);
+    const results = await Promise.all(
+      batch.map(async p => {
+        const live = await fetchLivePrice(p.ySymbol);
+        setStatus(`ライブ価格を取得中（${++done}/${targets.length}）...`, 'yellow');
+        return { pos: p, live };
+      })
+    );
+    fetched.push(...results);
+    if (i + BATCH < targets.length) await sleep(300); // バッチ間に小休止
+  }
+
+  // 失敗した銘柄を2秒後にリトライ
+  const failed = fetched.filter(f => !f.live);
+  if (failed.length > 0) {
+    await sleep(2000);
+    await Promise.all(failed.map(async f => {
+      f.live = await fetchLivePrice(f.pos.ySymbol);
+    }));
+  }
 
   const updateCache = (sym, price) => {
     for (const r of ['1y', '5y', '10y']) {
