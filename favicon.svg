@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <style>
+    .bg   { fill: #ffffff; }
+    .c-g3 { fill: #16a34a; }
+    .c-g2 { fill: #4ade80; }
+    .c-g1 { fill: #86efac; }
+    .c-g0 { fill: #0f6b2e; }
+    .c-r2 { fill: #dc2626; }
+    .c-r1 { fill: #f87171; }
+    .c-r0 { fill: #fca5a5; }
+    @media (prefers-color-scheme: dark) {
+      .bg   { fill: #0f172a; }
+      .c-g3 { fill: #22c55e; }
+      .c-g2 { fill: #4ade80; }
+      .c-g1 { fill: #86efac; }
+      .c-g0 { fill: #15803d; }
+      .c-r2 { fill: #ef4444; }
+      .c-r1 { fill: #f87171; }
+      .c-r0 { fill: #fca5a5; }
+    }
+  </style>
+  <rect class="bg" width="512" height="512" rx="96"/>
+  <!-- Row 1: green, light-green, red, green -->
+  <rect x="58" y="58"  width="88" height="88" rx="14" class="c-g3"/>
+  <rect x="162" y="58" width="88" height="88" rx="14" class="c-g1"/>
+  <rect x="266" y="58" width="88" height="88" rx="14" class="c-r2"/>
+  <rect x="370" y="58" width="88" height="88" rx="14" class="c-g2"/>
+  <!-- Row 2: light-red, dark-green, green, red -->
+  <rect x="58"  y="162" width="88" height="88" rx="14" class="c-r0"/>
+  <rect x="162" y="162" width="88" height="88" rx="14" class="c-g0"/>
+  <rect x="266" y="162" width="88" height="88" rx="14" class="c-g2"/>
+  <rect x="370" y="162" width="88" height="88" rx="14" class="c-r1"/>
+  <!-- Row 3: green, red, light-green, dark-green -->
+  <rect x="58"  y="266" width="88" height="88" rx="14" class="c-g3"/>
+  <rect x="162" y="266" width="88" height="88" rx="14" class="c-r2"/>
+  <rect x="266" y="266" width="88" height="88" rx="14" class="c-g1"/>
+  <rect x="370" y="266" width="88" height="88" rx="14" class="c-g0"/>
+  <!-- Row 4: light-red, green, dark-red, green -->
+  <rect x="58"  y="370" width="88" height="88" rx="14" class="c-r0"/>
+  <rect x="162" y="370" width="88" height="88" rx="14" class="c-g2"/>
+  <rect x="266" y="370" width="88" height="88" rx="14" class="c-r2"/>
+  <rect x="370" y="370" width="88" height="88" rx="14" class="c-g3"/>
+</svg>
