@@ -103,6 +103,8 @@ fetchSymbolHistory(ySymbol, range)
 
 | バージョン | 内容 |
 |---|---|
+| 20260322f | PWA アイコン実装（ヒートマップグリッドデザイン、dark/light SVG favicon、PNG 512/192/180px、manifest.json） |
+| 20260322e | 投資信託追加（ひふみ3銘柄・PIMCO-ST）、CSV ボタンコメントアウト |
 | 20260322b | ウォッチリストのスマホ表示修正（overflow-x: auto 追加・プレースホルダー短縮） |
 | 20260322a | Finnhub 実装（Finnhub 優先→Yahoo フォールバック）、ポートフォリオ更新（SHLD/SHV/XLE 追加、EPI/EPP等削除、投資信託をオルカンのみに） |
 | 20260311o | Yahoo Finance 安定性改善（query2追加・バッチ取得・リトライ） |

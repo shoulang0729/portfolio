@@ -10,12 +10,20 @@
 <script>(function(){ document.documentElement.setAttribute('data-theme', localStorage.getItem('hm-theme') || 'auto'); })();</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f172a">
 <title>Heatmap</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='5' fill='%230d1117'/><rect x='2'  y='2'  width='9' height='9' rx='1.5' fill='%230E6B2E'/><rect x='13' y='2'  width='9' height='9' rx='1.5' fill='%233fb950'/><rect x='24' y='2'  width='6' height='9' rx='1.5' fill='%238B1A1A'/><rect x='2'  y='13' width='9' height='9' rx='1.5' fill='%238B1A1A'/><rect x='13' y='13' width='9' height='9' rx='1.5' fill='%230E6B2E'/><rect x='24' y='13' width='6' height='9' rx='1.5' fill='%233fb950'/><rect x='2'  y='24' width='9' height='6' rx='1.5' fill='%233fb950'/><rect x='13' y='24' width='9' height='6' rx='1.5' fill='%238B1A1A'/><rect x='24' y='24' width='6' height='6' rx='1.5' fill='%230E6B2E'/></svg>">
+<!-- アイコン: ダーク/ライトモード切り替え対応 -->
+<link rel="icon" href="icon-dark.svg" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="icon-light.svg" media="(prefers-color-scheme: light)">
+<link rel="icon" href="icon-dark.svg">
+<!-- Apple PWA ホーム画面アイコン -->
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<!-- PWA マニフェスト -->
+<link rel="manifest" href="manifest.json">
 
 <!-- スタイルシート -->
-<link rel="stylesheet" href="portfolio.css?v=20260322e">
+<link rel="stylesheet" href="portfolio.css?v=20260322f">
 <!-- 銘柄リスト列表示制御（JS が動的に書き込む） -->
 <style id="sl-col-style"></style>
 <!-- ★ モバイルレイアウト CSS フォールバック
@@ -196,16 +204,16 @@
 
 
 <!-- ★ 保有データ（銘柄の追加・変更はこのファイルのみ編集すれば OK） -->
-<script src="positions.js?v=20260322e"></script>
+<script src="positions.js?v=20260322f"></script>
 <!-- アプリロジック（分割ファイル） -->
-<script src="state.js?v=20260322e"></script>
-<script src="utils.js?v=20260322e"></script>
-<script src="data.js?v=20260322e"></script>
-<script src="heatmap.js?v=20260322e"></script>
-<script src="chart.js?v=20260322e"></script>
-<script src="stock-list.js?v=20260322e"></script>
-<script src="watchlist.js?v=20260322e"></script>
-<script src="app.js?v=20260322e"></script>
+<script src="state.js?v=20260322f"></script>
+<script src="utils.js?v=20260322f"></script>
+<script src="data.js?v=20260322f"></script>
+<script src="heatmap.js?v=20260322f"></script>
+<script src="chart.js?v=20260322f"></script>
+<script src="stock-list.js?v=20260322f"></script>
+<script src="watchlist.js?v=20260322f"></script>
+<script src="app.js?v=20260322f"></script>
 
 <!-- フォールバック JS：旧版 portfolio.js でもヒートマップが描画されるよう保証 -->
 <script>
