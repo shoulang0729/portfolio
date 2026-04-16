@@ -263,15 +263,29 @@ async function refreshPrices() {
   }
 
   const updateCache = (sym, price) => {
+    if (!price || !isFinite(price) || price <= 0) return;
     for (const r of ['1y', '5y', '10y']) {
       const arr = state.historicalCache[r]?.[sym];
-      if (arr?.length > 0) arr[arr.length - 1].close = price;
+      if (!arr?.length) continue;
+      const last = arr[arr.length - 1].close;
+      // 前日比が ±70% を超える場合は Finnhub の誤データとみなしスキップ
+      if (last > 0 && (price / last < 0.3 || price / last > 3.0)) {
+        console.warn(`[updateCache] 異常価格スキップ: ${sym} live=${price} hist=${last}`);
+        continue;
+      }
+      arr[arr.length - 1].close = price;
     }
   };
 
   let n = 0;
   fetched.forEach(({ pos: p, live }) => {
     if (!live) return;
+
+    // Sanity check: live価格が記録値と10倍以上乖離する場合は Finnhub 誤データとみなす
+    if (p.price > 0 && (live.price / p.price < 0.1 || live.price / p.price > 10)) {
+      console.warn(`[refreshPrices] 異常価格スキップ: ${p.symbol} live=${live.price} stored=${p.price}`);
+      return;
+    }
 
     if (p.isProxy) {
       // 投資信託: 代替インデックスの騰落率のみ反映。NAV・評価額・損益は基準価額ベースを維持

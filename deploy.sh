@@ -7,7 +7,9 @@ cd "$(dirname "$0")"
 # 全ファイルをステージ（deploy.sh 自身も含む）
 git add index.html app.js chart.js data.js heatmap.js \
         portfolio.css positions.js state.js stock-list.js \
-        utils.js watchlist.js .gitignore deploy.sh
+        utils.js watchlist.js .gitignore deploy.sh \
+        favicon.svg icon-dark.svg icon-light.svg \
+        icon-192.png icon-512.png apple-touch-icon.png manifest.json
 
 # 変更があるか確認
 if git diff --cached --quiet; then
