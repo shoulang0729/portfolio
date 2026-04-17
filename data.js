@@ -164,6 +164,31 @@ async function fetchAllHistorical(neededRange = '1y') {
   }
 }
 
+/**
+ * 日足データの急激な価格変動（株式分割・合併）を検出し、最新価格を基準に補正する。
+ * Yahoo Finance adjclose が超直近の分割に未対応の場合に自動正規化する。
+ * 1日で ±50% 以上の変動を分割と判断（日本市場の値幅制限は通常 ±30% 以内）。
+ * @param {Array<{date: Date, close: number}>} entries
+ * @returns {Array<{date: Date, close: number}>}
+ */
+function applySplitCorrection(entries) {
+  if (entries.length < 2) return entries;
+  // 最新日を基準に、古い方向へ遡りながら急変点を補正
+  for (let i = entries.length - 1; i >= 1; i--) {
+    const a = entries[i].close;
+    const b = entries[i - 1].close;
+    if (!a || !b || a <= 0 || b <= 0) continue;
+    const r = b / a;
+    // 1日で1.5倍以上（または0.67倍以下）の変動 → 分割・合併と判断
+    if (r >= 1.5 || r <= 1 / 1.5) {
+      for (let j = 0; j < i; j++) {
+        if (entries[j].close > 0) entries[j].close /= r;
+      }
+    }
+  }
+  return entries;
+}
+
 async function fetchSymbolHistory(symbol, range = '1y') {
   if (!state.historicalCache[range]) state.historicalCache[range] = {};
   if (state.historicalCache[range][symbol]) return; // already cached
@@ -181,9 +206,11 @@ async function fetchSymbolHistory(symbol, range = '1y') {
   const adjCloses = result.indicators?.adjclose?.[0]?.adjclose || [];
   const rawCloses = result.indicators?.quote?.[0]?.close || [];
   const closes = adjCloses.length ? adjCloses : rawCloses;
-  state.historicalCache[range][symbol] = timestamps
+  const entries = timestamps
     .map((ts, i) => ({ date: new Date(ts * 1000), close: closes[i] }))
     .filter(p => p.close != null && isFinite(p.close));
+  // adjclose が超直近の分割に未対応の場合に備えてスプリット自動補正
+  state.historicalCache[range][symbol] = applySplitCorrection(entries);
 }
 
 // ══════════════════════════════════════════════
