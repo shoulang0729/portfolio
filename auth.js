@@ -66,7 +66,8 @@ async function _restoreEncKey() {
  * 平文を AES-GCM で暗号化して Base64 文字列を返す（ai-tab.js から呼ぶ）
  */
 async function aiEncrypt(plaintext) {
-  if (!_auth.encKey) throw new Error('encKey not ready');
+  if (!_auth.encKey) await _restoreEncKey();
+  if (!_auth.encKey) throw new Error('セッションが切れました。ページを再読み込みしてPINを入力してください。');
   const iv  = crypto.getRandomValues(new Uint8Array(12));
   const enc = await crypto.subtle.encrypt(
     { name: 'AES-GCM', iv }, _auth.encKey, new TextEncoder().encode(plaintext)
@@ -80,7 +81,8 @@ async function aiEncrypt(plaintext) {
  * aiEncrypt で暗号化された Base64 文字列を復号する
  */
 async function aiDecrypt(ciphertext) {
-  if (!_auth.encKey) throw new Error('encKey not ready');
+  if (!_auth.encKey) await _restoreEncKey();
+  if (!_auth.encKey) throw new Error('セッションが切れました。ページを再読み込みしてPINを入力してください。');
   const buf = Uint8Array.from(atob(ciphertext), c => c.charCodeAt(0));
   const dec = await crypto.subtle.decrypt(
     { name: 'AES-GCM', iv: buf.slice(0, 12) }, _auth.encKey, buf.slice(12)
@@ -426,13 +428,14 @@ function _showChangePinButton() {
 // ══════════════════════════════════════════════
 (function initAuth() {
   if (isAuthenticated()) {
-    // 既に認証済み → 鍵を復元してから変更ボタンを表示
-    _restoreEncKey(); // async だが await 不要（鍵が使われるのは後）
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', _showChangePinButton);
-    } else {
-      _showChangePinButton();
-    }
+    // 既に認証済み → 鍵を非同期で復元（完了後に変更ボタンを表示）
+    _restoreEncKey().then(() => {
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', _showChangePinButton);
+      } else {
+        _showChangePinButton();
+      }
+    });
     return;
   }
 
