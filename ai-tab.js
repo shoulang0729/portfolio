@@ -347,6 +347,10 @@ async function openAiSettings() {
         <button class="ai-save-btn" onclick="saveAiSettings()">保存</button>
         <button class="ai-clear-btn" onclick="clearAiKeys()">すべて削除</button>
       </div>
+      <div class="ai-settings-transfer">
+        <button class="ai-transfer-btn" onclick="exportAiKeys()" title="暗号化コードをコピーしてスマホに転送">📋 エクスポート</button>
+        <button class="ai-transfer-btn" onclick="toggleAiImport()" title="PCでコピーしたコードを貼り付けて読み込む">📥 インポート</button>
+      </div>
       <div class="ai-settings-msg" id="ai-settings-msg"></div>
     </div>`;
   document.body.appendChild(ov);
@@ -392,6 +396,74 @@ async function clearAiKeys() {
   const msg = document.getElementById('ai-settings-msg');
   if (msg) { msg.textContent = '🗑 削除しました'; msg.className = 'ai-settings-msg success'; }
   setTimeout(() => closeAiSettings(), 1000);
+}
+
+// ── エクスポート：暗号化済みブロブをクリップボードにコピー ──
+async function exportAiKeys() {
+  const enc = localStorage.getItem(AI_LS_KEYS);
+  const msg = document.getElementById('ai-settings-msg');
+  if (!enc) {
+    if (msg) { msg.textContent = '⚠ キーが未設定です'; msg.className = 'ai-settings-msg error'; }
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(enc);
+    if (msg) { msg.textContent = '📋 コードをコピーしました。スマホで「インポート」に貼り付けてください。'; msg.className = 'ai-settings-msg success'; }
+  } catch {
+    // clipboard API が使えない場合は選択可能なテキストエリアを表示
+    _showExportTextarea(enc);
+  }
+}
+
+function _showExportTextarea(text) {
+  const existing = document.getElementById('ai-export-area-wrap');
+  if (existing) { existing.remove(); return; }
+  const wrap = document.createElement('div');
+  wrap.id = 'ai-export-area-wrap';
+  wrap.style.cssText = 'margin-top:10px;';
+  wrap.innerHTML = `<textarea id="ai-export-area" readonly
+    style="width:100%;height:64px;font-size:11px;font-family:monospace;background:var(--surface3);border:1px solid var(--border2);border-radius:8px;color:var(--text);padding:8px;box-sizing:border-box;resize:none;outline:none;">${text}</textarea>`;
+  const actionsEl = document.querySelector('.ai-settings-actions');
+  if (actionsEl) actionsEl.after(wrap);
+  // 全選択
+  setTimeout(() => {
+    const ta = document.getElementById('ai-export-area');
+    if (ta) { ta.focus(); ta.select(); }
+  }, 50);
+}
+
+// ── インポート：テキストエリアを表示して貼り付けを受け付ける ──
+function toggleAiImport() {
+  const existing = document.getElementById('ai-import-area-wrap');
+  if (existing) { existing.remove(); return; }
+  const wrap = document.createElement('div');
+  wrap.id = 'ai-import-area-wrap';
+  wrap.style.cssText = 'margin-top:10px;';
+  wrap.innerHTML = `
+    <textarea id="ai-import-area" placeholder="PC でコピーしたコードを貼り付けてください..."
+      style="width:100%;height:64px;font-size:11px;font-family:monospace;background:var(--surface3);border:1px solid var(--border2);border-radius:8px;color:var(--text);padding:8px;box-sizing:border-box;resize:none;outline:none;"></textarea>
+    <button onclick="doAiImport()" style="margin-top:6px;width:100%;padding:7px;background:var(--text);color:var(--bg);border:none;border-radius:8px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;">読み込む</button>`;
+  const actionsEl = document.querySelector('.ai-settings-actions');
+  if (actionsEl) actionsEl.after(wrap);
+  setTimeout(() => document.getElementById('ai-import-area')?.focus(), 50);
+}
+
+async function doAiImport() {
+  const val = document.getElementById('ai-import-area')?.value?.trim();
+  const msg = document.getElementById('ai-settings-msg');
+  if (!val) {
+    if (msg) { msg.textContent = '⚠ コードを貼り付けてください'; msg.className = 'ai-settings-msg error'; }
+    return;
+  }
+  try {
+    // 復号テスト（正しい形式かチェック）
+    await aiDecrypt(val);
+    localStorage.setItem(AI_LS_KEYS, val);
+    if (msg) { msg.textContent = '✅ 読み込みました'; msg.className = 'ai-settings-msg success'; }
+    setTimeout(() => closeAiSettings(), 1200);
+  } catch {
+    if (msg) { msg.textContent = '❌ コードが無効です（PINが違うか、形式が不正）'; msg.className = 'ai-settings-msg error'; }
+  }
 }
 
 // ══════════════════════════════════════════════

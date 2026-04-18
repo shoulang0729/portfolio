@@ -1320,3 +1320,24 @@ body {
 }
 .ai-settings-msg.success { color: #3cb371; }
 .ai-settings-msg.error   { color: #e05252; }
+
+/* ── AI キー転送ボタン（エクスポート / インポート） ── */
+.ai-settings-transfer {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.ai-transfer-btn {
+  flex: 1;
+  padding: 7px 8px;
+  background: none;
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  color: var(--text2);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+.ai-transfer-btn:hover { background: var(--surface3); color: var(--text); border-color: var(--border); }
