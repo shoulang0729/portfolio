@@ -21,7 +21,7 @@
 <link rel="manifest" href="manifest.json">
 
 <!-- スタイルシート -->
-<link rel="stylesheet" href="portfolio.css?v=20260516a">
+<link rel="stylesheet" href="portfolio.css?v=20260516c">
 <!-- 銘柄リスト列表示制御（JS が動的に書き込む） -->
 <style id="sl-col-style"></style>
 <!-- ★ モバイルレイアウト CSS フォールバック
@@ -76,6 +76,7 @@
         <circle cx="6.5" cy="11.5" r="1.3" fill="currentColor"/>
       </svg>
     </button>
+    <button class="theme-btn" id="passkey-register-btn" onclick="registerPasskey()" title="パスキーを登録（指紋/顔認証）" style="display:none">🔑</button>
     <!-- CSVインポート（休止中 / 削除要否は後日確認） -->
     <!-- <input type="file" id="csv-import-input" accept=".csv" multiple style="display:none" onchange="handleCsvImport(event)">
     <button class="csv-btn" onclick="document.getElementById('csv-import-input').click()" title="マネックス証券CSVを読み込む（国内株・米国株・投資信託）">CSV</button> -->
@@ -225,19 +226,19 @@
 
 
 <!-- ★ 保有データ（銘柄の追加・変更はこのファイルのみ編集すれば OK） -->
-<script src="auth.js?v=20260516a"></script>
-<script src="positions.js?v=20260516a"></script>
+<script src="auth.js?v=20260516c"></script>
+<script src="positions.js?v=20260516c"></script>
 <!-- アプリロジック（分割ファイル） -->
-<script src="state.js?v=20260516a"></script>
-<script src="utils.js?v=20260516a"></script>
-<script src="data.js?v=20260516a"></script>
-<script src="heatmap.js?v=20260516a"></script>
-<script src="chart.js?v=20260516a"></script>
-<script src="stock-list.js?v=20260516a"></script>
-<script src="watchlist.js?v=20260516a"></script>
-<script src="history.js?v=20260516a"></script>
-<script src="ai-tab.js?v=20260516a"></script>
-<script src="app.js?v=20260516a"></script>
+<script src="state.js?v=20260516c"></script>
+<script src="utils.js?v=20260516c"></script>
+<script src="data.js?v=20260516c"></script>
+<script src="heatmap.js?v=20260516c"></script>
+<script src="chart.js?v=20260516c"></script>
+<script src="stock-list.js?v=20260516c"></script>
+<script src="watchlist.js?v=20260516c"></script>
+<script src="history.js?v=20260516c"></script>
+<script src="ai-tab.js?v=20260516c"></script>
+<script src="app.js?v=20260516c"></script>
 
 <!-- フォールバック JS：旧版 portfolio.js でもヒートマップが描画されるよう保証 -->
 <script>

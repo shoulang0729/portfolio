@@ -1,0 +1,11 @@
+name = "portfolio-proxy"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+[vars]
+ALLOWED_ORIGIN = "https://shoulang0729.github.io"
+NOTION_DB_ID = "357e348f-3cc9-809b-8647-f4a87244d676"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "349321b2ffbf416e922ac94208651736"

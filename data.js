@@ -32,6 +32,9 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 async function fetchViaProxy(url, timeoutMs = 7000) {
   const q2url = url.replace('query1.finance.yahoo.com', 'query2.finance.yahoo.com');
   const attempts = [
+    // Worker 経由（最優先：CORS 確実・APIキー不要）
+    { url: `${WORKER_URL}/yahoo?url=${encodeURIComponent(url)}`,               opts: {} },
+    // 以下は Worker が落ちているときのフォールバック
     { url,                                                                      opts: { credentials: 'include' } },
     { url: q2url,                                                               opts: { credentials: 'include' } },
     { url: `https://corsproxy.io/?${encodeURIComponent(url)}`,                 opts: {} },
@@ -50,9 +53,9 @@ async function fetchViaProxy(url, timeoutMs = 7000) {
 }
 
 // ══════════════════════════════════════════════
-// FINNHUB CONFIG
+// WORKER / FINNHUB CONFIG
 // ══════════════════════════════════════════════
-const FINNHUB_KEY = 'd6vk211r01qiiutc5h60d6vk211r01qiiutc5h6g';
+const WORKER_URL = 'https://portfolio-proxy.shoulang.workers.dev';
 
 /**
  * Yahoo Finance シンボルを Finnhub シンボルに変換
@@ -65,30 +68,29 @@ function toFinnhubSymbol(ySymbol) {
 }
 
 /**
- * Finnhub Quote API でライブ価格・当日騰落率を取得
+ * Finnhub Quote API でライブ価格・当日騰落率を取得（Worker経由）
  * @returns {Promise<{price, dayPct}|null>}
  */
 async function fetchFinnhubQuote(fSymbol) {
-  const url = `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(fSymbol)}&token=${FINNHUB_KEY}`;
+  const url = `${WORKER_URL}/finnhub?path=/quote&symbol=${encodeURIComponent(fSymbol)}`;
   try {
     const res = await fetchWithTimeout(url, 7000);
     if (!res.ok) return null;
     const d = await res.json();
-    // c=0 はデータなし（週末・未収録銘柄）
     if (!d || !d.c) return null;
     return { price: d.c, dayPct: d.dp ?? null };
   } catch { return null; }
 }
 
 /**
- * Finnhub Candles API で日足履歴データを取得
+ * Finnhub Candles API で日足履歴データを取得（Worker経由）
  * @param {string} fSymbol - Finnhub シンボル
  * @param {number} fromTs  - 開始 UNIX タイムスタンプ（秒）
  * @param {number} toTs    - 終了 UNIX タイムスタンプ（秒）
  * @returns {Promise<Array<{date, close}>|null>}
  */
 async function fetchFinnhubCandles(fSymbol, fromTs, toTs) {
-  const url = `https://finnhub.io/api/v1/stock/candle?symbol=${encodeURIComponent(fSymbol)}&resolution=D&from=${fromTs}&to=${toTs}&token=${FINNHUB_KEY}`;
+  const url = `${WORKER_URL}/finnhub?path=/stock/candle&symbol=${encodeURIComponent(fSymbol)}&resolution=D&from=${fromTs}&to=${toTs}`;
   try {
     const res = await fetchWithTimeout(url, 10000);
     if (!res.ok) return null;

@@ -3,8 +3,9 @@
 //
 // 保有銘柄データを前提に複数の AI に同じ質問を投げ、
 // 最後に Claude が各回答を統合して総括する。
+// API キーは Cloudflare Worker Secrets に保管。フロントは WORKER_URL 経由でのみ呼ぶ。
 //
-// 依存: auth.js (aiEncrypt, aiDecrypt), positions.js (positions)
+// 依存: state.js (state), positions.js (positions), data.js (WORKER_URL)
 // ══════════════════════════════════════════════════════════════
 
 // ══════════════════════════════════════════════
@@ -18,36 +19,66 @@ const AI_MODELS = [
   { id: 'claude',   name: 'Claude',   sub: 'claude-sonnet-4-6',   color: '#CC785C', textColor: '#fff' },
 ];
 
-// AI LS キー（暗号化された API キー群を localStorage に保存）
-const AI_LS_KEYS = 'hm-ai-keys-enc';
+// ── ルーティンプロンプト ──
+const ROUTINE_JAPAN_PROMPT = `あなたは個人投資家のポートフォリオ管理を支援するアシスタントです。
+以下の手順で本日の日本市場引け後レポートを作成してください。
+
+### 保有ポートフォリオ（日本）
+日本株ETF: 1615（東証銀行業ETF）/ 1629（商社・卸売ETF）/ 200A（日経半導体ETF）
+個別株: 6301（小松製作所）/ 8050（セイコーグループ）/ 9983（ファーストリテイリング）
+投資信託: eMAXIS Slim 全世界（オルカン, ¥112M）/ ひふみ投信 / ひふみマイクロスコープpro / ひふみクロスオーバーpro
+
+### Step 1: 本日の日付確認
+日本時間（JST）の今日の日付を確認し YYYY/MM/DD 形式で記録する。
+
+### Step 2: 数値収集
+- 日経平均・TOPIX 終値・前日比%
+- USD/JPY・CNY/JPY レート
+- 各保有銘柄の終値（円）・前日比%・PER（実績/予想）
+- 投資信託の基準価額（直近発表値）
+
+### Step 3: 回答フォーマット
+以下の構成で回答する（Notionへの保存は不要）:
+1. 本日のサマリー（3〜4行）
+2. 市場データ表（日経/TOPIX/USD/CNY）
+3. 保有日本株表（終値・前日比・PER）
+4. 投資信託基準価額表
+5. 主要ニュース・注目事項
+6. 明日の注目イベント`;
+
+const ROUTINE_US_PROMPT = `あなたは個人投資家のポートフォリオ管理を支援するアシスタントです。
+以下の手順で米国市場の前夜引け後レポートを作成してください。
+
+### 保有ポートフォリオ（米国）
+大型テック: AAPL / AMZN / GOOGL / MSFT / TSLA / PLTR
+ETF・コモディティ: SMH / GLDM / GDX / SLV / COPX / REMX / XLE / ILF / SHLD / SHV
+
+### Step 1: 対象米国日付を確認（最重要）
+06:00 JST実行 = 前日の米国市場が対象。JST実行日 - 1日 = 米国対象日（月曜実行時は直前金曜）。
+NYタイムを検索する必要はなく、上記算術で確定すること。
+
+### Step 2: 数値収集
+- S&P500 / Nasdaq100 / ダウ / 米10年債 / 米2年債 / VIX / DXY 終値・前日比%
+- 各保有銘柄の終値（USD）・前日比%・PER（実績/予想）
+- GLDM・SLV・COPX・SHVはPER対象外（N/A）
+
+### Step 3: 回答フォーマット
+以下の構成で回答する（Notionへの保存は不要）:
+1. 昨日（米国時間）のサマリー（3〜4行）
+2. 主要指数表（S&P500/Nasdaq/ダウ/国債利回り/VIX/DXY）
+3. 大型テック・半導体表（終値・前日比・PER）
+4. コモディティ・資源表
+5. PER評価まとめ
+6. マクロ・地政学ポイント
+7. ポートフォリオ注目事項
+8. 本日（東京時間）の注目イベント`;
 
 // ── 状態 ──
 const aiState = {
   running:     false,
   results:     {}, // { id: { status: 'idle|loading|done|error', text: '' } }
-  // 会話履歴: [{ question, responses: {gpt,gemini,grok,deepseek,claude}, timestamp }]
-  chatHistory: [],
+  chatHistory: [], // [{ question, responses: {gpt,gemini,grok,deepseek,claude}, timestamp }]
 };
-
-// ══════════════════════════════════════════════
-// API キー管理（暗号化して localStorage に保存）
-// ══════════════════════════════════════════════
-
-/** 平文の API キー群 { gpt, gemini, grok, deepseek, claude } をすべて暗号化して保存 */
-async function aiSaveKeys(keys) {
-  const plain = JSON.stringify(keys);
-  const enc   = await aiEncrypt(plain);
-  localStorage.setItem(AI_LS_KEYS, enc);
-}
-
-/** 保存された暗号化キーを復号して返す。未保存なら {} */
-async function aiLoadKeys() {
-  const enc = localStorage.getItem(AI_LS_KEYS);
-  if (!enc) return {};
-  try {
-    return JSON.parse(await aiDecrypt(enc));
-  } catch { return {}; }
-}
 
 // ══════════════════════════════════════════════
 // ポートフォリオ コンテキスト生成
@@ -72,20 +103,13 @@ ${rows}
 }
 
 // ══════════════════════════════════════════════
-// 各 AI への API 呼び出し
+// 各 AI への API 呼び出し（Cloudflare Worker 経由）
 // ══════════════════════════════════════════════
 
-/**
- * 会話履歴 + 現在の質問から OpenAI 形式の messages 配列を構築する。
- * Claude の総括を "assistant" として使い、自然な会話文脈を作る。
- * @param {string} currentQuestion
- * @returns {Array<{role, content}>}
- */
 function _buildMessages(currentQuestion) {
   const msgs = [];
   for (const item of aiState.chatHistory) {
     msgs.push({ role: 'user',      content: item.question });
-    // Claude の総括がある場合はそれを正規回答として使用
     const canonicalReply = item.responses?.claude || item.responses?.gpt || '';
     if (canonicalReply) msgs.push({ role: 'assistant', content: canonicalReply });
   }
@@ -93,120 +117,75 @@ function _buildMessages(currentQuestion) {
   return msgs;
 }
 
-async function _callOpenAI(messages, systemPrompt, apiKey) {
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+async function _callOpenAI(messages, systemPrompt) {
+  const res = await fetch(`${WORKER_URL}/ai/openai`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: 'gpt-4o',
       messages: [{ role: 'system', content: systemPrompt }, ...messages],
       max_tokens: 1200,
-    })
+    }),
   });
   if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e?.error?.message || `HTTP ${res.status}`); }
   const d = await res.json();
   return d.choices[0].message.content;
 }
 
-async function _callGemini(messages, systemPrompt, apiKey) {
-  // Gemini は user/model 交互のフォーマット。role: 'assistant' → 'model' に変換
+async function _callGemini(messages, systemPrompt) {
   const contents = messages.map(m => ({
     role: m.role === 'assistant' ? 'model' : 'user',
     parts: [{ text: m.content }],
   }));
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: systemPrompt }] },
-        contents,
-        generationConfig: { maxOutputTokens: 1200 },
-      })
-    }
-  );
+  const res = await fetch(`${WORKER_URL}/ai/gemini`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'gemini-2.0-flash',
+      system_instruction: { parts: [{ text: systemPrompt }] },
+      contents,
+      generationConfig: { maxOutputTokens: 1200 },
+    }),
+  });
   if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e?.error?.message || `HTTP ${res.status}`); }
   const d = await res.json();
   return d.candidates?.[0]?.content?.parts?.[0]?.text ?? '(回答なし)';
 }
 
-async function _callOpenAICompat(endpoint, model, messages, systemPrompt, apiKey) {
-  const res = await fetch(endpoint, {
+async function _callOpenAICompat(provider, model, messages, systemPrompt) {
+  const res = await fetch(`${WORKER_URL}/ai/${provider}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model,
       messages: [{ role: 'system', content: systemPrompt }, ...messages],
       max_tokens: 1200,
-    })
+    }),
   });
   if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e?.error?.message || `HTTP ${res.status}`); }
   const d = await res.json();
   return d.choices[0].message.content;
 }
 
-/**
- * Claude にストリーミングで問い合わせ、ストリームをリアルタイムで bodyEl に書き込む。
- * @param {Array} messages  - 会話履歴込みの messages 配列
- * @param {string} systemPrompt
- * @param {string} apiKey
- * @param {HTMLElement} bodyEl - テキストを逐次書き込む要素
- * @returns {Promise<string>} 完全な応答テキスト
- */
-async function _callClaudeStream(messages, systemPrompt, apiKey, bodyEl) {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+async function _callClaude(messages, systemPrompt, bodyEl) {
+  const res = await fetch(`${WORKER_URL}/ai/claude`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
       max_tokens: 2000,
-      stream: true,
       system: systemPrompt,
       messages,
-    })
+    }),
   });
   if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e?.error?.message || `HTTP ${res.status}`); }
-
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let full = '';
-
-  // SSE ストリームを読みながら UI に書き込む
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    const chunk = decoder.decode(value, { stream: true });
-    for (const line of chunk.split('\n')) {
-      if (!line.startsWith('data: ')) continue;
-      const json = line.slice(6).trim();
-      if (json === '[DONE]') break;
-      try {
-        const evt = JSON.parse(json);
-        const delta = evt?.delta?.text || '';
-        if (delta) {
-          full += delta;
-          // リアルタイムで Markdown 風レンダリング
-          const html = full
-            .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-            .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
-            .replace(/\n/g,'<br>');
-          bodyEl.innerHTML = `<div class="ai-text">${html}<span class="ai-cursor">▌</span></div>`;
-        }
-      } catch { /* JSONパース失敗は無視 */ }
-    }
-  }
-  // カーソル除去
-  bodyEl.innerHTML = `<div class="ai-text">${full
+  const d = await res.json();
+  const text = d.content?.[0]?.text ?? '(回答なし)';
+  const html = text
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
-    .replace(/\n/g,'<br>')}</div>`;
-  return full;
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
+  if (bodyEl) bodyEl.innerHTML = `<div class="ai-text">${html}</div>`;
+  return text;
 }
 
 // ── 統合システムプロンプト（Claude の総括用）──
@@ -249,7 +228,6 @@ function _setCardState(modelId, status, text) {
   if (status === 'loading') {
     body.innerHTML = '<div class="ai-loading"><span class="ai-spinner"></span>回答中...</div>';
   } else if (status === 'done') {
-    // Markdown 風の簡易レンダリング（改行 → <br>, **bold**）
     const html = text
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -257,34 +235,13 @@ function _setCardState(modelId, status, text) {
     body.innerHTML = `<div class="ai-text">${html}</div>`;
   } else if (status === 'error') {
     body.innerHTML = `<div class="ai-error">⚠ ${text}</div>`;
-  } else if (status === 'no-key') {
-    body.innerHTML = `<div class="ai-no-key">🔑 APIキーが未設定です<br><button class="ai-set-key-btn" onclick="openAiSettings()">設定する</button></div>`;
   }
 }
 
-// ── カードを描画（結果エリア）──
-function _renderResultCards(withPortfolio) {
+function _renderResultCards() {
   const wrap = document.getElementById('ai-results-wrap');
   if (!wrap) return;
 
-  const cards = AI_MODELS.map((m, i) => {
-    const isClaude = m.id === 'claude';
-    return `
-      <div class="ai-card${isClaude ? ' ai-card-claude' : ''}" id="${_aiCardId(m.id)}">
-        <div class="ai-card-header" style="background:${m.color}">
-          <span class="ai-card-name">${m.name}</span>
-          <span class="ai-card-sub">${m.sub}</span>
-          ${isClaude ? '<span class="ai-card-badge">統合</span>' : ''}
-        </div>
-        <div class="ai-card-body" id="${_aiBodyId(m.id)}"></div>
-      </div>`;
-  }).join('');
-
-  wrap.innerHTML = `
-    <div class="ai-grid">${cards.slice(0, -1 * AI_MODELS.length + 4).replace(/\n\s+/g,' ')}</div>
-    ${cards.split('</div>').slice(-2).join('</div>')}`;
-
-  // 実際は2カラムグリッド + Claude フル幅で組む
   wrap.innerHTML = `
     <div class="ai-grid">${AI_MODELS.slice(0,4).map(m => `
       <div class="ai-card" id="${_aiCardId(m.id)}">
@@ -304,7 +261,6 @@ function _renderResultCards(withPortfolio) {
       <div class="ai-card-body" id="${_aiBodyId('claude')}"></div>
     </div>`;
 
-  // 全カードを idle 状態に
   AI_MODELS.forEach(m => {
     const body = document.getElementById(_aiBodyId(m.id));
     if (body) body.innerHTML = '<div class="ai-idle">準備中...</div>';
@@ -329,31 +285,24 @@ async function aiAskAll() {
   const sendBtn = document.getElementById('ai-send-btn');
   if (sendBtn) sendBtn.disabled = true;
 
-  // 質問欄をクリアして会話履歴に表示
   if (questionEl) questionEl.value = '';
   _appendChatQuestion(question);
 
-  // 結果エリアを表示してカードを描画
   const resultsWrap = document.getElementById('ai-results-wrap');
   if (resultsWrap) resultsWrap.hidden = false;
-  _renderResultCards(withPortfolio);
+  _renderResultCards();
 
-  // API キーを復号
-  const keys = await aiLoadKeys().catch(() => ({}));
-
-  // 会話履歴込みの messages 配列を構築
   const messages = _buildMessages(question);
 
   // ── 最初の4モデルを並列実行 ──
   const callModel = async (m) => {
-    if (!keys[m.id]) { _setCardState(m.id, 'no-key', ''); return; }
     _setCardState(m.id, 'loading', '');
     try {
       let text;
-      if      (m.id === 'gpt')      text = await _callOpenAI(messages, systemPrompt, keys[m.id]);
-      else if (m.id === 'gemini')   text = await _callGemini(messages, systemPrompt, keys[m.id]);
-      else if (m.id === 'grok')     text = await _callOpenAICompat('https://api.x.ai/v1/chat/completions',     'grok-3-latest',  messages, systemPrompt, keys[m.id]);
-      else if (m.id === 'deepseek') text = await _callOpenAICompat('https://api.deepseek.com/chat/completions','deepseek-chat',  messages, systemPrompt, keys[m.id]);
+      if      (m.id === 'gpt')      text = await _callOpenAI(messages, systemPrompt);
+      else if (m.id === 'gemini')   text = await _callGemini(messages, systemPrompt);
+      else if (m.id === 'grok')     text = await _callOpenAICompat('grok',     'grok-3-latest', messages, systemPrompt);
+      else if (m.id === 'deepseek') text = await _callOpenAICompat('deepseek', 'deepseek-chat', messages, systemPrompt);
       _setCardState(m.id, 'done', text);
     } catch(e) {
       _setCardState(m.id, 'error', e.message);
@@ -362,25 +311,21 @@ async function aiAskAll() {
 
   await Promise.allSettled(AI_MODELS.slice(0, 4).map(callModel));
 
-  // ── Claude 統合（ストリーミング対応・他の回答が揃ってから）──
+  // ── Claude 統合（他の回答が揃ってから）──
   let claudeText = '';
-  if (!keys['claude']) {
-    _setCardState('claude', 'no-key', '');
-  } else {
-    _setCardState('claude', 'loading', '');
-    const claudeBody = document.getElementById(_aiBodyId('claude'));
-    if (claudeBody) claudeBody.innerHTML = '<div class="ai-text"><span class="ai-cursor">▌</span></div>';
-    try {
-      const synthesisPrompt = buildSynthesisPrompt(systemPrompt, question, aiState.results);
-      const synMessages = [...messages.slice(0, -1), { role: 'user', content: synthesisPrompt + '\n\n' + question }];
-      claudeText = await _callClaudeStream(synMessages, systemPrompt, keys['claude'], claudeBody || document.createElement('div'));
-      if (!claudeBody) _setCardState('claude', 'done', claudeText);
-    } catch(e) {
-      _setCardState('claude', 'error', e.message);
-    }
+  _setCardState('claude', 'loading', '');
+  const claudeBody = document.getElementById(_aiBodyId('claude'));
+  if (claudeBody) claudeBody.innerHTML = '<div class="ai-loading"><span class="ai-spinner"></span>統合中...</div>';
+  try {
+    const synthesisPrompt = buildSynthesisPrompt(systemPrompt, question, aiState.results);
+    const synMessages = [...messages.slice(0, -1), { role: 'user', content: synthesisPrompt + '\n\n' + question }];
+    claudeText = await _callClaude(synMessages, systemPrompt, claudeBody || document.createElement('div'));
+    if (!claudeBody) _setCardState('claude', 'done', claudeText);
+  } catch(e) {
+    _setCardState('claude', 'error', e.message);
   }
 
-  // 会話履歴に保存（Claude または最初に成功したモデルの回答を canonical とする）
+  // 会話履歴に保存
   const savedResponses = {};
   for (const m of AI_MODELS) {
     const r = aiState.results[m.id];
@@ -389,14 +334,38 @@ async function aiAskAll() {
   if (claudeText) savedResponses['claude'] = claudeText;
   aiState.chatHistory.push({ question, responses: savedResponses, timestamp: Date.now() });
 
-  // 会話ログに Claude 回答を表示
   if (claudeText) _appendChatAssistant(claudeText);
+
+  // Notion 自動保存（fire-and-forget）
+  _saveToNotion(question, savedResponses);
 
   aiState.running = false;
   if (sendBtn) sendBtn.disabled = false;
 
-  // Claude カードまでスクロール
   document.getElementById(_aiCardId('claude'))?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// ── Notion 保存 ──
+function _saveToNotion(question, responses) {
+  const now = new Date();
+  const jstStr = now.toLocaleString('ja-JP', {
+    timeZone: 'Asia/Tokyo',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit',
+  });
+  fetch(`${WORKER_URL}/notion/save`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title: `AI相談 ${jstStr}`, question, responses }),
+  }).catch(() => {});
+}
+
+// ── ルーティン実行 ──
+function aiRunRoutine(type) {
+  const q = type === 'japan' ? ROUTINE_JAPAN_PROMPT : ROUTINE_US_PROMPT;
+  const el = document.getElementById('ai-question');
+  if (el) { el.value = q; el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }
+  aiAskAll();
 }
 
 /** 会話ログに質問バブルを追加 */
@@ -436,163 +405,6 @@ function aiResetChat() {
 }
 
 // ══════════════════════════════════════════════
-// API キー設定モーダル
-// ══════════════════════════════════════════════
-
-async function openAiSettings() {
-  if (document.getElementById('ai-settings-overlay')) return;
-  const keys = await aiLoadKeys().catch(() => ({}));
-
-  const fields = AI_MODELS.map(m => `
-    <div class="ai-settings-row">
-      <label class="ai-settings-label">
-        <span class="ai-settings-name">${m.name}</span>
-        <span class="ai-settings-model">${m.sub}</span>
-      </label>
-      <input class="ai-settings-input" type="password" id="ai-key-${m.id}"
-             placeholder="sk-..." autocomplete="off"
-             value="${keys[m.id] ? '●'.repeat(8) : ''}"
-             data-has-key="${!!keys[m.id]}"
-             onfocus="if(this.dataset.hasKey==='true'){this.value='';this.dataset.hasKey='false';}">
-    </div>`).join('');
-
-  const ov = document.createElement('div');
-  ov.id = 'ai-settings-overlay';
-  ov.innerHTML = `
-    <div class="ai-settings-card">
-      <div class="pc-header">
-        <span class="pc-title">API キー設定</span>
-        <button class="pc-close" onclick="closeAiSettings()">✕</button>
-      </div>
-      <p class="ai-settings-desc">
-        キーは AES-GCM で暗号化してブラウザに保存されます。<br>
-        GitHub リポジトリには一切保存されません。
-      </p>
-      <div class="ai-settings-fields">${fields}</div>
-      <div class="ai-settings-actions">
-        <button class="ai-save-btn" onclick="saveAiSettings()">保存</button>
-        <button class="ai-clear-btn" onclick="clearAiKeys()">すべて削除</button>
-      </div>
-      <div class="ai-settings-transfer">
-        <button class="ai-transfer-btn" onclick="exportAiKeys()" title="暗号化コードをコピーしてスマホに転送">📋 エクスポート</button>
-        <button class="ai-transfer-btn" onclick="toggleAiImport()" title="PCでコピーしたコードを貼り付けて読み込む">📥 インポート</button>
-      </div>
-      <div class="ai-settings-msg" id="ai-settings-msg"></div>
-    </div>`;
-  document.body.appendChild(ov);
-
-  ov._kbHandler = e => { if (e.key === 'Escape') closeAiSettings(); };
-  document.addEventListener('keydown', ov._kbHandler);
-  requestAnimationFrame(() => requestAnimationFrame(() => { ov.style.opacity = '1'; }));
-}
-
-function closeAiSettings() {
-  const ov = document.getElementById('ai-settings-overlay');
-  if (!ov) return;
-  if (ov._kbHandler) document.removeEventListener('keydown', ov._kbHandler);
-  ov.style.opacity = '0';
-  setTimeout(() => ov.remove(), 320);
-}
-
-async function saveAiSettings() {
-  const existing = await aiLoadKeys().catch(() => ({}));
-  const newKeys = {};
-  for (const m of AI_MODELS) {
-    const inp = document.getElementById(`ai-key-${m.id}`);
-    if (!inp) continue;
-    const val = inp.value.trim();
-    // ●●●●●●●● = 変更なし → 既存を引き継ぐ
-    if (/^●+$/.test(val)) { newKeys[m.id] = existing[m.id] || ''; }
-    else if (val)           { newKeys[m.id] = val; }
-    else                    { newKeys[m.id] = ''; }
-  }
-  try {
-    await aiSaveKeys(newKeys);
-    const msg = document.getElementById('ai-settings-msg');
-    if (msg) { msg.textContent = '✅ 保存しました'; msg.className = 'ai-settings-msg success'; }
-    setTimeout(() => closeAiSettings(), 1200);
-  } catch(e) {
-    const msg = document.getElementById('ai-settings-msg');
-    if (msg) { msg.textContent = `❌ ${e.message}`; msg.className = 'ai-settings-msg error'; }
-  }
-}
-
-async function clearAiKeys() {
-  localStorage.removeItem(AI_LS_KEYS);
-  const msg = document.getElementById('ai-settings-msg');
-  if (msg) { msg.textContent = '🗑 削除しました'; msg.className = 'ai-settings-msg success'; }
-  setTimeout(() => closeAiSettings(), 1000);
-}
-
-// ── エクスポート：暗号化済みブロブをクリップボードにコピー ──
-async function exportAiKeys() {
-  const enc = localStorage.getItem(AI_LS_KEYS);
-  const msg = document.getElementById('ai-settings-msg');
-  if (!enc) {
-    if (msg) { msg.textContent = '⚠ キーが未設定です'; msg.className = 'ai-settings-msg error'; }
-    return;
-  }
-  try {
-    await navigator.clipboard.writeText(enc);
-    if (msg) { msg.textContent = '📋 コードをコピーしました。スマホで「インポート」に貼り付けてください。'; msg.className = 'ai-settings-msg success'; }
-  } catch {
-    // clipboard API が使えない場合は選択可能なテキストエリアを表示
-    _showExportTextarea(enc);
-  }
-}
-
-function _showExportTextarea(text) {
-  const existing = document.getElementById('ai-export-area-wrap');
-  if (existing) { existing.remove(); return; }
-  const wrap = document.createElement('div');
-  wrap.id = 'ai-export-area-wrap';
-  wrap.style.cssText = 'margin-top:10px;';
-  wrap.innerHTML = `<textarea id="ai-export-area" readonly
-    style="width:100%;height:64px;font-size:11px;font-family:monospace;background:var(--surface3);border:1px solid var(--border2);border-radius:8px;color:var(--text);padding:8px;box-sizing:border-box;resize:none;outline:none;">${text}</textarea>`;
-  const actionsEl = document.querySelector('.ai-settings-actions');
-  if (actionsEl) actionsEl.after(wrap);
-  // 全選択
-  setTimeout(() => {
-    const ta = document.getElementById('ai-export-area');
-    if (ta) { ta.focus(); ta.select(); }
-  }, 50);
-}
-
-// ── インポート：テキストエリアを表示して貼り付けを受け付ける ──
-function toggleAiImport() {
-  const existing = document.getElementById('ai-import-area-wrap');
-  if (existing) { existing.remove(); return; }
-  const wrap = document.createElement('div');
-  wrap.id = 'ai-import-area-wrap';
-  wrap.style.cssText = 'margin-top:10px;';
-  wrap.innerHTML = `
-    <textarea id="ai-import-area" placeholder="PC でコピーしたコードを貼り付けてください..."
-      style="width:100%;height:64px;font-size:11px;font-family:monospace;background:var(--surface3);border:1px solid var(--border2);border-radius:8px;color:var(--text);padding:8px;box-sizing:border-box;resize:none;outline:none;"></textarea>
-    <button onclick="doAiImport()" style="margin-top:6px;width:100%;padding:7px;background:var(--text);color:var(--bg);border:none;border-radius:8px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;">読み込む</button>`;
-  const actionsEl = document.querySelector('.ai-settings-actions');
-  if (actionsEl) actionsEl.after(wrap);
-  setTimeout(() => document.getElementById('ai-import-area')?.focus(), 50);
-}
-
-async function doAiImport() {
-  const val = document.getElementById('ai-import-area')?.value?.trim();
-  const msg = document.getElementById('ai-settings-msg');
-  if (!val) {
-    if (msg) { msg.textContent = '⚠ コードを貼り付けてください'; msg.className = 'ai-settings-msg error'; }
-    return;
-  }
-  try {
-    // 復号テスト（正しい形式かチェック）
-    await aiDecrypt(val);
-    localStorage.setItem(AI_LS_KEYS, val);
-    if (msg) { msg.textContent = '✅ 読み込みました'; msg.className = 'ai-settings-msg success'; }
-    setTimeout(() => closeAiSettings(), 1200);
-  } catch {
-    if (msg) { msg.textContent = '❌ コードが無効です（PINが違うか、形式が不正）'; msg.className = 'ai-settings-msg error'; }
-  }
-}
-
-// ══════════════════════════════════════════════
 // タブ内 HTML 初期レンダリング（switchTab から呼ばれる）
 // ══════════════════════════════════════════════
 
@@ -607,25 +419,27 @@ function renderAiTab() {
       <!-- ヘッダー -->
       <div class="ai-header">
         <div class="ai-header-title">AI 相談</div>
-        <div style="display:flex;gap:8px;align-items:center;">
-          <button class="ai-reset-btn" onclick="aiResetChat()" title="会話をリセット">
-            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M1 7A6 6 0 1 1 3 11.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-              <path d="M1 4v3h3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            リセット
-          </button>
-          <button class="ai-settings-btn" onclick="openAiSettings()" title="API キー設定">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.5"/>
-              <path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3.1 3.1l1.05 1.05M11.85 11.85l1.05 1.05M3.1 12.9l1.05-1.05M11.85 4.15l1.05-1.05" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-            </svg>
-          </button>
-        </div>
+        <button class="ai-reset-btn" onclick="aiResetChat()" title="会話をリセット">
+          <svg width="13" height="13" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M1 7A6 6 0 1 1 3 11.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+            <path d="M1 4v3h3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          リセット
+        </button>
       </div>
 
       <!-- 会話ログ（質問 + Claude 総括の履歴） -->
       <div class="ai-chat-log" id="ai-chat-log"></div>
+
+      <!-- ルーティンボタン -->
+      <div class="ai-routine-btns">
+        <button class="ai-routine-btn" onclick="aiRunRoutine('japan')" title="Japan Close ルーティンを実行">
+          🇯🇵 Japan Close
+        </button>
+        <button class="ai-routine-btn" onclick="aiRunRoutine('us')" title="US Overnight ルーティンを実行">
+          🇺🇸 US Overnight
+        </button>
+      </div>
 
       <!-- 質問入力 -->
       <div class="ai-input-wrap">

@@ -13,3 +13,7 @@
 
 # Push script（トークンを含むため非公開）
 push.sh
+
+# Cloudflare Worker
+worker/node_modules/
+worker/package-lock.json
