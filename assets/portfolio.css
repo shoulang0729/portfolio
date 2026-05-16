@@ -289,13 +289,40 @@ body {
   border: none !important;
   background: transparent !important;
   padding: 4px 6px;
-  font-size: 18px;
-  line-height: 1;
+  width: 30px; height: 30px;
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
   color: var(--text2);
   cursor: pointer;
   min-width: unset;
 }
 #hm-menu-btn:hover { color: var(--text); background: transparent !important; }
+#hm-menu-btn .hm-bar,
+#hm-menu-btn .hm-x {
+  position: absolute;
+  font-size: 18px;
+  line-height: 1;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+#hm-menu-btn .hm-x {
+  opacity: 0;
+  transform: rotate(45deg) scale(0.5);
+}
+#hm-menu-btn.open .hm-bar {
+  opacity: 0;
+  transform: rotate(-45deg) scale(0.5);
+}
+#hm-menu-btn.open .hm-x {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+}
+
+/* ── 非アクティブタブ ── */
+.tab-btn.tab-disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
 #hm-menu-dropdown {
   display: none;
   position: absolute;
