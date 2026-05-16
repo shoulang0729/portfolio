@@ -282,29 +282,57 @@ body {
 /* ── Hamburger menu ── */
 #hm-menu-wrap {
   position: relative;
+  display: flex;
+  align-items: center;
 }
+#hm-menu-btn {
+  border: none !important;
+  background: transparent !important;
+  padding: 4px 6px;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--text2);
+  cursor: pointer;
+  min-width: unset;
+}
+#hm-menu-btn:hover { color: var(--text); background: transparent !important; }
 #hm-menu-dropdown {
   display: none;
   position: absolute;
-  top: calc(100% + 4px);
+  top: calc(100% + 6px);
   right: 0;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 6px;
+  border-radius: 10px;
+  padding: 4px;
   flex-direction: column;
-  gap: 4px;
-  min-width: 52px;
-  box-shadow: 0 4px 16px var(--shadow2);
+  min-width: 150px;
+  box-shadow: 0 6px 20px var(--shadow2);
   z-index: 9999;
 }
 #hm-menu-dropdown.open {
   display: flex;
 }
 .hm-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   width: 100%;
-  justify-content: center;
+  padding: 9px 12px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+  min-width: unset;
+  transition: background 0.1s;
 }
+.hm-menu-item:hover { background: var(--surface2); }
+.hm-menu-item .hm-icon { font-size: 15px; flex-shrink: 0; width: 18px; text-align: center; }
 
 /* ── Modal ── */
 .modal-overlay {

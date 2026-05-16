@@ -70,8 +70,9 @@ function applyTheme() {
   }
   document.documentElement.dataset.theme = resolved;
   const icons = { light: '☼', dark: '☾', auto: 'A' };
+  const iconEl = document.getElementById('theme-icon');
+  if (iconEl) iconEl.textContent = icons[state.themeMode] ?? 'A';
   const el = document.getElementById('theme-btn');
-  if (el) el.textContent = icons[state.themeMode] ?? 'A';
   el && (el.title = { light: 'ライトモード', dark: 'ダークモード', auto: 'システムに合わせる' }[state.themeMode]);
 }
 
