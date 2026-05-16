@@ -112,7 +112,20 @@ async function parseManexFiles(files) {
 
 // ── マネーフォワード スクショ → Claude Vision ─────────────────────────────
 
+// Anthropic Vision API がサポートする画像形式
+const SUPPORTED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+// base64 5MB 上限に合わせてソースファイルは 3.7MB 以内を推奨
+const MAX_IMAGE_BYTES = 3_800_000;
+
 async function parseMoneyForwardImage(file) {
+  const mime = file.type || 'image/png';
+  if (!SUPPORTED_IMAGE_TYPES.includes(mime.toLowerCase())) {
+    throw new Error(`非対応の画像形式です（${mime}）。JPEG または PNG 形式のスクリーンショットを使用してください。iOS の場合は「ファイル」アプリで JPEG 変換後にお試しください。`);
+  }
+  if (file.size > MAX_IMAGE_BYTES) {
+    throw new Error(`画像サイズが大きすぎます（${(file.size / 1024 / 1024).toFixed(1)} MB）。3.7 MB 以下の画像を使用してください。`);
+  }
+
   const buf   = await file.arrayBuffer();
   const uint8 = new Uint8Array(buf);
   // スタックオーバーフロー回避のためチャンク処理
@@ -120,8 +133,7 @@ async function parseMoneyForwardImage(file) {
   for (let i = 0; i < uint8.length; i += 8192) {
     binaryStr += String.fromCharCode(...uint8.subarray(i, i + 8192));
   }
-  const b64  = btoa(binaryStr);
-  const mime = file.type || 'image/png';
+  const b64 = btoa(binaryStr);
 
   const prompt = `このスクリーンショットは資産管理アプリの保有資産一覧です。
 画像から保有資産を抽出し、必ず以下のJSON形式のみで回答してください（説明文不要）:
@@ -146,7 +158,11 @@ async function parseMoneyForwardImage(file) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!res.ok) {
+      let detail = '';
+      try { const e = await res.json(); detail = e?.error?.message || JSON.stringify(e); } catch {}
+      throw new Error(`HTTP ${res.status}${detail ? ': ' + detail : ''}`);
+    }
     const data = await res.json();
     const text = data?.content?.[0]?.text || '';
     const m    = text.match(/\{[\s\S]*\}/);
