@@ -76,4 +76,5 @@ const state = {
   watchlistPrices:  {},         // symbol → { price, dayPct }
   wlSortCol:        '1d',       // ウォッチリストのデフォルトソート列
   wlSortDir:        'desc',
+  prevPrices:       {},         // { ySymbol: price } 前回のライブ価格（フラッシュアニメーション用）
 };

@@ -58,13 +58,30 @@ function renderStats() {
 // ══════════════════════════════════════════════
 // THEME
 // ══════════════════════════════════════════════
+/**
+ * themeMode ('auto'|'light'|'dark') を data-theme 属性に適用する。
+ * auto の場合は matchMedia でシステム設定を解決し、
+ * data-theme="dark" or "light" を明示セット（CSS @media 重複ブロック不要）。
+ */
 function applyTheme() {
-  document.documentElement.dataset.theme = state.themeMode;
+  let resolved = state.themeMode;
+  if (resolved === 'auto') {
+    resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  document.documentElement.dataset.theme = resolved;
   const icons = { light: '☼', dark: '☾', auto: 'A' };
   const el = document.getElementById('theme-btn');
   if (el) el.textContent = icons[state.themeMode] ?? 'A';
   el && (el.title = { light: 'ライトモード', dark: 'ダークモード', auto: 'システムに合わせる' }[state.themeMode]);
 }
+
+// システムテーマ変更時に auto モードを追従させる
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+  if (state.themeMode === 'auto') {
+    applyTheme();
+    renderHeatmap();
+  }
+});
 
 function cycleTheme() {
   const order = ['auto', 'light', 'dark'];
@@ -253,9 +270,11 @@ function init() {
   // 初期タブ状態を適用（ヒートマップのみ表示、他は非表示）
   const panelList      = document.getElementById('panel-list');
   const panelWatchlist = document.getElementById('panel-watchlist');
+  const panelHistory   = document.getElementById('panel-history');
   const panelAi        = document.getElementById('panel-ai');
   if (panelList)      panelList.hidden      = true;
   if (panelWatchlist) panelWatchlist.hidden = true;
+  if (panelHistory)   panelHistory.hidden   = true;
   if (panelAi)        panelAi.hidden        = true;
 
   renderStats();
@@ -280,15 +299,29 @@ function init() {
   // リスト高さを初期設定（DOM確定後）
   requestAnimationFrame(updateListHeight);
 
-  // 起動時に自動で初回ライブ更新 → その後バックグラウンドで履歴データ取得
+  // 起動時に自動で初回ライブ更新 → 資産記録 → バックグラウンドで履歴データ取得
   (async () => {
     await refreshPrices();
+    // 初回ライブ更新完了後にスケルトンを非表示にして SVG を表示
+    _hideHeatmapSkeleton();
+    // ライブ価格取得後に今日の資産額を記録
+    if (typeof recordTodayAsset === 'function') recordTodayAsset();
     for (const range of ['1y', '5y', '10y']) {
       await fetchAllHistorical(range);
       renderStats();
       if (state.changePeriod && state.changePeriod !== '1d') renderHeatmap();
     }
   })();
+}
+
+/**
+ * 初回データ取得完了後にスケルトンを非表示にし SVG を表示する（初回のみ）。
+ */
+function _hideHeatmapSkeleton() {
+  const sk = document.getElementById('heatmap-skeleton');
+  const sv = document.getElementById('heatmap');
+  if (sk) { sk.style.transition = 'opacity 0.3s ease'; sk.style.opacity = '0'; setTimeout(() => sk.remove(), 320); }
+  if (sv) sv.style.display = '';
 }
 
 // ── 銘柄リストの高さをビューポートに合わせて動的設定 ──
@@ -309,17 +342,19 @@ function updateListHeight() {
 
 // ── タブ切替 ──
 function switchTab(name) {
-  // 'heatmap' | 'list' | 'watchlist' | 'ai'
+  // 'heatmap' | 'list' | 'watchlist' | 'history' | 'ai'
   if (state.activeTab === name) return;
   state.activeTab = name;
 
   const panelHeatmap   = document.getElementById('panel-heatmap');
   const panelList      = document.getElementById('panel-list');
   const panelWatchlist = document.getElementById('panel-watchlist');
+  const panelHistory   = document.getElementById('panel-history');
   const panelAi        = document.getElementById('panel-ai');
   if (panelHeatmap)   panelHeatmap.hidden   = (name !== 'heatmap');
   if (panelList)      panelList.hidden      = (name !== 'list');
   if (panelWatchlist) panelWatchlist.hidden = (name !== 'watchlist');
+  if (panelHistory)   panelHistory.hidden   = (name !== 'history');
   if (panelAi)        panelAi.hidden        = (name !== 'ai');
 
   // タブボタンの active 状態を更新
@@ -339,6 +374,13 @@ function switchTab(name) {
   if (name === 'watchlist') {
     renderWatchlist();
     fetchWatchlistData();
+  }
+
+  // 資産推移タブに切り替えたとき描画（D3 幅確定後）
+  if (name === 'history') {
+    requestAnimationFrame(() => {
+      if (typeof renderHistoryTab === 'function') renderHistoryTab();
+    });
   }
 
   // AI 相談タブに切り替えたとき初期レンダリング

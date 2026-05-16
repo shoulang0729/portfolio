@@ -51,30 +51,9 @@ html[data-theme="dark"] {
   --scrollbar-thumb-hover: rgba(255,255,255,0.30);
   --scrollbar-track:       transparent;
 }
-@media (prefers-color-scheme: dark) {
-  html[data-theme="auto"] {
-    --bg:        #000000;
-    --surface:   #1C1C1E;
-    --surface2:  #2C2C2E;
-    --surface3:  #3A3A3C;
-    --border:    #3A3A3C;
-    --border2:   #48484A;
-    --text:      #FFFFFF;
-    --text2:     #8E8E93;
-    --text3:     rgba(235,235,245,0.60);
-    --shadow:    0 8px 32px rgba(0,0,0,0.50);
-    --shadow2:   rgba(0,0,0,0.70);
-    --null-cell: #2C2C2E;
-    --cat-bg:    #2C2C2E;
-    --handle:    #48484A;
-    --chart-grid:rgba(255,255,255,0.07);
-    --cost-line: rgba(255,255,255,0.70);
-    --cost-text: rgba(255,255,255,0.80);
-    --scrollbar-thumb:       rgba(255,255,255,0.18);
-    --scrollbar-thumb-hover: rgba(255,255,255,0.30);
-    --scrollbar-track:       transparent;
-  }
-}
+/* @media (prefers-color-scheme: dark) は app.js の applyTheme() が
+   matchMedia で解決して data-theme="dark" を明示セットするため不要。
+   システムテーマ追従は JS 側で行う（applyTheme / matchMedia listener）。 */
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', Arial, sans-serif;
@@ -1039,6 +1018,83 @@ body {
 }
 .ai-settings-btn:hover { background: var(--surface3); border-color: var(--border); color: var(--text); }
 
+/* ── 会話リセットボタン ── */
+.ai-reset-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  background: none;
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  color: var(--text2);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+.ai-reset-btn:hover { background: var(--surface3); color: var(--text); border-color: var(--border); }
+
+/* ── 会話ログエリア ── */
+.ai-chat-log {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 360px;
+  overflow-y: auto;
+  margin-bottom: 14px;
+  padding-right: 4px;
+  /* 空のときは高さを持たない */
+}
+.ai-chat-log:empty { margin-bottom: 0; }
+
+/* ユーザー質問バブル */
+.ai-chat-q {
+  align-self: flex-end;
+  max-width: 80%;
+  background: #3B82F6;
+  color: #fff;
+  border-radius: 16px 16px 4px 16px;
+  padding: 10px 14px;
+  font-size: 13px;
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+/* Claude 総括バブル */
+.ai-chat-a {
+  align-self: flex-start;
+  max-width: 88%;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 4px 16px 16px 16px;
+  padding: 10px 14px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.ai-chat-a-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  color: #CC785C;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ストリーミングカーソル */
+.ai-cursor {
+  display: inline-block;
+  animation: ai-blink 0.7s steps(1) infinite;
+  color: var(--text2);
+  font-weight: 300;
+}
+@keyframes ai-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
 /* ── 質問入力 ── */
 .ai-input-wrap {
   background: var(--surface2);
@@ -1341,3 +1397,222 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 .ai-transfer-btn:hover { background: var(--surface3); color: var(--text); border-color: var(--border); }
+
+/* ══════════════════════════════════════════════
+   資産推移タブ (history.js)
+   ══════════════════════════════════════════════ */
+
+/* サマリーカード群 */
+.hist-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 14px 16px 0;
+  max-width: 900px;
+  margin: 0 auto;
+}
+.hist-stat {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 140px;
+  flex: 1;
+}
+.hist-label {
+  font-size: 11px;
+  color: var(--text2);
+}
+.hist-val {
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.hist-val.pos { color: #FF3B30; }
+.hist-val.neg { color: #34C759; }
+.hist-val.neu { color: var(--text); }
+.hist-sub {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.hist-sub.pos { color: #FF3B30; }
+.hist-sub.neg { color: #34C759; }
+.hist-sub.neu { color: var(--text2); }
+
+/* レンジ切替ボタン */
+.hist-range-bar {
+  display: flex;
+  gap: 6px;
+  padding: 12px 16px 0;
+  max-width: 900px;
+  margin: 0 auto;
+}
+.hist-range-btn {
+  padding: 5px 12px;
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  background: none;
+  color: var(--text2);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+.hist-range-btn:hover   { background: var(--surface3); color: var(--text); border-color: var(--border); }
+.hist-range-btn.active  { background: var(--surface3); color: var(--text); border-color: var(--border); font-weight: 600; }
+
+/* チャートラッパー */
+.hist-chart-wrap {
+  width: 100%;
+  max-width: 900px;
+  margin: 10px auto 0;
+  padding: 0 4px;
+  overflow: hidden;
+}
+#hist-svg { display: block; width: 100%; }
+
+/* フッター */
+.hist-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px 16px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+.hist-count {
+  font-size: 11px;
+  color: var(--text2);
+}
+.hist-export-btn {
+  padding: 4px 10px;
+  border: 1px solid var(--border2);
+  border-radius: 7px;
+  background: none;
+  color: var(--text2);
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+.hist-export-btn:hover { background: var(--surface3); color: var(--text); }
+
+/* 空状態 */
+.hist-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 60px 24px;
+  text-align: center;
+  color: var(--text2);
+  font-size: 14px;
+}
+.hist-refresh-btn {
+  padding: 10px 24px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: background 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+.hist-refresh-btn:hover { background: var(--surface3); }
+
+@media (max-width: 600px) {
+  .hist-stat { min-width: calc(50% - 5px); flex: none; }
+}
+
+/* ══════════════════════════════════════════════
+   価格フラッシュアニメーション（heatmap.js）
+   filter: brightness() で色相を変えずに明暗を変化させる
+   ══════════════════════════════════════════════ */
+
+@keyframes flash-up {
+  0%   { filter: brightness(1.0); }
+  20%  { filter: brightness(2.0); }
+  100% { filter: brightness(1.0); }
+}
+@keyframes flash-down {
+  0%   { filter: brightness(1.0); }
+  20%  { filter: brightness(0.4); }
+  100% { filter: brightness(1.0); }
+}
+rect.flash-up   { animation: flash-up   0.7s ease-out forwards; }
+rect.flash-down { animation: flash-down 0.7s ease-out forwards; }
+
+/* ══════════════════════════════════════════════
+   初回ロードスケルトン（heatmap-wrap 内）
+   ══════════════════════════════════════════════ */
+
+.heatmap-skeleton {
+  position: relative;
+  width: 100%;
+  /* ヒートマップと同じアスペクト比（デスクトップ: 0.58 / モバイル: 0.85） */
+  aspect-ratio: 1 / 0.58;
+  min-height: 480px;
+  background: var(--surface3);
+  border-radius: 8px;
+  overflow: hidden;
+}
+@media (max-width: 600px) {
+  .heatmap-skeleton { aspect-ratio: 1 / 0.85; min-height: 360px; }
+}
+
+/* シマーアニメーション（左→右に光が流れる） */
+.skeleton-shimmer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--surface2) 50%,
+    transparent 100%
+  );
+  animation: shimmer 1.6s infinite;
+}
+@keyframes shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* ══════════════════════════════════════════════
+   銘柄リスト：ティッカー列を横スクロール時に左端固定
+   ══════════════════════════════════════════════ */
+
+/* データセル（td） */
+.sl-table td[data-col="symbol"] {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface);  /* スクロール時に背後が透けないよう不透明背景 */
+}
+
+/* ヘッダーセル（th）：縦方向の sticky と重なるため z-index を最大に */
+.sl-table th[data-col="symbol"] {
+  position: sticky;
+  left: 0;
+  z-index: 3;  /* thead の th は縦(top) + 横(left) 両方 sticky → z-index 最大 */
+  background: var(--surface);
+}
+
+/* スクロール中に右側のセルと重なる際の境界線 */
+.sl-table td[data-col="symbol"]::after,
+.sl-table th[data-col="symbol"]::after {
+  content: '';
+  position: absolute;
+  top: 0; right: -1px; bottom: 0;
+  width: 1px;
+  background: var(--border2);
+  pointer-events: none;
+}

@@ -71,6 +71,7 @@ function renderHeatmap() {
     .attr('x', d => d.x0).attr('y', d => d.y0)
     .attr('width', d => Math.max(0, d.x1 - d.x0)).attr('height', d => Math.max(0, d.y1 - d.y0))
     .attr('rx', 7)
+    .attr('data-ysymbol', d => d.data.ySymbol || '')   // フラッシュアニメーション用
     .attr('fill', d => getColor(getDisplayPct(d.data), state.colorMode === 'change' ? 'change' : 'pnl',
       state.colorMode === 'change' ? (PERIOD_MAP[state.changePeriod]?.scale ?? 25) : null));
 

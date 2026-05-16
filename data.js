@@ -127,6 +127,77 @@ async function ensureYahooCrumb() {
 }
 
 // ══════════════════════════════════════════════
+// SESSION STORAGE CACHE  （履歴データの永続化）
+// ══════════════════════════════════════════════
+const SS_CACHE_KEY = 'hm-hist-cache';
+const SS_CACHE_VER = '2';  // キャッシュ構造変更時にインクリメントして自動破棄
+
+/**
+ * sessionStorage から historicalCache を復元する。
+ * ページリロード時に API を再取得しないようにする。
+ * セッション終了（タブを閉じる）時に自動クリアされる。
+ */
+function loadCacheFromSession() {
+  try {
+    const raw = sessionStorage.getItem(SS_CACHE_KEY);
+    if (!raw) return;
+    const obj = JSON.parse(raw);
+    if (obj._v !== SS_CACHE_VER) return; // バージョン不一致は破棄（クリア）
+    let total = 0;
+    for (const range of ['1y', '5y', '10y']) {
+      if (!obj[range]) continue;
+      for (const [sym, entries] of Object.entries(obj[range])) {
+        // ISO文字列 → Date オブジェクトに復元
+        state.historicalCache[range][sym] = entries.map(e => ({
+          date:  new Date(e.date),
+          close: e.close,
+        }));
+        total++;
+      }
+    }
+    if (total > 0) console.log(`[cache] sessionStorage から ${total} 銘柄×レンジを復元`);
+  } catch (e) {
+    console.warn('[cache] sessionStorage 復元失敗:', e);
+    sessionStorage.removeItem(SS_CACHE_KEY);
+  }
+}
+
+/**
+ * historicalCache を sessionStorage に保存する。
+ * fetchSymbolHistory 完了後に呼ぶ。
+ * 容量超過（QuotaExceededError）時は警告のみで続行。
+ */
+function saveCacheToSession() {
+  try {
+    const obj = { _v: SS_CACHE_VER };
+    for (const range of ['1y', '5y', '10y']) {
+      obj[range] = {};
+      for (const [sym, entries] of Object.entries(state.historicalCache[range] || {})) {
+        // Date オブジェクト → ISO文字列（JSON シリアライズ可能にする）
+        obj[range][sym] = entries.map(e => ({
+          date:  e.date instanceof Date ? e.date.toISOString() : e.date,
+          close: e.close,
+        }));
+      }
+    }
+    sessionStorage.setItem(SS_CACHE_KEY, JSON.stringify(obj));
+  } catch (e) {
+    console.warn('[cache] sessionStorage 保存失敗（容量超過の可能性）:', e);
+  }
+}
+
+/**
+ * sessionStorage の履歴キャッシュをクリアする。
+ * CSV インポートなどでキャッシュを無効化する際に呼ぶ。
+ */
+function clearCacheSession() {
+  sessionStorage.removeItem(SS_CACHE_KEY);
+}
+
+// ── 起動時に即時復元（state.js のロード後、API 取得前） ──
+loadCacheFromSession();
+
+// ══════════════════════════════════════════════
 // HISTORICAL DATA FETCH
 // ══════════════════════════════════════════════
 async function fetchAllHistorical(neededRange = '1y') {
@@ -211,6 +282,8 @@ async function fetchSymbolHistory(symbol, range = '1y') {
     .filter(p => p.close != null && isFinite(p.close));
   // adjclose が超直近の分割に未対応の場合に備えてスプリット自動補正
   state.historicalCache[range][symbol] = applySplitCorrection(entries);
+  // sessionStorage に永続化（バックグラウンドで非同期保存）
+  saveCacheToSession();
 }
 
 // ══════════════════════════════════════════════
@@ -344,9 +417,55 @@ async function refreshPrices() {
     setStatus(msg, 'green');
     renderStats();
     renderHeatmap();
+    // 価格変化をフラッシュアニメーションで表示（前回価格がある場合のみ）
+    flashPriceChanges(fetched);
   } else {
     setStatus('取得失敗（市場時間外またはAPIアクセス制限）', 'red');
   }
+}
+
+/**
+ * 前回価格との差分を検出してヒートマップのセルをフラッシュさせる。
+ * 上昇 → flash-up クラス（明るく）、下落 → flash-down クラス（暗く）
+ * CSS animation が終了したら自動的にクラスを除去する。
+ */
+function flashPriceChanges(fetched) {
+  const hasPrev = Object.keys(state.prevPrices).length > 0;
+  if (!hasPrev) {
+    // 初回取得時は次回のために価格を記録するだけ（アニメーションしない）
+    fetched.forEach(({ pos: p, live }) => {
+      if (live?.price && p.ySymbol) state.prevPrices[p.ySymbol] = live.price;
+    });
+    return;
+  }
+
+  const changes = [];
+  fetched.forEach(({ pos: p, live }) => {
+    if (!live?.price || !p.ySymbol) return;
+    const prev = state.prevPrices[p.ySymbol];
+    if (prev != null && prev !== live.price) {
+      changes.push({ ySymbol: p.ySymbol, direction: live.price > prev ? 'up' : 'down' });
+    }
+    state.prevPrices[p.ySymbol] = live.price;
+  });
+
+  if (changes.length === 0) return;
+
+  // 描画完了後の次フレームでアニメーションクラスを付与
+  requestAnimationFrame(() => {
+    const svg = document.getElementById('heatmap');
+    if (!svg) return;
+    changes.forEach(({ ySymbol, direction }) => {
+      const rect = svg.querySelector(`rect[data-ysymbol="${CSS.escape(ySymbol)}"]`);
+      if (!rect) return;
+      const cls = direction === 'up' ? 'flash-up' : 'flash-down';
+      // 既存クラスを除去してリフロー → 再付与（再トリガー）
+      rect.classList.remove('flash-up', 'flash-down');
+      void rect.getBoundingClientRect(); // reflow
+      rect.classList.add(cls);
+      rect.addEventListener('animationend', () => rect.classList.remove(cls), { once: true });
+    });
+  });
 }
 
 function setStatus(msg, color) {
@@ -538,6 +657,7 @@ async function importMonexCsvs(files) {
 
   // 履歴キャッシュをリセット（保有数・取得単価が変わり得るため）
   state.historicalCache = { '1y': {}, '5y': {}, '10y': {} };
+  clearCacheSession();           // sessionStorage のキャッシュも破棄
   state.lastUpdateText = null;  // CSV更新後はライブ取得前なので「最終更新」を無効化
 
   // ステータス表示更新

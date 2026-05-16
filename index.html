@@ -21,7 +21,7 @@
 <link rel="manifest" href="manifest.json">
 
 <!-- スタイルシート -->
-<link rel="stylesheet" href="portfolio.css?v=20260514a">
+<link rel="stylesheet" href="portfolio.css?v=20260516a">
 <!-- 銘柄リスト列表示制御（JS が動的に書き込む） -->
 <style id="sl-col-style"></style>
 <!-- ★ モバイルレイアウト CSS フォールバック
@@ -100,6 +100,8 @@
             onclick="switchTab('list')">銘柄リスト</button>
     <button class="tab-btn" data-tab="watchlist" role="tab"
             onclick="switchTab('watchlist')">ウォッチリスト</button>
+    <button class="tab-btn" data-tab="history" role="tab"
+            onclick="switchTab('history')">資産推移</button>
     <button class="tab-btn" data-tab="ai" role="tab"
             onclick="switchTab('ai')">AI相談</button>
   </div>
@@ -130,7 +132,11 @@
 
 <!-- ヒートマップ -->
 <div id="heatmap-wrap">
-  <svg id="heatmap"></svg>
+  <!-- 初回ロード中スケルトン（refreshPrices 完了後に JS で非表示） -->
+  <div id="heatmap-skeleton" class="heatmap-skeleton" aria-hidden="true">
+    <div class="skeleton-shimmer"></div>
+  </div>
+  <svg id="heatmap" style="display:none"></svg>
 </div>
 
 <!-- 下落▼〜▲上昇 凡例 -->
@@ -181,7 +187,11 @@
 </div>
 </section><!-- /panel-watchlist -->
 
-<!-- AI相談パネル（タブ4） -->
+<!-- 資産推移パネル（タブ4） -->
+<section id="panel-history" class="tab-panel">
+</section><!-- /panel-history -->
+
+<!-- AI相談パネル（タブ5） -->
 <section id="panel-ai" class="tab-panel">
 </section><!-- /panel-ai -->
 
@@ -215,18 +225,19 @@
 
 
 <!-- ★ 保有データ（銘柄の追加・変更はこのファイルのみ編集すれば OK） -->
-<script src="auth.js?v=20260514a"></script>
-<script src="positions.js?v=20260514a"></script>
+<script src="auth.js?v=20260516a"></script>
+<script src="positions.js?v=20260516a"></script>
 <!-- アプリロジック（分割ファイル） -->
-<script src="state.js?v=20260514a"></script>
-<script src="utils.js?v=20260514a"></script>
-<script src="data.js?v=20260514a"></script>
-<script src="heatmap.js?v=20260514a"></script>
-<script src="chart.js?v=20260514a"></script>
-<script src="stock-list.js?v=20260514a"></script>
-<script src="watchlist.js?v=20260514a"></script>
-<script src="ai-tab.js?v=20260514a"></script>
-<script src="app.js?v=20260514a"></script>
+<script src="state.js?v=20260516a"></script>
+<script src="utils.js?v=20260516a"></script>
+<script src="data.js?v=20260516a"></script>
+<script src="heatmap.js?v=20260516a"></script>
+<script src="chart.js?v=20260516a"></script>
+<script src="stock-list.js?v=20260516a"></script>
+<script src="watchlist.js?v=20260516a"></script>
+<script src="history.js?v=20260516a"></script>
+<script src="ai-tab.js?v=20260516a"></script>
+<script src="app.js?v=20260516a"></script>
 
 <!-- フォールバック JS：旧版 portfolio.js でもヒートマップが描画されるよう保証 -->
 <script>
