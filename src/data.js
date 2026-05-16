@@ -593,28 +593,23 @@ function parseJpRow(row) {
 
 /**
  * 米国株 CSV の1行からポジションデータを抽出
- * 列: 銘柄名,銘柄(ticker),市場,口座区分,保有数[株],...,取得平均[ドル],...,評価単価[ドル],...,時価評価額[円],前日比[円],評価損益額[円],損益率[円]
+ * 列: 銘柄名,銘柄(ticker),市場,口座区分,保有数[株],...,取得平均[ドル],...,評価単価[ドル],...,時価評価額[円],...,評価損益額[円],損益率[円]
  */
 function parseUsRow(row) {
   const ticker = row[1]?.trim();
   if (!ticker) return null;
-  const value  = parseNum(row[16]);
-  const dayCh  = parseNum(row[17]);
-  const pnl    = parseNum(row[18]);
-  // row[19] の損益率は JPY/USD 混在計算のため使用しない。
-  // JPY 値同士（評価損益 ÷ 取得原価）で再計算する（parseFundRow と同方式）
+  const value  = parseNum(row[16]);  // 現在値評価額[円]
+  const pnl    = parseNum(row[18]);  // 現在値損益[円]
+  // row[17]=外貨建て評価額[円]=常に0（当日変動ではない）→ dayCh/dayPct はライブ取得で更新
   const pnlPct = (value != null && pnl != null && value - pnl !== 0)
     ? (pnl / (value - pnl)) * 100 : null;
-  // dayPct = 前日比(円) / (時価評価額 - 前日比) × 100
-  const prevVal = (value != null && dayCh != null) ? value - dayCh : null;
-  const dayPct  = (prevVal != null && prevVal !== 0) ? (dayCh / prevVal) * 100 : null;
   return { ticker, shares: parseNum(row[4]), avgCost: parseNum(row[7]), price: parseNum(row[10]),
-           value, dayCh, dayPct, pnl, pnlPct };
+           value, dayCh: null, dayPct: null, pnl, pnlPct };
 }
 
 /**
  * 投資信託 CSV の1行からポジションデータを抽出
- * 列: 日付,時間,銘柄名,口座区分,預り区分,基準価額,...,保有数,...,平均取得単価,概算評価額,概算評価損益
+ * 列: 日付,時間,銘柄名,口座区分,預り区分,基準価額[円/万口],口数種別,保有口数[口],...,平均取得単価[円/万口],時価評価額,時価損益
  */
 function parseFundRow(row) {
   const rawName = row[2]?.trim();
@@ -624,10 +619,12 @@ function parseFundRow(row) {
   if (!symbol) return null;
   const value = parseNum(row[12]);
   const pnl   = parseNum(row[13]);
-  // pnlPct = 損益 ÷ 取得原価 × 100。取得原価 = value - pnl
   const cost   = (value != null && pnl != null) ? value - pnl : null;
   const pnlPct = (cost != null && cost !== 0) ? pnl / cost * 100 : null;
-  return { symbol, price: parseNum(row[5]), shares: parseNum(row[7]),
+  // row[7]=保有口数[口] → 万口に変換（price/avgCostの単位円/万口に合わせる）
+  const sharesRaw = parseNum(row[7]);
+  const shares = sharesRaw != null ? Math.round(sharesRaw / 10000 * 10000) / 10000 : null;
+  return { symbol, price: parseNum(row[5]), shares,
            avgCost: parseNum(row[11]), value, pnl, pnlPct };
 }
 

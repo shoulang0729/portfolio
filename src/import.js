@@ -43,21 +43,19 @@ function buildUsPosition(row) {
   const ticker = row[1]?.trim();
   if (!ticker || !name) return null;
   const shares  = parseNum(row[4]);
-  const avgCost = parseNum(row[7]);
-  const price   = parseNum(row[10]);
-  const value   = parseNum(row[16]);
-  const pnl     = parseNum(row[18]);
-  const dayCh   = parseNum(row[17]);
+  const avgCost = parseNum(row[7]);    // 平均取得単価[ドル]
+  const price   = parseNum(row[10]);   // 現在値単価[ドル]
+  const value   = parseNum(row[16]);   // 現在値評価額[円]
+  const pnl     = parseNum(row[18]);   // 現在値損益[円]
+  // row[17]=外貨建て評価額[円]=常に0 (当日変動ではない) → dayPct はライブ価格取得で更新
   const pnlPct  = (value != null && pnl != null && value - pnl !== 0)
     ? (pnl / (value - pnl)) * 100 : null;
-  const prevVal = (value != null && dayCh != null) ? value - dayCh : null;
-  const dayPct  = (prevVal != null && prevVal !== 0) ? (dayCh / prevVal) * 100 : null;
   return {
     symbol: ticker, name, cat: '米国株・ETF',
     shares: shares ?? 0, price: price ?? 0,
     avgCost: avgCost ?? 0, value: value ?? 0,
     pnl: pnl ?? 0, pnlPct: pnlPct ?? 0,
-    dayPct: dayPct ?? null, dayCh: dayCh ?? null, cur: 'USD',
+    dayPct: null, dayCh: null, cur: 'USD',
     ySymbol: ticker,
   };
 }
@@ -68,11 +66,14 @@ function buildFundPosition(row) {
   const name   = normalizeStr(rawName);
   const symbol = FUND_SYMBOL_PATTERNS.find(([pat]) => name.includes(pat))?.[1] ?? null;
   if (!symbol) return null;
-  const shares  = parseNum(row[7]);
-  const avgCost = parseNum(row[11]);
-  const price   = parseNum(row[5]);
-  const value   = parseNum(row[12]);
-  const pnl     = parseNum(row[13]);
+  // row[7]=保有口数[口]、row[5]=基準価額[円/万口]、row[11]=平均取得単価[円/万口]
+  // 口÷10000=万口 に変換して price/avgCost の単位(円/万口)と一致させる
+  const sharesRaw = parseNum(row[7]);
+  const shares  = sharesRaw != null ? Math.round(sharesRaw / 10000 * 10000) / 10000 : null;
+  const avgCost = parseNum(row[11]);   // 円/万口
+  const price   = parseNum(row[5]);    // 円/万口 (基準価額)
+  const value   = parseNum(row[12]);   // 時価評価額[円]
+  const pnl     = parseNum(row[13]);   // 時価損益[円]
   const cost    = (value != null && pnl != null) ? value - pnl : null;
   const pnlPct  = (cost != null && cost !== 0) ? pnl / cost * 100 : null;
   const proxy   = FUND_PROXY_MAP[symbol] ?? { ySymbol: '^N225', proxyName: '日経平均' };
@@ -112,9 +113,15 @@ async function parseManexFiles(files) {
 // ── マネーフォワード スクショ → Claude Vision ─────────────────────────────
 
 async function parseMoneyForwardImage(file) {
-  const buf    = await file.arrayBuffer();
-  const b64    = btoa(String.fromCharCode(...new Uint8Array(buf)));
-  const mime   = file.type || 'image/png';
+  const buf   = await file.arrayBuffer();
+  const uint8 = new Uint8Array(buf);
+  // スタックオーバーフロー回避のためチャンク処理
+  let binaryStr = '';
+  for (let i = 0; i < uint8.length; i += 8192) {
+    binaryStr += String.fromCharCode(...uint8.subarray(i, i + 8192));
+  }
+  const b64  = btoa(binaryStr);
+  const mime = file.type || 'image/png';
 
   const prompt = `このスクリーンショットは資産管理アプリの保有資産一覧です。
 画像から保有資産を抽出し、必ず以下のJSON形式のみで回答してください（説明文不要）:
@@ -430,13 +437,18 @@ async function handleMoneyForwardImageSelect(event) {
   event.target.value = '';
   if (!file) return;
   _renderImportStep('loading', 'AIで資産情報を読み取り中...');
-  const parsed = await parseMoneyForwardImage(file);
-  if (!parsed || parsed.length === 0) {
-    _renderImportStep('error', '画像から資産情報を読み取れませんでした。資産一覧が写ったスクリーンショットをお試しください。');
-    return;
+  try {
+    const parsed = await parseMoneyForwardImage(file);
+    if (!parsed || parsed.length === 0) {
+      _renderImportStep('error', '画像から資産情報を読み取れませんでした。資産一覧が写ったスクリーンショットをお試しください。');
+      return;
+    }
+    _importState.parsed = parsed;
+    _renderImportStep('review');
+  } catch (e) {
+    console.error('[import] MF image handler error:', e);
+    _renderImportStep('error', `読み取りエラー: ${e.message}`);
   }
-  _importState.parsed = parsed;
-  _renderImportStep('review');
 }
 
 // ── HTML エスケープ ───────────────────────────────────────────────────────
