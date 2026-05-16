@@ -17,3 +17,4 @@ push.sh
 # Cloudflare Worker
 worker/node_modules/
 worker/package-lock.json
+worker/.wrangler/
