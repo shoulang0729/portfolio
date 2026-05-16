@@ -172,16 +172,25 @@ async function parseMoneyForwardImage(file) {
 }
 
 function _mfAssetToPosition(a) {
-  if (!a.symbol || !a.name) return null;
+  if (!a.name) return null;
+  const name = String(a.name).trim();
   const cat = a.category === '米国株' ? '米国株・ETF'
             : a.category === '投資信託' ? '投資信託'
             : '日本株・ETF';
-  const isJP = cat === '日本株・ETF';
+  const isJP   = cat === '日本株・ETF';
   const isFund = cat === '投資信託';
-  const sym  = String(a.symbol).trim();
+
+  // GPT-4oがsymbolを空で返す場合、投資信託はFUND_SYMBOL_PATTERNSでマッチ
+  let sym = String(a.symbol || '').trim();
+  if (!sym && isFund) {
+    const matched = FUND_SYMBOL_PATTERNS.find(([pat]) => name.includes(pat));
+    if (matched) sym = matched[1];
+  }
+  if (!sym) sym = name; // 最終フォールバック: 名前をそのままシンボルに
+
   const proxy = isFund ? (FUND_PROXY_MAP[sym] ?? { ySymbol: '^N225', proxyName: '日経平均' }) : null;
   return {
-    symbol: sym, name: String(a.name).trim(), cat,
+    symbol: sym, name, cat,
     shares: Number(a.shares) || 0, price: 0,
     avgCost: Number(a.avgCost) || 0, value: 0,
     pnl: 0, pnlPct: 0, dayPct: null, dayCh: null,
