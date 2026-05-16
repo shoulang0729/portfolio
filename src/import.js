@@ -224,7 +224,7 @@ async function savePositionsToKV(newPositions, pinHashOverride) {
   const pinHash = pinHashOverride
     || localStorage.getItem('hm-pin-hash')
     || '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
-  const res = await fetchWithTimeout(`${WORKER_URL}/positions`, 15000, {
+  const res = await fetchWithTimeout(`${WORKER_URL}/positions`, 30000, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', 'X-Pin-Hash': pinHash },
     body: JSON.stringify(newPositions),
@@ -326,8 +326,8 @@ function _renderImportStep(step, payload) {
     const total = _importState.parsed.length + removed.length;
     html += `<div class="import-review-summary">${_importState.parsed.length}銘柄を検出`;
     if (added.length)    html += ` · <span class="imp-badge new">${added.length}件新規</span>`;
-    if (removed.length)  html += ` · <span class="imp-badge del">${removed.length}件削除予定</span>`;
     if (changed.length)  html += ` · <span class="imp-badge chg">${changed.length}件変更</span>`;
+    if (unchanged.length) html += ` · ${unchanged.length}件変更なし`;
     html += `</div>`;
 
     html += `<div class="import-list">`;
@@ -346,12 +346,20 @@ function _renderImportStep(step, payload) {
     for (const p of unchanged) {
       html += _importRow(p, 'same', true);
     }
-    // 削除予定（現在あるが今回のCSVにない）
-    for (const p of removed) {
-      html += _importRow(p, 'del', false);
-    }
 
     html += `</div>`;
+
+    // 今回のファイルにない既存銘柄（デフォルト保持・チェックで削除）
+    if (removed.length > 0) {
+      html += `<details class="import-kept-section">
+        <summary class="import-kept-title">今回のファイルにない既存銘柄 (${removed.length}件) — デフォルトで保持</summary>
+        <div class="import-kept-note">チェックすると削除されます。チェックなし = そのまま残す</div>
+        <div class="import-list">`;
+      for (const p of removed) {
+        html += _importRow(p, 'del', false);
+      }
+      html += `</div></details>`;
+    }
     html += `<div class="import-footer">
       <button class="import-cancel-btn" onclick="closeImportModal()">キャンセル</button>
       <button class="import-confirm-btn" onclick="_confirmImport()">取込確定 →</button>
@@ -451,6 +459,8 @@ async function _doSavePositions(finalPositions, pinHashOverride) {
   } catch (e) {
     if (e.message.includes('PIN認証失敗')) {
       _renderImportStep('pin-auth');
+    } else if (e.name === 'AbortError' || e.message.includes('aborted')) {
+      _renderImportStep('error', '保存がタイムアウトしました。もう一度お試しください。');
     } else {
       _renderImportStep('error', `保存に失敗しました: ${e.message}`);
     }
