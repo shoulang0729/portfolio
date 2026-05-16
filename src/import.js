@@ -11,9 +11,12 @@
 
 // 投資信託の Yahoo Finance proxy マッピング（symbol → { ySymbol, isProxy, proxyName }）
 const FUND_PROXY_MAP = {
-  'オルカン':    { ySymbol: 'ACWI',  proxyName: 'iShares MSCI ACWI ETF' },
-  'ひふみ':      { ySymbol: '2563.T', proxyName: 'iシェアーズ・コアS&P500' },
+  'オルカン':    { ySymbol: 'ACWI',   proxyName: 'iShares MSCI ACWI ETF' },
+  'ひふみ投信':  { ySymbol: '2563.T', proxyName: 'iシェアーズ・コアS&P500' },
   'ひふみXO':    { ySymbol: 'SPY',    proxyName: 'SPDR S&P500 ETF' },
+  'ひふみMS':    { ySymbol: '^GSPC',  proxyName: 'S&P 500 Index' },
+  // 旧シンボル名の後方互換（KV保存済みデータ向け）
+  'ひふみ':      { ySymbol: '2563.T', proxyName: 'iシェアーズ・コアS&P500' },
   'マイクロSP':  { ySymbol: '^GSPC',  proxyName: 'S&P 500 Index' },
 };
 
