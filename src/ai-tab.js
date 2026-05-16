@@ -524,11 +524,9 @@ function renderAiTab() {
       </label>
       ${tpl.isCustom ? `
         <div class="ai-custom-area visible" id="ai-custom-area">
-          <div class="ai-input-wrap">
-            <textarea class="ai-question" id="ai-custom-text"
-              placeholder="例: ポートフォリオのリスク分散は十分ですか？半導体セクターへの集中を減らすべきですか？"
-              rows="3" onkeydown="if(event.ctrlKey&&event.key==='Enter')aiAskAll()"></textarea>
-          </div>
+          <textarea class="ai-custom-textarea" id="ai-custom-text"
+            placeholder="例: ポートフォリオのリスク分散は十分ですか？半導体セクターへの集中を減らすべきですか？"
+            rows="2" onkeydown="if(event.ctrlKey&&event.key==='Enter')aiAskAll()"></textarea>
         </div>` : ''}`;
   }).join('');
 
@@ -601,16 +599,6 @@ function renderAiTab() {
           ${modelsHtml}
         </div>
 
-      </div>
-
-      <!-- ルーティンボタン -->
-      <div class="ai-routine-btns">
-        <button class="ai-routine-btn" onclick="aiRunRoutine('japan')" title="Japan Close ルーティンを実行">
-          🇯🇵 Japan Close
-        </button>
-        <button class="ai-routine-btn" onclick="aiRunRoutine('us')" title="US Overnight ルーティンを実行">
-          🇺🇸 US Overnight
-        </button>
       </div>
 
       <!-- 送信ボタン -->

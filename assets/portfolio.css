@@ -6,50 +6,53 @@
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
 /* ── CSS Variables (Light / Dark / Auto) ── */
+/* Claude デスクトップアプリ準拠のウォームトーンパレット */
 :root,
 html[data-theme="light"] {
-  --bg:        #F2F2F7;
-  --surface:   #FFFFFF;
-  --surface2:  #F2F2F7;
-  --surface3:  #E5E5EA;
-  --border:    #C6C6CB;
-  --border2:   #E5E5EA;
-  --text:      #1C1C1E;
-  --text2:     #8E8E93;
-  --text3:     rgba(60,60,67,0.55);
-  --shadow:    0 8px 32px rgba(0,0,0,0.12);
-  --shadow2:   rgba(0,0,0,0.40);
-  --null-cell: #E5E5EA;
-  --cat-bg:    #E0E0E5;
-  --handle:    #C6C6CB;
-  --chart-grid:rgba(0,0,0,0.07);
-  --cost-line: rgba(80,80,90,0.55);
-  --cost-text: rgba(80,80,90,0.80);
-  --scrollbar-thumb:       rgba(0,0,0,0.20);
-  --scrollbar-thumb-hover: rgba(0,0,0,0.35);
+  --bg:        #f7f2ee;
+  --surface:   #ffffff;
+  --surface2:  #f0e9e3;
+  --surface3:  #e8ddd7;
+  --border:    #d4c8c0;
+  --border2:   #e4d9d2;
+  --text:      #1c1714;
+  --text2:     #78695f;
+  --text3:     rgba(28,23,20,0.50);
+  --shadow:    0 8px 32px rgba(0,0,0,0.10);
+  --shadow2:   rgba(0,0,0,0.35);
+  --null-cell: #e8ddd7;
+  --cat-bg:    #e0d4cc;
+  --handle:    #d4c8c0;
+  --chart-grid:rgba(0,0,0,0.06);
+  --cost-line: rgba(80,65,55,0.55);
+  --cost-text: rgba(80,65,55,0.80);
+  --scrollbar-thumb:       rgba(0,0,0,0.18);
+  --scrollbar-thumb-hover: rgba(0,0,0,0.30);
   --scrollbar-track:       transparent;
+  --accent:    #cc785c;
 }
 html[data-theme="dark"] {
-  --bg:        #000000;
-  --surface:   #1C1C1E;
-  --surface2:  #2C2C2E;
-  --surface3:  #3A3A3C;
-  --border:    #3A3A3C;
-  --border2:   #48484A;
-  --text:      #FFFFFF;
-  --text2:     #8E8E93;
-  --text3:     rgba(235,235,245,0.60);
-  --shadow:    0 8px 32px rgba(0,0,0,0.50);
-  --shadow2:   rgba(0,0,0,0.70);
-  --null-cell: #2C2C2E;
-  --cat-bg:    #2C2C2E;
-  --handle:    #48484A;
-  --chart-grid:rgba(255,255,255,0.07);
-  --cost-line: rgba(255,255,255,0.70);
-  --cost-text: rgba(255,255,255,0.80);
-  --scrollbar-thumb:       rgba(255,255,255,0.18);
-  --scrollbar-thumb-hover: rgba(255,255,255,0.30);
+  --bg:        #1c1917;
+  --surface:   #27211e;
+  --surface2:  #322b28;
+  --surface3:  #3d3530;
+  --border:    #48403b;
+  --border2:   #3d3530;
+  --text:      #f5f0ec;
+  --text2:     #a09188;
+  --text3:     rgba(245,240,236,0.50);
+  --shadow:    0 8px 32px rgba(0,0,0,0.55);
+  --shadow2:   rgba(0,0,0,0.72);
+  --null-cell: #322b28;
+  --cat-bg:    #2e2722;
+  --handle:    #48403b;
+  --chart-grid:rgba(255,255,255,0.06);
+  --cost-line: rgba(255,250,245,0.65);
+  --cost-text: rgba(255,250,245,0.80);
+  --scrollbar-thumb:       rgba(255,255,255,0.15);
+  --scrollbar-thumb-hover: rgba(255,255,255,0.26);
   --scrollbar-track:       transparent;
+  --accent:    #cc785c;
 }
 /* @media (prefers-color-scheme: dark) は app.js の applyTheme() が
    matchMedia で解決して data-theme="dark" を明示セットするため不要。
@@ -679,26 +682,30 @@ body {
 .tab-bar {
   display: flex;
   background: var(--bg);
-  padding: 0;           /* 左端を他要素と揃える */
+  border-bottom: 1px solid var(--border);
+  padding: 0;
 }
 .tab-btn {
   flex: 1;
-  padding: 8px 4px 6px;
+  padding: 9px 4px 7px;
   background: none;
   border: none;
-  border-bottom: 2px solid var(--border);  /* 全ボタン共通のグレー下線 */
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
   color: var(--text2);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s;
+  -webkit-tap-highlight-color: transparent;
 }
 .tab-btn:hover {
   color: var(--text);
 }
 .tab-btn.active {
-  color: var(--text);
-  border-bottom-color: var(--text);  /* アクティブは同じ位置を上書き */
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
 }
 
 /* ── タブパネル ── */
@@ -1071,8 +1078,8 @@ body {
 
 /* パネル全体の余白 */
 .ai-panel-inner {
-  padding: 16px 16px 40px;
-  max-width: 900px;
+  padding: 14px 14px 24px;
+  max-width: 860px;
   margin: 0 auto;
 }
 
@@ -1144,11 +1151,11 @@ body {
 
 /* ── AI 設定パネル（チェックボックスUI） ── */
 .ai-config {
-  display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px;
+  display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px;
 }
 .ai-config-section {
   border: 1px solid var(--border); border-radius: 10px;
-  padding: 10px 14px 12px; background: var(--surface2);
+  padding: 10px 12px 10px; background: var(--surface2);
 }
 .ai-config-title {
   font-size: 10px; font-weight: 700; color: var(--text2);
@@ -1201,8 +1208,26 @@ body {
 .ai-ver-select:hover { border-color: var(--border2); }
 .ai-ver-select:disabled { opacity: 0.3; cursor: not-allowed; }
 .ai-send-row {
-  display: flex; justify-content: flex-end; margin-bottom: 16px;
+  display: flex; justify-content: flex-end; margin-bottom: 12px;
 }
+.ai-custom-textarea {
+  width: 100%;
+  padding: 9px 10px;
+  background: var(--surface3);
+  border: 1px solid var(--border);
+  border-radius: 0;
+  outline: none;
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  resize: none;
+  box-sizing: border-box;
+  line-height: 1.6;
+  display: block;
+  margin-top: 6px;
+}
+.ai-custom-textarea:focus { border-color: var(--accent); }
+.ai-custom-textarea::placeholder { color: var(--text2); }
 
 /* ── パスキーボタン ── */
 .pin-passkey-btn {
