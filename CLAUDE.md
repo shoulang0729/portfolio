@@ -120,6 +120,8 @@ fetchSymbolHistory(ySymbol, range)
 
 | バージョン | 内容 |
 |---|---|
+| 20260516i | 資産推移タブ削除、マネックスCSV/マネフォスクショ取込モーダル（import.js）、保有銘柄KV化（/positions）、Worker Cron 6h価格キャッシュ |
+| 20260516h | AI相談タブ全面リデザイン（チェックボックス選択式）、Claude Desktopウォームトーンデザイン、DESIGN.md作成 |
 | 20260516c | ディレクトリ構成整理（src/ assets/ docs/）、AI API外部化（Cloudflare Secrets）、ウォッチリストKV同期、Notion自動保存、ルーティンボタン、パスキー認証追加 |
 | 20260516b | Cloudflare Worker プロキシ実装（Yahoo/Finnhub/AI）、APIキーをWorker Secretsに移管 |
 | 20260417a | ポートフォリオ更新（1629分割・PLTR追加・株数変更）、Finnhub異常価格スキップ修正 |

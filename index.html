@@ -21,7 +21,7 @@
 <link rel="manifest" href="assets/manifest.json">
 
 <!-- スタイルシート -->
-<link rel="stylesheet" href="assets/portfolio.css?v=20260516h">
+<link rel="stylesheet" href="assets/portfolio.css?v=20260516i">
 <!-- 銘柄リスト列表示制御（JS が動的に書き込む） -->
 <style id="sl-col-style"></style>
 <!-- ★ モバイルレイアウト CSS フォールバック
@@ -93,11 +93,32 @@
             </svg>
           </span>パスキー登録
         </button>
+        <div class="hm-menu-divider"></div>
+        <button class="hm-menu-item" id="import-manex-btn" onclick="openImportModal('manex'); closeHmMenu()" title="マネックス証券 CSV を取込（国内株・米国株・投資信託）" style="display:none">
+          <span class="hm-icon">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="2" y="1" width="10" height="12" rx="1.5" stroke="currentColor" stroke-width="1.4" fill="none"/>
+              <line x1="4.5" y1="5" x2="9.5" y2="5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+              <line x1="4.5" y1="7.5" x2="9.5" y2="7.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+              <line x1="4.5" y1="10" x2="7.5" y2="10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+            </svg>
+          </span>マネックス取込
+        </button>
+        <button class="hm-menu-item" id="import-mf-btn" onclick="openImportModal('moneyforward'); closeHmMenu()" title="マネーフォワード スクショを取込" style="display:none">
+          <span class="hm-icon">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="1" y="2.5" width="12" height="9" rx="1.5" stroke="currentColor" stroke-width="1.4" fill="none"/>
+              <circle cx="7" cy="7" r="2.2" stroke="currentColor" stroke-width="1.2"/>
+              <line x1="3" y1="0.5" x2="5" y2="2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+              <line x1="11" y1="0.5" x2="9" y2="2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+            </svg>
+          </span>マネフォ取込
+        </button>
+        <!-- 隠しファイル入力 -->
+        <input type="file" id="import-manex-input" accept=".csv" multiple style="display:none" onchange="handleManexFileSelect(event)">
+        <input type="file" id="import-mf-input" accept="image/*" style="display:none" onchange="handleMoneyForwardImageSelect(event)">
       </div>
     </div>
-    <!-- CSVインポート（休止中 / 削除要否は後日確認） -->
-    <!-- <input type="file" id="csv-import-input" accept=".csv" multiple style="display:none" onchange="handleCsvImport(event)">
-    <button class="csv-btn" onclick="document.getElementById('csv-import-input').click()" title="マネックス証券CSVを読み込む（国内株・米国株・投資信託）">CSV</button> -->
   </div>
 </div>
 
@@ -119,7 +140,6 @@
             onclick="switchTab('list')">銘柄リスト</button>
     <button class="tab-btn" data-tab="watchlist" role="tab"
             onclick="switchTab('watchlist')">ウォッチリスト</button>
-    <button class="tab-btn tab-disabled" data-tab="history" role="tab" disabled title="実装検討中">資産推移</button>
     <button class="tab-btn" data-tab="ai" role="tab"
             onclick="switchTab('ai')">AI相談</button>
   </div>
@@ -205,15 +225,22 @@
 </div>
 </section><!-- /panel-watchlist -->
 
-<!-- 資産推移パネル（タブ4） -->
-<section id="panel-history" class="tab-panel">
-</section><!-- /panel-history -->
-
 <!-- AI相談パネル（タブ5） -->
 <section id="panel-ai" class="tab-panel">
 </section><!-- /panel-ai -->
 
 <div class="tooltip" id="tooltip"></div>
+
+<!-- ── Import Modal ── -->
+<div class="modal-overlay" id="import-modal-overlay" style="display:none" onclick="handleImportOverlayClick(event)">
+  <div class="modal import-modal" id="import-modal">
+    <div class="modal-header">
+      <div class="modal-title" id="import-modal-title">資産取込</div>
+      <span class="modal-close" onclick="closeImportModal()">✕</span>
+    </div>
+    <div id="import-modal-body"></div>
+  </div>
+</div>
 
 <!-- ── Chart Modal ── -->
 <div class="modal-overlay" id="modal-overlay" style="display:none" onclick="handleOverlayClick(event)">
@@ -243,19 +270,19 @@
 
 
 <!-- ★ 保有データ（銘柄の追加・変更はこのファイルのみ編集すれば OK） -->
-<script src="src/auth.js?v=20260516h"></script>
-<script src="src/positions.js?v=20260516h"></script>
+<script src="src/auth.js?v=20260516i"></script>
+<script src="src/positions.js?v=20260516i"></script>
 <!-- アプリロジック（分割ファイル） -->
-<script src="src/state.js?v=20260516h"></script>
-<script src="src/utils.js?v=20260516h"></script>
-<script src="src/data.js?v=20260516h"></script>
-<script src="src/heatmap.js?v=20260516h"></script>
-<script src="src/chart.js?v=20260516h"></script>
-<script src="src/stock-list.js?v=20260516h"></script>
-<script src="src/watchlist.js?v=20260516h"></script>
-<script src="src/history.js?v=20260516h"></script>
-<script src="src/ai-tab.js?v=20260516h"></script>
-<script src="src/app.js?v=20260516h"></script>
+<script src="src/state.js?v=20260516i"></script>
+<script src="src/utils.js?v=20260516i"></script>
+<script src="src/data.js?v=20260516i"></script>
+<script src="src/heatmap.js?v=20260516i"></script>
+<script src="src/chart.js?v=20260516i"></script>
+<script src="src/stock-list.js?v=20260516i"></script>
+<script src="src/watchlist.js?v=20260516i"></script>
+<script src="src/import.js?v=20260516i"></script>
+<script src="src/ai-tab.js?v=20260516i"></script>
+<script src="src/app.js?v=20260516i"></script>
 
 <!-- フォールバック JS：旧版 portfolio.js でもヒートマップが描画されるよう保証 -->
 <script>

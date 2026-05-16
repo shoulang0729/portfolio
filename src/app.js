@@ -290,11 +290,9 @@ function init() {
   // 初期タブ状態を適用（ヒートマップのみ表示、他は非表示）
   const panelList      = document.getElementById('panel-list');
   const panelWatchlist = document.getElementById('panel-watchlist');
-  const panelHistory   = document.getElementById('panel-history');
   const panelAi        = document.getElementById('panel-ai');
   if (panelList)      panelList.hidden      = true;
   if (panelWatchlist) panelWatchlist.hidden = true;
-  if (panelHistory)   panelHistory.hidden   = true;
   if (panelAi)        panelAi.hidden        = true;
 
   renderStats();
@@ -319,12 +317,20 @@ function init() {
   // リスト高さを初期設定（DOM確定後）
   requestAnimationFrame(updateListHeight);
 
-  // 起動時に自動で初回ライブ更新 → 資産記録 → バックグラウンドで履歴データ取得
+  // 起動時に KV から保有銘柄を読み込んでから価格取得
   (async () => {
+    // 1. KV から保有銘柄を取得（あれば positions.js の内容を上書き）
+    if (typeof loadPositionsFromKV === 'function') {
+      const loaded = await loadPositionsFromKV();
+      if (loaded) { renderStats(); renderHeatmap(); }
+    }
+    // 2. Cron キャッシュ価格を即時反映（ライブ取得前の暫定表示）
+    if (typeof applyPricesCache === 'function') {
+      applyPricesCache(); // fire-and-forget
+    }
+    // 3. ライブ価格取得
     await refreshPrices();
-    // 初回ライブ更新完了後にスケルトンを非表示にして SVG を表示
     _hideHeatmapSkeleton();
-    // ライブ価格取得後に今日の資産額を記録
     if (typeof recordTodayAsset === 'function') recordTodayAsset();
     for (const range of ['1y', '5y', '10y']) {
       await fetchAllHistorical(range);
@@ -362,19 +368,17 @@ function updateListHeight() {
 
 // ── タブ切替 ──
 function switchTab(name) {
-  // 'heatmap' | 'list' | 'watchlist' | 'history' | 'ai'
+  // 'heatmap' | 'list' | 'watchlist' | 'ai'
   if (state.activeTab === name) return;
   state.activeTab = name;
 
   const panelHeatmap   = document.getElementById('panel-heatmap');
   const panelList      = document.getElementById('panel-list');
   const panelWatchlist = document.getElementById('panel-watchlist');
-  const panelHistory   = document.getElementById('panel-history');
   const panelAi        = document.getElementById('panel-ai');
   if (panelHeatmap)   panelHeatmap.hidden   = (name !== 'heatmap');
   if (panelList)      panelList.hidden      = (name !== 'list');
   if (panelWatchlist) panelWatchlist.hidden = (name !== 'watchlist');
-  if (panelHistory)   panelHistory.hidden   = (name !== 'history');
   if (panelAi)        panelAi.hidden        = (name !== 'ai');
 
   // タブボタンの active 状態を更新
@@ -398,13 +402,6 @@ function switchTab(name) {
       renderWatchlist();
       fetchWatchlistData();
     }
-  }
-
-  // 資産推移タブに切り替えたとき描画（D3 幅確定後）
-  if (name === 'history') {
-    requestAnimationFrame(() => {
-      if (typeof renderHistoryTab === 'function') renderHistoryTab();
-    });
   }
 
   // AI 相談タブに切り替えたとき初期レンダリング

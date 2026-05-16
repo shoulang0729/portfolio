@@ -10,6 +10,10 @@
 //   POST /ai/claude                     Claude (Anthropic) プロキシ
 //   GET  /watchlist                     ウォッチリスト取得（KV）
 //   PUT  /watchlist                     ウォッチリスト保存（KV）
+//   GET  /positions                     保有銘柄取得（KV・非公開）
+//   PUT  /positions                     保有銘柄保存（KV・PIN認証必須）
+//   PUT  /auth/pin-hash                 PIN ハッシュ更新（KV）
+//   GET  /prices/cache                  Cron キャッシュ価格取得（KV）
 //   POST /notion/save                   AI相談結果をNotion DBに保存
 //   GET  /auth/challenge                パスキー認証チャレンジ生成
 //   POST /auth/register                 パスキー登録
@@ -20,6 +24,7 @@
 //   GROK_API_KEY, DEEPSEEK_API_KEY, ANTHROPIC_API_KEY,
 //   NOTION_API_KEY, NOTION_DB_ID, ALLOWED_ORIGIN
 //   KV: Cloudflare KV namespace binding
+// Cron: 0 */6 * * *  — 6時間ごとに全保有銘柄の価格を取得してキャッシュ
 
 const FINNHUB_BASE = 'https://finnhub.io/api/v1';
 
@@ -229,6 +234,59 @@ async function handleNotionSave(request, env, origin) {
   }
 }
 
+// ── 保有銘柄（KV・非公開）────────────────────────────────────
+// GET: 許可オリジンからのみ取得可能
+// PUT: 許可オリジンかつ X-Pin-Hash ヘッダーによる PIN 認証が必要
+const DEFAULT_PIN_HASH = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4'; // SHA-256("1234")
+
+async function handlePositions(request, env, origin) {
+  if (!env.KV) return errRes('KV 未設定', 500, origin);
+
+  if (request.method === 'GET') {
+    const val = await env.KV.get('positions');
+    return jsonRes(val ? JSON.parse(val) : [], 200, origin);
+  }
+
+  if (request.method === 'PUT') {
+    const pinHash = request.headers.get('X-Pin-Hash');
+    if (!pinHash) return errRes('認証が必要です（X-Pin-Hash）', 401, origin);
+    const storedHash = await env.KV.get('auth:pin-hash') || DEFAULT_PIN_HASH;
+    if (pinHash !== storedHash) return errRes('PIN認証失敗', 401, origin);
+
+    let body;
+    try { body = await request.json(); } catch { return errRes('JSON 不正', 400, origin); }
+    if (!Array.isArray(body)) return errRes('Array が必要です', 400, origin);
+    await env.KV.put('positions', JSON.stringify(body));
+    return jsonRes({ ok: true }, 200, origin);
+  }
+
+  return errRes('GET/PUT のみ許可', 405, origin);
+}
+
+// ── PIN ハッシュ更新 ──────────────────────────────────────────
+async function handleAuthPinHash(request, env, origin) {
+  if (request.method !== 'PUT') return errRes('PUT のみ許可', 405, origin);
+  if (!env.KV) return errRes('KV 未設定', 500, origin);
+
+  let body;
+  try { body = await request.json(); } catch { return errRes('JSON 不正', 400, origin); }
+  const { oldHash, newHash } = body;
+  if (!oldHash || !newHash) return errRes('oldHash/newHash が必要です', 400, origin);
+
+  const storedHash = await env.KV.get('auth:pin-hash') || DEFAULT_PIN_HASH;
+  if (oldHash !== storedHash) return errRes('現在のPIN認証失敗', 401, origin);
+
+  await env.KV.put('auth:pin-hash', newHash);
+  return jsonRes({ ok: true }, 200, origin);
+}
+
+// ── 価格キャッシュ（Cron が書き込み、フロントが読む）──────────
+async function handlePricesCache(env, origin) {
+  if (!env.KV) return errRes('KV 未設定', 500, origin);
+  const val = await env.KV.get('prices:cache');
+  return jsonRes(val ? JSON.parse(val) : {}, 200, origin);
+}
+
 // ── パスキー認証 ──────────────────────────────────────
 
 // チャレンジ生成（60秒TTL）
@@ -299,16 +357,62 @@ export default {
     const org = allowed ? origin : '*';
 
     const path = url.pathname;
-    if (path === '/')               return new Response('portfolio-proxy OK', { status: 200 });
-    if (path === '/yahoo')          return handleYahoo(url, org);
-    if (path === '/finnhub')        return handleFinnhub(url, env, org);
-    if (path.startsWith('/ai/'))    return handleAI(request, path, env, org);
-    if (path === '/watchlist')      return handleWatchlist(request, env, org);
-    if (path === '/notion/save')    return handleNotionSave(request, env, org);
-    if (path === '/auth/challenge') return handleAuthChallenge(env, org);
-    if (path === '/auth/register')  return handleAuthRegister(request, env, org);
-    if (path === '/auth/verify')    return handleAuthVerify(request, env, org);
+    if (path === '/')                return new Response('portfolio-proxy OK', { status: 200 });
+    if (path === '/yahoo')           return handleYahoo(url, org);
+    if (path === '/finnhub')         return handleFinnhub(url, env, org);
+    if (path.startsWith('/ai/'))     return handleAI(request, path, env, org);
+    if (path === '/watchlist')       return handleWatchlist(request, env, org);
+    if (path === '/positions')       return handlePositions(request, env, org);
+    if (path === '/prices/cache')    return handlePricesCache(env, org);
+    if (path === '/auth/pin-hash')   return handleAuthPinHash(request, env, org);
+    if (path === '/notion/save')     return handleNotionSave(request, env, org);
+    if (path === '/auth/challenge')  return handleAuthChallenge(env, org);
+    if (path === '/auth/register')   return handleAuthRegister(request, env, org);
+    if (path === '/auth/verify')     return handleAuthVerify(request, env, org);
 
     return errRes('Not Found', 404, org);
+  },
+
+  // ── Cron: 6時間ごとに全保有銘柄の価格をキャッシュ ───────────
+  async scheduled(event, env, ctx) {
+    if (!env.KV || !env.FINNHUB_API_KEY) return;
+
+    const posVal = await env.KV.get('positions');
+    if (!posVal) return;
+    const positions = JSON.parse(posVal);
+    if (!positions.length) return;
+
+    const cache = {};
+    const BATCH = 5;
+
+    for (let i = 0; i < positions.length; i += BATCH) {
+      const batch = positions.slice(i, i + BATCH);
+      await Promise.all(batch.map(async p => {
+        if (!p.ySymbol) return;
+        try {
+          // Finnhub シンボルに変換（東証: 9983.T → TYO:9983）
+          const fSym = p.ySymbol.endsWith('.T')
+            ? 'TYO:' + p.ySymbol.slice(0, -2)
+            : p.ySymbol;
+          const res = await fetch(
+            `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(fSym)}&token=${env.FINNHUB_API_KEY}`,
+            { cf: { cacheTtl: 300 } }
+          );
+          if (!res.ok) return;
+          const d = await res.json();
+          if (d?.c && d.c > 0) {
+            cache[p.ySymbol] = { price: d.c, dayPct: d.dp ?? null, ts: Date.now() };
+          }
+        } catch { /* 個別エラーは無視して継続 */ }
+      }));
+      // バッチ間の待機（Finnhub 60リクエスト/分制限）
+      if (i + BATCH < positions.length) {
+        await new Promise(r => setTimeout(r, 1200));
+      }
+    }
+
+    if (Object.keys(cache).length > 0) {
+      await env.KV.put('prices:cache', JSON.stringify(cache), { expirationTtl: 25200 }); // 7h TTL
+    }
   },
 };

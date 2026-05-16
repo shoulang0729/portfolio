@@ -199,6 +199,52 @@ function clearCacheSession() {
 // ── 起動時に即時復元（state.js のロード後、API 取得前） ──
 loadCacheFromSession();
 
+// ── KV キャッシュ価格を positions に適用 ──────────────────────
+async function applyPricesCache() {
+  try {
+    const res = await fetchWithTimeout(`${WORKER_URL}/prices/cache`, 8000);
+    if (!res.ok) return;
+    const cache = await res.json();
+    if (!cache || typeof cache !== 'object') return;
+    const now = Date.now();
+    let applied = 0;
+    for (const p of positions) {
+      const c = cache[p.ySymbol];
+      if (!c || !c.price) continue;
+      // キャッシュが8時間以内のもののみ適用
+      if (c.ts && (now - c.ts) > 8 * 3600 * 1000) continue;
+      if (!p.isProxy && p.price > 0 && (c.price / p.price < 0.1 || c.price / p.price > 10)) continue;
+      if (p.isProxy) {
+        p.dayPct = c.dayPct ?? null;
+      } else {
+        const oldPrice = p.price;
+        p.price = c.price;
+        p.dayPct = c.dayPct ?? null;
+        if (p.cur === 'JPY') {
+          p.value = Math.round(c.price * p.shares);
+          const cost = p.avgCost * p.shares;
+          p.pnl    = p.value - cost;
+          p.pnlPct = cost > 0 ? (p.pnl / cost) * 100 : 0;
+        } else {
+          const costJPY = (p.value != null && p.pnl != null) ? p.value - p.pnl : 0;
+          const ratio   = oldPrice > 0 ? c.price / oldPrice : 1;
+          p.value  = Math.round(p.value * ratio);
+          p.pnl    = p.value - costJPY;
+          p.pnlPct = costJPY > 0 ? (p.pnl / costJPY) * 100 : 0;
+        }
+      }
+      applied++;
+    }
+    if (applied > 0) {
+      console.log(`[prices:cache] ${applied}銘柄に Cron キャッシュ価格を適用`);
+      if (typeof renderStats === 'function') renderStats();
+      if (typeof renderHeatmap === 'function') renderHeatmap();
+    }
+  } catch (e) {
+    console.warn('[prices:cache] 読込失敗:', e);
+  }
+}
+
 // ══════════════════════════════════════════════
 // HISTORICAL DATA FETCH
 // ══════════════════════════════════════════════

@@ -358,8 +358,15 @@ async function _pcSubmit() {
       return;
     }
     // 保存
+    const prevHash = _getActivePinHash(); // 変更前のハッシュ（Worker認証に使用）
     const newHash = await _hashPin(_pc.newPin);
     localStorage.setItem(AUTH_LS_HASH_KEY, newHash);
+    // Worker の KV にも新ハッシュを同期（失敗しても PIN 変更自体は成功とみなす）
+    fetch(`${WORKER_URL}/auth/pin-hash`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ oldHash: prevHash, newHash }),
+    }).catch(() => {});
     _pcSuccess();
   }
 }
@@ -419,13 +426,17 @@ function closePinChange() {
 }
 
 // ══════════════════════════════════════════════
-// PIN 変更ボタンをヘッダーに表示
+// PIN 変更ボタン・取込ボタンをヘッダーに表示
 // ══════════════════════════════════════════════
 function _showChangePinButton() {
   const btn = document.getElementById('pin-change-btn');
   if (btn) btn.style.display = '';
   const pkBtn = document.getElementById('passkey-register-btn');
   if (pkBtn) pkBtn.style.display = '';
+  const manexBtn = document.getElementById('import-manex-btn');
+  if (manexBtn) manexBtn.style.display = '';
+  const mfBtn = document.getElementById('import-mf-btn');
+  if (mfBtn) mfBtn.style.display = '';
 }
 
 // ══════════════════════════════════════════════
