@@ -21,7 +21,7 @@
 <link rel="manifest" href="assets/manifest.json">
 
 <!-- スタイルシート -->
-<link rel="stylesheet" href="assets/portfolio.css?v=20260517c">
+<link rel="stylesheet" href="assets/portfolio.css?v=20260517d">
 <!-- 銘柄リスト列表示制御（JS が動的に書き込む） -->
 <style id="sl-col-style"></style>
 <!-- ★ モバイルレイアウト CSS フォールバック
@@ -113,6 +113,17 @@
               <line x1="11" y1="0.5" x2="9" y2="2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
             </svg>
           </span>マネフォ取込
+        </button>
+        <button class="hm-menu-item" id="manage-positions-btn" onclick="openManagePositionsModal(); closeHmMenu()" title="保有銘柄の削除・整理" style="display:none">
+          <span class="hm-icon">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <line x1="2" y1="4" x2="12" y2="4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+              <line x1="2" y1="7" x2="12" y2="7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+              <line x1="2" y1="10" x2="8" y2="10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+              <line x1="10.5" y1="9" x2="12.5" y2="11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+              <line x1="12.5" y1="9" x2="10.5" y2="11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+            </svg>
+          </span>銘柄を整理
         </button>
       </div>
     </div>
@@ -271,19 +282,19 @@
 
 
 <!-- ★ 保有データ（銘柄の追加・変更はこのファイルのみ編集すれば OK） -->
-<script src="src/auth.js?v=20260517c"></script>
-<script src="src/positions.js?v=20260517c"></script>
+<script src="src/auth.js?v=20260517d"></script>
+<script src="src/positions.js?v=20260517d"></script>
 <!-- アプリロジック（分割ファイル） -->
-<script src="src/state.js?v=20260517c"></script>
-<script src="src/utils.js?v=20260517c"></script>
-<script src="src/data.js?v=20260517c"></script>
-<script src="src/heatmap.js?v=20260517c"></script>
-<script src="src/chart.js?v=20260517c"></script>
-<script src="src/stock-list.js?v=20260517c"></script>
-<script src="src/watchlist.js?v=20260517c"></script>
-<script src="src/import.js?v=20260517c"></script>
-<script src="src/ai-tab.js?v=20260517c"></script>
-<script src="src/app.js?v=20260517c"></script>
+<script src="src/state.js?v=20260517d"></script>
+<script src="src/utils.js?v=20260517d"></script>
+<script src="src/data.js?v=20260517d"></script>
+<script src="src/heatmap.js?v=20260517d"></script>
+<script src="src/chart.js?v=20260517d"></script>
+<script src="src/stock-list.js?v=20260517d"></script>
+<script src="src/watchlist.js?v=20260517d"></script>
+<script src="src/import.js?v=20260517d"></script>
+<script src="src/ai-tab.js?v=20260517d"></script>
+<script src="src/app.js?v=20260517d"></script>
 
 <!-- フォールバック JS：旧版 portfolio.js でもヒートマップが描画されるよう保証 -->
 <script>

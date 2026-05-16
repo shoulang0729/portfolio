@@ -272,6 +272,17 @@ function openImportModal(source) {
   requestAnimationFrame(() => overlay.classList.add('open'));
 }
 
+function openManagePositionsModal() {
+  _importState = { source: 'manage', parsed: [...positions], current: [...positions] };
+  const overlay = document.getElementById('import-modal-overlay');
+  const title   = document.getElementById('import-modal-title');
+  if (!overlay) return;
+  title.textContent = '保有銘柄を整理';
+  _renderImportStep('review');
+  overlay.style.display = 'flex';
+  requestAnimationFrame(() => overlay.classList.add('open'));
+}
+
 function closeImportModal() {
   const overlay = document.getElementById('import-modal-overlay');
   if (!overlay) return;
@@ -324,11 +335,15 @@ function _renderImportStep(step, payload) {
     let html = `<div class="import-review">`;
 
     const total = _importState.parsed.length + removed.length;
-    html += `<div class="import-review-summary">${_importState.parsed.length}銘柄を検出`;
-    if (added.length)    html += ` · <span class="imp-badge new">${added.length}件新規</span>`;
-    if (changed.length)  html += ` · <span class="imp-badge chg">${changed.length}件変更</span>`;
-    if (unchanged.length) html += ` · ${unchanged.length}件変更なし`;
-    html += `</div>`;
+    if (_importState.source === 'manage') {
+      html += `<div class="import-review-summary">保有銘柄 ${_importState.parsed.length}件 · <span style="color:var(--text2);font-weight:400">チェックを外すと削除されます</span></div>`;
+    } else {
+      html += `<div class="import-review-summary">${_importState.parsed.length}銘柄を検出`;
+      if (added.length)    html += ` · <span class="imp-badge new">${added.length}件新規</span>`;
+      if (changed.length)  html += ` · <span class="imp-badge chg">${changed.length}件変更</span>`;
+      if (unchanged.length) html += ` · ${unchanged.length}件変更なし`;
+      html += `</div>`;
+    }
 
     html += `<div class="import-list">`;
 
@@ -360,9 +375,10 @@ function _renderImportStep(step, payload) {
       }
       html += `</div></details>`;
     }
+    const confirmLabel = _importState.source === 'manage' ? '保存 →' : '取込確定 →';
     html += `<div class="import-footer">
       <button class="import-cancel-btn" onclick="closeImportModal()">キャンセル</button>
-      <button class="import-confirm-btn" onclick="_confirmImport()">取込確定 →</button>
+      <button class="import-confirm-btn" onclick="_confirmImport()">${confirmLabel}</button>
     </div>`;
     html += `</div>`;
     body.innerHTML = html;

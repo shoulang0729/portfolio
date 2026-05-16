@@ -437,6 +437,8 @@ function _showChangePinButton() {
   if (manexBtn) manexBtn.style.display = '';
   const mfBtn = document.getElementById('import-mf-btn');
   if (mfBtn) mfBtn.style.display = '';
+  const manageBtn = document.getElementById('manage-positions-btn');
+  if (manageBtn) manageBtn.style.display = '';
 }
 
 // ══════════════════════════════════════════════
