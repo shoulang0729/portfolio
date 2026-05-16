@@ -419,9 +419,10 @@ async function _confirmImport() {
 // ── ファイル選択ハンドラ ──────────────────────────────────────────────────
 
 async function handleManexFileSelect(event) {
-  const files = event.target.files;
+  // Array.from でコピーしてからクリア（FileList はクリアで空になるブラウザがある）
+  const files = Array.from(event.target.files || []);
   event.target.value = '';
-  if (!files || files.length === 0) return;
+  if (files.length === 0) return;
   _renderImportStep('loading', 'CSVを解析中...');
   const parsed = await parseManexFiles(files);
   if (!parsed || parsed.length === 0) {
