@@ -12,13 +12,13 @@
 // AI モデル設定
 // ══════════════════════════════════════════════
 const AI_MODELS = [
-  { id: 'gpt',      name: 'ChatGPT',  color: '#19C37D', textColor: '#fff',
+  { id: 'gpt',      name: 'ChatGPT',  color: '#10A37F', textColor: '#fff',
     versions: ['gpt-4o', 'gpt-4o-mini', 'o3', 'o4-mini'] },
   { id: 'gemini',   name: 'Gemini',   color: '#4285F4', textColor: '#fff',
     versions: ['gemini-2.0-flash', 'gemini-2.5-pro', 'gemini-1.5-pro'] },
-  { id: 'grok',     name: 'Grok',     color: '#1DA1F2', textColor: '#fff',
+  { id: 'grok',     name: 'Grok',     color: '#1A1A1A', textColor: '#fff',
     versions: ['grok-3-latest', 'grok-3-mini-latest', 'grok-2-latest'] },
-  { id: 'deepseek', name: 'DeepSeek', color: '#FF6B6B', textColor: '#fff',
+  { id: 'deepseek', name: 'DeepSeek', color: '#1C5EFF', textColor: '#fff',
     versions: ['deepseek-chat', 'deepseek-reasoner'] },
   { id: 'claude',   name: 'Claude',   color: '#CC785C', textColor: '#fff',
     versions: ['claude-sonnet-4-6', 'claude-opus-4-7', 'claude-haiku-4-5-20251001'],
