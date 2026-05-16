@@ -83,6 +83,22 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () 
   }
 });
 
+function toggleHmMenu() {
+  const dropdown = document.getElementById('hm-menu-dropdown');
+  const btn = document.getElementById('hm-menu-btn');
+  if (!dropdown) return;
+  const isOpen = dropdown.classList.toggle('open');
+  if (btn) { btn.textContent = isOpen ? '✕' : '☰'; btn.setAttribute('aria-expanded', String(isOpen)); }
+}
+
+function closeHmMenu() {
+  const dropdown = document.getElementById('hm-menu-dropdown');
+  const btn = document.getElementById('hm-menu-btn');
+  if (!dropdown) return;
+  dropdown.classList.remove('open');
+  if (btn) { btn.textContent = '☰'; btn.setAttribute('aria-expanded', 'false'); }
+}
+
 function cycleTheme() {
   const order = ['auto', 'light', 'dark'];
   state.themeMode = order[(order.indexOf(state.themeMode) + 1) % order.length];
@@ -176,6 +192,11 @@ async function handleRefreshSelect(val) {
   }, 1000);
 }
 
+document.addEventListener('click', (e) => {
+  const wrap = document.getElementById('hm-menu-wrap');
+  if (wrap && !wrap.contains(e.target)) closeHmMenu();
+});
+
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && state.autoSec > 0) state.countdownVal = state.autoSec;
 });
@@ -216,19 +237,17 @@ function _setupMobileLayout() {
     ? document.getElementById('refresh-switch').closest('.ctrl-group') : null;
   const refreshSwitch = document.getElementById('refresh-switch');
   const countdown     = document.getElementById('countdown');
-  const themeBtn      = document.getElementById('theme-btn');
+  const hmMenuWrap    = document.getElementById('hm-menu-wrap');
   const statusLine    = document.getElementById('status-line');
 
   const mobileRefresh = document.createElement('div');
   mobileRefresh.className = 'mobile-refresh';
 
-  // 上段：更新頻度スイッチ + テーマボタン + CSVボタン
+  // 上段：更新頻度スイッチ + ハンバーガーメニュー + CSVボタン
   const refreshTop = document.createElement('div');
   refreshTop.className = 'mobile-refresh-top';
   if (refreshSwitch) refreshTop.appendChild(refreshSwitch);
-  if (themeBtn)      refreshTop.appendChild(themeBtn);
-  const pinChangeBtn = document.getElementById('pin-change-btn');
-  if (pinChangeBtn)  refreshTop.appendChild(pinChangeBtn);
+  if (hmMenuWrap)    refreshTop.appendChild(hmMenuWrap);
   const csvInput = document.getElementById('csv-import-input');
   const csvBtn   = document.querySelector('.csv-btn');
   if (csvInput) refreshTop.appendChild(csvInput);

@@ -279,6 +279,33 @@ body {
 }
 .theme-btn:hover { background: var(--surface2); color: var(--text); }
 
+/* ── Hamburger menu ── */
+#hm-menu-wrap {
+  position: relative;
+}
+#hm-menu-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 52px;
+  box-shadow: 0 4px 16px var(--shadow2);
+  z-index: 9999;
+}
+#hm-menu-dropdown.open {
+  display: flex;
+}
+.hm-menu-item {
+  width: 100%;
+  justify-content: center;
+}
+
 /* ── Modal ── */
 .modal-overlay {
   position: fixed; inset: 0;
@@ -491,6 +518,7 @@ body {
   /* PC: ボタン高さ統一（refresh-switch=34px枠内でrefresh-btn=32px） */
   .mobile-refresh-top .refresh-switch,
   .mobile-refresh-top .theme-btn,
+  .mobile-refresh-top #hm-menu-wrap,
   .mobile-refresh-top .csv-btn   { height: 34px; box-sizing: border-box; }
   .mobile-refresh-top .refresh-btn { height: 32px; box-sizing: border-box; }
   .mobile-status-row { font-size: 12px; gap: 6px; }
