@@ -370,10 +370,14 @@ function switchTab(name) {
     requestAnimationFrame(() => requestAnimationFrame(updateListHeight));
   }
 
-  // ウォッチリストに切り替えたとき価格データを取得・描画
+  // ウォッチリストに切り替えたとき KV から同期後に描画
   if (name === 'watchlist') {
-    renderWatchlist();
-    fetchWatchlistData();
+    if (typeof _loadWatchlistFromWorker === 'function') {
+      _loadWatchlistFromWorker().then(() => { renderWatchlist(); fetchWatchlistData(); });
+    } else {
+      renderWatchlist();
+      fetchWatchlistData();
+    }
   }
 
   // 資産推移タブに切り替えたとき描画（D3 幅確定後）

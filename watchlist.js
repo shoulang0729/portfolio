@@ -13,6 +13,32 @@
 
 function saveWatchlist() {
   localStorage.setItem('hm-watchlist', JSON.stringify(state.watchlist));
+  clearTimeout(_wlKvSyncTimer);
+  _wlKvSyncTimer = setTimeout(_syncWatchlistToWorker, 1000);
+}
+
+let _wlKvSyncTimer = null;
+
+async function _syncWatchlistToWorker() {
+  try {
+    await fetch(`${WORKER_URL}/watchlist`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(state.watchlist),
+    });
+  } catch { /* 失敗時はlocalStorageのデータで継続 */ }
+}
+
+async function _loadWatchlistFromWorker() {
+  try {
+    const res = await fetch(`${WORKER_URL}/watchlist`);
+    if (!res.ok) return;
+    const remote = await res.json();
+    if (Array.isArray(remote) && remote.length > 0) {
+      state.watchlist = remote;
+      localStorage.setItem('hm-watchlist', JSON.stringify(remote));
+    }
+  } catch { /* localStorageをそのまま使用 */ }
 }
 
 function addToWatchlist(item) {

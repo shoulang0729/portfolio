@@ -1036,6 +1036,47 @@ body {
 }
 .ai-reset-btn:hover { background: var(--surface3); color: var(--text); border-color: var(--border); }
 
+/* ── ルーティンボタン ── */
+.ai-routine-btns {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.ai-routine-btn {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.ai-routine-btn:hover { background: var(--surface3); border-color: var(--border2); }
+.ai-routine-btn:active { transform: scale(0.97); }
+
+/* ── パスキーボタン ── */
+.pin-passkey-btn {
+  margin-top: 12px;
+  width: 100%;
+  padding: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text2);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.pin-passkey-btn:hover { background: var(--surface2); color: var(--text); }
+
 /* ── 会話ログエリア ── */
 .ai-chat-log {
   display: flex;
