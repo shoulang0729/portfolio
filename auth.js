@@ -424,6 +424,8 @@ function closePinChange() {
 function _showChangePinButton() {
   const btn = document.getElementById('pin-change-btn');
   if (btn) btn.style.display = '';
+  const pkBtn = document.getElementById('passkey-register-btn');
+  if (pkBtn) pkBtn.style.display = '';
 }
 
 // ══════════════════════════════════════════════
