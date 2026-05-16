@@ -122,7 +122,7 @@ const aiState = {
 };
 
 // ══════════════════════════════════════════════
-// ポートフォリオ コンテキスト生成
+// コンテキスト生成（ポートフォリオ / ウォッチリスト）
 // ══════════════════════════════════════════════
 
 function buildPortfolioContext() {
@@ -141,6 +141,46 @@ ${rows}
 
 上記ポートフォリオを踏まえて、ユーザーの質問に簡潔かつ具体的に回答してください。
 投資判断はあくまで参考情報として提供し、最終判断はユーザー自身が行うことを前提としてください。`;
+}
+
+function buildWatchlistContext() {
+  const wl = state.watchlist;
+  if (!wl || wl.length === 0) return null;
+  const rows = wl.map(item => {
+    const price = state.watchlistPrices?.[item.ySymbol || item.symbol];
+    const priceStr = price?.price ? `現在値 ${item.cur === 'USD' ? '$' : '¥'}${price.price.toLocaleString()}` : '価格未取得';
+    const dayStr   = price?.dayPct != null ? ` / 当日 ${price.dayPct.toFixed(2)}%` : '';
+    return `・${item.symbol}（${item.name || item.symbol}）: ${priceStr}${dayStr}`;
+  }).join('\n');
+
+  return `【ウォッチリスト（注目銘柄・未保有）】
+以下は保有していないが注目している銘柄です。保有ポートフォリオとは別に参照してください:
+
+${rows}`;
+}
+
+// システムプロンプトを組み立てる（保有銘柄 + ウォッチリストを分離して結合）
+function buildSystemPrompt(withPortfolio, withWatchlist) {
+  const base = 'あなたは個人投資家のポートフォリオ管理を支援するアシスタントです。';
+  if (!withPortfolio && !withWatchlist) return base;
+
+  const parts = [];
+
+  if (withPortfolio) {
+    parts.push(buildPortfolioContext());
+  } else {
+    parts.push(base);
+  }
+
+  if (withWatchlist) {
+    const wlCtx = buildWatchlistContext();
+    if (wlCtx) {
+      parts.push(wlCtx);
+      parts.push('ウォッチリスト銘柄については、保有ポートフォリオとは独立して分析し、「注目銘柄として検討すべきか」という観点でコメントしてください。');
+    }
+  }
+
+  return parts.join('\n\n');
 }
 
 // ══════════════════════════════════════════════
@@ -360,9 +400,8 @@ async function aiAskAll() {
   }
 
   const withPortfolio = document.getElementById('ai-with-portfolio')?.checked ?? true;
-  const systemPrompt = withPortfolio
-    ? buildPortfolioContext()
-    : 'あなたは個人投資家のポートフォリオ管理を支援するアシスタントです。';
+  const withWatchlist = document.getElementById('ai-with-watchlist')?.checked ?? false;
+  const systemPrompt  = buildSystemPrompt(withPortfolio, withWatchlist);
 
   aiState.running = true;
   const sendBtn = document.getElementById('ai-send-btn');
@@ -576,6 +615,10 @@ function renderAiTab() {
             <input type="checkbox" id="ai-with-portfolio" checked>
             <span>保有銘柄情報を含める</span>
           </label>
+          <label class="ai-check-row" id="ai-with-watchlist-row">
+            <input type="checkbox" id="ai-with-watchlist">
+            <span>ウォッチリストを含める</span>
+          </label>
           <div class="ai-config-subtitle">市場</div>
           <div class="ai-market-row">
             <label class="ai-check-row">
@@ -624,4 +667,13 @@ function renderAiTab() {
     const sel = document.getElementById(`ai-ver-${cb.dataset.model}`);
     if (sel) cb.addEventListener('change', () => { sel.disabled = !cb.checked; });
   });
+
+  // ウォッチリストが空のときはチェックボックスを無効化
+  const wlRow = document.getElementById('ai-with-watchlist-row');
+  const wlCb  = document.getElementById('ai-with-watchlist');
+  if (wlRow && wlCb && (!state.watchlist || state.watchlist.length === 0)) {
+    wlRow.classList.add('disabled');
+    wlCb.disabled = true;
+    wlRow.title = 'ウォッチリストに銘柄がありません';
+  }
 }
