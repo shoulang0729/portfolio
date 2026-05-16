@@ -1142,6 +1142,68 @@ body {
 .ai-routine-btn:hover { background: var(--surface3); border-color: var(--border2); }
 .ai-routine-btn:active { transform: scale(0.97); }
 
+/* ── AI 設定パネル（チェックボックスUI） ── */
+.ai-config {
+  display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px;
+}
+.ai-config-section {
+  border: 1px solid var(--border); border-radius: 10px;
+  padding: 10px 14px 12px; background: var(--surface2);
+}
+.ai-config-title {
+  font-size: 10px; font-weight: 700; color: var(--text2);
+  text-transform: uppercase; letter-spacing: 0.06em;
+  margin-bottom: 8px;
+}
+.ai-config-subtitle {
+  font-size: 10px; font-weight: 700; color: var(--text2);
+  text-transform: uppercase; letter-spacing: 0.06em;
+  margin-top: 10px; margin-bottom: 6px;
+}
+.ai-check-row {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; color: var(--text);
+  cursor: pointer; padding: 3px 0;
+  user-select: none; -webkit-user-select: none;
+}
+.ai-check-row input[type="checkbox"] {
+  accent-color: var(--text); width: 14px; height: 14px; cursor: pointer; flex-shrink: 0;
+}
+.ai-market-row {
+  display: flex; gap: 16px; flex-wrap: wrap;
+}
+.ai-custom-area {
+  display: none; margin-top: 8px;
+}
+.ai-custom-area.visible { display: block; }
+.ai-model-row {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; color: var(--text); padding: 4px 0;
+}
+.ai-model-row input[type="checkbox"] {
+  accent-color: var(--text); width: 14px; height: 14px; cursor: pointer; flex-shrink: 0;
+}
+.ai-model-name {
+  flex: 1; cursor: pointer;
+}
+.ai-model-badge-synth {
+  font-size: 10px; color: #CC785C; font-weight: 700;
+  border: 1px solid #CC785C; border-radius: 4px; padding: 1px 5px;
+}
+.ai-ver-select {
+  font-size: 11px; font-family: inherit;
+  padding: 3px 6px;
+  border: 1px solid var(--border); border-radius: 6px;
+  background: var(--surface); color: var(--text2);
+  cursor: pointer; max-width: 190px;
+  transition: border-color 0.12s;
+}
+.ai-ver-select:hover { border-color: var(--border2); }
+.ai-ver-select:disabled { opacity: 0.3; cursor: not-allowed; }
+.ai-send-row {
+  display: flex; justify-content: flex-end; margin-bottom: 16px;
+}
+
 /* ── パスキーボタン ── */
 .pin-passkey-btn {
   margin-top: 12px;
