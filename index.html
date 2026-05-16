@@ -21,7 +21,7 @@
 <link rel="manifest" href="assets/manifest.json">
 
 <!-- スタイルシート -->
-<link rel="stylesheet" href="assets/portfolio.css?v=20260516e">
+<link rel="stylesheet" href="assets/portfolio.css?v=20260516f">
 <!-- 銘柄リスト列表示制御（JS が動的に書き込む） -->
 <style id="sl-col-style"></style>
 <!-- ★ モバイルレイアウト CSS フォールバック
@@ -69,7 +69,9 @@
     <span class="countdown" id="countdown"></span>
     <div class="divider"></div>
     <div id="hm-menu-wrap">
-      <button id="hm-menu-btn" class="theme-btn" onclick="toggleHmMenu()" title="メニュー" aria-expanded="false" aria-haspopup="true">☰</button>
+      <button id="hm-menu-btn" onclick="toggleHmMenu()" title="メニュー" aria-expanded="false" aria-haspopup="true">
+        <span class="hm-bar">☰</span><span class="hm-x">✕</span>
+      </button>
       <div id="hm-menu-dropdown" role="menu">
         <button class="hm-menu-item" id="theme-btn" onclick="cycleTheme()" title="ライト/ダーク/自動">
           <span class="hm-icon" id="theme-icon">☀</span>テーマ切替
@@ -84,7 +86,12 @@
           </span>PIN変更
         </button>
         <button class="hm-menu-item" id="passkey-register-btn" onclick="registerPasskey(); closeHmMenu()" title="パスキーを登録（指紋/顔認証）" style="display:none">
-          <span class="hm-icon">🔑</span>パスキー登録
+          <span class="hm-icon">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="5" cy="5" r="3.3" stroke="currentColor" stroke-width="1.4"/>
+              <path d="M7.3 7.3L12.5 12.5M10.5 10.5V12M12 12H10.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>パスキー登録
         </button>
       </div>
     </div>
@@ -112,8 +119,7 @@
             onclick="switchTab('list')">銘柄リスト</button>
     <button class="tab-btn" data-tab="watchlist" role="tab"
             onclick="switchTab('watchlist')">ウォッチリスト</button>
-    <button class="tab-btn" data-tab="history" role="tab"
-            onclick="switchTab('history')">資産推移</button>
+    <button class="tab-btn tab-disabled" data-tab="history" role="tab" disabled title="実装検討中">資産推移</button>
     <button class="tab-btn" data-tab="ai" role="tab"
             onclick="switchTab('ai')">AI相談</button>
   </div>
@@ -237,19 +243,19 @@
 
 
 <!-- ★ 保有データ（銘柄の追加・変更はこのファイルのみ編集すれば OK） -->
-<script src="src/auth.js?v=20260516e"></script>
-<script src="src/positions.js?v=20260516e"></script>
+<script src="src/auth.js?v=20260516f"></script>
+<script src="src/positions.js?v=20260516f"></script>
 <!-- アプリロジック（分割ファイル） -->
-<script src="src/state.js?v=20260516e"></script>
-<script src="src/utils.js?v=20260516e"></script>
-<script src="src/data.js?v=20260516e"></script>
-<script src="src/heatmap.js?v=20260516e"></script>
-<script src="src/chart.js?v=20260516e"></script>
-<script src="src/stock-list.js?v=20260516e"></script>
-<script src="src/watchlist.js?v=20260516e"></script>
-<script src="src/history.js?v=20260516e"></script>
-<script src="src/ai-tab.js?v=20260516e"></script>
-<script src="src/app.js?v=20260516e"></script>
+<script src="src/state.js?v=20260516f"></script>
+<script src="src/utils.js?v=20260516f"></script>
+<script src="src/data.js?v=20260516f"></script>
+<script src="src/heatmap.js?v=20260516f"></script>
+<script src="src/chart.js?v=20260516f"></script>
+<script src="src/stock-list.js?v=20260516f"></script>
+<script src="src/watchlist.js?v=20260516f"></script>
+<script src="src/history.js?v=20260516f"></script>
+<script src="src/ai-tab.js?v=20260516f"></script>
+<script src="src/app.js?v=20260516f"></script>
 
 <!-- フォールバック JS：旧版 portfolio.js でもヒートマップが描画されるよう保証 -->
 <script>
