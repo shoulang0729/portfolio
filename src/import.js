@@ -152,27 +152,24 @@ async function parseMoneyForwardImage(file) {
     }],
   };
 
-  try {
-    const res = await fetchWithTimeout(`${WORKER_URL}/ai/claude`, 30000, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) {
-      let detail = '';
-      try { const e = await res.json(); detail = e?.error?.message || JSON.stringify(e); } catch {}
-      throw new Error(`HTTP ${res.status}${detail ? ': ' + detail : ''}`);
-    }
-    const data = await res.json();
-    const text = data?.content?.[0]?.text || '';
-    const m    = text.match(/\{[\s\S]*\}/);
-    if (!m) throw new Error('JSON not found in response');
-    const parsed = JSON.parse(m[0]);
-    return (parsed.assets || []).map(a => _mfAssetToPosition(a)).filter(Boolean);
-  } catch (e) {
-    console.error('[import] MF image parse error:', e);
-    return null;
+  // エラーはそのまま呼び出し元に伝播させて具体的なメッセージを表示する
+  const res = await fetchWithTimeout(`${WORKER_URL}/ai/claude`, 30000, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    let detail = '';
+    try { const e = await res.json(); detail = e?.error?.message || JSON.stringify(e); } catch {}
+    throw new Error(`AI API エラー (${res.status})${detail ? ': ' + detail : ''}`);
   }
+  const data = await res.json();
+  const text = data?.content?.[0]?.text || '';
+  const m    = text.match(/\{[\s\S]*\}/);
+  if (!m) throw new Error('AIのレスポンスからJSONを抽出できませんでした。別のスクリーンショットをお試しください。');
+  const parsed = JSON.parse(m[0]);
+  return (parsed.assets || []).map(a => _mfAssetToPosition(a)).filter(Boolean);
+  // 空配列の場合は呼び出し元で別メッセージを表示
 }
 
 function _mfAssetToPosition(a) {
@@ -212,8 +209,9 @@ async function loadPositionsFromKV() {
   }
 }
 
-async function savePositionsToKV(newPositions) {
-  const pinHash = localStorage.getItem('hm-pin-hash')
+async function savePositionsToKV(newPositions, pinHashOverride) {
+  const pinHash = pinHashOverride
+    || localStorage.getItem('hm-pin-hash')
     || '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
   const res = await fetchWithTimeout(`${WORKER_URL}/positions`, 15000, {
     method: 'PUT',
@@ -250,7 +248,7 @@ function computeImportDiff(current, incoming) {
 
 // ── Import Modal UI ───────────────────────────────────────────────────────
 
-let _importState = { source: null, parsed: [], current: [] };
+let _importState = { source: null, parsed: [], current: [], pendingPositions: [] };
 
 function openImportModal(source) {
   _importState = { source, parsed: [], current: [...positions] };
@@ -351,6 +349,21 @@ function _renderImportStep(step, payload) {
     body.innerHTML = html;
   }
 
+  if (step === 'pin-auth') {
+    body.innerHTML = `
+      <div class="import-pin-auth">
+        <div class="import-pin-msg">🔒 PIN認証に失敗しました。PINを入力してください。</div>
+        <input type="password" id="import-pin-input" class="import-pin-input"
+          inputmode="numeric" maxlength="4" placeholder="••••"
+          onkeydown="if(event.key==='Enter')_retryWithPin()">
+        <div class="import-footer">
+          <button class="import-cancel-btn" onclick="closeImportModal()">キャンセル</button>
+          <button class="import-confirm-btn" onclick="_retryWithPin()">保存する →</button>
+        </div>
+      </div>`;
+    requestAnimationFrame(() => document.getElementById('import-pin-input')?.focus());
+  }
+
   if (step === 'saving') {
     body.innerHTML = `
       <div class="import-loading">
@@ -393,7 +406,6 @@ async function _confirmImport() {
   const cbs  = body?.querySelectorAll('.import-cb');
   if (!cbs) return;
 
-  // チェックされたシンボルセット
   const selectedSymbols = new Set(
     [...cbs].filter(cb => cb.checked && cb.dataset.type !== 'del').map(cb => cb.dataset.symbol)
   );
@@ -401,35 +413,52 @@ async function _confirmImport() {
     [...cbs].filter(cb => cb.checked && cb.dataset.type === 'del').map(cb => cb.dataset.symbol)
   );
 
-  // 新ポジション = 今回の取込データのうち選択済み
   const newPositions = _importState.parsed.filter(p => selectedSymbols.has(p.symbol));
-  // 現在のポジションのうち「削除予定」として選択されたもの以外、かつ新規でない古い銘柄をマージ
   const oldKept = _importState.current.filter(p =>
     !selectedSymbols.has(p.symbol) && !delSymbols.has(p.symbol)
   );
   const finalPositions = [...newPositions, ...oldKept];
+  _importState.pendingPositions = finalPositions;   // PIN再入力時のために保持
 
   _renderImportStep('saving');
+  await _doSavePositions(finalPositions);
+}
+
+async function _doSavePositions(finalPositions, pinHashOverride) {
   try {
-    await savePositionsToKV(finalPositions);
-    // メモリ上の positions 配列を更新
+    await savePositionsToKV(finalPositions, pinHashOverride);
     positions.splice(0, positions.length, ...finalPositions);
-    // キャッシュリセット
     state.historicalCache = { '1y': {}, '5y': {}, '10y': {} };
     if (typeof clearCacheSession === 'function') clearCacheSession();
     state.lastUpdateText = null;
-
     _renderImportStep('done', `${finalPositions.length}銘柄を保存しました`);
-
-    // バックグラウンドで再描画・価格取得
     setTimeout(() => {
       if (typeof renderStats === 'function') renderStats();
       if (typeof renderHeatmap === 'function') renderHeatmap();
       if (typeof refreshPrices === 'function') refreshPrices();
     }, 300);
   } catch (e) {
-    _renderImportStep('error', `保存に失敗しました: ${e.message}`);
+    if (e.message.includes('PIN認証失敗')) {
+      _renderImportStep('pin-auth');
+    } else {
+      _renderImportStep('error', `保存に失敗しました: ${e.message}`);
+    }
   }
+}
+
+async function _retryWithPin() {
+  const pinInput = document.getElementById('import-pin-input');
+  const pin = pinInput?.value?.trim();
+  if (!pin) { if (pinInput) pinInput.focus(); return; }
+
+  const hashBuf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin));
+  const pinHash = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
+  localStorage.setItem('hm-pin-hash', pinHash);  // 以後の操作のために保存
+
+  const finalPositions = _importState.pendingPositions;
+  if (!finalPositions?.length) { closeImportModal(); return; }
+  _renderImportStep('saving');
+  await _doSavePositions(finalPositions, pinHash);
 }
 
 // ── ファイル選択ハンドラ ──────────────────────────────────────────────────
@@ -456,15 +485,15 @@ async function handleMoneyForwardImageSelect(event) {
   _renderImportStep('loading', 'AIで資産情報を読み取り中...');
   try {
     const parsed = await parseMoneyForwardImage(file);
-    if (!parsed || parsed.length === 0) {
-      _renderImportStep('error', '画像から資産情報を読み取れませんでした。資産一覧が写ったスクリーンショットをお試しください。');
+    if (parsed.length === 0) {
+      _renderImportStep('error', 'AIが資産情報を検出できませんでした。資産一覧が写ったスクリーンショットをお試しください。');
       return;
     }
     _importState.parsed = parsed;
     _renderImportStep('review');
   } catch (e) {
     console.error('[import] MF image handler error:', e);
-    _renderImportStep('error', `読み取りエラー: ${e.message}`);
+    _renderImportStep('error', e.message);
   }
 }
 

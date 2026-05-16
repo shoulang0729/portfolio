@@ -2005,6 +2005,19 @@ rect.flash-down { animation: flash-down 0.7s ease-out forwards; }
 }
 .import-done-text { font-size: 14px; font-weight: 600; color: var(--text); }
 
+/* ── PIN 再入力ステップ ── */
+.import-pin-auth { padding: 4px 0 8px; }
+.import-pin-msg  { font-size: 13px; color: var(--text2); margin-bottom: 16px; }
+.import-pin-input {
+  display: block; margin: 0 auto 18px;
+  width: 120px; text-align: center; letter-spacing: 8px;
+  font-size: 22px; padding: 9px 12px;
+  border: 1px solid var(--border); border-radius: 8px;
+  background: var(--surface); color: var(--text);
+  font-family: inherit;
+}
+.import-pin-input:focus { outline: none; border-color: var(--accent); }
+
 /* モーダルオーバーレイ open アニメーション */
 #import-modal-overlay.open .import-modal {
   animation: modal-in 0.2s ease-out;
