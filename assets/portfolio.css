@@ -102,7 +102,7 @@ body {
   flex-wrap: nowrap;
   gap: 8px;
 }
-.title { font-size: 20px; font-weight: 700; letter-spacing: 0.3px; }
+.title { font-size: 24px; font-weight: 700; letter-spacing: 0.3px; }
 .subtitle { font-size: 12px; color: var(--text2); margin-top: 3px; }
 
 /* コントロール：横スクロール可能1行（nowrap統一） */
@@ -1264,7 +1264,7 @@ body {
 .ai-chat-q {
   align-self: flex-end;
   max-width: 80%;
-  background: #3B82F6;
+  background: #CC785C;
   color: #fff;
   border-radius: 16px 16px 4px 16px;
   padding: 10px 14px;
@@ -1815,6 +1815,29 @@ rect.flash-down { animation: flash-down 0.7s ease-out forwards; }
   left: 0;
   z-index: 3;  /* thead の th は縦(top) + 横(left) 両方 sticky → z-index 最大 */
   background: var(--surface);
+}
+
+/* ウォッチリストもティッカー列を左端固定 */
+.wl-table td.sl-sym {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface);
+}
+.wl-table thead th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  background: var(--surface);
+}
+.wl-table td.sl-sym::after,
+.wl-table thead th:first-child::after {
+  content: '';
+  position: absolute;
+  top: 0; right: -1px; bottom: 0;
+  width: 1px;
+  background: var(--border2);
+  pointer-events: none;
 }
 
 /* スクロール中に右側のセルと重なる際の境界線 */

@@ -441,18 +441,24 @@ async function _confirmImport() {
   const cbs  = body?.querySelectorAll('.import-cb');
   if (!cbs) return;
 
-  const selectedSymbols = new Set(
-    [...cbs].filter(cb => cb.checked && cb.dataset.type !== 'del').map(cb => cb.dataset.symbol)
-  );
-  const delSymbols = new Set(
-    [...cbs].filter(cb => cb.checked && cb.dataset.type === 'del').map(cb => cb.dataset.symbol)
-  );
-
-  const newPositions = _importState.parsed.filter(p => selectedSymbols.has(p.symbol));
-  const oldKept = _importState.current.filter(p =>
-    !selectedSymbols.has(p.symbol) && !delSymbols.has(p.symbol)
-  );
-  const finalPositions = [...newPositions, ...oldKept];
+  let finalPositions;
+  if (_importState.source === 'manage') {
+    // 管理モード: チェックされた銘柄のみ残す（外したものを削除）
+    const kept = new Set([...cbs].filter(cb => cb.checked).map(cb => cb.dataset.symbol));
+    finalPositions = _importState.parsed.filter(p => kept.has(p.symbol));
+  } else {
+    const selectedSymbols = new Set(
+      [...cbs].filter(cb => cb.checked && cb.dataset.type !== 'del').map(cb => cb.dataset.symbol)
+    );
+    const delSymbols = new Set(
+      [...cbs].filter(cb => cb.checked && cb.dataset.type === 'del').map(cb => cb.dataset.symbol)
+    );
+    const newPositions = _importState.parsed.filter(p => selectedSymbols.has(p.symbol));
+    const oldKept = _importState.current.filter(p =>
+      !selectedSymbols.has(p.symbol) && !delSymbols.has(p.symbol)
+    );
+    finalPositions = [...newPositions, ...oldKept];
+  }
   _importState.pendingPositions = finalPositions;   // PIN再入力時のために保持
 
   _renderImportStep('saving');

@@ -440,6 +440,50 @@ if (typeof d3 === 'undefined') {
   }
 }
 
+// ── Pull-to-refresh（上端で引っ張るとリロード） ──
+(function() {
+  let startY = 0;
+  let indicator = null;
+  const THRESHOLD = 72;
+
+  function getIndicator() {
+    if (!indicator) {
+      indicator = document.createElement('div');
+      indicator.id = 'ptr-indicator';
+      indicator.style.cssText = [
+        'position:fixed;top:0;left:0;right:0;z-index:9999',
+        'display:flex;align-items:center;justify-content:center',
+        'height:0;overflow:hidden;transition:height 0.15s',
+        'background:var(--surface2);font-size:13px;color:var(--text2)',
+      ].join(';');
+      indicator.textContent = '↓ 離すとリロード';
+      document.body.prepend(indicator);
+    }
+    return indicator;
+  }
+
+  document.addEventListener('touchstart', e => {
+    startY = e.touches[0].clientY;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', e => {
+    if (window.scrollY > 0) return;
+    const delta = e.touches[0].clientY - startY;
+    if (delta <= 0) return;
+    const ind = getIndicator();
+    ind.style.height = Math.min(delta * 0.5, THRESHOLD * 0.8) + 'px';
+    ind.textContent = delta >= THRESHOLD ? '↺ 離すとリロード' : '↓ 引っ張ってリロード';
+  }, { passive: true });
+
+  document.addEventListener('touchend', e => {
+    const delta = e.changedTouches[0].clientY - startY;
+    if (indicator) indicator.style.height = '0';
+    if (window.scrollY === 0 && delta >= THRESHOLD) {
+      setTimeout(() => location.reload(), 150);
+    }
+  }, { passive: true });
+}());
+
 // ── デバッグ：読み込んだファイルのバージョンをタイトル横に表示 ──
 (function() {
   const s = document.querySelector('script[src*="app.js"]');
