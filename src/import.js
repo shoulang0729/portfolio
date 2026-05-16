@@ -110,20 +110,20 @@ async function parseManexFiles(files) {
   return results;
 }
 
-// ── マネーフォワード スクショ → Claude Vision ─────────────────────────────
+// ── マネーフォワード スクショ → GPT-4o Vision ────────────────────────────
 
-// Anthropic Vision API がサポートする画像形式
+// OpenAI Vision API がサポートする画像形式
 const SUPPORTED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-// base64 5MB 上限に合わせてソースファイルは 3.7MB 以内を推奨
-const MAX_IMAGE_BYTES = 3_800_000;
+// base64 20MB 上限に合わせてソースファイルは 16MB 以内を推奨
+const MAX_IMAGE_BYTES = 16_000_000;
 
 async function parseMoneyForwardImage(file) {
   const mime = file.type || 'image/png';
   if (!SUPPORTED_IMAGE_TYPES.includes(mime.toLowerCase())) {
-    throw new Error(`非対応の画像形式です（${mime}）。JPEG または PNG 形式のスクリーンショットを使用してください。iOS の場合は「ファイル」アプリで JPEG 変換後にお試しください。`);
+    throw new Error(`非対応の画像形式です（${mime}）。JPEG または PNG 形式のスクリーンショットを使用してください。`);
   }
   if (file.size > MAX_IMAGE_BYTES) {
-    throw new Error(`画像サイズが大きすぎます（${(file.size / 1024 / 1024).toFixed(1)} MB）。3.7 MB 以下の画像を使用してください。`);
+    throw new Error(`画像サイズが大きすぎます（${(file.size / 1024 / 1024).toFixed(1)} MB）。16 MB 以下の画像を使用してください。`);
   }
 
   const buf   = await file.arrayBuffer();
@@ -141,19 +141,18 @@ async function parseMoneyForwardImage(file) {
 取得単価が不明な場合は0、保有数が不明な場合は0にしてください。`;
 
   const body = {
-    model: 'claude-sonnet-4-6',
+    model: 'gpt-4o',
     max_tokens: 2048,
     messages: [{
       role: 'user',
       content: [
-        { type: 'image', source: { type: 'base64', media_type: mime, data: b64 } },
+        { type: 'image_url', image_url: { url: `data:${mime};base64,${b64}` } },
         { type: 'text', text: prompt },
       ],
     }],
   };
 
-  // エラーはそのまま呼び出し元に伝播させて具体的なメッセージを表示する
-  const res = await fetchWithTimeout(`${WORKER_URL}/ai/claude`, 30000, {
+  const res = await fetchWithTimeout(`${WORKER_URL}/ai/openai`, 30000, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -164,12 +163,12 @@ async function parseMoneyForwardImage(file) {
     throw new Error(`AI API エラー (${res.status})${detail ? ': ' + detail : ''}`);
   }
   const data = await res.json();
-  const text = data?.content?.[0]?.text || '';
+  // OpenAI Chat Completions 形式: choices[0].message.content
+  const text = data?.choices?.[0]?.message?.content || '';
   const m    = text.match(/\{[\s\S]*\}/);
   if (!m) throw new Error('AIのレスポンスからJSONを抽出できませんでした。別のスクリーンショットをお試しください。');
   const parsed = JSON.parse(m[0]);
   return (parsed.assets || []).map(a => _mfAssetToPosition(a)).filter(Boolean);
-  // 空配列の場合は呼び出し元で別メッセージを表示
 }
 
 function _mfAssetToPosition(a) {
