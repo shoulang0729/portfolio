@@ -220,16 +220,26 @@ function _buildMessages(currentQuestion) {
 }
 
 async function _callOpenAI(messages, systemPrompt, model = 'gpt-4o') {
+  // gpt-5系・oシリーズ（o1/o3/o4）は max_tokens ではなく max_completion_tokens を要求する
+  const useCompletionTokens = /^(o\d|gpt-5)/i.test(model);
+  const body = {
+    model,
+    messages: [{ role: 'system', content: systemPrompt }, ...messages],
+  };
+  if (useCompletionTokens) body.max_completion_tokens = 4000;
+  else                     body.max_tokens = 4000;
+
   const res = await fetch(`${WORKER_URL}/ai/openai`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model,
-      messages: [{ role: 'system', content: systemPrompt }, ...messages],
-      max_tokens: 4000,
-    }),
+    body: JSON.stringify(body),
   });
-  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e?.error?.message || `HTTP ${res.status}`); }
+  if (!res.ok) {
+    const raw = await res.text().catch(() => '');
+    let detail = '';
+    try { const j = JSON.parse(raw); detail = j?.error?.message || raw; } catch { detail = raw; }
+    throw new Error(`openai HTTP ${res.status}: ${detail.slice(0, 300)}`);
+  }
   const d = await res.json();
   return d.choices[0].message.content;
 }
