@@ -194,7 +194,16 @@ function makeTh(label, col, align, activeSortCol, sortDir, sortFnName) {
  */
 function makePctCell(pct, scale, dataCol = '') {
   const dataAttr = dataCol ? `data-col="${dataCol}" ` : '';
-  if (pct == null) return `<td ${dataAttr}class="sl-pct-cell">–</td>`;
+  if (pct == null) {
+    // 該当期間の履歴データがまだ取得中（state.fetchingRanges に該当 range が居る）
+    // なら "..." を表示してユーザーに「ロード中」を伝える。
+    // 完了後もデータが無い場合のみ "–" 固定表示。
+    const period = (typeof PERIOD_MAP !== 'undefined') ? PERIOD_MAP[dataCol] : null;
+    const range  = period?.range;
+    const loading = !!(range && state.fetchingRanges?.has?.(range));
+    const placeholder = loading ? '<span class="sl-pct-loading">…</span>' : '–';
+    return `<td ${dataAttr}class="sl-pct-cell">${placeholder}</td>`;
+  }
   const bg = getColor(pct, 'change', scale);
   const fg = getCellTextColor(bg);
   return `<td ${dataAttr}class="sl-pct-cell" style="background:${bg};color:${fg}">${fmtPctInt(pct)}</td>`;
