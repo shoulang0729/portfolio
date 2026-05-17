@@ -9,7 +9,7 @@
     "value": 38934592,
     "pnl": 11900435.896,
     "pnlPct": 44.01999855082965,
-    "dayPct": -0.20100502512563098,
+    "dayPct": -0.046242774566473986,
     "dayCh": null,
     "cur": "JPY",
     "ySymbol": "1312.T",
@@ -26,7 +26,7 @@
     "value": 1983378,
     "pnl": 383299.3452,
     "pnlPct": 23.95501592356688,
-    "dayPct": -0.4802364240857037,
+    "dayPct": 0.14308426073131594,
     "dayCh": null,
     "cur": "JPY",
     "ySymbol": "2516.T",
@@ -43,7 +43,7 @@
     "value": 1885842,
     "pnl": 485732.8344,
     "pnlPct": 34.69247396345058,
-    "dayPct": -0.4230038663092221,
+    "dayPct": -1.6406,
     "dayCh": null,
     "cur": "JPY",
     "ySymbol": "ACWI",
@@ -60,7 +60,7 @@
     "value": 8834328,
     "pnl": 3122454,
     "pnlPct": 54.666016792387225,
-    "dayPct": 0.45504734499950267,
+    "dayPct": 0.6774,
     "dayCh": null,
     "cur": "USD",
     "ySymbol": "AAPL"
@@ -75,7 +75,7 @@
     "value": 10446737,
     "pnl": 1857487,
     "pnlPct": 21.625718194254446,
-    "dayPct": -2.217450856994784,
+    "dayPct": -1.1526,
     "dayCh": null,
     "cur": "USD",
     "ySymbol": "AMZN"
@@ -90,7 +90,7 @@
     "value": 8540032,
     "pnl": 289582,
     "pnlPct": 3.509893399753953,
-    "dayPct": -9.639865085409639,
+    "dayPct": -7.0821,
     "dayCh": null,
     "cur": "USD",
     "ySymbol": "COPX"
@@ -105,7 +105,7 @@
     "value": 46362861,
     "pnl": 1816872,
     "pnlPct": 4.078643309502008,
-    "dayPct": -3.0178917870230624,
+    "dayPct": -2.2912,
     "dayCh": null,
     "cur": "USD",
     "ySymbol": "GLDM"
@@ -120,7 +120,7 @@
     "value": 16320355,
     "pnl": 8708855,
     "pnlPct": 114.41706628128489,
-    "dayPct": -1.450499230043225,
+    "dayPct": -1.0696,
     "dayCh": null,
     "cur": "USD",
     "ySymbol": "GOOGL"
@@ -135,7 +135,7 @@
     "value": 7629986,
     "pnl": 597786,
     "pnlPct": 8.500696794744176,
-    "dayPct": -2.38027769906488,
+    "dayPct": -2.6561,
     "dayCh": null,
     "cur": "USD",
     "ySymbol": "ILF"
@@ -150,7 +150,7 @@
     "value": 15514833,
     "pnl": -25051,
     "pnlPct": -0.16120454953202995,
-    "dayPct": -0.039588281868573084,
+    "dayPct": -0.0198,
     "dayCh": null,
     "cur": "USD",
     "ySymbol": "JPST"
@@ -165,7 +165,7 @@
     "value": 8143225,
     "pnl": 119651,
     "pnlPct": 1.4912431791618048,
-    "dayPct": 4.123787665654855,
+    "dayPct": 3.0506,
     "dayCh": null,
     "cur": "USD",
     "ySymbol": "MSFT"
@@ -180,7 +180,7 @@
     "value": 8012549,
     "pnl": 26921,
     "pnlPct": 0.3371181327254412,
-    "dayPct": 3.029603998462128,
+    "dayPct": 0.1944,
     "dayCh": null,
     "cur": "USD",
     "ySymbol": "PLTR"
@@ -195,7 +195,7 @@
     "value": 7638687,
     "pnl": 1298187,
     "pnlPct": 20.474520936834633,
-    "dayPct": -9.119141727837391,
+    "dayPct": -3.2849,
     "dayCh": null,
     "cur": "USD",
     "ySymbol": "REMX"
@@ -210,7 +210,7 @@
     "value": 7396641,
     "pnl": -1100109,
     "pnlPct": -12.947409303557242,
-    "dayPct": -2.2730835554162026,
+    "dayPct": -2.7457,
     "dayCh": null,
     "cur": "USD",
     "ySymbol": "SHLD"
@@ -225,7 +225,7 @@
     "value": 7645490,
     "pnl": -425510,
     "pnlPct": -5.272085243464255,
-    "dayPct": -12.993068683049765,
+    "dayPct": -8.5684,
     "dayCh": null,
     "cur": "USD",
     "ySymbol": "SLV"
@@ -240,7 +240,7 @@
     "value": 41454118,
     "pnl": 17158996,
     "pnlPct": 70.62733004592444,
-    "dayPct": -2.815917269328862,
+    "dayPct": -3.804,
     "dayCh": null,
     "cur": "USD",
     "ySymbol": "SMH"
@@ -255,7 +255,7 @@
     "value": 8349796,
     "pnl": 2183296,
     "pnlPct": 35.405756912348984,
-    "dayPct": -5.172142744851432,
+    "dayPct": -4.7507,
     "dayCh": null,
     "cur": "USD",
     "ySymbol": "TSLA"
@@ -270,7 +270,7 @@
     "value": 7992897,
     "pnl": -503,
     "pnlPct": -0.006292691470463132,
-    "dayPct": 3.140725316675334,
+    "dayPct": 2.3592,
     "dayCh": null,
     "cur": "USD",
     "ySymbol": "XLE"
@@ -285,7 +285,7 @@
     "value": 61610165,
     "pnl": 15294704,
     "pnlPct": 33.02289056347728,
-    "dayPct": -1.1547344110854394,
+    "dayPct": -1.6406,
     "dayCh": null,
     "cur": "JPY",
     "ySymbol": "ACWI",
