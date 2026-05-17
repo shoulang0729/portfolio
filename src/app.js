@@ -174,8 +174,31 @@ function _buildPortfolioSnapshotPayload() {
       : null;
   }
 
+  // ウォッチリスト：保有していない注目銘柄。期間パフォーマンスのみ出力
+  const watchlistWithPerf = (state.watchlist || []).map(item => {
+    const ySymbol = item.ySymbol || item.symbol;
+    const perf = {};
+    for (const period of PERIODS) {
+      if (period.id === '1d') {
+        perf['1d'] = state.watchlistPrices?.[item.symbol]?.dayPct ?? null;
+      } else {
+        perf[period.id] = typeof getHistoricalChangePct === 'function'
+          ? getHistoricalChangePct(ySymbol, period.id)
+          : null;
+      }
+    }
+    return {
+      symbol: item.symbol,
+      name:   item.name || item.symbol,
+      ySymbol,
+      cat:    item.cat || null,
+      cur:    item.cur || null,
+      performance: perf,
+    };
+  });
+
   // historicals（日次価格系列）は重い（5MB超）ので保存しない。
-  // 必要な情報は positions[].performance に集約されている。
+  // 必要な情報は positions[].performance / watchlist[].performance に集約されている。
   return {
     asOf: new Date().toISOString(),
     source: 'frontend-manual',
@@ -184,10 +207,12 @@ function _buildPortfolioSnapshotPayload() {
       totalPnl,
       totalPnlPct: totalValue > totalPnl ? totalPnl / (totalValue - totalPnl) * 100 : null,
       positionCount: positions.length,
+      watchlistCount: watchlistWithPerf.length,
       currencyBase: 'JPY',
       performance: portPerf,
     },
     positions: positionsWithPerf,
+    watchlist: watchlistWithPerf,
   };
 }
 

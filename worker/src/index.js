@@ -111,10 +111,12 @@ async function handleFinnhub(url, env, origin) {
 // 保存先: data/portfolio-snapshot.json
 //
 // 構造:
-//   { asOf, source, summary: {totalValue, totalPnl, pnlPct, performance},
-//     positions: [{...basic, performance:{1d,1w,...,10y}}] }
+//   { asOf, source,
+//     summary:   { totalValue, totalPnl, pnlPct, positionCount, watchlistCount, performance },
+//     positions: [{...basic, performance:{1d,1w,...,10y}}],
+//     watchlist: [{symbol, name, ySymbol, cat, cur, performance:{1d,...,10y}}] }
 //   ※ historicals（日次価格系列）は重い（5MB超）ため含めない。
-//     必要な情報は positions[].performance に集約済み。
+//     必要な情報は positions[].performance / watchlist[].performance に集約済み。
 // ══════════════════════════════════════════════════════════════
 
 const _SNAPSHOT_PERIODS = [
@@ -162,37 +164,61 @@ async function handlePortfolioSnapshot(request, env, origin, ctx) {
   }, 200, origin);
 }
 
-// KV の positions を元に Yahoo Finance から historicals を取得してスナップショットを構築
+// KV の positions + watchlist を元に Yahoo Finance から historicals を取得してスナップショットを構築
 async function _buildSnapshotFromKV(env) {
   const posVal = await env.KV.get('positions');
   if (!posVal) return null;
   const positions = JSON.parse(posVal);
   if (!Array.isArray(positions) || positions.length === 0) return null;
 
+  // Watchlist（保有していない注目銘柄）も同時に取得
+  const wlVal = await env.KV.get('watchlist');
+  const watchlist = wlVal ? (JSON.parse(wlVal) || []) : [];
+
+  // 全対象銘柄（positions + watchlist、重複除去）
+  const allSymbols = [...new Set([
+    ...positions.map(p => p.ySymbol),
+    ...watchlist.map(w => w.ySymbol || w.symbol),
+  ].filter(Boolean))];
+
   // 1y/5y/10y の historicals を並列フェッチ（範囲ごと・5並列バッチ）
   const RANGES = ['1y', '5y', '10y'];
   const historicals = { '1y': {}, '5y': {}, '10y': {} };
   for (const range of RANGES) {
     const BATCH = 5;
-    for (let i = 0; i < positions.length; i += BATCH) {
-      const batch = positions.slice(i, i + BATCH);
-      await Promise.all(batch.map(async p => {
-        if (!p.ySymbol) return;
-        const arr = await _fetchYahooHistory(p.ySymbol, range).catch(() => null);
-        if (arr) historicals[range][p.ySymbol] = arr;
+    for (let i = 0; i < allSymbols.length; i += BATCH) {
+      const batch = allSymbols.slice(i, i + BATCH);
+      await Promise.all(batch.map(async sym => {
+        const arr = await _fetchYahooHistory(sym, range).catch(() => null);
+        if (arr) historicals[range][sym] = arr;
       }));
-      if (i + BATCH < positions.length) await new Promise(r => setTimeout(r, 600));
+      if (i + BATCH < allSymbols.length) await new Promise(r => setTimeout(r, 600));
     }
   }
 
-  // 期間パフォーマンスを計算
-  const positionsWithPerf = positions.map(p => {
+  const perfOf = (ySymbol) => {
     const perf = {};
     for (const { id, days } of _SNAPSHOT_PERIODS) {
-      perf[id] = _computePeriodPctFromHistoricals(p.ySymbol, days, historicals);
+      perf[id] = _computePeriodPctFromHistoricals(ySymbol, days, historicals);
     }
-    return { ...p, performance: perf };
-  });
+    return perf;
+  };
+
+  // positions に performance を付与
+  const positionsWithPerf = positions.map(p => ({
+    ...p,
+    performance: perfOf(p.ySymbol),
+  }));
+
+  // watchlist は最小限フィールド + performance のみ
+  const watchlistWithPerf = watchlist.map(w => ({
+    symbol: w.symbol,
+    name:   w.name || w.symbol,
+    ySymbol: w.ySymbol || w.symbol,
+    cat:    w.cat || null,
+    cur:    w.cur || null,
+    performance: perfOf(w.ySymbol || w.symbol),
+  }));
 
   // サマリ
   const totalValue = positions.reduce((s, p) => s + (p.value || 0), 0);
@@ -202,6 +228,7 @@ async function _buildSnapshotFromKV(env) {
     totalPnl,
     totalPnlPct: totalValue > totalPnl ? totalPnl / (totalValue - totalPnl) * 100 : null,
     positionCount: positions.length,
+    watchlistCount: watchlistWithPerf.length,
     currencyBase: 'JPY',
     performance: _computePortfolioPerf(positionsWithPerf, totalValue),
   };
@@ -212,6 +239,7 @@ async function _buildSnapshotFromKV(env) {
     source: 'worker-cron',
     summary,
     positions: positionsWithPerf,
+    watchlist: watchlistWithPerf,
   };
 }
 
