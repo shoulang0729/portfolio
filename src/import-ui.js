@@ -21,7 +21,11 @@ function openImportModal(source) {
 }
 
 function openManagePositionsModal() {
-  _importState = { source: 'manage', parsed: [...positions], current: [...positions] };
+  // 整理モーダル表示時点で投信名を canonical 化（プレビューでも正しく見える）
+  const normalized = (typeof canonicalizeFundPosition === 'function')
+    ? positions.map(canonicalizeFundPosition)
+    : [...positions];
+  _importState = { source: 'manage', parsed: normalized, current: [...positions] };
   const overlay = document.getElementById('import-modal-overlay');
   const title   = document.getElementById('import-modal-title');
   if (!overlay) return;
@@ -227,6 +231,10 @@ async function _confirmImport() {
     finalPositions = [...newPositions, ...oldKept];
   }
 
+  // 投資信託の銘柄名・シンボルを canonical 化（マイクロプラス → ひふみマイクロスコープpro 等）
+  if (typeof canonicalizeFundPosition === 'function') {
+    finalPositions = finalPositions.map(canonicalizeFundPosition);
+  }
   // 同一 symbol を1件にマージ（保有数合算・取得単価加重平均）
   if (typeof mergeDuplicatePositions === 'function') {
     finalPositions = mergeDuplicatePositions(finalPositions);
