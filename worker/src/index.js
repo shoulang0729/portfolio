@@ -100,6 +100,102 @@ async function handleFinnhub(url, env, origin) {
   }
 }
 
+// ── AI モデル一覧（各プロバイダーの /v1/models を集約・1時間KVキャッシュ）─
+// レスポンス形式:
+//   { openai: ['gpt-5.4-mini', ...], gemini: ['gemini-2.5-flash', ...],
+//     grok:   ['grok-4.3', ...],     claude: ['claude-sonnet-4-6', ...],
+//     cachedAt: '2026-05-17T...', ttl: 3600 }
+//
+// 部分的に取得失敗したプロバイダーは null を返す（フロント側でハードコードへフォールバック）
+async function handleAIModels(env, origin) {
+  const CACHE_KEY = 'ai:models:v1';
+  const CACHE_TTL = 3600; // 1時間
+
+  if (env.KV) {
+    const cached = await env.KV.get(CACHE_KEY, 'json');
+    if (cached && cached.cachedAt && (Date.now() - cached.cachedAt < CACHE_TTL * 1000)) {
+      return jsonRes(cached, 200, origin);
+    }
+  }
+
+  const [openai, gemini, grok, claude] = await Promise.all([
+    _fetchOpenAIModels(env.OPENAI_API_KEY).catch(e => { console.warn('openai models:', e); return null; }),
+    _fetchGeminiModels(env.GEMINI_API_KEY).catch(e => { console.warn('gemini models:', e); return null; }),
+    _fetchGrokModels(env.GROK_API_KEY).catch(e => { console.warn('grok models:', e); return null; }),
+    _fetchClaudeModels(env.ANTHROPIC_API_KEY).catch(e => { console.warn('claude models:', e); return null; }),
+  ]);
+
+  const result = { openai, gemini, grok, claude, cachedAt: Date.now(), ttl: CACHE_TTL };
+  if (env.KV) {
+    await env.KV.put(CACHE_KEY, JSON.stringify(result), { expirationTtl: CACHE_TTL });
+  }
+  return jsonRes(result, 200, origin);
+}
+
+async function _fetchOpenAIModels(apiKey) {
+  if (!apiKey) return null;
+  const res = await fetch('https://api.openai.com/v1/models', {
+    headers: { 'Authorization': `Bearer ${apiKey}` },
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const j = await res.json();
+  // チャット用モデルのみ抽出（embeddings/dall-e/whisper/tts/moderation を除外）
+  return (j.data || [])
+    .map(m => m.id)
+    .filter(id => /^(gpt-|o\d|chatgpt-)/i.test(id))
+    .filter(id => !/embed|dall-e|whisper|tts|moderation|realtime|audio|search-preview|transcribe/i.test(id))
+    .sort()
+    .reverse(); // 新しいモデルが先頭になりやすい
+}
+
+async function _fetchGeminiModels(apiKey) {
+  if (!apiKey) return null;
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const j = await res.json();
+  // generateContent をサポートする gemini モデルのみ
+  return (j.models || [])
+    .filter(m => (m.supportedGenerationMethods || []).includes('generateContent'))
+    .map(m => (m.name || '').replace(/^models\//, ''))
+    .filter(id => /^gemini-/i.test(id))
+    .filter(id => !/embedding|vision-latest|aqa/i.test(id))
+    .sort()
+    .reverse();
+}
+
+async function _fetchGrokModels(apiKey) {
+  if (!apiKey) return null;
+  const res = await fetch('https://api.x.ai/v1/models', {
+    headers: { 'Authorization': `Bearer ${apiKey}` },
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const j = await res.json();
+  // 言語モデルのみ（imagine/vision-only を除外）
+  return (j.data || [])
+    .map(m => m.id)
+    .filter(id => /^grok-/i.test(id))
+    .filter(id => !/imagine|tts|stt|realtime|vision-only/i.test(id))
+    .sort()
+    .reverse();
+}
+
+async function _fetchClaudeModels(apiKey) {
+  if (!apiKey) return null;
+  const res = await fetch('https://api.anthropic.com/v1/models', {
+    headers: {
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+    },
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const j = await res.json();
+  return (j.data || [])
+    .map(m => m.id)
+    .filter(id => /^claude-/i.test(id))
+    .sort()
+    .reverse();
+}
+
 // ── AI プロキシ ───────────────────────────────────────
 async function handleAI(request, path, env, origin) {
   if (request.method !== 'POST') return errRes('POST のみ許可', 405, origin);
@@ -360,6 +456,7 @@ export default {
     if (path === '/')                return new Response('portfolio-proxy OK', { status: 200 });
     if (path === '/yahoo')           return handleYahoo(url, org);
     if (path === '/finnhub')         return handleFinnhub(url, env, org);
+    if (path === '/ai/models')       return handleAIModels(env, org);
     if (path.startsWith('/ai/'))     return handleAI(request, path, env, org);
     if (path === '/watchlist')       return handleWatchlist(request, env, org);
     if (path === '/positions')       return handlePositions(request, env, org);

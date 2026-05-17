@@ -702,4 +702,42 @@ function renderAiTab() {
     wlCb.disabled = true;
     wlRow.title = 'ウォッチリストに銘柄がありません';
   }
+
+  // バージョン一覧を Worker から動的取得して上書き（失敗時はハードコード版にフォールバック）
+  _refreshModelVersionsFromWorker();
+}
+
+/**
+ * Worker の /ai/models を fetch して各 select の <option> を最新に更新する。
+ * - 各プロバイダーごとに、ハードコードされた preferred モデル（AI_MODELS[].versions[0]）が
+ *   動的リストに含まれていればそれを先頭に固定し、残りを動的順で並べる。
+ * - 失敗時は現状のドロップダウン（renderAiTab で描いたハードコード版）をそのまま残す。
+ */
+async function _refreshModelVersionsFromWorker() {
+  try {
+    const res = await fetch(`${WORKER_URL}/ai/models`);
+    if (!res.ok) { console.warn('[ai-tab] /ai/models HTTP', res.status); return; }
+    const data = await res.json();
+    const map = { gpt: data.openai, gemini: data.gemini, grok: data.grok, claude: data.claude };
+    for (const m of AI_MODELS) {
+      const dynamic = map[m.id];
+      if (!Array.isArray(dynamic) || dynamic.length === 0) continue;
+      // preferred = ハードコードの versions[0]。動的リストに含まれていれば先頭に置く
+      const preferred = m.versions[0];
+      const ordered = dynamic.includes(preferred)
+        ? [preferred, ...dynamic.filter(v => v !== preferred)]
+        : dynamic;
+      m.versions = ordered;
+      // DOM 上の select も差し替え（現在の選択値を維持できれば維持）
+      const sel = document.getElementById(`ai-ver-${m.id}`);
+      if (!sel) continue;
+      const prevSelected = sel.value;
+      sel.innerHTML = ordered.map((v, i) =>
+        `<option value="${v}"${(v === prevSelected || (i === 0 && !ordered.includes(prevSelected))) ? ' selected' : ''}>${v}</option>`
+      ).join('');
+    }
+    console.log('[ai-tab] モデル一覧を Worker から更新');
+  } catch (e) {
+    console.warn('[ai-tab] モデル一覧の動的取得に失敗（ハードコード版を使用）:', e);
+  }
 }
