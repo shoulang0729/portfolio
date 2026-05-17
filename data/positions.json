@@ -9,7 +9,7 @@
     "value": 8834328,
     "pnl": 3122454,
     "pnlPct": 54.666016792387225,
-    "dayPct": null,
+    "dayPct": 0.6774,
     "dayCh": null,
     "cur": "USD",
     "ySymbol": "AAPL"
@@ -24,7 +24,7 @@
     "value": 10446737,
     "pnl": 1857487,
     "pnlPct": 21.625718194254446,
-    "dayPct": null,
+    "dayPct": -1.1526,
     "dayCh": null,
     "cur": "USD",
     "ySymbol": "AMZN"
@@ -39,7 +39,7 @@
     "value": 8540032,
     "pnl": 289582,
     "pnlPct": 3.509893399753953,
-    "dayPct": null,
+    "dayPct": -7.0821,
     "dayCh": null,
     "cur": "USD",
     "ySymbol": "COPX"
@@ -54,7 +54,7 @@
     "value": 46362861,
     "pnl": 1816872,
     "pnlPct": 4.078643309502008,
-    "dayPct": null,
+    "dayPct": -2.2912,
     "dayCh": null,
     "cur": "USD",
     "ySymbol": "GLDM"
@@ -69,7 +69,7 @@
     "value": 16320355,
     "pnl": 8708855,
     "pnlPct": 114.41706628128489,
-    "dayPct": null,
+    "dayPct": -1.0696,
     "dayCh": null,
     "cur": "USD",
     "ySymbol": "GOOGL"
@@ -84,7 +84,7 @@
     "value": 7629986,
     "pnl": 597786,
     "pnlPct": 8.500696794744176,
-    "dayPct": null,
+    "dayPct": -2.38027769906488,
     "dayCh": null,
     "cur": "USD",
     "ySymbol": "ILF"
@@ -99,7 +99,7 @@
     "value": 15514833,
     "pnl": -25051,
     "pnlPct": -0.16120454953202995,
-    "dayPct": null,
+    "dayPct": -0.039588281868573084,
     "dayCh": null,
     "cur": "USD",
     "ySymbol": "JPST"
@@ -114,7 +114,7 @@
     "value": 8143225,
     "pnl": 119651,
     "pnlPct": 1.4912431791618048,
-    "dayPct": null,
+    "dayPct": 4.123787665654855,
     "dayCh": null,
     "cur": "USD",
     "ySymbol": "MSFT"
@@ -129,7 +129,7 @@
     "value": 8012549,
     "pnl": 26921,
     "pnlPct": 0.3371181327254412,
-    "dayPct": null,
+    "dayPct": 3.029603998462128,
     "dayCh": null,
     "cur": "USD",
     "ySymbol": "PLTR"
@@ -144,7 +144,7 @@
     "value": 7638687,
     "pnl": 1298187,
     "pnlPct": 20.474520936834633,
-    "dayPct": null,
+    "dayPct": -9.119141727837391,
     "dayCh": null,
     "cur": "USD",
     "ySymbol": "REMX"
@@ -159,7 +159,7 @@
     "value": 7396641,
     "pnl": -1100109,
     "pnlPct": -12.947409303557242,
-    "dayPct": null,
+    "dayPct": -2.7457,
     "dayCh": null,
     "cur": "USD",
     "ySymbol": "SHLD"
@@ -174,7 +174,7 @@
     "value": 7645490,
     "pnl": -425510,
     "pnlPct": -5.272085243464255,
-    "dayPct": null,
+    "dayPct": -8.5684,
     "dayCh": null,
     "cur": "USD",
     "ySymbol": "SLV"
@@ -189,7 +189,7 @@
     "value": 41454118,
     "pnl": 17158996,
     "pnlPct": 70.62733004592444,
-    "dayPct": null,
+    "dayPct": -3.804,
     "dayCh": null,
     "cur": "USD",
     "ySymbol": "SMH"
@@ -204,7 +204,7 @@
     "value": 8349796,
     "pnl": 2183296,
     "pnlPct": 35.405756912348984,
-    "dayPct": null,
+    "dayPct": -4.7507,
     "dayCh": null,
     "cur": "USD",
     "ySymbol": "TSLA"
@@ -219,7 +219,7 @@
     "value": 7992897,
     "pnl": -503,
     "pnlPct": -0.006292691470463132,
-    "dayPct": null,
+    "dayPct": 2.3592,
     "dayCh": null,
     "cur": "USD",
     "ySymbol": "XLE"
@@ -234,7 +234,7 @@
     "value": 61610165,
     "pnl": 15294704,
     "pnlPct": 33.02289056347728,
-    "dayPct": null,
+    "dayPct": -1.6406,
     "dayCh": null,
     "cur": "JPY",
     "ySymbol": "ACWI",
@@ -251,7 +251,7 @@
     "value": 24716970,
     "pnl": -367830,
     "pnlPct": -1.4663461538461537,
-    "dayPct": null,
+    "dayPct": -0.31614785992218175,
     "dayCh": null,
     "cur": "JPY",
     "ySymbol": "1306.T"
@@ -266,7 +266,7 @@
     "value": 24225439,
     "pnl": 3472679,
     "pnlPct": 16.733576642335766,
-    "dayPct": null,
+    "dayPct": -0.046874999999992895,
     "dayCh": null,
     "cur": "JPY",
     "ySymbol": "1615.T"
@@ -281,7 +281,7 @@
     "value": 25970000,
     "pnl": 4532500,
     "pnlPct": 21.142857142857142,
-    "dayPct": null,
+    "dayPct": 0.2364066193853389,
     "dayCh": null,
     "cur": "JPY",
     "ySymbol": "1629.T"
@@ -296,7 +296,7 @@
     "value": 30332600,
     "pnl": 10759600,
     "pnlPct": 54.97164461247637,
-    "dayPct": null,
+    "dayPct": -4.674418604651163,
     "dayCh": null,
     "cur": "JPY",
     "ySymbol": "200A.T"
@@ -311,7 +311,7 @@
     "value": 1944900,
     "pnl": 990600,
     "pnlPct": 103.80383527192707,
-    "dayPct": null,
+    "dayPct": -1.173780487804878,
     "dayCh": null,
     "cur": "JPY",
     "ySymbol": "6301.T"
@@ -326,7 +326,7 @@
     "value": 13000000,
     "pnl": 6098000,
     "pnlPct": 88.3512025499855,
-    "dayPct": null,
+    "dayPct": 4.166666666666666,
     "dayCh": null,
     "cur": "JPY",
     "ySymbol": "8050.T"
@@ -341,44 +341,10 @@
     "value": 14326000,
     "pnl": 5532800,
     "pnlPct": 62.92134831460674,
-    "dayPct": null,
+    "dayPct": 0.4205804009533156,
     "dayCh": null,
     "cur": "JPY",
     "ySymbol": "9983.T"
-  },
-  {
-    "symbol": "ひふみ投信",
-    "name": "ひふみ投信",
-    "cat": "投資信託",
-    "shares": 1,
-    "price": 0,
-    "avgCost": 2933304,
-    "value": 0,
-    "pnl": 0,
-    "pnlPct": 0,
-    "dayPct": -0.20100502512563098,
-    "dayCh": null,
-    "cur": "JPY",
-    "ySymbol": "2563.T",
-    "isProxy": true,
-    "proxyName": "iシェアーズ・コアS&P500"
-  },
-  {
-    "symbol": "ひふみ投信",
-    "name": "ひふみ投信",
-    "cat": "投資信託",
-    "shares": 1,
-    "price": 0,
-    "avgCost": 2933304,
-    "value": 0,
-    "pnl": 0,
-    "pnlPct": 0,
-    "dayPct": -0.20100502512563098,
-    "dayCh": null,
-    "cur": "JPY",
-    "ySymbol": "2563.T",
-    "isProxy": true,
-    "proxyName": "iシェアーズ・コアS&P500"
   },
   {
     "symbol": "ひふみ投信",
