@@ -449,11 +449,13 @@ function init() {
   requestAnimationFrame(updateListHeight);
 
   // 前回開いていたタブを復元（heatmap以外なら switchTab で切替）
+  // AI タブは無効化中のため復元対象外
   try {
     const lastTab = localStorage.getItem('hm-active-tab');
-    if (lastTab && lastTab !== 'heatmap' && ['list','watchlist','ai'].includes(lastTab)) {
-      // ヒートマップ初期描画後にタブ切替（DOM 確定を待つ）
+    if (lastTab && lastTab !== 'heatmap' && ['list','watchlist'].includes(lastTab)) {
       requestAnimationFrame(() => switchTab(lastTab));
+    } else if (lastTab === 'ai') {
+      localStorage.removeItem('hm-active-tab'); // 古い保存値をクリア
     }
   } catch {}
 
@@ -545,10 +547,7 @@ function switchTab(name) {
     }
   }
 
-  // AI 相談タブに切り替えたとき初期レンダリング
-  if (name === 'ai') {
-    if (typeof renderAiTab === 'function') renderAiTab();
-  }
+  // AI 相談タブは現在無効化中（renderAiTab を呼ばない）
 }
 
 if (typeof d3 === 'undefined') {
