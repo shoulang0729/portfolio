@@ -90,33 +90,43 @@ function renderHeatmap() {
     const symFill = getCellTextColor(cellBg);
     const pctFill = getCellTextColorSub(cellBg);
 
-    // セル面積（sqrtスケール）でフォントサイズを滑らかに決定。
-    // さらに文字数（全角=1.0/半角=0.55幅）でもキャップして横はみ出しを防ぐ。
+    // セル面積（sqrtスケール）でフォントサイズの「理想値」を決め、
+    // 実描画後に getComputedTextLength() で計測 → はみ出すなら縮める。
+    // → 文字数・字体・端末DPI差を heuristic 無しで吸収できる。
     const sqr = Math.sqrt(w * h);
-    const symbolText = d.data.symbol || '';
-    // 全角(non-ASCII) は 1.0em、半角は 0.55em として実効文字数を計算
-    const effectiveLen = [...symbolText].reduce(
-      (sum, c) => sum + (/[^\x00-\xff]/.test(c) ? 1.0 : 0.55), 0,
-    );
-    const maxFontByWidth = (w - 8) / Math.max(effectiveLen, 2.5);
-    const symSz = Math.min(
-      C.SYM_FONT_MAX,
-      Math.max(C.SYM_FONT_MIN, sqr * C.SYM_FONT_COEFF),
-      Math.floor(maxFontByWidth),
-    );
-    const pctSz = Math.min(C.PCT_FONT_MAX, Math.max(C.PCT_FONT_MIN, symSz * C.PCT_FONT_RATIO));
-    const gap   = symSz * C.GAP_RATIO;
+    const idealSym = Math.min(C.SYM_FONT_MAX, Math.max(C.SYM_FONT_MIN, sqr * C.SYM_FONT_COEFF));
+    const idealPct = Math.min(C.PCT_FONT_MAX, Math.max(C.PCT_FONT_MIN, idealSym * C.PCT_FONT_RATIO));
+    const gap      = idealSym * C.GAP_RATIO;
+    const innerW   = Math.max(w - 8, 12);   // 左右に 4px の余白
+
+    // 描画してから実測幅を見て font-size を縮める。
+    // SVG text の getComputedTextLength は同期的に取れる（attach 済みであれば）。
+    const fitText = (textEl, idealSize) => {
+      const node = textEl.node();
+      if (!node) return;
+      let measured = 0;
+      try { measured = node.getComputedTextLength(); } catch { return; }
+      if (measured <= innerW || measured === 0) return;
+      const shrunk = Math.max(C.SYM_FONT_MIN, Math.floor(idealSize * innerW / measured));
+      textEl.attr('font-size', shrunk);
+    };
 
     if ((h >= 55 && w >= 44) || (h >= 30 && w >= 32)) {
       // 大・中セル: 銘柄名 + 変化率 縦2段
-      g.append('text').attr('class','lbl-sym').attr('fill', symFill).attr('x',cx).attr('y',cy - gap * C.GAP_SYM_OFFSET)
-        .attr('font-size', symSz).text(d.data.symbol);
-      g.append('text').attr('class','lbl-pct').attr('fill', pctFill).attr('x',cx).attr('y',cy + gap * C.GAP_PCT_OFFSET)
-        .attr('font-size', pctSz).text(pctStr);
+      const symEl = g.append('text').attr('class','lbl-sym').attr('fill', symFill)
+        .attr('x',cx).attr('y',cy - gap * C.GAP_SYM_OFFSET)
+        .attr('font-size', idealSym).text(d.data.symbol);
+      fitText(symEl, idealSym);
+      const pctEl = g.append('text').attr('class','lbl-pct').attr('fill', pctFill)
+        .attr('x',cx).attr('y',cy + gap * C.GAP_PCT_OFFSET)
+        .attr('font-size', idealPct).text(pctStr);
+      fitText(pctEl, idealPct);
     } else if (w >= 26 && h >= 16) {
       // 小セル: 銘柄名のみ
-      g.append('text').attr('class','lbl-sym').attr('fill', symFill).attr('x',cx).attr('y',cy)
-        .attr('font-size', symSz).text(d.data.symbol);
+      const symEl = g.append('text').attr('class','lbl-sym').attr('fill', symFill)
+        .attr('x',cx).attr('y',cy)
+        .attr('font-size', idealSym).text(d.data.symbol);
+      fitText(symEl, idealSym);
     }
   });
 

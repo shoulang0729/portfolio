@@ -183,14 +183,26 @@ function _mfAssetToPosition(a) {
   if (!sym) sym = name;
 
   const proxy   = isFund ? (fundProxyOf(sym) ?? FUND_FALLBACK_PROXY) : null;
-  const shares  = Number(a.shares)  || 0;
+  let   shares  = Number(a.shares)  || 0;
   const avgCost = Number(a.avgCost) || 0;
   let   price   = Number(a.price)   || 0;
   let   value   = Number(a.value)   || 0;
 
+  // 投資信託の単位正規化:
+  //   内部表現は CSV パスに合わせて「万口」で統一する（avgCost/price は 円/万口）。
+  //   GPT-4o が "687,800口" を 687800 として返すと、shares × avgCost が 10000倍 大きくなる。
+  //   value が取れていれば比率で判定、無ければ shares のオーダーで heuristic 判定。
+  if (isFund && shares > 0) {
+    if (value > 0 && avgCost > 0) {
+      // shares × avgCost が value より 1000倍 以上大きい → 単位が「口」 → 万口へ変換
+      if (shares * avgCost > value * 1000) shares = shares / 10000;
+    } else if (shares >= 10000) {
+      // value 情報なしでも、shares が 1万 を超えるなら「口」 単位とみなす
+      shares = shares / 10000;
+    }
+  }
+
   // value が取れていなければ shares × avgCost で推定（基準価額ベースの概算）
-  // 投資信託の場合 avgCost は 円/万口 だが、shares 単位は GPT-4o の解釈次第。
-  // ここではユーザーの保有コスト額として近い値を出すフォールバック扱い。
   if (value === 0 && shares > 0 && avgCost > 0) value = shares * avgCost;
 
   // price が無ければ avgCost を初期値として使う（refreshPrices でライブ更新される）
