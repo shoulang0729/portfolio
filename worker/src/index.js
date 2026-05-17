@@ -513,7 +513,7 @@ async function handleNotionSave(request, env, origin) {
 // PUT: 許可オリジンかつ X-Pin-Hash ヘッダーによる PIN 認証が必要
 const DEFAULT_PIN_HASH = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4'; // SHA-256("1234")
 
-async function handlePositions(request, env, origin) {
+async function handlePositions(request, env, origin, ctx) {
   if (!env.KV) return errRes('KV 未設定', 500, origin);
 
   if (request.method === 'GET') {
@@ -532,8 +532,11 @@ async function handlePositions(request, env, origin) {
     if (!Array.isArray(body)) return errRes('Array が必要です', 400, origin);
     await env.KV.put('positions', JSON.stringify(body));
 
-    // GitHub にもミラー（失敗してもKV保存自体は成功とみなす・fire-and-forget）
-    _syncPositionsToGithub(body, env).catch(e => console.warn('[github sync]', e));
+    // GitHub にもミラー（response 返却後も処理を継続させるため waitUntil で包む）
+    const githubSync = _syncPositionsToGithub(body, env).catch(e => console.warn('[github sync]', e));
+    if (ctx && typeof ctx.waitUntil === 'function') {
+      ctx.waitUntil(githubSync);
+    }
 
     return jsonRes({ ok: true }, 200, origin);
   }
@@ -684,7 +687,7 @@ async function handleAuthVerify(request, env, origin) {
 
 // ── メインハンドラー ──────────────────────────────────
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const origin = request.headers.get('Origin') || '';
     const allowed = isAllowedOrigin(origin, env);
@@ -707,7 +710,7 @@ export default {
     if (path === '/ai/context')      return handleAIContext(request, env, org);
     if (path.startsWith('/ai/'))     return handleAI(request, path, env, org);
     if (path === '/watchlist')       return handleWatchlist(request, env, org);
-    if (path === '/positions')       return handlePositions(request, env, org);
+    if (path === '/positions')       return handlePositions(request, env, org, ctx);
     if (path === '/prices/cache')    return handlePricesCache(env, org);
     if (path === '/auth/pin-hash')   return handleAuthPinHash(request, env, org);
     if (path === '/notion/save')     return handleNotionSave(request, env, org);
