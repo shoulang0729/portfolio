@@ -12,7 +12,7 @@
 // AI モデル設定
 // ══════════════════════════════════════════════
 const AI_MODELS = [
-  { id: 'gpt',      name: 'ChatGPT',  color: '#10A37F', textColor: '#fff',
+  { id: 'gpt',      name: 'ChatGPT',  color: '#FFFFFF', textColor: '#10A37F', borderColor: '#10A37F',
     versions: ['gpt-4o', 'gpt-4o-mini', 'o3', 'o4-mini'] },
   { id: 'gemini',   name: 'Gemini',   color: '#4285F4', textColor: '#fff',
     versions: ['gemini-2.0-flash', 'gemini-2.5-pro', 'gemini-1.5-pro'] },
@@ -123,25 +123,9 @@ const aiState = {
 
 // ══════════════════════════════════════════════
 // コンテキスト生成（ポートフォリオ / ウォッチリスト）
+// ペルソナプロンプトは ai-system-prompt.js の ADVISOR_PERSONA_PROMPT。
+// ポートフォリオ部分は _buildPortfolioBlock() で生成（後方で定義）。
 // ══════════════════════════════════════════════
-
-function buildPortfolioContext() {
-  const totalValue = positions.reduce((s, p) => s + p.value, 0);
-  const rows = positions.map(p => {
-    const pct = (p.value / totalValue * 100).toFixed(1);
-    const pnl = p.pnlPct != null ? `（損益率 ${p.pnlPct.toFixed(1)}%）` : '';
-    const cur = p.cur === 'USD' ? `$${p.price.toFixed(2)}` : `¥${Math.round(p.price).toLocaleString()}`;
-    return `・${p.symbol}（${p.name}）: 評価額 ${Math.round(p.value).toLocaleString()}円 / ポートフォリオ比 ${pct}% / 現在値 ${cur}${pnl}`;
-  }).join('\n');
-
-  return `あなたは個人投資家のポートフォリオ分析を支援するアシスタントです。
-以下は質問者の保有ポートフォリオです（合計評価額: ${Math.round(totalValue / 100000000 * 100) / 100}億円）:
-
-${rows}
-
-上記ポートフォリオを踏まえて、ユーザーの質問に簡潔かつ具体的に回答してください。
-投資判断はあくまで参考情報として提供し、最終判断はユーザー自身が行うことを前提としてください。`;
-}
 
 function buildWatchlistContext() {
   const wl = state.watchlist;
@@ -159,17 +143,15 @@ function buildWatchlistContext() {
 ${rows}`;
 }
 
-// システムプロンプトを組み立てる（保有銘柄 + ウォッチリストを分離して結合）
+// システムプロンプトを組み立てる
+//   1. アドバイザーペルソナ（投資壁打ちAI） ※ ai-system-prompt.js で定義
+//   2. 保有ポートフォリオ（任意）
+//   3. ウォッチリスト（任意）
 function buildSystemPrompt(withPortfolio, withWatchlist) {
-  const base = 'あなたは個人投資家のポートフォリオ管理を支援するアシスタントです。';
-  if (!withPortfolio && !withWatchlist) return base;
-
-  const parts = [];
+  const parts = [ADVISOR_PERSONA_PROMPT];
 
   if (withPortfolio) {
-    parts.push(buildPortfolioContext());
-  } else {
-    parts.push(base);
+    parts.push(_buildPortfolioBlock());
   }
 
   if (withWatchlist) {
@@ -180,7 +162,23 @@ function buildSystemPrompt(withPortfolio, withWatchlist) {
     }
   }
 
-  return parts.join('\n\n');
+  return parts.join('\n\n---\n\n');
+}
+
+// ポートフォリオ部分のみを生成（ペルソナ部分は分離）
+function _buildPortfolioBlock() {
+  const totalValue = positions.reduce((s, p) => s + p.value, 0);
+  const rows = positions.map(p => {
+    const pct = (p.value / totalValue * 100).toFixed(1);
+    const pnl = p.pnlPct != null ? `（損益率 ${p.pnlPct.toFixed(1)}%）` : '';
+    const cur = p.cur === 'USD' ? `$${p.price.toFixed(2)}` : `¥${Math.round(p.price).toLocaleString()}`;
+    return `・${p.symbol}（${p.name}）: 評価額 ${Math.round(p.value).toLocaleString()}円 / ポートフォリオ比 ${pct}% / 現在値 ${cur}${pnl}`;
+  }).join('\n');
+
+  return `# ポートフォリオ（positions）
+合計評価額: ${Math.round(totalValue / 100000000 * 100) / 100}億円
+
+${rows}`;
 }
 
 // ══════════════════════════════════════════════
@@ -341,12 +339,19 @@ function _renderResultCards(nonClaudeIds, showClaude) {
   if (!wrap) return;
   const claudeModel = AI_MODELS.find(m => m.isSynthesizer);
 
+  const headerStyle = (m) => {
+    const fg = m.textColor || '#fff';
+    const subFg = m.borderColor ? m.textColor : 'rgba(255,255,255,0.75)';
+    const border = m.borderColor ? `box-shadow:inset 0 0 0 1px ${m.borderColor};` : '';
+    return `background:${m.color};color:${fg};--ai-sub-fg:${subFg};${border}`;
+  };
+
   const nonClaudeHtml = nonClaudeIds.map(id => {
     const m = AI_MODELS.find(m => m.id === id);
     const ver = _getSelectedVersion(id);
     return `
       <div class="ai-card" id="${_aiCardId(id)}">
-        <div class="ai-card-header" style="background:${m.color}">
+        <div class="ai-card-header" style="${headerStyle(m)}">
           <span class="ai-card-name">${m.name}</span>
           <span class="ai-card-sub">${ver}</span>
         </div>
@@ -356,7 +361,7 @@ function _renderResultCards(nonClaudeIds, showClaude) {
 
   const claudeHtml = showClaude ? `
     <div class="ai-card ai-card-claude" id="${_aiCardId('claude')}">
-      <div class="ai-card-header" style="background:${claudeModel.color}">
+      <div class="ai-card-header" style="${headerStyle(claudeModel)}">
         <span class="ai-card-name">${claudeModel.name}</span>
         <span class="ai-card-sub">${_getSelectedVersion('claude')}</span>
         <span class="ai-card-badge">統合 · 総括</span>

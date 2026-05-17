@@ -1,0 +1,194 @@
+
+/* ── 銘柄タイプバッジ ── */
+.wl-type-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  background: var(--border);
+  color: var(--text2);
+}
+.wl-badge-ETF,
+.wl-badge-株,
+.wl-badge-投信,
+.wl-badge-通貨  { background: var(--border); color: var(--text2); }
+
+/* ── テーブル ── */
+.wl-empty-msg {
+  text-align: center;
+  padding: 32px 16px;
+  color: var(--text2);
+  font-size: 14px;
+}
+.wl-table .wl-market-cell { text-align: center; white-space: nowrap; }
+.wl-table .wl-price-cell  { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.wl-del-cell { text-align: center; width: 32px; padding: 0 4px; }
+.wl-del-btn {
+  background: none;
+  border: none;
+  color: var(--text2);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1;
+  transition: background 0.1s, color 0.1s;
+}
+.wl-del-btn:hover { background: rgba(255,59,48,0.15); color: #ff3b30; }
+
+/* ウォッチリスト検索ドロップダウン：価格・騰落率 */
+.wl-item-price {
+  margin-left: auto;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.wl-item-pct { font-weight: 600; }
+.wl-item-pct.pos { color: #FF3B30; }
+.wl-item-pct.neg { color: #34C759; }
+
+
+/* ══════════════════════════════════════════════
+   PIN 認証オーバーレイ  (auth.js)
+   ══════════════════════════════════════════════ */
+
+#pin-overlay {
+  position: fixed; inset: 0;
+  background: var(--bg);
+  z-index: 99999;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0;
+  transition: opacity 0.38s ease;
+}
+
+.pin-card {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 44px 36px 40px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+  width: min(320px, 88vw);
+  gap: 0;
+}
+
+.pin-lock-icon {
+  color: var(--text2);
+  opacity: 0.65;
+  margin-bottom: 22px;
+  transition: color 0.2s;
+}
+
+.pin-title {
+  font-size: 24px; font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.3px;
+  margin-bottom: 6px;
+}
+
+.pin-subtitle {
+  font-size: 13px;
+  color: var(--text2);
+  margin-bottom: 32px;
+}
+
+/* ── 4つのドット ── */
+.pin-dots {
+  display: flex; gap: 18px;
+  margin-bottom: 0;
+  transition: transform 0.05s;
+}
+
+.pin-dot {
+  width: 15px; height: 15px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: transparent;
+  transition: background 0.15s, border-color 0.15s, transform 0.12s;
+}
+.pin-dot.filled {
+  background: var(--text);
+  border-color: var(--text);
+  transform: scale(1.18);
+}
+.pin-dots.success .pin-dot.filled {
+  background: #34C759;
+  border-color: #34C759;
+}
+.pin-dots.success .pin-lock-icon { color: #34C759; }
+
+/* ── エラーメッセージ ── */
+.pin-error {
+  height: 18px;
+  font-size: 12px;
+  color: #FF3B30;
+  margin-top: 12px;
+  margin-bottom: 0;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.18s;
+  min-height: 18px;
+}
+.pin-error.visible { opacity: 1; }
+
+/* ── キーパッド ── */
+.pin-keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 11px;
+  margin-top: 26px;
+  width: 100%;
+}
+
+.pin-key {
+  aspect-ratio: 1;
+  border: 1.5px solid var(--border2);
+  border-radius: 50%;
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 22px;
+  font-weight: 300;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.1s, transform 0.08s, border-color 0.1s;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none; -webkit-user-select: none;
+  width: 100%;
+}
+.pin-key:hover  { background: var(--surface3); border-color: var(--border); }
+.pin-key:active { transform: scale(0.90); background: var(--surface3); }
+.pin-key:disabled { opacity: 0.35; cursor: default; transform: none; }
+.pin-key-empty  { /* スペーサー */ }
+.pin-key-back {
+  background: transparent;
+  border-color: transparent;
+  font-size: 16px;
+  color: var(--text2);
+}
+.pin-key-back:hover  { background: var(--surface3); border-color: var(--border2); color: var(--text); }
+.pin-key-back:active { transform: scale(0.90); }
+
+/* ── シェイクアニメーション ── */
+@keyframes pin-shake {
+  0%, 100% { transform: translateX(0); }
+  12%  { transform: translateX(-9px); }
+  25%  { transform: translateX(9px); }
+  37%  { transform: translateX(-7px); }
+  50%  { transform: translateX(7px); }
+  62%  { transform: translateX(-4px); }
+  75%  { transform: translateX(4px); }
+  87%  { transform: translateX(-2px); }
+}
+.pin-dots.shake { animation: pin-shake 0.48s ease; }
+
+/* ── モバイル調整 ── */
+@media (max-width: 400px) {
+  .pin-card { padding: 36px 24px 32px; border-radius: 24px; }
+  .pin-key  { font-size: 20px; }
+  .pin-keypad { gap: 9px; }
+}
+

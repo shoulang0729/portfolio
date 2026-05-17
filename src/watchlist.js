@@ -131,7 +131,11 @@ function wlTypeBadge(quoteType) {
 // ── 検索 ──
 let _wlSearchTimer = null;
 
-function onWatchlistSearch(q) {
+function onWatchlistSearch(eventOrQuery) {
+  // data-action ディスパッチャ経由（input イベント）、または文字列引数の両方を受ける
+  const q = (typeof eventOrQuery === 'string')
+    ? eventOrQuery
+    : (eventOrQuery?.target?.value ?? '');
   clearTimeout(_wlSearchTimer);
   const dropdown = document.getElementById('wl-search-dropdown');
   if (!q.trim()) { dropdown.hidden = true; return; }

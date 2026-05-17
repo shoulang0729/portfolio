@@ -1,0 +1,45 @@
+// ══════════════════════════════════════════════════════════════
+// auth-pin.js  ―  PIN 認証ロジック（状態・ハッシュ・ロックアウト）
+//
+// ■ デフォルト PIN: 1234  / リセット: localStorage.removeItem('hm-pin-hash')
+// UI（キーパッド・ダイアログ）は src/auth-ui.js に分離。
+// 暗号化（AES-GCM 鍵導出）は src/auth-crypto.js に分離。
+//
+// このファイルは "依存元" ─ 他の auth-*.js より先に読込む。
+// ══════════════════════════════════════════════════════════════
+
+// ── ハードコードされたデフォルト PIN ハッシュ（SHA-256 of "1234"）──
+const AUTH_PIN_HASH    = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
+const AUTH_SESSION_KEY = 'hm-auth-v1';
+const AUTH_LS_HASH_KEY = 'hm-pin-hash'; // localStorage キー
+const AUTH_PIN_LEN     = 4;
+const AUTH_MAX_FAIL    = 5;
+const AUTH_LOCK_SEC    = 30;
+
+// ── 有効な PIN ハッシュ（localStorage 優先） ──
+function _getActivePinHash() {
+  return localStorage.getItem(AUTH_LS_HASH_KEY) || AUTH_PIN_HASH;
+}
+
+// ── 共有 internal state（auth-crypto / auth-passkey / auth-ui から参照） ──
+const _auth = {
+  input:    '',
+  fails:    0,
+  lockedAt: null,
+  encKey:   null,   // AES-GCM key（auth-crypto.js が _deriveEncKey でセット）
+};
+
+// ── セッション確認（app.js からも参照） ──
+function isAuthenticated() {
+  return sessionStorage.getItem(AUTH_SESSION_KEY) === '1';
+}
+
+// ── PIN ハッシュ計算 ──
+async function _hashPin(pin) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// ── ロックアウト ──
+function _isLocked()   { return _auth.lockedAt && (Date.now() - _auth.lockedAt) / 1000 < AUTH_LOCK_SEC; }
+function _lockRemain() { return Math.ceil(AUTH_LOCK_SEC - (Date.now() - _auth.lockedAt) / 1000); }

@@ -277,10 +277,50 @@ function _setupMobileLayout() {
 }
 
 /**
+/**
+ * data-action 属性で宣言されたハンドラの委譲ディスパッチャ。
+ *
+ * HTML側: <button data-action="fnName" data-arg="value">         → fnName(value, event)
+ *         <button data-action="fnA|fnB">                          → fnA(event); fnB(event)
+ *         <input  data-event="input" data-action="onSearch">      → onSearch(event.target.value, event)
+ *         <div    data-action="handleOverlayClick">               → handleOverlayClick(event, event)
+ *
+ * 全てのハンドラは window.* グローバル関数として既存。
+ */
+function _dispatchAction(el, event) {
+  const actions = (el.dataset.action || '').split('|').filter(Boolean);
+  // data-arg があれば最優先、なければ event をそのまま渡す
+  // input value が必要な関数は event.target.value を内部で読む。
+  const arg = (el.dataset.arg !== undefined) ? el.dataset.arg : event;
+  for (const name of actions) {
+    const fn = window[name];
+    if (typeof fn !== 'function') {
+      console.warn(`[dispatch] unknown action: ${name}`);
+      continue;
+    }
+    try { fn(arg, event); }
+    catch (e) { console.error(`[dispatch] ${name} threw:`, e); }
+  }
+}
+
+function _bindActionDispatcher() {
+  const findAndDispatch = (e) => {
+    const el = e.target.closest('[data-action]');
+    if (!el) return;
+    const wantType = el.dataset.event || 'click';
+    if (wantType !== e.type) return;
+    _dispatchAction(el, e);
+  };
+  ['click', 'input', 'change'].forEach(t =>
+    document.addEventListener(t, findAndDispatch));
+}
+
+/**
  * アプリ初期化
  * テーマ適用 → 初期描画 → バックグラウンドで履歴データを段階的に取得する
  */
 function init() {
+  _bindActionDispatcher();
   _setupMobileLayout();
   applyTheme();
   document.getElementById('btn-pnl').classList.remove('active');

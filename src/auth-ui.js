@@ -1,109 +1,12 @@
 // ══════════════════════════════════════════════════════════════
-// auth.js  ―  PIN 認証 + PIN 変更
+// auth-ui.js  ―  PIN ログイン / PIN 変更ダイアログ UI
 //
-// ■ デフォルト PIN: 1234
-//   変更はアプリ内の 🔒 ボタン → 「PINを変更」から行える。
-//   変更後の PIN はブラウザの localStorage に保存される。
-//   リセットしたい場合: localStorage.removeItem('hm-pin-hash') を console で実行。
+// 依存: auth-pin.js (_auth, AUTH_*, _hashPin, isAuthenticated, _isLocked, _lockRemain),
+//       auth-crypto.js (_deriveEncKey, _restoreEncKey, _AUTH_ENC_SS),
+//       auth-passkey.js (authenticatePasskey)
+//
+// 読込順: auth-pin → auth-crypto → auth-passkey → auth-ui
 // ══════════════════════════════════════════════════════════════
-
-// ── ハードコードされたデフォルト PIN ハッシュ（SHA-256 of "1234"）──
-const AUTH_PIN_HASH    = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
-const AUTH_SESSION_KEY = 'hm-auth-v1';
-const AUTH_LS_HASH_KEY = 'hm-pin-hash'; // localStorage キー
-const AUTH_PIN_LEN     = 4;
-const AUTH_MAX_FAIL    = 5;
-const AUTH_LOCK_SEC    = 30;
-
-// ── 有効な PIN ハッシュ（localStorage 優先） ──
-function _getActivePinHash() {
-  return localStorage.getItem(AUTH_LS_HASH_KEY) || AUTH_PIN_HASH;
-}
-
-// ══════════════════════════════════════════════
-// ログイン画面 内部状態
-// ══════════════════════════════════════════════
-const _auth = {
-  input:    '',
-  fails:    0,
-  lockedAt: null,
-  encKey:   null,   // AES-GCM key（PIN から PBKDF2 導出）
-};
-
-// ══════════════════════════════════════════════
-// AES-GCM 暗号化 / 復号（AI タブの API キー保護）
-// ══════════════════════════════════════════════
-
-const _AUTH_ENC_SALT = 'hm-ai-keys-v1';
-const _AUTH_ENC_SS   = 'hm-enc-key-v1'; // sessionStorage キー
-
-/** PIN から AES-256-GCM 鍵を PBKDF2 導出して _auth.encKey にセット */
-async function _deriveEncKey(pin) {
-  const keyMat = await crypto.subtle.importKey(
-    'raw', new TextEncoder().encode(pin), 'PBKDF2', false, ['deriveKey']
-  );
-  _auth.encKey = await crypto.subtle.deriveKey(
-    { name: 'PBKDF2', salt: new TextEncoder().encode(_AUTH_ENC_SALT),
-      iterations: 100000, hash: 'SHA-256' },
-    keyMat, { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']
-  );
-  const exported = await crypto.subtle.exportKey('raw', _auth.encKey);
-  sessionStorage.setItem(_AUTH_ENC_SS,
-    btoa(String.fromCharCode(...new Uint8Array(exported))));
-}
-
-/** sessionStorage から鍵を復元（既に認証済みの再読み込み時） */
-async function _restoreEncKey() {
-  const stored = sessionStorage.getItem(_AUTH_ENC_SS);
-  if (!stored) return;
-  const bytes = Uint8Array.from(atob(stored), c => c.charCodeAt(0));
-  _auth.encKey = await crypto.subtle.importKey(
-    'raw', bytes, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']
-  );
-}
-
-/**
- * 平文を AES-GCM で暗号化して Base64 文字列を返す（ai-tab.js から呼ぶ）
- */
-async function aiEncrypt(plaintext) {
-  if (!_auth.encKey) await _restoreEncKey();
-  if (!_auth.encKey) throw new Error('セッションが切れました。ページを再読み込みしてPINを入力してください。');
-  const iv  = crypto.getRandomValues(new Uint8Array(12));
-  const enc = await crypto.subtle.encrypt(
-    { name: 'AES-GCM', iv }, _auth.encKey, new TextEncoder().encode(plaintext)
-  );
-  const buf = new Uint8Array(12 + enc.byteLength);
-  buf.set(iv); buf.set(new Uint8Array(enc), 12);
-  return btoa(String.fromCharCode(...buf));
-}
-
-/**
- * aiEncrypt で暗号化された Base64 文字列を復号する
- */
-async function aiDecrypt(ciphertext) {
-  if (!_auth.encKey) await _restoreEncKey();
-  if (!_auth.encKey) throw new Error('セッションが切れました。ページを再読み込みしてPINを入力してください。');
-  const buf = Uint8Array.from(atob(ciphertext), c => c.charCodeAt(0));
-  const dec = await crypto.subtle.decrypt(
-    { name: 'AES-GCM', iv: buf.slice(0, 12) }, _auth.encKey, buf.slice(12)
-  );
-  return new TextDecoder().decode(dec);
-}
-
-// ── セッション確認（app.js から参照可） ──
-function isAuthenticated() {
-  return sessionStorage.getItem(AUTH_SESSION_KEY) === '1';
-}
-
-// ── PIN ハッシュ計算 ──
-async function _hashPin(pin) {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-// ── ロックアウト ──
-function _isLocked()    { return _auth.lockedAt && (Date.now() - _auth.lockedAt) / 1000 < AUTH_LOCK_SEC; }
-function _lockRemain()  { return Math.ceil(AUTH_LOCK_SEC - (Date.now() - _auth.lockedAt) / 1000); }
 
 // ── キーパッド制御 ──
 function _setKeypadEnabled(on) {
@@ -166,11 +69,10 @@ async function _submitPin() {
   if (hash === _getActivePinHash()) {
     _auth.fails = 0;
     sessionStorage.setItem(AUTH_SESSION_KEY, '1');
-    await _deriveEncKey(_auth.input); // AES 鍵を導出してセッションに保存
+    await _deriveEncKey(_auth.input);
     _shake('success');
     document.querySelectorAll('#pin-overlay .pin-dot').forEach(d => d.classList.add('filled'));
 
-    // 変更ボタンを表示してフェードアウト
     setTimeout(() => {
       _showChangePinButton();
       const ov = document.getElementById('pin-overlay');
@@ -341,7 +243,6 @@ async function _pcSubmit() {
   const hash = await _hashPin(_pc.input);
 
   if (_pc.step === 1) {
-    // 現在の PIN 確認
     if (hash !== _getActivePinHash()) {
       _pc.input = ''; _pcUpdateDots(); _pcShake();
       _pcShowError('PINが違います');
@@ -353,22 +254,19 @@ async function _pcSubmit() {
     document.querySelectorAll('#pc-overlay .pin-key').forEach(b => { b.disabled = false; });
 
   } else if (_pc.step === 2) {
-    // 新 PIN を記憶して確認ステップへ
     _pc.newPin = _pc.input;
     _pc.step = 3; _pc.input = '';
     _pcUpdateDots(); _pcSetTitle(); _pcHideError();
     document.querySelectorAll('#pc-overlay .pin-key').forEach(b => { b.disabled = false; });
 
   } else if (_pc.step === 3) {
-    // 新 PIN の一致確認
     if (_pc.input !== _pc.newPin) {
       _pc.input = ''; _pcUpdateDots(); _pcShake();
       _pcShowError('PINが一致しません');
       document.querySelectorAll('#pc-overlay .pin-key').forEach(b => { b.disabled = false; });
       return;
     }
-    // 保存
-    const prevHash = _getActivePinHash(); // 変更前のハッシュ（Worker認証に使用）
+    const prevHash = _getActivePinHash();
     const newHash = await _hashPin(_pc.newPin);
     localStorage.setItem(AUTH_LS_HASH_KEY, newHash);
     // Worker の KV にも新ハッシュを同期（失敗しても PIN 変更自体は成功とみなす）
@@ -416,7 +314,6 @@ function openPinChange() {
     </div>`;
   document.body.appendChild(ov);
 
-  // キーボード入力
   ov._kbHandler = e => {
     if (e.key >= '0' && e.key <= '9') pcKeyPress(e.key);
     else if (e.key === 'Backspace') pcBackspace();
@@ -436,132 +333,19 @@ function closePinChange() {
 }
 
 // ══════════════════════════════════════════════
-// PIN 変更ボタン・取込ボタンをヘッダーに表示
+// 認証後にメニューボタンを表示
 // ══════════════════════════════════════════════
 function _showChangePinButton() {
-  const btn = document.getElementById('pin-change-btn');
-  if (btn) btn.style.display = '';
-  const pkBtn = document.getElementById('passkey-register-btn');
-  if (pkBtn) pkBtn.style.display = '';
-  const manexBtn = document.getElementById('import-manex-btn');
-  if (manexBtn) manexBtn.style.display = '';
-  const mfBtn = document.getElementById('import-mf-btn');
-  if (mfBtn) mfBtn.style.display = '';
-  const manageBtn = document.getElementById('manage-positions-btn');
-  if (manageBtn) manageBtn.style.display = '';
-}
-
-// ══════════════════════════════════════════════
-// パスキー認証（WebAuthn）
-// RP ID = shoulang0729.github.io（本番）/ localhost（開発）
-// ══════════════════════════════════════════════
-
-const _PASSKEY_RP_ID   = location.hostname;
-const _PASSKEY_RP_NAME = 'Portfolio Heatmap';
-const _PASSKEY_USER_ID = new TextEncoder().encode('portfolio-owner');
-
-function _b64ToU8(b64) {
-  return Uint8Array.from(atob(b64.replace(/-/g,'+').replace(/_/g,'/')), c => c.charCodeAt(0));
-}
-function _u8ToB64url(u8) {
-  return btoa(String.fromCharCode(...u8)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-}
-
-async function registerPasskey() {
-  if (!navigator.credentials || !window.PublicKeyCredential) {
-    alert('このブラウザはパスキーに対応していません。');
-    return;
-  }
-  try {
-    const challengeRes = await fetch(`${WORKER_URL}/auth/challenge`);
-    const { challenge } = await challengeRes.json();
-
-    const credential = await navigator.credentials.create({
-      publicKey: {
-        challenge: _b64ToU8(challenge),
-        rp: { id: _PASSKEY_RP_ID, name: _PASSKEY_RP_NAME },
-        user: { id: _PASSKEY_USER_ID, name: 'owner', displayName: 'Portfolio Owner' },
-        pubKeyCredParams: [
-          { type: 'public-key', alg: -7  },
-          { type: 'public-key', alg: -257 },
-        ],
-        authenticatorSelection: { userVerification: 'preferred', residentKey: 'preferred' },
-        timeout: 60000,
-      },
-    });
-
-    const response = credential.response;
-    const publicKey = response.getPublicKey ? new Uint8Array(response.getPublicKey()) : new Uint8Array(0);
-
-    const regRes = await fetch(`${WORKER_URL}/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: credential.id,
-        publicKey: _u8ToB64url(publicKey),
-        clientDataJSON: _u8ToB64url(new Uint8Array(response.clientDataJSON)),
-      }),
-    });
-    if (!(await regRes.json()).ok) throw new Error('登録失敗');
-    alert('パスキーを登録しました。次回からパスキーでログインできます。');
-  } catch (e) {
-    if (e.name !== 'NotAllowedError') alert(`パスキー登録エラー: ${e.message}`);
-  }
-}
-
-async function authenticatePasskey() {
-  if (!navigator.credentials || !window.PublicKeyCredential) return;
-  try {
-    const challengeRes = await fetch(`${WORKER_URL}/auth/challenge`);
-    if (!challengeRes.ok) return;
-    const { challenge } = await challengeRes.json();
-
-    const assertion = await navigator.credentials.get({
-      publicKey: {
-        challenge: _b64ToU8(challenge),
-        rpId: _PASSKEY_RP_ID,
-        allowCredentials: [],
-        userVerification: 'preferred',
-        timeout: 60000,
-      },
-    });
-
-    const response = assertion.response;
-    const verifyRes = await fetch(`${WORKER_URL}/auth/verify`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: assertion.id,
-        clientDataJSON: _u8ToB64url(new Uint8Array(response.clientDataJSON)),
-        authenticatorData: _u8ToB64url(new Uint8Array(response.authenticatorData)),
-        signature: _u8ToB64url(new Uint8Array(response.signature)),
-      }),
-    });
-
-    if ((await verifyRes.json()).ok) {
-      sessionStorage.setItem(AUTH_SESSION_KEY, '1');
-      // パスキー認証時はランダムなセッション鍵を生成
-      const rawKey = crypto.getRandomValues(new Uint8Array(32));
-      _auth.encKey = await crypto.subtle.importKey('raw', rawKey, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
-      sessionStorage.setItem(_AUTH_ENC_SS, btoa(String.fromCharCode(...rawKey)));
-      _auth.fails = 0;
-      const ov = document.getElementById('pin-overlay');
-      if (ov) { ov.style.opacity = '0'; setTimeout(() => { ov.remove(); document.body.style.overflow = ''; }, 380); }
-      _showChangePinButton();
-    } else {
-      const errEl = document.getElementById('pin-error');
-      if (errEl) { errEl.textContent = 'パスキー認証失敗'; errEl.classList.add('visible'); }
-    }
-  } catch (e) {
-    if (e.name !== 'NotAllowedError') {
-      const errEl = document.getElementById('pin-error');
-      if (errEl) { errEl.textContent = `パスキーエラー: ${e.message}`; errEl.classList.add('visible'); }
-    }
+  for (const id of ['pin-change-btn', 'passkey-register-btn',
+                    'import-manex-btn', 'import-mf-btn',
+                    'manage-positions-btn']) {
+    const btn = document.getElementById(id);
+    if (btn) btn.style.display = '';
   }
 }
 
 // ══════════════════════════════════════════════
-// 起動時初期化
+// 起動時初期化（ログイン画面を出すか、自動でスキップするか）
 // ══════════════════════════════════════════════
 (function initAuth() {
   if (isAuthenticated()) {
@@ -576,8 +360,7 @@ async function authenticatePasskey() {
       });
       return;
     }
-    // auth tokenはあるがenc鍵がない（古いセッション or 初回暗号化機能導入）
-    // → 一度クリアしてPINを再入力させる
+    // auth tokenはあるがenc鍵がない → クリアしてPINを再入力させる
     sessionStorage.removeItem(AUTH_SESSION_KEY);
   }
 

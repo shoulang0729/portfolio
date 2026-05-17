@@ -21,7 +21,11 @@
 <link rel="manifest" href="assets/manifest.json">
 
 <!-- スタイルシート -->
-<link rel="stylesheet" href="assets/portfolio.css?v=20260517e">
+<link rel="stylesheet" href="assets/01-base.css?v=20260517g">
+<link rel="stylesheet" href="assets/02-tables.css?v=20260517g">
+<link rel="stylesheet" href="assets/03-misc.css?v=20260517g">
+<link rel="stylesheet" href="assets/04-auth.css?v=20260517g">
+<link rel="stylesheet" href="assets/05-ai-tab.css?v=20260517g">
 <!-- 銘柄リスト列表示制御（JS が動的に書き込む） -->
 <style id="sl-col-style"></style>
 <!-- ★ モバイルレイアウト CSS フォールバック
@@ -59,24 +63,24 @@
     <div class="ctrl-group" id="refresh-ctrl-group">
       <span class="ctrl-label">更新頻度</span>
       <div class="refresh-switch" id="refresh-switch">
-        <button class="refresh-btn active" data-val="0"     onclick="handleRefreshSelect('0')">OFF</button>
-        <button class="refresh-btn"        data-val="60"    onclick="handleRefreshSelect('60')">1分</button>
-        <button class="refresh-btn"        data-val="300"   onclick="handleRefreshSelect('300')">5分</button>
-        <button class="refresh-btn"        data-val="3600"  onclick="handleRefreshSelect('3600')">60分</button>
-        <button class="refresh-btn"        data-val="now"   onclick="handleRefreshSelect('now')">ライブ</button>
+        <button class="refresh-btn active" data-val="0"     data-action="handleRefreshSelect" data-arg="0">OFF</button>
+        <button class="refresh-btn"        data-val="60"    data-action="handleRefreshSelect" data-arg="60">1分</button>
+        <button class="refresh-btn"        data-val="300"   data-action="handleRefreshSelect" data-arg="300">5分</button>
+        <button class="refresh-btn"        data-val="3600"  data-action="handleRefreshSelect" data-arg="3600">60分</button>
+        <button class="refresh-btn"        data-val="now"   data-action="handleRefreshSelect" data-arg="now">ライブ</button>
       </div>
     </div>
     <span class="countdown" id="countdown"></span>
     <div class="divider"></div>
     <div id="hm-menu-wrap">
-      <button id="hm-menu-btn" onclick="toggleHmMenu()" title="メニュー" aria-expanded="false" aria-haspopup="true">
+      <button id="hm-menu-btn" data-action="toggleHmMenu" title="メニュー" aria-expanded="false" aria-haspopup="true">
         <span class="hm-bar">☰</span><span class="hm-x">✕</span>
       </button>
       <div id="hm-menu-dropdown" role="menu">
-        <button class="hm-menu-item" id="theme-btn" onclick="cycleTheme()" title="ライト/ダーク/自動">
+        <button class="hm-menu-item" id="theme-btn" data-action="cycleTheme" title="ライト/ダーク/自動">
           <span class="hm-icon" id="theme-icon">☀</span>テーマ切替
         </button>
-        <button class="hm-menu-item" id="pin-change-btn" onclick="openPinChange(); closeHmMenu()" title="PINを変更" style="display:none">
+        <button class="hm-menu-item" id="pin-change-btn" data-action="openPinChange|closeHmMenu" title="PINを変更" style="display:none">
           <span class="hm-icon">
             <svg width="13" height="16" viewBox="0 0 13 17" fill="none" xmlns="http://www.w3.org/2000/svg">
               <rect x="1" y="7" width="11" height="9" rx="2.5" stroke="currentColor" stroke-width="1.6" fill="none"/>
@@ -85,7 +89,7 @@
             </svg>
           </span>PIN変更
         </button>
-        <button class="hm-menu-item" id="passkey-register-btn" onclick="registerPasskey(); closeHmMenu()" title="パスキーを登録（指紋/顔認証）" style="display:none">
+        <button class="hm-menu-item" id="passkey-register-btn" data-action="registerPasskey|closeHmMenu" title="パスキーを登録（指紋/顔認証）" style="display:none">
           <span class="hm-icon">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
               <circle cx="5" cy="5" r="3.3" stroke="currentColor" stroke-width="1.4"/>
@@ -94,7 +98,7 @@
           </span>パスキー登録
         </button>
         <div class="hm-menu-divider"></div>
-        <button class="hm-menu-item" id="import-manex-btn" onclick="openImportModal('manex'); closeHmMenu()" title="マネックス証券 CSV を取込（国内株・米国株・投資信託）" style="display:none">
+        <button class="hm-menu-item" id="import-manex-btn" data-action="openImportModal|closeHmMenu" data-arg="manex" title="マネックス証券 CSV を取込（国内株・米国株・投資信託）" style="display:none">
           <span class="hm-icon">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
               <rect x="2" y="1" width="10" height="12" rx="1.5" stroke="currentColor" stroke-width="1.4" fill="none"/>
@@ -104,7 +108,7 @@
             </svg>
           </span>マネックス取込
         </button>
-        <button class="hm-menu-item" id="import-mf-btn" onclick="openImportModal('moneyforward'); closeHmMenu()" title="マネーフォワード スクショを取込" style="display:none">
+        <button class="hm-menu-item" id="import-mf-btn" data-action="openImportModal|closeHmMenu" data-arg="moneyforward" title="マネーフォワード スクショを取込" style="display:none">
           <span class="hm-icon">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
               <rect x="1" y="2.5" width="12" height="9" rx="1.5" stroke="currentColor" stroke-width="1.4" fill="none"/>
@@ -114,7 +118,7 @@
             </svg>
           </span>マネフォ取込
         </button>
-        <button class="hm-menu-item" id="manage-positions-btn" onclick="openManagePositionsModal(); closeHmMenu()" title="保有銘柄の削除・整理" style="display:none">
+        <button class="hm-menu-item" id="manage-positions-btn" data-action="openManagePositionsModal|closeHmMenu" title="保有銘柄の削除・整理" style="display:none">
           <span class="hm-icon">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
               <line x1="2" y1="4" x2="12" y2="4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
@@ -131,7 +135,7 @@
 </div>
 
 <div class="stats-outer">
-  <button class="eye-btn" id="stats-eye" onclick="toggleStats()" title="統計の表示／非表示">
+  <button class="eye-btn" id="stats-eye" data-action="toggleStats" title="統計の表示／非表示">
     <svg width="18" height="14" viewBox="0 0 18 14" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M9 1C5 1 1.5 4 1 7c.5 3 3.5 6 8 6s7.5-3 8-6c-.5-3-4-6-8-6z" stroke="currentColor" stroke-width="1.5" fill="none"/>
       <circle cx="9" cy="7" r="2.5" stroke="currentColor" stroke-width="1.5" fill="none"/>
@@ -143,13 +147,13 @@
   <!-- タブバー -->
   <div id="tab-bar" class="tab-bar" role="tablist">
     <button class="tab-btn active" data-tab="heatmap" role="tab"
-            onclick="switchTab('heatmap')">ヒートマップ</button>
+            data-action="switchTab" data-arg="heatmap">ヒートマップ</button>
     <button class="tab-btn" data-tab="list" role="tab"
-            onclick="switchTab('list')">銘柄リスト</button>
+            data-action="switchTab" data-arg="list">銘柄リスト</button>
     <button class="tab-btn" data-tab="watchlist" role="tab"
-            onclick="switchTab('watchlist')">ウォッチリスト</button>
+            data-action="switchTab" data-arg="watchlist">ウォッチリスト</button>
     <button class="tab-btn" data-tab="ai" role="tab"
-            onclick="switchTab('ai')">AI相談</button>
+            data-action="switchTab" data-arg="ai">AI相談</button>
   </div>
 </div><!-- /sticky-top -->
 
@@ -161,19 +165,19 @@
   <div class="ctrl-group">
     <span class="ctrl-label">シミュレーション</span>
     <div class="period-switch" id="period-switch">
-      <button class="period-btn active" data-period="1d"  onclick="setChangePeriod('1d')">1d</button>
-      <button class="period-btn"        data-period="1w"  onclick="setChangePeriod('1w')">1w</button>
-      <button class="period-btn"        data-period="1m"  onclick="setChangePeriod('1m')">1m</button>
-      <button class="period-btn"        data-period="3m"  onclick="setChangePeriod('3m')">3m</button>
-      <button class="period-btn"        data-period="6m"  onclick="setChangePeriod('6m')">6m</button>
-      <button class="period-btn"        data-period="9m"  onclick="setChangePeriod('9m')">9m</button>
-      <button class="period-btn"        data-period="1y"  onclick="setChangePeriod('1y')">1y</button>
-      <button class="period-btn"        data-period="3y"  onclick="setChangePeriod('3y')">3y</button>
-      <button class="period-btn"        data-period="5y"  onclick="setChangePeriod('5y')">5y</button>
-      <button class="period-btn"        data-period="10y" onclick="setChangePeriod('10y')">10y</button>
+      <button class="period-btn active" data-period="1d"  data-action="setChangePeriod" data-arg="1d">1d</button>
+      <button class="period-btn"        data-period="1w"  data-action="setChangePeriod" data-arg="1w">1w</button>
+      <button class="period-btn"        data-period="1m"  data-action="setChangePeriod" data-arg="1m">1m</button>
+      <button class="period-btn"        data-period="3m"  data-action="setChangePeriod" data-arg="3m">3m</button>
+      <button class="period-btn"        data-period="6m"  data-action="setChangePeriod" data-arg="6m">6m</button>
+      <button class="period-btn"        data-period="9m"  data-action="setChangePeriod" data-arg="9m">9m</button>
+      <button class="period-btn"        data-period="1y"  data-action="setChangePeriod" data-arg="1y">1y</button>
+      <button class="period-btn"        data-period="3y"  data-action="setChangePeriod" data-arg="3y">3y</button>
+      <button class="period-btn"        data-period="5y"  data-action="setChangePeriod" data-arg="5y">5y</button>
+      <button class="period-btn"        data-period="10y" data-action="setChangePeriod" data-arg="10y">10y</button>
     </div>
   </div>
-  <button class="pnl-btn" id="btn-pnl" onclick="setColorModePnl()">含み損益率</button>
+  <button class="pnl-btn" id="btn-pnl" data-action="setColorModePnl">含み損益率</button>
 </div>
 
 <!-- ヒートマップ -->
@@ -202,7 +206,7 @@
 <!-- 銘柄リストパネル（タブ2） -->
 <section id="panel-list" class="tab-panel">
 <div class="sl-controls">
-  <button class="sl-eye-btn" id="sl-eye-btn" onclick="slToggleDetail()" title="詳細列の表示／非表示">
+  <button class="sl-eye-btn" id="sl-eye-btn" data-action="slToggleDetail" title="詳細列の表示／非表示">
     <svg width="18" height="14" viewBox="0 0 18 14" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M9 1C5 1 1.5 4 1 7c.5 3 3.5 6 8 6s7.5-3 8-6c-.5-3-4-6-8-6z" stroke="currentColor" stroke-width="1.5" fill="none"/>
       <circle cx="9" cy="7" r="2.5" stroke="currentColor" stroke-width="1.5" fill="none"/>
@@ -223,7 +227,7 @@
     </svg>
     <input type="text" id="wl-search-input" class="wl-search-input"
            placeholder="例: AAPL / 7203.T / 0700.HK"
-           oninput="onWatchlistSearch(this.value)"
+           data-event="input" data-action="onWatchlistSearch"
            autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
   </div>
   <div id="wl-search-dropdown" class="wl-search-dropdown" hidden></div>
@@ -240,38 +244,38 @@
 <div class="tooltip" id="tooltip"></div>
 
 <!-- 隠しファイル入力（body直下に置かないと display:none の親要素内で .click() が効かない） -->
-<input type="file" id="import-manex-input" accept=".csv" multiple style="display:none" onchange="handleManexFileSelect(event)">
-<input type="file" id="import-mf-input" accept="image/*" style="display:none" onchange="handleMoneyForwardImageSelect(event)">
+<input type="file" id="import-manex-input" accept=".csv" multiple style="display:none" data-event="change" data-action="handleManexFileSelect">
+<input type="file" id="import-mf-input" accept="image/*" style="display:none" data-event="change" data-action="handleMoneyForwardImageSelect">
 
 <!-- ── Import Modal ── -->
-<div class="modal-overlay" id="import-modal-overlay" style="display:none" onclick="handleImportOverlayClick(event)">
+<div class="modal-overlay" id="import-modal-overlay" style="display:none" data-action="handleImportOverlayClick">
   <div class="modal import-modal" id="import-modal">
     <div class="modal-header">
       <div class="modal-title" id="import-modal-title">資産取込</div>
-      <span class="modal-close" onclick="closeImportModal()">✕</span>
+      <span class="modal-close" data-action="closeImportModal">✕</span>
     </div>
     <div id="import-modal-body"></div>
   </div>
 </div>
 
 <!-- ── Chart Modal ── -->
-<div class="modal-overlay" id="modal-overlay" style="display:none" onclick="handleOverlayClick(event)">
+<div class="modal-overlay" id="modal-overlay" style="display:none" data-action="handleOverlayClick">
   <div class="modal" id="modal">
     <div class="modal-header">
       <div class="modal-title" id="modal-title">チャート</div>
-      <span class="modal-close" onclick="closeModal()">✕</span>
+      <span class="modal-close" data-action="closeModal">✕</span>
     </div>
     <div class="range-btns" id="range-btns">
-      <button class="range-btn"        data-range="1d"  onclick="setRange('1d')">1d</button>
-      <button class="range-btn"        data-range="1w"  onclick="setRange('1w')">1w</button>
-      <button class="range-btn"        data-range="1m"  onclick="setRange('1m')">1m</button>
-      <button class="range-btn active" data-range="3m"  onclick="setRange('3m')">3m</button>
-      <button class="range-btn"        data-range="6m"  onclick="setRange('6m')">6m</button>
-      <button class="range-btn"        data-range="9m"  onclick="setRange('9m')">9m</button>
-      <button class="range-btn"        data-range="1y"  onclick="setRange('1y')">1y</button>
-      <button class="range-btn"        data-range="3y"  onclick="setRange('3y')">3y</button>
-      <button class="range-btn"        data-range="5y"  onclick="setRange('5y')">5y</button>
-      <button class="range-btn"        data-range="10y" onclick="setRange('10y')">10y</button>
+      <button class="range-btn"        data-range="1d"  data-action="setRange" data-arg="1d">1d</button>
+      <button class="range-btn"        data-range="1w"  data-action="setRange" data-arg="1w">1w</button>
+      <button class="range-btn"        data-range="1m"  data-action="setRange" data-arg="1m">1m</button>
+      <button class="range-btn active" data-range="3m"  data-action="setRange" data-arg="3m">3m</button>
+      <button class="range-btn"        data-range="6m"  data-action="setRange" data-arg="6m">6m</button>
+      <button class="range-btn"        data-range="9m"  data-action="setRange" data-arg="9m">9m</button>
+      <button class="range-btn"        data-range="1y"  data-action="setRange" data-arg="1y">1y</button>
+      <button class="range-btn"        data-range="3y"  data-action="setRange" data-arg="3y">3y</button>
+      <button class="range-btn"        data-range="5y"  data-action="setRange" data-arg="5y">5y</button>
+      <button class="range-btn"        data-range="10y" data-action="setRange" data-arg="10y">10y</button>
     </div>
     <div id="chart-message" class="chart-loading">読み込み中...</div>
     <svg id="chart-svg"></svg>
@@ -282,19 +286,27 @@
 
 
 <!-- ★ 保有データ（銘柄の追加・変更はこのファイルのみ編集すれば OK） -->
-<script src="src/auth.js?v=20260517e"></script>
-<script src="src/positions.js?v=20260517e"></script>
+<script src="src/auth-pin.js?v=20260517g"></script>
+<script src="src/auth-crypto.js?v=20260517g"></script>
+<script src="src/auth-passkey.js?v=20260517g"></script>
+<script src="src/auth-ui.js?v=20260517g"></script>
+<script src="src/positions.js?v=20260517g"></script>
 <!-- アプリロジック（分割ファイル） -->
-<script src="src/state.js?v=20260517e"></script>
-<script src="src/utils.js?v=20260517e"></script>
-<script src="src/data.js?v=20260517e"></script>
-<script src="src/heatmap.js?v=20260517e"></script>
-<script src="src/chart.js?v=20260517e"></script>
-<script src="src/stock-list.js?v=20260517e"></script>
-<script src="src/watchlist.js?v=20260517e"></script>
-<script src="src/import.js?v=20260517e"></script>
-<script src="src/ai-tab.js?v=20260517e"></script>
-<script src="src/app.js?v=20260517e"></script>
+<script src="src/state.js?v=20260517g"></script>
+<script src="src/funds.js?v=20260517g"></script>
+<script src="src/csv.js?v=20260517g"></script>
+<script src="src/utils.js?v=20260517g"></script>
+<script src="src/data.js?v=20260517g"></script>
+<script src="src/heatmap.js?v=20260517g"></script>
+<script src="src/chart.js?v=20260517g"></script>
+<script src="src/stock-list.js?v=20260517g"></script>
+<script src="src/watchlist.js?v=20260517g"></script>
+<script src="src/positions-store.js?v=20260517g"></script>
+<script src="src/import-parse.js?v=20260517g"></script>
+<script src="src/import-ui.js?v=20260517g"></script>
+<script src="src/ai-system-prompt.js?v=20260517g"></script>
+<script src="src/ai-tab.js?v=20260517g"></script>
+<script src="src/app.js?v=20260517g"></script>
 
 <!-- フォールバック JS：旧版 portfolio.js でもヒートマップが描画されるよう保証 -->
 <script>

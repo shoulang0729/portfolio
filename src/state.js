@@ -37,17 +37,7 @@ const CHART_RANGES = {
   '10y': { yRange: '10y', interval: '1mo', dateFmt: '%Y',     label: '10y' },
 };
 
-// ── CSV インポート：投資信託名正規化マッピング ──
-const FUND_SYMBOL_PATTERNS = [
-  ['全世界株式',       'オルカン'],
-  ['マイクロスコープ', 'ひふみMS'],   // ひふみマイクロスコープpro
-  ['マイクロプラス',   'ひふみMS'],   // ひふみマイクロプラスプロ
-  ['マイクロSP',       'ひふみMS'],   // 旧シンボル名
-  ['クロスオーバー',   'ひふみXO'],   // ひふみクロスオーバーpro
-  ['ひふみXO',         'ひふみXO'],
-  ['ひふみ投信',       'ひふみ投信'],
-  ['ひふみ',           'ひふみ投信'], // フォールバック
-];
+// ── 投資信託マッピングは src/funds.js に移動（FUND_DEFS / fundSymbolFromName / fundProxyOf）──
 
 // ── 銘柄リスト：詳細列定義 ──
 const SL_DETAIL_COLS = ['value', 'shares', 'avgCost', 'pnl', 'pnlPct'];

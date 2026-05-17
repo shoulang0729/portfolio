@@ -1,0 +1,65 @@
+/* ── PIN 変更ダイアログ (auth.js) ── */
+#pc-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 99998;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0;
+  transition: opacity 0.32s ease;
+  backdrop-filter: blur(4px);
+}
+.pc-card {
+  padding: 28px 32px 32px;
+  border-radius: 24px;
+  width: min(300px, 90vw);
+}
+.pc-header {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%;
+  margin-bottom: 18px;
+}
+.pc-title {
+  font-size: 16px; font-weight: 700; color: var(--text);
+}
+.pc-close {
+  background: none; border: none; color: var(--text2);
+  font-size: 16px; cursor: pointer; padding: 2px 6px;
+  border-radius: 6px; line-height: 1.4; transition: background 0.1s;
+}
+.pc-close:hover { background: var(--surface3); color: var(--text); }
+
+/* ステップインジケーター */
+.pc-progress {
+  display: flex; align-items: center; gap: 0;
+  margin-bottom: 20px;
+}
+.pc-prog-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  border: 2px solid var(--border);
+  background: transparent;
+  transition: background 0.2s, border-color 0.2s;
+  flex-shrink: 0;
+}
+.pc-prog-dot.active {
+  background: var(--text); border-color: var(--text);
+}
+.pc-prog-line {
+  flex: 1; height: 2px;
+  background: var(--border2);
+}
+.pc-hint {
+  font-size: 12px; color: var(--text2);
+  margin-top: -10px; margin-bottom: 20px;
+}
+
+/* ══════════════════════════════════════════════
+   AI 相談タブ (ai-tab.js)
+   ══════════════════════════════════════════════ */
+
+/* パネル全体の余白 */
+.ai-panel-inner {
+  padding: 14px 14px 24px;
+  max-width: 860px;
+  margin: 0 auto;
+}
+

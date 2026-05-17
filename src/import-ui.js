@@ -1,0 +1,298 @@
+// ══════════════════════════════════════════════════════════════
+// import-ui.js  ―  資産取込モーダルUI
+//
+// 依存: import-parse.js (parseManexFiles, parseMoneyForwardImage),
+//       positions-store.js (savePositionsToKV, computeImportDiff),
+//       data.js (clearCacheSession, refreshPrices),
+//       state.js (state), positions.js (positions)
+// ══════════════════════════════════════════════════════════════
+
+let _importState = { source: null, parsed: [], current: [], pendingPositions: [] };
+
+function openImportModal(source) {
+  _importState = { source, parsed: [], current: [...positions] };
+  const overlay = document.getElementById('import-modal-overlay');
+  const title   = document.getElementById('import-modal-title');
+  if (!overlay) return;
+  title.textContent = source === 'manex' ? 'マネックス証券 取込' : 'マネーフォワード 取込';
+  _renderImportStep('select');
+  overlay.style.display = 'flex';
+  requestAnimationFrame(() => overlay.classList.add('open'));
+}
+
+function openManagePositionsModal() {
+  _importState = { source: 'manage', parsed: [...positions], current: [...positions] };
+  const overlay = document.getElementById('import-modal-overlay');
+  const title   = document.getElementById('import-modal-title');
+  if (!overlay) return;
+  title.textContent = '保有銘柄を整理';
+  _renderImportStep('review');
+  overlay.style.display = 'flex';
+  requestAnimationFrame(() => overlay.classList.add('open'));
+}
+
+function closeImportModal() {
+  const overlay = document.getElementById('import-modal-overlay');
+  if (!overlay) return;
+  overlay.classList.remove('open');
+  setTimeout(() => { overlay.style.display = 'none'; }, 220);
+  _importState = { source: null, parsed: [], current: [] };
+}
+
+function handleImportOverlayClick(e) {
+  if (e.target === document.getElementById('import-modal-overlay')) closeImportModal();
+}
+
+function _renderImportStep(step, payload) {
+  const body = document.getElementById('import-modal-body');
+  if (!body) return;
+
+  if (step === 'select') {
+    const isManex = _importState.source === 'manex';
+    body.innerHTML = `
+      <div class="import-select-area" id="import-drop-zone">
+        <div class="import-icon">${isManex ? '📄' : '📷'}</div>
+        <div class="import-select-title">${isManex ? 'CSVファイルを選択' : 'スクリーンショットを選択'}</div>
+        <div class="import-select-hint">${isManex ? '国内株・米国株・投資信託の3ファイルまとめて選択できます' : 'マネーフォワードの資産一覧画面のスクショ'}</div>
+        <button class="import-file-btn" onclick="${isManex ? 'document.getElementById(\'import-manex-input\').click()' : 'document.getElementById(\'import-mf-input\').click()'}">
+          ファイルを選択
+        </button>
+      </div>`;
+  }
+
+  if (step === 'loading') {
+    body.innerHTML = `
+      <div class="import-loading">
+        <div class="import-spinner"></div>
+        <div class="import-loading-text">${payload || '解析中...'}</div>
+      </div>`;
+  }
+
+  if (step === 'error') {
+    body.innerHTML = `
+      <div class="import-error-msg">
+        <div>⚠️ ${escapeHTML(payload || '解析に失敗しました')}</div>
+        <button class="import-file-btn" style="margin-top:12px" onclick="_renderImportStep('select')">やり直す</button>
+      </div>`;
+  }
+
+  if (step === 'review') {
+    let html = `<div class="import-review">`;
+
+    if (_importState.source === 'manage') {
+      // 管理モード: parsed をそのまま列挙し、インデックスで紐付け（重複symbol対応）
+      html += `<div class="import-review-summary">保有銘柄 ${_importState.parsed.length}件 · <span style="color:var(--text2);font-weight:400">チェックを外すと削除されます</span></div>`;
+      html += `<div class="import-list">`;
+      _importState.parsed.forEach((p, i) => {
+        html += _importRow(p, 'same', true, null, i);
+      });
+      html += `</div>`;
+    } else {
+      const { added, removed, changed, unchanged } = computeImportDiff(
+        _importState.current, _importState.parsed
+      );
+      html += `<div class="import-review-summary">${_importState.parsed.length}銘柄を検出`;
+      if (added.length)    html += ` · <span class="imp-badge new">${added.length}件新規</span>`;
+      if (changed.length)  html += ` · <span class="imp-badge chg">${changed.length}件変更</span>`;
+      if (unchanged.length) html += ` · ${unchanged.length}件変更なし`;
+      html += `</div>`;
+
+      html += `<div class="import-list">`;
+      for (const p of added)     html += _importRow(p, 'new', true);
+      for (const p of changed) {
+        const cur = _importState.current.find(c => c.symbol === p.symbol);
+        const hint = cur ? `${cur.shares}→${p.shares}株 / @${cur.avgCost}→@${p.avgCost}` : '';
+        html += _importRow(p, 'chg', true, hint);
+      }
+      for (const p of unchanged) html += _importRow(p, 'same', true);
+      html += `</div>`;
+
+      // 今回のファイルにない既存銘柄（デフォルト保持・チェックで削除）
+      if (removed.length > 0) {
+        html += `<details class="import-kept-section">
+          <summary class="import-kept-title">今回のファイルにない既存銘柄 (${removed.length}件) — デフォルトで保持</summary>
+          <div class="import-kept-note">チェックすると削除されます。チェックなし = そのまま残す</div>
+          <div class="import-list">`;
+        for (const p of removed) html += _importRow(p, 'del', false);
+        html += `</div></details>`;
+      }
+    }
+
+    const confirmLabel = _importState.source === 'manage' ? '保存 →' : '取込確定 →';
+    html += `<div class="import-footer">
+      <button class="import-cancel-btn" onclick="closeImportModal()">キャンセル</button>
+      <button class="import-confirm-btn" onclick="_confirmImport()">${confirmLabel}</button>
+    </div>`;
+    html += `</div>`;
+    body.innerHTML = html;
+  }
+
+  if (step === 'pin-auth') {
+    body.innerHTML = `
+      <div class="import-pin-auth">
+        <div class="import-pin-msg">🔒 PIN認証に失敗しました。PINを入力してください。</div>
+        <input type="password" id="import-pin-input" class="import-pin-input"
+          inputmode="numeric" maxlength="4" placeholder="••••"
+          onkeydown="if(event.key==='Enter')_retryWithPin()">
+        <div class="import-footer">
+          <button class="import-cancel-btn" onclick="closeImportModal()">キャンセル</button>
+          <button class="import-confirm-btn" onclick="_retryWithPin()">保存する →</button>
+        </div>
+      </div>`;
+    requestAnimationFrame(() => document.getElementById('import-pin-input')?.focus());
+  }
+
+  if (step === 'saving') {
+    body.innerHTML = `
+      <div class="import-loading">
+        <div class="import-spinner"></div>
+        <div class="import-loading-text">保存中...</div>
+      </div>`;
+  }
+
+  if (step === 'done') {
+    body.innerHTML = `
+      <div class="import-done">
+        <div class="import-done-icon">✓</div>
+        <div class="import-done-text">${escapeHTML(payload || '取込が完了しました')}</div>
+        <button class="import-confirm-btn" onclick="closeImportModal()">閉じる</button>
+      </div>`;
+  }
+}
+
+function _importRow(p, type, checked, hint, idx) {
+  const label = { new: '新規', chg: '変更', same: '', del: '削除予定' }[type];
+  const badgeHtml = label
+    ? `<span class="imp-badge ${type}">${label}</span>`
+    : '';
+  const hintHtml = hint
+    ? `<span class="imp-row-hint">${escapeHTML(hint)}</span>`
+    : '';
+  const idxAttr = (idx != null) ? ` data-idx="${idx}"` : '';
+  return `<label class="import-row">
+    <input type="checkbox" class="import-cb" data-symbol="${escapeHTML(p.symbol)}"
+      data-type="${type}"${idxAttr} ${checked ? 'checked' : ''}>
+    <span class="imp-sym">${escapeHTML(p.symbol)}</span>
+    <span class="imp-name">${escapeHTML(p.name)}</span>
+    ${hintHtml}
+    ${badgeHtml}
+    <span class="imp-meta">${p.shares}株 @${p.avgCost}</span>
+  </label>`;
+}
+
+async function _confirmImport() {
+  const body = document.getElementById('import-modal-body');
+  const cbs  = body?.querySelectorAll('.import-cb');
+  if (!cbs) return;
+
+  let finalPositions;
+  if (_importState.source === 'manage') {
+    // 管理モード: チェックされた行のインデックスで parsed をフィルタ（重複symbol対応）
+    const keepIdx = new Set(
+      [...cbs]
+        .filter(cb => cb.checked && cb.dataset.idx != null)
+        .map(cb => Number(cb.dataset.idx))
+    );
+    finalPositions = _importState.parsed.filter((_, i) => keepIdx.has(i));
+  } else {
+    const selectedSymbols = new Set(
+      [...cbs].filter(cb => cb.checked && cb.dataset.type !== 'del').map(cb => cb.dataset.symbol)
+    );
+    const delSymbols = new Set(
+      [...cbs].filter(cb => cb.checked && cb.dataset.type === 'del').map(cb => cb.dataset.symbol)
+    );
+    const newPositions = _importState.parsed.filter(p => selectedSymbols.has(p.symbol));
+    const oldKept = _importState.current.filter(p =>
+      !selectedSymbols.has(p.symbol) && !delSymbols.has(p.symbol)
+    );
+    finalPositions = [...newPositions, ...oldKept];
+  }
+  _importState.pendingPositions = finalPositions;
+
+  _renderImportStep('saving');
+  await _doSavePositions(finalPositions);
+}
+
+async function _doSavePositions(finalPositions, pinHashOverride) {
+  try {
+    await savePositionsToKV(finalPositions, pinHashOverride);
+    positions.splice(0, positions.length, ...finalPositions);
+    state.historicalCache = { '1y': {}, '5y': {}, '10y': {} };
+    if (typeof clearCacheSession === 'function') clearCacheSession();
+    state.lastUpdateText = null;
+    _renderImportStep('done', `${finalPositions.length}銘柄を保存しました`);
+    setTimeout(() => {
+      if (typeof renderStats === 'function') renderStats();
+      if (typeof renderHeatmap === 'function') renderHeatmap();
+      if (typeof renderStockList === 'function') renderStockList();
+      if (typeof renderWatchlist === 'function') renderWatchlist();
+      if (typeof refreshPrices === 'function') refreshPrices();
+    }, 300);
+  } catch (e) {
+    if (e.message.includes('PIN認証失敗')) {
+      _renderImportStep('pin-auth');
+    } else if (e.name === 'AbortError' || e.message.includes('aborted')) {
+      _renderImportStep('error', '保存がタイムアウトしました。もう一度お試しください。');
+    } else {
+      _renderImportStep('error', `保存に失敗しました: ${e.message}`);
+    }
+  }
+}
+
+async function _retryWithPin() {
+  const pinInput = document.getElementById('import-pin-input');
+  const pin = pinInput?.value?.trim();
+  if (!pin) { if (pinInput) pinInput.focus(); return; }
+
+  const hashBuf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin));
+  const pinHash = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
+  localStorage.setItem('hm-pin-hash', pinHash);
+
+  const finalPositions = _importState.pendingPositions;
+  if (!finalPositions?.length) { closeImportModal(); return; }
+  _renderImportStep('saving');
+  await _doSavePositions(finalPositions, pinHash);
+}
+
+// ── ファイル選択ハンドラ ──────────────────────────────────────────────────
+
+async function handleManexFileSelect(event) {
+  // Array.from でコピーしてからクリア（FileList はクリアで空になるブラウザがある）
+  const files = Array.from(event.target.files || []);
+  event.target.value = '';
+  if (files.length === 0) return;
+  _renderImportStep('loading', 'CSVを解析中...');
+  const parsed = await parseManexFiles(files);
+  if (!parsed || parsed.length === 0) {
+    _renderImportStep('error', 'CSVを解析できませんでした。マネックス証券のCSVファイルを選択してください。');
+    return;
+  }
+  _importState.parsed = parsed;
+  _renderImportStep('review');
+}
+
+async function handleMoneyForwardImageSelect(event) {
+  const file = event.target.files?.[0];
+  event.target.value = '';
+  if (!file) return;
+  _renderImportStep('loading', 'AIで資産情報を読み取り中...');
+  try {
+    const parsed = await parseMoneyForwardImage(file);
+    if (parsed.length === 0) {
+      _renderImportStep('error', 'AIが資産情報を検出できませんでした。資産一覧が写ったスクリーンショットをお試しください。');
+      return;
+    }
+    _importState.parsed = parsed;
+    _renderImportStep('review');
+  } catch (e) {
+    console.error('[import-ui] MF image handler error:', e);
+    _renderImportStep('error', e.message);
+  }
+}
+
+// ── HTML エスケープ（モーダル内のXSS対策）────────────────────────────────
+function escapeHTML(s) {
+  return String(s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
