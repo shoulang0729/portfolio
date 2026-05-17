@@ -531,10 +531,79 @@ async function handlePositions(request, env, origin) {
     try { body = await request.json(); } catch { return errRes('JSON 不正', 400, origin); }
     if (!Array.isArray(body)) return errRes('Array が必要です', 400, origin);
     await env.KV.put('positions', JSON.stringify(body));
+
+    // GitHub にもミラー（失敗してもKV保存自体は成功とみなす・fire-and-forget）
+    _syncPositionsToGithub(body, env).catch(e => console.warn('[github sync]', e));
+
     return jsonRes({ ok: true }, 200, origin);
   }
 
   return errRes('GET/PUT のみ許可', 405, origin);
+}
+
+// ══════════════════════════════════════════════════════════════
+// GitHub Contents API ミラー: KV に保存した positions を
+// shoulang0729/portfolio リポジトリの data/positions.json にも書き出す
+//
+// 他アプリは https://raw.githubusercontent.com/shoulang0729/portfolio/main/data/positions.json
+// から fetch して利用可能。
+//
+// 必要 Secret: GITHUB_TOKEN（Classic PAT で repo スコープ）
+// ══════════════════════════════════════════════════════════════
+async function _syncPositionsToGithub(positions, env) {
+  if (!env.GITHUB_TOKEN) {
+    console.log('[github sync] GITHUB_TOKEN 未設定のためスキップ');
+    return;
+  }
+  const owner  = 'shoulang0729';
+  const repo   = 'portfolio';
+  const path   = 'data/positions.json';
+  const branch = 'main';
+
+  const headers = {
+    'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
+    'Accept':        'application/vnd.github+json',
+    'User-Agent':    'portfolio-proxy-worker',
+    'X-GitHub-Api-Version': '2022-11-28',
+  };
+
+  // 1. 現在の SHA を取得（無ければ新規作成扱い）
+  let sha = undefined;
+  try {
+    const getRes = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${branch}`,
+      { headers },
+    );
+    if (getRes.ok) {
+      const meta = await getRes.json();
+      sha = meta.sha;
+    }
+  } catch (e) { /* 取得失敗時は sha なしで新規 PUT */ }
+
+  // 2. base64 エンコード（Worker は btoa が使える）
+  const content = btoa(unescape(encodeURIComponent(JSON.stringify(positions, null, 2) + '\n')));
+
+  // 3. PUT で content を上書き
+  const putRes = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/contents/${path}`,
+    {
+      method: 'PUT',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: `chore(positions): sync from KV (${positions.length} items)`,
+        content,
+        branch,
+        ...(sha ? { sha } : {}),
+      }),
+    },
+  );
+
+  if (!putRes.ok) {
+    const errText = await putRes.text().catch(() => '');
+    console.warn(`[github sync] HTTP ${putRes.status}: ${errText.slice(0, 300)}`);
+    return;
+  }
+  console.log(`[github sync] pushed ${positions.length} items to ${owner}/${repo}/${path}`);
 }
 
 // ── PIN ハッシュ更新 ──────────────────────────────────────────
