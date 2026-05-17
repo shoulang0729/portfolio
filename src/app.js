@@ -174,20 +174,8 @@ function _buildPortfolioSnapshotPayload() {
       : null;
   }
 
-  // historical cache をそのまま添付（1y/5y/10y、各銘柄）
-  const historicals = {};
-  for (const range of ['1y', '5y', '10y']) {
-    historicals[range] = {};
-    const cache = state.historicalCache?.[range] || {};
-    for (const [sym, arr] of Object.entries(cache)) {
-      // 日付を ISO 文字列に正規化してファイルサイズ・互換性両立
-      historicals[range][sym] = arr.map(e => ({
-        date: e.date instanceof Date ? e.date.toISOString().slice(0, 10) : String(e.date).slice(0, 10),
-        close: e.close,
-      }));
-    }
-  }
-
+  // historicals（日次価格系列）は重い（5MB超）ので保存しない。
+  // 必要な情報は positions[].performance に集約されている。
   return {
     asOf: new Date().toISOString(),
     source: 'frontend-manual',
@@ -200,7 +188,6 @@ function _buildPortfolioSnapshotPayload() {
       performance: portPerf,
     },
     positions: positionsWithPerf,
-    historicals,
   };
 }
 

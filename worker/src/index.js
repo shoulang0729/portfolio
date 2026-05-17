@@ -112,8 +112,9 @@ async function handleFinnhub(url, env, origin) {
 //
 // 構造:
 //   { asOf, source, summary: {totalValue, totalPnl, pnlPct, performance},
-//     positions: [{...basic, performance:{1d,1w,...,10y}}],
-//     historicals: { '1y': {sym:[{date,close}]}, '5y': ..., '10y': ... } }
+//     positions: [{...basic, performance:{1d,1w,...,10y}}] }
+//   ※ historicals（日次価格系列）は重い（5MB超）ため含めない。
+//     必要な情報は positions[].performance に集約済み。
 // ══════════════════════════════════════════════════════════════
 
 const _SNAPSHOT_PERIODS = [
@@ -205,12 +206,12 @@ async function _buildSnapshotFromKV(env) {
     performance: _computePortfolioPerf(positionsWithPerf, totalValue),
   };
 
+  // historicals は performance 算出に内部利用するだけで、出力 JSON には含めない（サイズ削減）
   return {
     asOf: new Date().toISOString(),
     source: 'worker-cron',
     summary,
     positions: positionsWithPerf,
-    historicals,
   };
 }
 
