@@ -128,7 +128,7 @@ function _buildPinScreen() {
         <circle cx="18" cy="30.5" r="3.5" fill="currentColor"/>
         <line x1="18" y1="30.5" x2="18" y2="35" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
       </svg>
-      <div class="pin-title">Heatmap</div>
+      <div class="pin-title">Portfolio Manager</div>
       <div class="pin-subtitle">PINを入力してください</div>
       <div class="pin-dots" id="pin-dots">
         <span class="pin-dot"></span><span class="pin-dot"></span>
