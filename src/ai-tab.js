@@ -27,10 +27,12 @@ const AI_MODELS = [
 ];
 
 // ── 質問テンプレート ──
+// categories: プリフェッチカテゴリ。Worker /ai/context で対応する Finnhub データを取得
 const AI_QUESTION_TEMPLATES = [
   {
     id: 'news',
     label: '今日の主要ニュース',
+    categories: ['news'],
     buildPrompt(markets) {
       const names = { japan: '日本', us: '米国', hk: '香港' };
       const mkt = (markets.length ? markets : ['japan', 'us']).map(m => names[m]).join('・');
@@ -41,14 +43,43 @@ const AI_QUESTION_TEMPLATES = [
     id: 'per',
     label: 'PER分析',
     requiresPortfolio: true,
+    categories: ['fundamentals'],
     buildPrompt() {
-      return '保有銘柄それぞれのPERを評価し、市場平均と比較して割安・割高を判断してください。';
+      return '保有銘柄それぞれのPER/PBR/EPS/ROE等のファンダメンタル指標を評価し、市場平均と比較して割安・割高を判断してください。';
+    },
+  },
+  {
+    id: 'earnings',
+    label: '直近の決算',
+    requiresPortfolio: true,
+    categories: ['earnings'],
+    buildPrompt() {
+      return '保有銘柄の直近4四半期の決算結果（実績EPS・予想EPS・サプライズ）を踏まえて、業績モメンタムと注目ポイントを評価してください。';
+    },
+  },
+  {
+    id: 'recommendation',
+    label: 'アナリスト評価',
+    requiresPortfolio: true,
+    categories: ['recommendation'],
+    buildPrompt() {
+      return '保有銘柄の直近3ヶ月のアナリスト評価分布（強買/買/中立/売/強売）を見て、市場コンセンサスの強弱を整理してください。';
+    },
+  },
+  {
+    id: 'insider',
+    label: 'インサイダー取引',
+    requiresPortfolio: true,
+    categories: ['insider'],
+    buildPrompt() {
+      return '保有銘柄の直近インサイダー取引（経営陣の売買）を確認し、注目すべき動きがあれば指摘してください。';
     },
   },
   {
     id: 'rebalance',
     label: 'リバランス提案',
     requiresPortfolio: true,
+    categories: [],
     buildPrompt() {
       return '現在のポートフォリオ構成を分析し、リスク分散の観点からリバランス案を提案してください。';
     },
@@ -57,9 +88,25 @@ const AI_QUESTION_TEMPLATES = [
     id: 'custom',
     label: 'カスタム',
     isCustom: true,
+    categories: [], // 質問文から動的推定（inferCategoriesFromQuestion）
     buildPrompt(markets, customText) { return customText; },
   },
 ];
+
+// プリフェッチが「銘柄ごと」に必要なカテゴリ（macro はここに含めない）
+const SYMBOL_BOUND_CATEGORIES = ['news', 'fundamentals', 'earnings', 'recommendation', 'insider'];
+
+// カスタム質問から categories を推定（メニュー未選択時のフォールバック）
+function inferCategoriesFromQuestion(q) {
+  const c = [];
+  if (!q) return c;
+  if (/ニュース|news|報道|発表/i.test(q))                       c.push('news');
+  if (/PER|PBR|EPS|ROE|割安|割高|バリュエーション|ファンダ/i.test(q)) c.push('fundamentals');
+  if (/決算|earnings|業績|サプライズ/i.test(q))                 c.push('earnings');
+  if (/レーティング|アナリスト|目標株価|recommendation/i.test(q)) c.push('recommendation');
+  if (/インサイダー|insider/i.test(q))                          c.push('insider');
+  return c;
+}
 
 // ── ルーティンプロンプト ──
 const ROUTINE_JAPAN_PROMPT = `あなたは個人投資家のポートフォリオ管理を支援するアシスタントです。
@@ -331,12 +378,20 @@ ${refSection}`;
 // UI ヘルパー
 // ══════════════════════════════════════════════
 
-function _aiCardId(modelId) { return `ai-card-${modelId}`; }
-function _aiBodyId(modelId) { return `ai-body-${modelId}`; }
+// 最新ターン要素を返す（チャットログの末尾の .ai-turn）
+function _currentTurn() {
+  return document.querySelector('#ai-chat-log .ai-turn:last-child');
+}
+
+// 最新ターン内の指定モデルの body 要素を返す
+function _currentTurnBody(modelId) {
+  const turn = _currentTurn();
+  return turn ? turn.querySelector(`.ai-card-body[data-model="${modelId}"]`) : null;
+}
 
 function _setCardState(modelId, status, text) {
   aiState.results[modelId] = { status, text };
-  const body = document.getElementById(_aiBodyId(modelId));
+  const body = _currentTurnBody(modelId);
   if (!body) return;
   if (status === 'loading') {
     body.innerHTML = '<div class="ai-loading"><span class="ai-spinner"></span>回答中...</div>';
@@ -355,9 +410,11 @@ function _getSelectedVersion(id) {
     || AI_MODELS.find(m => m.id === id)?.versions[0];
 }
 
+// 最新ターン内に結果カード群を append する（turn-based 表示）
+// 各 body は `data-model="X"` 属性で識別。ID は使わない（複数ターンで重複しないため）
 function _renderResultCards(nonClaudeIds, showClaude) {
-  const wrap = document.getElementById('ai-results-wrap');
-  if (!wrap) return;
+  const turn = _currentTurn();
+  if (!turn) return;
   const claudeModel = AI_MODELS.find(m => m.isSynthesizer);
 
   const headerStyle = (m) => {
@@ -367,36 +424,79 @@ function _renderResultCards(nonClaudeIds, showClaude) {
     return `background:${m.color};color:${fg};--ai-sub-fg:${subFg};${border}`;
   };
 
-  const nonClaudeHtml = nonClaudeIds.map(id => {
-    const m = AI_MODELS.find(m => m.id === id);
+  const cardHtml = (id, isClaude = false) => {
+    const m = isClaude ? claudeModel : AI_MODELS.find(m => m.id === id);
     const ver = _getSelectedVersion(id);
+    const cls = isClaude ? 'ai-card ai-card-claude' : 'ai-card';
+    const badge = isClaude ? '<span class="ai-card-badge">統合 · 総括</span>' : '';
     return `
-      <div class="ai-card" id="${_aiCardId(id)}">
+      <div class="${cls}">
         <div class="ai-card-header" style="${headerStyle(m)}">
           <span class="ai-card-name">${m.name}</span>
           <span class="ai-card-sub">${ver}</span>
+          ${badge}
         </div>
-        <div class="ai-card-body" id="${_aiBodyId(id)}"></div>
+        <div class="ai-card-body" data-model="${id}"><div class="ai-idle">準備中...</div></div>
       </div>`;
-  }).join('');
+  };
 
-  const claudeHtml = showClaude ? `
-    <div class="ai-card ai-card-claude" id="${_aiCardId('claude')}">
-      <div class="ai-card-header" style="${headerStyle(claudeModel)}">
-        <span class="ai-card-name">${claudeModel.name}</span>
-        <span class="ai-card-sub">${_getSelectedVersion('claude')}</span>
-        <span class="ai-card-badge">統合 · 総括</span>
-      </div>
-      <div class="ai-card-body" id="${_aiBodyId('claude')}"></div>
-    </div>` : '';
+  let html = '';
+  if (nonClaudeIds.length > 0) {
+    html += `<div class="ai-grid">${nonClaudeIds.map(id => cardHtml(id)).join('')}</div>`;
+  }
+  if (showClaude) {
+    html += cardHtml('claude', true);
+  }
+  // ターンに append（既存 Q バブルの下に追加）
+  turn.insertAdjacentHTML('beforeend', html);
+}
 
-  wrap.innerHTML = (nonClaudeIds.length > 0
-    ? `<div class="ai-grid">${nonClaudeHtml}</div>` : '') + claudeHtml;
+// ══════════════════════════════════════════════
+// プリフェッチ: 選択テンプレから categories を集約し Worker /ai/context を呼ぶ
+// 失敗時は空文字を返す（LLM呼出は通常通り続行）
+// ══════════════════════════════════════════════
 
-  [...nonClaudeIds, ...(showClaude ? ['claude'] : [])].forEach(id => {
-    const body = document.getElementById(_aiBodyId(id));
-    if (body) body.innerHTML = '<div class="ai-idle">準備中...</div>';
-  });
+async function _prefetchContext(question) {
+  // 1. 選択テンプレから categories を集約
+  const checkedTemplates = AI_QUESTION_TEMPLATES.filter(tpl =>
+    document.getElementById(`ai-tpl-${tpl.id}`)?.checked
+  );
+  let categories = [...new Set(checkedTemplates.flatMap(t => t.categories || []))];
+
+  // 2. カスタムが選ばれていて categories が他テンプレから取れていなければ質問文から推定
+  const customChecked = document.getElementById('ai-tpl-custom')?.checked;
+  if (customChecked) {
+    const customText = document.getElementById('ai-custom-text')?.value || '';
+    const inferred = inferCategoriesFromQuestion(customText);
+    for (const c of inferred) if (!categories.includes(c)) categories.push(c);
+  }
+
+  if (categories.length === 0) return '';
+
+  // 3. 銘柄系カテゴリがあれば保有銘柄全件を対象（macro等の銘柄非依存カテゴリは [] でOK）
+  const needsSymbols = categories.some(c => SYMBOL_BOUND_CATEGORIES.includes(c));
+  const targetSymbols = needsSymbols
+    ? positions.map(p => p.ySymbol).filter(Boolean)
+    : [];
+
+  // 4. Worker にプリフェッチ依頼（失敗してもメイン処理は続ける）
+  try {
+    const res = await fetch(`${WORKER_URL}/ai/context`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ categories, targetSymbols, question }),
+    });
+    if (!res.ok) {
+      console.warn('[ai-tab] /ai/context HTTP', res.status);
+      return '';
+    }
+    const data = await res.json();
+    console.log('[ai-tab] prefetched context:', { categories, symbols: targetSymbols.length, size: data.contextSection?.length || 0 });
+    return data.contextSection || '';
+  } catch (e) {
+    console.warn('[ai-tab] prefetch failed:', e);
+    return '';
+  }
 }
 
 // ══════════════════════════════════════════════
@@ -427,17 +527,20 @@ async function aiAskAll() {
 
   const withPortfolio = document.getElementById('ai-with-portfolio')?.checked ?? true;
   const withWatchlist = document.getElementById('ai-with-watchlist')?.checked ?? false;
-  const systemPrompt  = buildSystemPrompt(withPortfolio, withWatchlist);
 
   aiState.running = true;
   const sendBtn = document.getElementById('ai-send-btn');
   if (sendBtn) sendBtn.disabled = true;
 
+  // 新しいターンを作成（質問バブル + これから入る回答カード群を内包）
   _appendChatQuestion(question);
-
-  const resultsWrap = document.getElementById('ai-results-wrap');
-  if (resultsWrap) resultsWrap.hidden = false;
   _renderResultCards(nonClaudeIds, claudeEnabled);
+
+  // ── プリフェッチ：選択テンプレ → categories → Worker /ai/context ──
+  const contextSection = await _prefetchContext(question);
+
+  const systemPrompt = buildSystemPrompt(withPortfolio, withWatchlist)
+    + (contextSection ? '\n\n---\n\n' + contextSection : '');
 
   const messages = _buildMessages(question);
 
@@ -462,7 +565,7 @@ async function aiAskAll() {
   let claudeText = '';
   if (claudeEnabled) {
     _setCardState('claude', 'loading', '');
-    const claudeBody = document.getElementById(_aiBodyId('claude'));
+    const claudeBody = _currentTurnBody('claude');
     if (claudeBody) claudeBody.innerHTML = '<div class="ai-loading"><span class="ai-spinner"></span>統合中...</div>';
     try {
       const synthesisPrompt = buildSynthesisPrompt(systemPrompt, question, aiState.results, nonClaudeIds);
@@ -497,8 +600,8 @@ async function aiAskAll() {
   aiState.running = false;
   if (sendBtn) sendBtn.disabled = false;
 
-  const lastCardId = claudeEnabled ? 'claude' : nonClaudeIds[nonClaudeIds.length - 1];
-  document.getElementById(_aiCardId(lastCardId))?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  // 最新ターンを画面内にスクロール
+  _currentTurn()?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 // ── Notion 保存 ──
@@ -531,30 +634,23 @@ function aiRunRoutine(type) {
   aiAskAll();
 }
 
-/** 会話ログに質問バブルを追加 */
+/** 新しいターンを作って質問バブルを入れる（その後の cards / Claude もこのターン内に追加される）*/
 function _appendChatQuestion(text) {
   const log = document.getElementById('ai-chat-log');
   if (!log) return;
   const escaped = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
-  const el = document.createElement('div');
-  el.className = 'ai-chat-q';
-  el.innerHTML = escaped;
-  log.appendChild(el);
+  const turn = document.createElement('div');
+  turn.className = 'ai-turn';
+  turn.innerHTML = `<div class="ai-chat-q">${escaped}</div>`;
+  log.appendChild(turn);
   log.scrollTop = log.scrollHeight;
 }
 
-/** 会話ログに Claude 総括回答バブルを追加 */
+/** Claude 総括の最終回答は専用カードとしてターン内に既に表示されるため、bubble は出さない（旧仕様の互換シム）*/
 function _appendChatAssistant(text) {
+  // turn-based UI 移行後は Claude カード内に表示済み。スクロール調整のみ。
   const log = document.getElementById('ai-chat-log');
-  if (!log) return;
-  const html = text
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
-  const el = document.createElement('div');
-  el.className = 'ai-chat-a';
-  el.innerHTML = `<span class="ai-chat-a-label">Claude 総括</span><div class="ai-text">${html}</div>`;
-  log.appendChild(el);
-  log.scrollTop = log.scrollHeight;
+  if (log) log.scrollTop = log.scrollHeight;
 }
 
 /** 会話履歴をリセット */
@@ -563,8 +659,6 @@ function aiResetChat() {
   aiState.results = {};
   const log = document.getElementById('ai-chat-log');
   if (log) log.innerHTML = '';
-  const resultsWrap = document.getElementById('ai-results-wrap');
-  if (resultsWrap) resultsWrap.hidden = true;
 }
 
 // ══════════════════════════════════════════════
@@ -680,11 +774,8 @@ function renderAiTab() {
         </button>
       </div>
 
-      <!-- 会話ログ -->
+      <!-- 会話ログ（質問・LLM回答カードを turn 単位で時系列にスタック） -->
       <div class="ai-chat-log" id="ai-chat-log"></div>
-
-      <!-- 各モデル結果カード（初期非表示） -->
-      <div id="ai-results-wrap" hidden></div>
 
     </div>`;
 

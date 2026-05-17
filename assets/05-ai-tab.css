@@ -294,16 +294,22 @@
   transform: none;
 }
 
-/* ── カードグリッド ── */
+/* ── カードグリッド（PC・モバイル共に1列固定） ── */
 .ai-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 12px;
   margin-bottom: 12px;
 }
-@media (max-width: 520px) {
-  .ai-grid { grid-template-columns: 1fr; }
+
+/* ── 会話ターン（質問→回答カード群→Claude総括 の1セット） ── */
+.ai-turn {
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px dashed var(--border2);
 }
+.ai-turn:last-child { border-bottom: none; }
+.ai-turn .ai-grid { margin: 10px 0; }
 
 .ai-card {
   border: 1px solid var(--border2);
