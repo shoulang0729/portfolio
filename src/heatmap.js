@@ -90,10 +90,20 @@ function renderHeatmap() {
     const symFill = getCellTextColor(cellBg);
     const pctFill = getCellTextColorSub(cellBg);
 
-    // セル面積（sqrtスケール）でフォントサイズを滑らかに決定
-    // セル幅でも上限を設ける（日本語など幅広文字がはみ出すのを防ぐ）
-    const sqr  = Math.sqrt(w * h);
-    const symSz = Math.min(C.SYM_FONT_MAX, Math.max(C.SYM_FONT_MIN, sqr * C.SYM_FONT_COEFF), Math.floor(w * 0.25));
+    // セル面積（sqrtスケール）でフォントサイズを滑らかに決定。
+    // さらに文字数（全角=1.0/半角=0.55幅）でもキャップして横はみ出しを防ぐ。
+    const sqr = Math.sqrt(w * h);
+    const symbolText = d.data.symbol || '';
+    // 全角(non-ASCII) は 1.0em、半角は 0.55em として実効文字数を計算
+    const effectiveLen = [...symbolText].reduce(
+      (sum, c) => sum + (/[^\x00-\xff]/.test(c) ? 1.0 : 0.55), 0,
+    );
+    const maxFontByWidth = (w - 8) / Math.max(effectiveLen, 2.5);
+    const symSz = Math.min(
+      C.SYM_FONT_MAX,
+      Math.max(C.SYM_FONT_MIN, sqr * C.SYM_FONT_COEFF),
+      Math.floor(maxFontByWidth),
+    );
     const pctSz = Math.min(C.PCT_FONT_MAX, Math.max(C.PCT_FONT_MIN, symSz * C.PCT_FONT_RATIO));
     const gap   = symSz * C.GAP_RATIO;
 
