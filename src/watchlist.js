@@ -268,14 +268,14 @@ async function fetchWatchlistData() {
     if (live) state.watchlistPrices[sym] = live;
   }));
 
-  // 履歴データ（1y / 5y / 10y）をキャッシュへ格納（既存データは再取得しない）
-  await Promise.all(symbols.flatMap(sym => [
-    fetchSymbolHistory(sym, '1y'),
-    fetchSymbolHistory(sym, '5y'),
-    fetchSymbolHistory(sym, '10y'),
-  ]));
-
-  renderWatchlist();
+  // 履歴データは Historical Heatmap と共通の fetchAllHistorical 経由で取得する。
+  // → state.fetchingRanges / state.historicalAttempted のフラグが正しくセットされ、
+  //    "…/-" の loading 表示が銘柄リストと同じ仕様で動く。
+  // → 既に取得済みのシンボルは内部 toFetch で除外されるので無駄打ち無し。
+  for (const range of ['1y', '5y', '10y']) {
+    await fetchAllHistorical(range);
+    renderWatchlist(); // 各レンジ完了ごとに再描画 → "…" が実値 or "-" に置換
+  }
 }
 
 // ══════════════════════════════════════════════
@@ -345,10 +345,9 @@ function renderWatchlist() {
     const price    = live?.price;
     const priceStr = price != null ? fmtPrice(price, item.cur) : '–';
 
-    // 全期間セル（1d〜10y）を wlGetPct + makePctCell で統一
-    const periodCells = PERIOD_COLS.map(pc =>
-      makePctCell(wlGetPct(item, pc.id), PERIOD_MAP[pc.id].scale)
-    ).join('');
+    // 期間セル群（utils.js の共通ヘルパー。Historical Heatmap と完全同一仕様）
+    // → dataCol が自動で渡るため "…/-" の loading 判定も同一になる
+    const periodCells = makePeriodCells(periodId => wlGetPct(item, periodId));
 
     return `<tr>
       <td class="sl-sym">${item.symbol}<span class="sl-inline-name">${item.name}</span></td>
@@ -366,7 +365,7 @@ function renderWatchlist() {
       ${th('ティッカー<br><span class="sl-th-sub">銘柄名</span>', 'symbol')}
       ${th('市場', 'market', 'center')}
       ${th('現在値', 'price')}
-      ${PERIOD_COLS.map(pc => th(pc.label, pc.id, 'center')).join('')}
+      ${makePeriodHeaderCells(state.wlSortCol, state.wlSortDir, 'wlSort')}
       <th></th>
     </tr></thead>
     <tbody>${rows}</tbody>

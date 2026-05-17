@@ -211,3 +211,31 @@ function makePctCell(pct, scale, dataCol = '') {
   const fg = getCellTextColor(bg);
   return `<td ${dataAttr}class="sl-pct-cell" style="background:${bg};color:${fg}">${fmtPctInt(pct)}</td>`;
 }
+
+/**
+ * 「期間パフォーマンス列群」を一括生成するヘルパー。
+ * Historical Heatmap (銘柄リスト) と Watchlist Historical Heatmap の両方で
+ * 共通使用することで、片方だけ修正漏れする事故を防ぐ。
+ *
+ * @param {(periodId: string) => number|null} getPct  - 期間IDから騰落率(%)を返す関数
+ * @returns {string} <td>...<td>... の連結 HTML
+ */
+function makePeriodCells(getPct) {
+  return PERIOD_COLS.map(pc => {
+    const pct   = getPct(pc.id);
+    const scale = PERIOD_MAP[pc.id]?.scale ?? 25;
+    return makePctCell(pct, scale, pc.id); // dataCol 必須（loading 判定用）
+  }).join('');
+}
+
+/**
+ * 「期間ヘッダー列群」を一括生成。クリックでソート可能。
+ * @param {string} activeSortCol - 現在ソート中の列ID
+ * @param {string} sortDir       - 'asc' | 'desc'
+ * @param {string} sortFnName    - 'slSort' or 'wlSort' 等
+ */
+function makePeriodHeaderCells(activeSortCol, sortDir, sortFnName) {
+  return PERIOD_COLS
+    .map(pc => makeTh(pc.label, pc.id, 'center', activeSortCol, sortDir, sortFnName))
+    .join('');
+}

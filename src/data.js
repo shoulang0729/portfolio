@@ -254,7 +254,11 @@ async function fetchAllHistorical(neededRange = '1y') {
   state.historicalAttempted = state.historicalAttempted || {};
   try {
     if (!state.historicalCache[neededRange]) state.historicalCache[neededRange] = {};
-    const symbols = positions.filter(p => p.ySymbol).map(p => p.ySymbol);
+    // 保有銘柄 + ウォッチリスト銘柄を一括処理（Historical Heatmap と Watchlist Historical Heatmap で
+    // 同じ履歴キャッシュ・同じ取得中フラグを共有することで "…/-" 表示の挙動も統一される）
+    const posSymbols = positions.filter(p => p.ySymbol).map(p => p.ySymbol);
+    const wlSymbols  = (state.watchlist || []).map(w => w.symbol).filter(Boolean);
+    const symbols = [...new Set([...posSymbols, ...wlSymbols])];
     const toFetch = symbols.filter(s => !state.historicalCache[neededRange][s]);
     if (toFetch.length === 0) return;
     setStatus(`履歴データ取得中（${toFetch.length}銘柄 / ${neededRange}）...`, 'yellow');

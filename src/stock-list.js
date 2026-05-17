@@ -106,11 +106,8 @@ function renderStockList() {
     // バーグラフ幅（tr に data-bar-pct で保持、applyStockBars で適用）
     const barPct = p.value && maxValue > 0 ? (p.value / maxValue) : 0;
 
-    const periodCells = PERIOD_COLS.map(pc => {
-      const pct   = getPctForPeriod(p, pc.id);
-      const scale = PERIOD_MAP[pc.id]?.scale ?? 25;
-      return makePctCell(pct, scale, pc.id);
-    }).join('');
+    // 期間セル群（utils.js の共通ヘルパー。Watchlist と完全同一仕様）
+    const periodCells = makePeriodCells(periodId => getPctForPeriod(p, periodId));
 
     // 列順：ティッカー(+銘柄名) / 市場 / 時価評価額 / 保有数 / 取得単価 / 現在値 / 騰落率×10 / 含み損益 / 損益率
     return `<tr data-bar="${barPct.toFixed(4)}">
@@ -134,7 +131,7 @@ function renderStockList() {
       ${th('保有数','shares')}
       ${th('取得単価','avgCost')}
       ${th('現在値','price')}
-      ${PERIOD_COLS.map(pc => th(pc.label, pc.id, 'center')).join('')}
+      ${makePeriodHeaderCells(state.listSortCol, state.listSortDir, 'slSort')}
       ${th('含み損益','pnl')}
       ${th('損益率','pnlPct','center')}
     </tr></thead>
