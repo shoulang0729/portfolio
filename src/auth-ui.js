@@ -129,7 +129,6 @@ function _buildPinScreen() {
         <line x1="18" y1="30.5" x2="18" y2="35" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
       </svg>
       <div class="pin-title">Portfolio Manager</div>
-      <div class="pin-subtitle">PINを入力してください</div>
       <button class="pin-passkey-btn" onclick="authenticatePasskey()" title="パスキー（指紋/顔認証）でログイン">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px">
           <path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"/>
@@ -143,6 +142,7 @@ function _buildPinScreen() {
           <path d="M9 6.8a6 6 0 0 1 9 5.2v2"/>
         </svg>パスキーでログイン
       </button>
+      <div class="pin-subtitle">PINでログイン</div>
       <div class="pin-dots" id="pin-dots">
         <span class="pin-dot"></span><span class="pin-dot"></span>
         <span class="pin-dot"></span><span class="pin-dot"></span>
@@ -368,4 +368,13 @@ function _showChangePinButton() {
   const ov = _buildPinScreen();
   document.body.appendChild(ov);
   requestAnimationFrame(() => requestAnimationFrame(() => { ov.style.opacity = '1'; }));
+
+  // ── パスキー画面を自動起動（WebAuthn 対応端末・ローカルにフラグありの場合のみ）
+  //    PIN を打ち始める前に Face ID/Touch ID シートを開いてユーザーを混乱させない。
+  //    一度パスキーログインに成功するとフラグ ON、初回登録前は自動起動しない。
+  if (window.PublicKeyCredential && localStorage.getItem('hm-passkey-seen') === '1') {
+    setTimeout(() => {
+      if (typeof authenticatePasskey === 'function') authenticatePasskey();
+    }, 250);
+  }
 }());
