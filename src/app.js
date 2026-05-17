@@ -357,6 +357,15 @@ function init() {
   // リスト高さを初期設定（DOM確定後）
   requestAnimationFrame(updateListHeight);
 
+  // 前回開いていたタブを復元（heatmap以外なら switchTab で切替）
+  try {
+    const lastTab = localStorage.getItem('hm-active-tab');
+    if (lastTab && lastTab !== 'heatmap' && ['list','watchlist','ai'].includes(lastTab)) {
+      // ヒートマップ初期描画後にタブ切替（DOM 確定を待つ）
+      requestAnimationFrame(() => switchTab(lastTab));
+    }
+  } catch {}
+
   // 起動時に KV から保有銘柄を読み込んでから価格取得
   (async () => {
     // 1. KV から保有銘柄を取得（あれば positions.js の内容を上書き）
@@ -411,6 +420,7 @@ function switchTab(name) {
   // 'heatmap' | 'list' | 'watchlist' | 'ai'
   if (state.activeTab === name) return;
   state.activeTab = name;
+  try { localStorage.setItem('hm-active-tab', name); } catch {}
 
   const panelHeatmap   = document.getElementById('panel-heatmap');
   const panelList      = document.getElementById('panel-list');

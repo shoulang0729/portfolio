@@ -163,11 +163,32 @@ NYタイムを検索する必要はなく、上記算術で確定すること。
 8. 本日（東京時間）の注目イベント`;
 
 // ── 状態 ──
+const AI_HISTORY_LS_KEY = 'hm-ai-history-v1';
+const AI_HISTORY_MAX    = 30; // 件数上限（古いものから捨てる）
+
 const aiState = {
   running:     false,
   results:     {}, // { id: { status: 'idle|loading|done|error', text: '' } }
-  chatHistory: [], // [{ question, responses: {gpt,...,claude}, timestamp }]
+  chatHistory: _loadAiHistory(), // [{ question, responses: {gpt,...,claude}, timestamp }]
 };
+
+function _loadAiHistory() {
+  try {
+    const raw = localStorage.getItem(AI_HISTORY_LS_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch { return []; }
+}
+
+function _saveAiHistory() {
+  try {
+    // 上限を超えたら古い順にカット
+    if (aiState.chatHistory.length > AI_HISTORY_MAX) {
+      aiState.chatHistory = aiState.chatHistory.slice(-AI_HISTORY_MAX);
+    }
+    localStorage.setItem(AI_HISTORY_LS_KEY, JSON.stringify(aiState.chatHistory));
+  } catch (e) { console.warn('[ai-tab] history save failed:', e); }
+}
 
 // ══════════════════════════════════════════════
 // コンテキスト生成（ポートフォリオ / ウォッチリスト）
@@ -592,6 +613,7 @@ async function aiAskAll() {
   }
   if (claudeText) savedResponses['claude'] = claudeText;
   aiState.chatHistory.push({ question, responses: savedResponses, timestamp: Date.now() });
+  _saveAiHistory();
 
   if (claudeText) _appendChatAssistant(claudeText);
 
@@ -601,10 +623,8 @@ async function aiAskAll() {
   if (sendBtn) sendBtn.disabled = false;
 
   // 質問送信後は設定パネルを自動で畳む（回答スペースを広く取る）
-  ['ai-section-questions', 'ai-section-options', 'ai-section-models'].forEach(id => {
-    const d = document.getElementById(id);
-    if (d) d.open = false;
-  });
+  const cfg = document.getElementById('ai-section-config');
+  if (cfg) cfg.open = false;
 
   // 最新ターンを画面内にスクロール
   _currentTurn()?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -663,6 +683,7 @@ function _appendChatAssistant(text) {
 function aiResetChat() {
   aiState.chatHistory = [];
   aiState.results = {};
+  _saveAiHistory();
   const log = document.getElementById('ai-chat-log');
   if (log) log.innerHTML = '';
 }
@@ -725,52 +746,55 @@ function renderAiTab() {
         </button>
       </div>
 
-      <!-- 設定パネル（質問・オプション・LLM）── 各セクションは <details> で個別開閉可 -->
-      <div class="ai-config">
+      <!-- 設定パネル：全体を1つの <details> で開閉。中の3セクションは常時並ぶ -->
+      <details class="ai-config" open id="ai-section-config">
+        <summary class="ai-config-toplabel">質問設定</summary>
+        <div class="ai-config-inner">
 
-        <!-- 質問テンプレート -->
-        <details class="ai-config-section" open id="ai-section-questions">
-          <summary class="ai-config-title">質問</summary>
-          <div class="ai-config-body">${questionsHtml}</div>
-        </details>
+          <!-- 質問テンプレート -->
+          <div class="ai-config-section">
+            <div class="ai-config-title">質問</div>
+            <div class="ai-config-body">${questionsHtml}</div>
+          </div>
 
-        <!-- オプション（保有銘柄・市場） -->
-        <details class="ai-config-section" open id="ai-section-options">
-          <summary class="ai-config-title">オプション</summary>
-          <div class="ai-config-body">
-            <label class="ai-check-row">
-              <input type="checkbox" id="ai-with-portfolio" checked>
-              <span>保有銘柄情報を含める</span>
-            </label>
-            <label class="ai-check-row" id="ai-with-watchlist-row">
-              <input type="checkbox" id="ai-with-watchlist">
-              <span>ウォッチリストを含める</span>
-            </label>
-            <div class="ai-config-subtitle">市場</div>
-            <div class="ai-market-row">
+          <!-- オプション（保有銘柄・市場） -->
+          <div class="ai-config-section">
+            <div class="ai-config-title">オプション</div>
+            <div class="ai-config-body">
               <label class="ai-check-row">
-                <input type="checkbox" class="ai-market-check" value="japan" checked>
-                <span>日本</span>
+                <input type="checkbox" id="ai-with-portfolio" checked>
+                <span>保有銘柄情報を含める</span>
               </label>
-              <label class="ai-check-row">
-                <input type="checkbox" class="ai-market-check" value="us" checked>
-                <span>米国</span>
+              <label class="ai-check-row" id="ai-with-watchlist-row">
+                <input type="checkbox" id="ai-with-watchlist">
+                <span>ウォッチリストを含める</span>
               </label>
-              <label class="ai-check-row">
-                <input type="checkbox" class="ai-market-check" value="hk">
-                <span>香港</span>
-              </label>
+              <div class="ai-config-subtitle">市場</div>
+              <div class="ai-market-row">
+                <label class="ai-check-row">
+                  <input type="checkbox" class="ai-market-check" value="japan" checked>
+                  <span>日本</span>
+                </label>
+                <label class="ai-check-row">
+                  <input type="checkbox" class="ai-market-check" value="us" checked>
+                  <span>米国</span>
+                </label>
+                <label class="ai-check-row">
+                  <input type="checkbox" class="ai-market-check" value="hk">
+                  <span>香港</span>
+                </label>
+              </div>
             </div>
           </div>
-        </details>
 
-        <!-- LLM 選択 -->
-        <details class="ai-config-section" open id="ai-section-models">
-          <summary class="ai-config-title">LLM</summary>
-          <div class="ai-config-body">${modelsHtml}</div>
-        </details>
+          <!-- LLM 選択 -->
+          <div class="ai-config-section">
+            <div class="ai-config-title">LLM</div>
+            <div class="ai-config-body">${modelsHtml}</div>
+          </div>
 
-      </div>
+        </div>
+      </details>
 
       <!-- 送信ボタン -->
       <div class="ai-send-row">
@@ -804,6 +828,66 @@ function renderAiTab() {
 
   // バージョン一覧を Worker から動的取得して上書き（失敗時はハードコード版にフォールバック）
   _refreshModelVersionsFromWorker();
+
+  // 過去のQA履歴を再描画
+  _restoreAiHistory();
+}
+
+// localStorage に保存されたQA履歴を画面に復元（各turn = 質問+回答カード群）
+function _restoreAiHistory() {
+  const log = document.getElementById('ai-chat-log');
+  if (!log) return;
+  log.innerHTML = '';
+  if (!aiState.chatHistory.length) return;
+
+  const claudeModel = AI_MODELS.find(m => m.isSynthesizer);
+  const headerStyle = (m) => {
+    const fg = m.textColor || '#fff';
+    const subFg = m.borderColor ? m.textColor : 'rgba(255,255,255,0.75)';
+    const border = m.borderColor ? `box-shadow:inset 0 0 0 1px ${m.borderColor};` : '';
+    return `background:${m.color};color:${fg};--ai-sub-fg:${subFg};${border}`;
+  };
+  const fmtText = (t) => (t || '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
+  const fmtQ = (t) => (t || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+
+  for (const turn of aiState.chatHistory) {
+    const responses = turn.responses || {};
+    const nonClaudeIds = AI_MODELS.filter(m => !m.isSynthesizer && responses[m.id] !== undefined).map(m => m.id);
+    const claudeText = responses['claude'];
+
+    const cardHtml = (id, isClaude = false) => {
+      const m = isClaude ? claudeModel : AI_MODELS.find(m => m.id === id);
+      if (!m) return '';
+      const txt = responses[id];
+      const body = txt
+        ? `<div class="ai-text">${fmtText(txt)}</div>`
+        : '<div class="ai-error">⚠ 回答なし</div>';
+      const cls = isClaude ? 'ai-card ai-card-claude' : 'ai-card';
+      const badge = isClaude ? '<span class="ai-card-badge">統合 · 総括</span>' : '';
+      return `
+        <div class="${cls}">
+          <div class="ai-card-header" style="${headerStyle(m)}">
+            <span class="ai-card-name">${m.name}</span>
+            ${badge}
+          </div>
+          <div class="ai-card-body" data-model="${id}">${body}</div>
+        </div>`;
+    };
+
+    let inner = `<div class="ai-chat-q">${fmtQ(turn.question)}</div>`;
+    if (nonClaudeIds.length > 0) {
+      inner += `<div class="ai-grid">${nonClaudeIds.map(id => cardHtml(id)).join('')}</div>`;
+    }
+    if (claudeText) inner += cardHtml('claude', true);
+
+    const turnEl = document.createElement('div');
+    turnEl.className = 'ai-turn';
+    turnEl.innerHTML = inner;
+    log.appendChild(turnEl);
+  }
+  log.scrollTop = log.scrollHeight;
 }
 
 /**

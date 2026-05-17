@@ -64,33 +64,42 @@
 .ai-routine-btn:hover { background: var(--surface3); border-color: var(--border2); }
 .ai-routine-btn:active { transform: scale(0.97); }
 
-/* ── AI 設定パネル（チェックボックスUI） ── */
+/* ── AI 設定パネル ── 全体を1つの <details> で開閉、中の3セクションは常時並ぶ */
 .ai-config {
-  display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px;
-}
-/* <details> 化に伴い、padding は summary 側に寄せ、body は閉じている時 0 */
-.ai-config-section {
+  margin-bottom: 10px;
   border: 1px solid var(--border); border-radius: 10px;
   background: var(--surface2);
+}
+.ai-config-toplabel {
+  padding: 10px 14px;
+  font-size: 12px; font-weight: 700; color: var(--text);
+  cursor: pointer; user-select: none; -webkit-user-select: none;
+  list-style: none;
+  display: flex; align-items: center; gap: 8px;
+}
+.ai-config-toplabel::-webkit-details-marker { display: none; }
+.ai-config-toplabel::before {
+  content: '▶'; font-size: 9px; transition: transform 0.15s;
+  color: var(--text2); opacity: 0.7;
+}
+.ai-config[open] > .ai-config-toplabel::before { transform: rotate(90deg); }
+.ai-config-inner {
+  padding: 4px 10px 10px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+
+/* 中の3セクションは独立カード（開閉なし） */
+.ai-config-section {
+  border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg);
+  padding: 8px 12px 10px;
 }
 .ai-config-title {
   font-size: 10px; font-weight: 700; color: var(--text2);
   text-transform: uppercase; letter-spacing: 0.06em;
-  padding: 10px 12px;
-  cursor: pointer; user-select: none; -webkit-user-select: none;
-  list-style: none; /* デフォルト三角を消す */
-  display: flex; align-items: center; gap: 6px;
+  margin-bottom: 6px;
 }
-.ai-config-title::-webkit-details-marker { display: none; }
-.ai-config-title::before {
-  content: '▶'; font-size: 8px; transition: transform 0.15s;
-  color: var(--text2); opacity: 0.6;
-}
-.ai-config-section[open] > .ai-config-title::before { transform: rotate(90deg); }
-.ai-config-section[open] > .ai-config-title { padding-bottom: 4px; }
-.ai-config-body {
-  padding: 0 12px 10px;
-}
+.ai-config-body { /* セクション本体（パディングは親側） */ }
 .ai-config-subtitle {
   font-size: 10px; font-weight: 700; color: var(--text2);
   text-transform: uppercase; letter-spacing: 0.06em;
@@ -158,9 +167,9 @@
 .ai-custom-textarea:focus { border-color: var(--accent); }
 .ai-custom-textarea::placeholder { color: var(--text2); }
 
-/* ── パスキーボタン ── */
+/* ── パスキーボタン（PIN キーパッドの上に配置） ── */
 .pin-passkey-btn {
-  margin-top: 12px;
+  margin: 12px 0 16px;
   width: 100%;
   padding: 10px;
   font-size: 13px;
@@ -752,6 +761,14 @@ rect.flash-down { animation: flash-down 0.7s ease-out forwards; }
   background: var(--surface);
 }
 
+/* ウォッチリストのヘッダー行を縦方向 sticky（スクロール時に常に画面上端に残す） */
+.wl-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--surface);
+}
+
 /* ウォッチリストもティッカー列を左端固定 */
 .wl-table td.sl-sym {
   position: sticky;
@@ -759,8 +776,10 @@ rect.flash-down { animation: flash-down 0.7s ease-out forwards; }
   z-index: 1;
   background: var(--surface);
 }
+/* ヘッダー左上の交差セルは縦＋横両方 sticky で最前面 */
 .wl-table thead th:first-child {
   position: sticky;
+  top: 0;
   left: 0;
   z-index: 3;
   background: var(--surface);

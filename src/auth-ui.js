@@ -130,12 +130,6 @@ function _buildPinScreen() {
       </svg>
       <div class="pin-title">Portfolio Manager</div>
       <div class="pin-subtitle">PINを入力してください</div>
-      <div class="pin-dots" id="pin-dots">
-        <span class="pin-dot"></span><span class="pin-dot"></span>
-        <span class="pin-dot"></span><span class="pin-dot"></span>
-      </div>
-      <div class="pin-error" id="pin-error"></div>
-      ${_pinKeypadHTML('authKeyPress', 'authBackspace')}
       <button class="pin-passkey-btn" onclick="authenticatePasskey()" title="パスキー（指紋/顔認証）でログイン">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px">
           <path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"/>
@@ -149,6 +143,12 @@ function _buildPinScreen() {
           <path d="M9 6.8a6 6 0 0 1 9 5.2v2"/>
         </svg>パスキーでログイン
       </button>
+      <div class="pin-dots" id="pin-dots">
+        <span class="pin-dot"></span><span class="pin-dot"></span>
+        <span class="pin-dot"></span><span class="pin-dot"></span>
+      </div>
+      <div class="pin-error" id="pin-error"></div>
+      ${_pinKeypadHTML('authKeyPress', 'authBackspace')}
     </div>`;
   return ov;
 }
