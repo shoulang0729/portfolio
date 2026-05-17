@@ -338,7 +338,7 @@ function closePinChange() {
 function _showChangePinButton() {
   for (const id of ['pin-change-btn', 'passkey-register-btn',
                     'import-manex-btn', 'import-mf-btn',
-                    'manage-positions-btn']) {
+                    'manage-positions-btn', 'snapshot-btn']) {
     const btn = document.getElementById(id);
     if (btn) btn.style.display = '';
   }

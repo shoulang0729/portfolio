@@ -114,6 +114,97 @@ function cycleTheme() {
 }
 
 // ══════════════════════════════════════════════
+// PORTFOLIO SNAPSHOT
+//   フロントの state を使ってフルスナップショット（履歴付き）を組み立て、
+//   Worker /portfolio/snapshot に POST して GitHub に保存させる。
+//   失敗時は Worker 側で自前再生成にフォールバック（payload なし指定）。
+// ══════════════════════════════════════════════
+async function triggerPortfolioSnapshot() {
+  if (!confirm('現在のポートフォリオを GitHub にスナップショット保存します。\n（data/portfolio-snapshot.json が更新されます）')) return;
+  try {
+    setStatus('スナップショット作成中...', 'yellow');
+    const payload = _buildPortfolioSnapshotPayload();
+    const res = await fetch(`${WORKER_URL}/portfolio/snapshot`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const t = await res.text().catch(() => '');
+      throw new Error(`HTTP ${res.status}: ${t.slice(0, 200)}`);
+    }
+    const data = await res.json();
+    setStatus(`スナップショット保存完了（${data.positions} 銘柄）`, 'green');
+    alert(`保存完了:\nhttps://github.com/shoulang0729/portfolio/blob/main/data/portfolio-snapshot.json\n\n反映まで raw.githubusercontent.com 側で最大5分のキャッシュラグあり。`);
+  } catch (e) {
+    setStatus(`スナップショット保存失敗: ${e.message}`, 'red');
+    alert(`スナップショット保存失敗:\n${e.message}`);
+  }
+}
+
+function _buildPortfolioSnapshotPayload() {
+  const perfOf = (ySymbol) => {
+    const perf = {};
+    for (const period of PERIODS) {
+      // 1d は当日騰落率（live price）、他は historical cache から計算
+      if (period.id === '1d') {
+        const pos = positions.find(p => p.ySymbol === ySymbol);
+        perf['1d'] = pos?.dayPct ?? null;
+      } else {
+        perf[period.id] = typeof getHistoricalChangePct === 'function'
+          ? getHistoricalChangePct(ySymbol, period.id)
+          : null;
+      }
+    }
+    return perf;
+  };
+
+  const positionsWithPerf = positions.map(p => ({
+    ...p,
+    performance: perfOf(p.ySymbol),
+  }));
+
+  const totalValue = positions.reduce((s, p) => s + (p.value || 0), 0);
+  const totalPnl   = positions.reduce((s, p) => s + (p.pnl || 0), 0);
+
+  const portPerf = {};
+  for (const period of PERIODS) {
+    portPerf[period.id] = typeof calcPortfolioPeriodPct === 'function'
+      ? calcPortfolioPeriodPct(period.id)
+      : null;
+  }
+
+  // historical cache をそのまま添付（1y/5y/10y、各銘柄）
+  const historicals = {};
+  for (const range of ['1y', '5y', '10y']) {
+    historicals[range] = {};
+    const cache = state.historicalCache?.[range] || {};
+    for (const [sym, arr] of Object.entries(cache)) {
+      // 日付を ISO 文字列に正規化してファイルサイズ・互換性両立
+      historicals[range][sym] = arr.map(e => ({
+        date: e.date instanceof Date ? e.date.toISOString().slice(0, 10) : String(e.date).slice(0, 10),
+        close: e.close,
+      }));
+    }
+  }
+
+  return {
+    asOf: new Date().toISOString(),
+    source: 'frontend-manual',
+    summary: {
+      totalValue,
+      totalPnl,
+      totalPnlPct: totalValue > totalPnl ? totalPnl / (totalValue - totalPnl) * 100 : null,
+      positionCount: positions.length,
+      currencyBase: 'JPY',
+      performance: portPerf,
+    },
+    positions: positionsWithPerf,
+    historicals,
+  };
+}
+
+// ══════════════════════════════════════════════
 // MODE TOGGLE
 // ══════════════════════════════════════════════
 function setColorModePnl() {
