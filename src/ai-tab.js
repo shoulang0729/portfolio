@@ -263,7 +263,17 @@ async function _callOpenAICompat(provider, model, messages, systemPrompt) {
       max_tokens: 4000,
     }),
   });
-  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e?.error?.message || `HTTP ${res.status}`); }
+  if (!res.ok) {
+    // エラー全文を取得（OpenAI形式以外もありえるのでtextでフォールバック）
+    const raw = await res.text().catch(() => '');
+    let detail = '';
+    try {
+      const j = JSON.parse(raw);
+      detail = j?.error?.message || j?.error?.code || j?.message || raw;
+    } catch { detail = raw; }
+    console.error(`[${provider}] HTTP ${res.status}:`, raw);
+    throw new Error(`${provider} HTTP ${res.status}: ${detail.slice(0, 300)}`);
+  }
   const d = await res.json();
   return d.choices[0].message.content;
 }
