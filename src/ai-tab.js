@@ -600,6 +600,12 @@ async function aiAskAll() {
   aiState.running = false;
   if (sendBtn) sendBtn.disabled = false;
 
+  // 質問送信後は設定パネルを自動で畳む（回答スペースを広く取る）
+  ['ai-section-questions', 'ai-section-options', 'ai-section-models'].forEach(id => {
+    const d = document.getElementById(id);
+    if (d) d.open = false;
+  });
+
   // 最新ターンを画面内にスクロール
   _currentTurn()?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
@@ -719,48 +725,50 @@ function renderAiTab() {
         </button>
       </div>
 
-      <!-- 設定パネル（質問・オプション・LLM） -->
+      <!-- 設定パネル（質問・オプション・LLM）── 各セクションは <details> で個別開閉可 -->
       <div class="ai-config">
 
         <!-- 質問テンプレート -->
-        <div class="ai-config-section">
-          <div class="ai-config-title">質問</div>
-          ${questionsHtml}
-        </div>
+        <details class="ai-config-section" open id="ai-section-questions">
+          <summary class="ai-config-title">質問</summary>
+          <div class="ai-config-body">${questionsHtml}</div>
+        </details>
 
         <!-- オプション（保有銘柄・市場） -->
-        <div class="ai-config-section">
-          <div class="ai-config-title">オプション</div>
-          <label class="ai-check-row">
-            <input type="checkbox" id="ai-with-portfolio" checked>
-            <span>保有銘柄情報を含める</span>
-          </label>
-          <label class="ai-check-row" id="ai-with-watchlist-row">
-            <input type="checkbox" id="ai-with-watchlist">
-            <span>ウォッチリストを含める</span>
-          </label>
-          <div class="ai-config-subtitle">市場</div>
-          <div class="ai-market-row">
+        <details class="ai-config-section" open id="ai-section-options">
+          <summary class="ai-config-title">オプション</summary>
+          <div class="ai-config-body">
             <label class="ai-check-row">
-              <input type="checkbox" class="ai-market-check" value="japan" checked>
-              <span>日本</span>
+              <input type="checkbox" id="ai-with-portfolio" checked>
+              <span>保有銘柄情報を含める</span>
             </label>
-            <label class="ai-check-row">
-              <input type="checkbox" class="ai-market-check" value="us" checked>
-              <span>米国</span>
+            <label class="ai-check-row" id="ai-with-watchlist-row">
+              <input type="checkbox" id="ai-with-watchlist">
+              <span>ウォッチリストを含める</span>
             </label>
-            <label class="ai-check-row">
-              <input type="checkbox" class="ai-market-check" value="hk">
-              <span>香港</span>
-            </label>
+            <div class="ai-config-subtitle">市場</div>
+            <div class="ai-market-row">
+              <label class="ai-check-row">
+                <input type="checkbox" class="ai-market-check" value="japan" checked>
+                <span>日本</span>
+              </label>
+              <label class="ai-check-row">
+                <input type="checkbox" class="ai-market-check" value="us" checked>
+                <span>米国</span>
+              </label>
+              <label class="ai-check-row">
+                <input type="checkbox" class="ai-market-check" value="hk">
+                <span>香港</span>
+              </label>
+            </div>
           </div>
-        </div>
+        </details>
 
         <!-- LLM 選択 -->
-        <div class="ai-config-section">
-          <div class="ai-config-title">LLM</div>
-          ${modelsHtml}
-        </div>
+        <details class="ai-config-section" open id="ai-section-models">
+          <summary class="ai-config-title">LLM</summary>
+          <div class="ai-config-body">${modelsHtml}</div>
+        </details>
 
       </div>
 
