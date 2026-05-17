@@ -31,7 +31,7 @@ async function registerPasskey() {
       publicKey: {
         challenge: _b64ToU8(challenge),
         rp: { id: _PASSKEY_RP_ID, name: _PASSKEY_RP_NAME },
-        user: { id: _PASSKEY_USER_ID, name: 'owner', displayName: 'Portfolio Owner' },
+        user: { id: _PASSKEY_USER_ID, name: 'Portfolio Manager', displayName: 'Portfolio Manager' },
         pubKeyCredParams: [
           { type: 'public-key', alg: -7  },
           { type: 'public-key', alg: -257 },

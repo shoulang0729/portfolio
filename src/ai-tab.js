@@ -12,7 +12,7 @@
 // AI モデル設定
 // ══════════════════════════════════════════════
 const AI_MODELS = [
-  { id: 'gpt',      name: 'ChatGPT',  color: '#FFFFFF', textColor: '#10A37F', borderColor: '#10A37F',
+  { id: 'gpt',      name: 'ChatGPT',  color: '#10A37F', textColor: '#fff',
     versions: ['gpt-4o', 'gpt-4o-mini', 'o3', 'o4-mini'] },
   { id: 'gemini',   name: 'Gemini',   color: '#4285F4', textColor: '#fff',
     versions: ['gemini-2.0-flash', 'gemini-2.5-pro', 'gemini-1.5-pro'] },
@@ -225,7 +225,7 @@ async function _callOpenAI(messages, systemPrompt, model = 'gpt-4o') {
     body: JSON.stringify({
       model,
       messages: [{ role: 'system', content: systemPrompt }, ...messages],
-      max_tokens: 1200,
+      max_tokens: 4000,
     }),
   });
   if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e?.error?.message || `HTTP ${res.status}`); }
@@ -245,7 +245,7 @@ async function _callGemini(messages, systemPrompt, model = 'gemini-2.0-flash') {
       model,
       system_instruction: { parts: [{ text: systemPrompt }] },
       contents,
-      generationConfig: { maxOutputTokens: 1200 },
+      generationConfig: { maxOutputTokens: 4000 },
     }),
   });
   if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e?.error?.message || `HTTP ${res.status}`); }
@@ -260,7 +260,7 @@ async function _callOpenAICompat(provider, model, messages, systemPrompt) {
     body: JSON.stringify({
       model,
       messages: [{ role: 'system', content: systemPrompt }, ...messages],
-      max_tokens: 1200,
+      max_tokens: 4000,
     }),
   });
   if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e?.error?.message || `HTTP ${res.status}`); }
@@ -272,7 +272,7 @@ async function _callClaude(messages, systemPrompt, bodyEl, model = 'claude-sonne
   const res = await fetch(`${WORKER_URL}/ai/claude`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model, max_tokens: 2000, system: systemPrompt, messages }),
+    body: JSON.stringify({ model, max_tokens: 4000, system: systemPrompt, messages }),
   });
   if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e?.error?.message || `HTTP ${res.status}`); }
   const d = await res.json();

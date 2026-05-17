@@ -481,45 +481,65 @@ if (typeof d3 === 'undefined') {
 }
 
 // ── Pull-to-refresh（上端で引っ張るとリロード） ──
+// iOS Safari PWA モード対応：touchstart 時点で「上端にいるか」を判定し、
+// 上端にいなければそのターゲットを一切追跡しない。
 (function() {
-  let startY = 0;
-  let indicator = null;
+  if (!('ontouchstart' in window)) return; // デスクトップではスキップ
+
   const THRESHOLD = 72;
+  let startY  = 0;
+  let pulling = false;
+  let indicator = null;
+
+  const atTop = () =>
+    (window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0) <= 0;
 
   function getIndicator() {
-    if (!indicator) {
-      indicator = document.createElement('div');
-      indicator.id = 'ptr-indicator';
-      indicator.style.cssText = [
-        'position:fixed;top:0;left:0;right:0;z-index:9999',
-        'display:flex;align-items:center;justify-content:center',
-        'height:0;overflow:hidden;transition:height 0.15s',
-        'background:var(--surface2);font-size:13px;color:var(--text2)',
-      ].join(';');
-      indicator.textContent = '↓ 離すとリロード';
-      document.body.prepend(indicator);
-    }
+    if (indicator) return indicator;
+    indicator = document.createElement('div');
+    indicator.id = 'ptr-indicator';
+    indicator.style.cssText = [
+      'position:fixed', 'top:0', 'left:0', 'right:0', 'z-index:99999',
+      'display:flex', 'align-items:center', 'justify-content:center',
+      'height:0', 'overflow:hidden', 'transition:none',
+      'background:var(--surface2)', 'font-size:13px', 'color:var(--text2)',
+      'pointer-events:none',
+    ].join(';');
+    document.body.prepend(indicator);
     return indicator;
   }
 
   document.addEventListener('touchstart', e => {
-    startY = e.touches[0].clientY;
+    pulling = atTop();
+    startY  = e.touches[0].clientY;
   }, { passive: true });
 
   document.addEventListener('touchmove', e => {
-    if (window.scrollY > 0) return;
+    if (!pulling) return;
     const delta = e.touches[0].clientY - startY;
     if (delta <= 0) return;
     const ind = getIndicator();
-    ind.style.height = Math.min(delta * 0.5, THRESHOLD * 0.8) + 'px';
+    ind.style.transition = 'none';
+    ind.style.height = Math.min(delta * 0.5, 60) + 'px';
     ind.textContent = delta >= THRESHOLD ? '↺ 離すとリロード' : '↓ 引っ張ってリロード';
   }, { passive: true });
 
   document.addEventListener('touchend', e => {
+    if (!pulling) return;
     const delta = e.changedTouches[0].clientY - startY;
-    if (indicator) indicator.style.height = '0';
-    if (window.scrollY === 0 && delta >= THRESHOLD) {
-      setTimeout(() => location.reload(), 150);
+    pulling = false;
+    if (indicator) {
+      indicator.style.transition = 'height 0.18s';
+      indicator.style.height = '0';
+    }
+    if (delta >= THRESHOLD) location.reload();
+  }, { passive: true });
+
+  document.addEventListener('touchcancel', () => {
+    pulling = false;
+    if (indicator) {
+      indicator.style.transition = 'height 0.18s';
+      indicator.style.height = '0';
     }
   }, { passive: true });
 }());
