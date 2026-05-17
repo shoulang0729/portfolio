@@ -15,7 +15,7 @@ const AI_MODELS = [
   { id: 'gpt',      name: 'ChatGPT',  color: '#10A37F', textColor: '#fff',
     versions: ['gpt-5.4-mini', 'gpt-4o', 'gpt-4o-mini', 'o3', 'o4-mini'] },
   { id: 'gemini',   name: 'Gemini',   color: '#4285F4', textColor: '#fff',
-    versions: ['gemini-2.0-flash', 'gemini-2.5-pro', 'gemini-1.5-pro'] },
+    versions: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.5-flash-lite', 'gemini-3.1-flash-lite'] },
   { id: 'grok',     name: 'Grok',     color: '#1A1A1A', textColor: '#fff',
     versions: ['grok-4.3', 'grok-4.20-0309-reasoning', 'grok-4.20-0309-non-reasoning', 'grok-4.20-multi-agent-0309'] },
   // DeepSeek は残高不足で利用不可のため一時無効化（再開する場合は下の行のコメントを外す）
