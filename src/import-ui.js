@@ -88,23 +88,36 @@ function _renderImportStep(step, payload) {
       });
       html += `</div>`;
     } else {
-      const { added, removed, changed, unchanged } = computeImportDiff(
+      const { added, removed, changed } = computeImportDiff(
         _importState.current, _importState.parsed
       );
+      // 重複検出（同 symbol が parsed 内に複数）→ ユーザーへ表示
+      const symCount = {};
+      _importState.parsed.forEach(p => { symCount[p.symbol] = (symCount[p.symbol] || 0) + 1; });
+      const dupSymCount = Object.values(symCount).filter(n => n > 1).length;
+
       html += `<div class="import-review-summary">${_importState.parsed.length}銘柄を検出`;
       if (added.length)    html += ` · <span class="imp-badge new">${added.length}件新規</span>`;
       if (changed.length)  html += ` · <span class="imp-badge chg">${changed.length}件変更</span>`;
-      if (unchanged.length) html += ` · ${unchanged.length}件変更なし`;
+      if (dupSymCount)     html += ` · <span class="imp-badge chg">${dupSymCount}銘柄に重複行あり（保存時に合算）</span>`;
       html += `</div>`;
 
+      // parsed を元の順序のままインデックス付きで描画（重複行も個別に uncheck 可能）
+      const addedSyms   = new Set(added.map(p => p.symbol));
+      const changedKeys = new Set(changed.map(p => p.symbol));
       html += `<div class="import-list">`;
-      for (const p of added)     html += _importRow(p, 'new', true);
-      for (const p of changed) {
-        const cur = _importState.current.find(c => c.symbol === p.symbol);
-        const hint = cur ? `${cur.shares}→${p.shares}株 / @${cur.avgCost}→@${p.avgCost}` : '';
-        html += _importRow(p, 'chg', true, hint);
-      }
-      for (const p of unchanged) html += _importRow(p, 'same', true);
+      _importState.parsed.forEach((p, idx) => {
+        let type = 'same';
+        let hint = '';
+        if (addedSyms.has(p.symbol)) {
+          type = 'new';
+        } else if (changedKeys.has(p.symbol)) {
+          type = 'chg';
+          const cur = _importState.current.find(c => c.symbol === p.symbol);
+          if (cur) hint = `${cur.shares}→${p.shares}株 / @${cur.avgCost}→@${p.avgCost}`;
+        }
+        html += _importRow(p, type, true, hint, idx);
+      });
       html += `</div>`;
 
       // 今回のファイルにない既存銘柄（デフォルト保持・チェックで削除）
@@ -195,18 +208,30 @@ async function _confirmImport() {
     );
     finalPositions = _importState.parsed.filter((_, i) => keepIdx.has(i));
   } else {
-    const selectedSymbols = new Set(
-      [...cbs].filter(cb => cb.checked && cb.dataset.type !== 'del').map(cb => cb.dataset.symbol)
+    // インポートモード（manex / moneyforward）:
+    //  - parsed のうちチェック済みインデックスを採用（重複symbol対応で symbol ではなく idx で判定）
+    //  - removed (del) のうちチェック済みは current から除外
+    const parsedKeepIdx = new Set(
+      [...cbs]
+        .filter(cb => cb.checked && cb.dataset.type !== 'del' && cb.dataset.idx != null)
+        .map(cb => Number(cb.dataset.idx))
     );
     const delSymbols = new Set(
       [...cbs].filter(cb => cb.checked && cb.dataset.type === 'del').map(cb => cb.dataset.symbol)
     );
-    const newPositions = _importState.parsed.filter(p => selectedSymbols.has(p.symbol));
+    const newPositions = _importState.parsed.filter((_, i) => parsedKeepIdx.has(i));
+    const incomingSymbols = new Set(newPositions.map(p => p.symbol));
     const oldKept = _importState.current.filter(p =>
-      !selectedSymbols.has(p.symbol) && !delSymbols.has(p.symbol)
+      !incomingSymbols.has(p.symbol) && !delSymbols.has(p.symbol)
     );
     finalPositions = [...newPositions, ...oldKept];
   }
+
+  // 同一 symbol を1件にマージ（保有数合算・取得単価加重平均）
+  if (typeof mergeDuplicatePositions === 'function') {
+    finalPositions = mergeDuplicatePositions(finalPositions);
+  }
+
   _importState.pendingPositions = finalPositions;
 
   _renderImportStep('saving');

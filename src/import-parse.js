@@ -128,8 +128,13 @@ async function parseMoneyForwardImage(file) {
 
   const prompt = `このスクリーンショットは資産管理アプリの保有資産一覧です。
 画像から保有資産を抽出し、必ず以下のJSON形式のみで回答してください（説明文不要）:
-{"assets":[{"symbol":"コードorティッカー","name":"銘柄名","shares":保有数,"avgCost":平均取得単価,"category":"日本株|米国株|投資信託|その他"}]}
-取得単価が不明な場合は0、保有数が不明な場合は0にしてください。`;
+{"assets":[{"symbol":"コードorティッカー","name":"銘柄名","shares":保有数,"avgCost":平均取得単価,"price":現在値or基準価額,"value":時価評価額,"category":"日本株|米国株|投資信託|その他"}]}
+
+注意:
+- 数値はカンマや通貨記号を除いた数値のみ（例: 1,234,567 → 1234567）
+- 不明な項目は 0 にする
+- 投資信託は「保有口数」を shares、「基準価額」を price、「平均取得単価」を avgCost、「時価評価額」を value に
+- 同じ銘柄が複数行ある場合はそれぞれ別レコードとして抽出（合算は後段でやる）`;
 
   const body = {
     model: 'gpt-4o',
@@ -177,12 +182,27 @@ function _mfAssetToPosition(a) {
   }
   if (!sym) sym = name;
 
-  const proxy = isFund ? (fundProxyOf(sym) ?? FUND_FALLBACK_PROXY) : null;
+  const proxy   = isFund ? (fundProxyOf(sym) ?? FUND_FALLBACK_PROXY) : null;
+  const shares  = Number(a.shares)  || 0;
+  const avgCost = Number(a.avgCost) || 0;
+  let   price   = Number(a.price)   || 0;
+  let   value   = Number(a.value)   || 0;
+
+  // value が取れていなければ shares × avgCost で推定（基準価額ベースの概算）
+  // 投資信託の場合 avgCost は 円/万口 だが、shares 単位は GPT-4o の解釈次第。
+  // ここではユーザーの保有コスト額として近い値を出すフォールバック扱い。
+  if (value === 0 && shares > 0 && avgCost > 0) value = shares * avgCost;
+
+  // price が無ければ avgCost を初期値として使う（refreshPrices でライブ更新される）
+  if (price === 0 && avgCost > 0) price = avgCost;
+
+  const pnl    = (price > 0 && avgCost > 0 && shares > 0) ? (price - avgCost) * shares : 0;
+  const pnlPct = (avgCost > 0 && shares > 0) ? (pnl / (avgCost * shares)) * 100 : 0;
+
   return {
     symbol: sym, name, cat,
-    shares: Number(a.shares) || 0, price: 0,
-    avgCost: Number(a.avgCost) || 0, value: 0,
-    pnl: 0, pnlPct: 0, dayPct: null, dayCh: null,
+    shares, price, avgCost, value, pnl, pnlPct,
+    dayPct: null, dayCh: null,
     cur: cat === '米国株・ETF' ? 'USD' : 'JPY',
     ySymbol: isFund ? proxy.ySymbol : (isJP ? `${sym}.T` : sym),
     ...(isFund ? { isProxy: true, proxyName: proxy.proxyName } : {}),

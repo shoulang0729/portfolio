@@ -37,6 +37,42 @@ async function savePositionsToKV(newPositions, pinHashOverride) {
   return (await res.json()).ok === true;
 }
 
+/**
+ * 同一 symbol の position を1件にマージする（保有数を合算・取得単価は加重平均）。
+ * 取込時に同じ銘柄が複数行で出てきた場合の dedup 用途。
+ *
+ * マージルール:
+ *  - shares: 単純合算
+ *  - avgCost: shares で加重平均 (Σ(avgCost_i × shares_i) / Σshares)
+ *  - value, pnl: 合算
+ *  - price: 最初に登場した非0の値（基本どれも同じはず）
+ *  - その他のフィールド（name, cat, cur, ySymbol, isProxy, proxyName）: 最初の値を採用
+ */
+function mergeDuplicatePositions(positions) {
+  if (!Array.isArray(positions)) return positions;
+  const map = new Map();
+  for (const p of positions) {
+    if (!p || !p.symbol) continue;
+    const existing = map.get(p.symbol);
+    if (!existing) {
+      map.set(p.symbol, { ...p });
+      continue;
+    }
+    const sharesA = existing.shares || 0;
+    const sharesB = p.shares || 0;
+    const totalShares = sharesA + sharesB;
+    const totalCost = (existing.avgCost || 0) * sharesA + (p.avgCost || 0) * sharesB;
+    existing.shares  = totalShares;
+    existing.avgCost = totalShares > 0 ? totalCost / totalShares : (existing.avgCost || 0);
+    existing.value   = (existing.value || 0) + (p.value || 0);
+    existing.pnl     = (existing.pnl   || 0) + (p.pnl   || 0);
+    if (!existing.price && p.price) existing.price = p.price;
+    const costBase = (existing.avgCost || 0) * (existing.shares || 0);
+    existing.pnlPct = costBase > 0 ? (existing.pnl / costBase) * 100 : 0;
+  }
+  return [...map.values()];
+}
+
 function computeImportDiff(current, incoming) {
   const keyOf = p => p.symbol;
   const curMap = new Map(current.map(p => [keyOf(p), p]));
