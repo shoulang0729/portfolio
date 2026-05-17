@@ -251,6 +251,7 @@ async function applyPricesCache() {
 async function fetchAllHistorical(neededRange = '1y') {
   if (state.fetchingRanges.has(neededRange)) return; // 同じレンジが既に取得中なら重複スキップ
   state.fetchingRanges.add(neededRange);
+  state.historicalAttempted = state.historicalAttempted || {};
   try {
     if (!state.historicalCache[neededRange]) state.historicalCache[neededRange] = {};
     const symbols = positions.filter(p => p.ySymbol).map(p => p.ySymbol);
@@ -280,6 +281,7 @@ async function fetchAllHistorical(neededRange = '1y') {
     }
   } finally {
     state.fetchingRanges.delete(neededRange); // 成功・失敗問わず必ず解放
+    state.historicalAttempted[neededRange] = true; // この range は一度試行済み（"…" → "–" に切替えるフラグ）
   }
 }
 
