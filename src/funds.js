@@ -18,27 +18,30 @@ const FUND_DEFS = [
   },
   {
     // ひふみマイクロスコープpro / ひふみマイクロプラスプロ / 旧シンボル名
+    // 超小型株特化 → 東証グロース250（旧マザーズ指数）が運用実態に最も近い
     patterns: ['マイクロスコープ', 'マイクロプラス', 'マイクロSP'],
     symbol:   'ひふみMS',
     canonicalName: 'ひふみマイクロスコープpro',
-    ySymbol:  '^GSPC',
-    proxyName:'S&P 500 Index',
+    ySymbol:  '2516.T',
+    proxyName:'NEXT FUNDS 東証グロース市場250指数ETF',
   },
   {
     // ひふみクロスオーバーpro
+    // 上場/未上場混在のグローバル投資 → MSCI ACWI が最も近い
     patterns: ['クロスオーバー', 'ひふみXO'],
     symbol:   'ひふみXO',
     canonicalName: 'ひふみクロスオーバーpro',
-    ySymbol:  'SPY',
-    proxyName:'SPDR S&P500 ETF',
+    ySymbol:  'ACWI',
+    proxyName:'iShares MSCI ACWI ETF',
   },
   {
     // ひふみ投信は最後（"ひふみ"は他にマッチしなかったときのフォールバック）
+    // 中小型成長株中心 → TOPIX Small（小型株指数）が最も近い
     patterns: ['ひふみ投信', 'ひふみ'],
     symbol:   'ひふみ投信',
     canonicalName: 'ひふみ投信',
-    ySymbol:  '2563.T',
-    proxyName:'iシェアーズ・コアS&P500',
+    ySymbol:  '1312.T',
+    proxyName:'NEXT FUNDS TOPIX Small ETF',
   },
 ];
 
@@ -61,6 +64,8 @@ function fundProxyOf(symbol) {
 // position 1件を正規化（投資信託のみ）：
 // - 銘柄名に FUND_DEFS のパターンが含まれていれば canonicalName で上書き
 // - symbol も対応する統一シンボルに正規化
+// - ySymbol / proxyName は FUND_DEFS の値で強制上書き
+//   （proxy を後から変更したい場合、既存KVの古い ySymbol を新しいものに切替えるため）
 // - 投資信託以外はそのまま返す
 function canonicalizeFundPosition(p) {
   if (!p || p.cat !== '投資信託') return p;
@@ -71,9 +76,9 @@ function canonicalizeFundPosition(p) {
         ...p,
         symbol: def.symbol,
         name:   def.canonicalName || p.name,
-        ySymbol: p.ySymbol || def.ySymbol,
-        isProxy: p.isProxy ?? true,
-        proxyName: p.proxyName || def.proxyName,
+        ySymbol:   def.ySymbol,        // ← 強制上書き
+        proxyName: def.proxyName,      // ← 強制上書き
+        isProxy:   true,
       };
     }
   }
