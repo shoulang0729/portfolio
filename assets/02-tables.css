@@ -1,5 +1,16 @@
 /* ── ヒートマップ色付きセル（中央揃え・角丸） ── */
 .sl-pct-cell { text-align: center; }
+
+/* 履歴データ取得中のプレースホルダ（"…"）。点滅で更新中を示す。 */
+.sl-pct-loading {
+  color: var(--text2);
+  opacity: 0.5;
+  animation: sl-pct-loading-pulse 1.2s ease-in-out infinite;
+}
+@keyframes sl-pct-loading-pulse {
+  0%, 100% { opacity: 0.35; }
+  50%      { opacity: 0.85; }
+}
 /* 騰落率列：全期間で幅を統一（white-space:nowrap で「1週間」が列幅を決める） */
 .sl-table th[data-col="1d"],  .sl-table th[data-col="1w"],
 .sl-table th[data-col="1mo"], .sl-table th[data-col="1Q"],

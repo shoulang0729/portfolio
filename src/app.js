@@ -489,6 +489,9 @@ function init() {
     for (const range of ['1y', '5y', '10y']) {
       await fetchAllHistorical(range);
       renderStats();
+      // 各レンジ完了ごとに銘柄リスト・ウォッチリストを再描画して "…" を実値に置換
+      if (typeof renderStockList === 'function') renderStockList();
+      if (typeof renderWatchlist === 'function' && state.activeTab === 'watchlist') renderWatchlist();
       if (state.changePeriod && state.changePeriod !== '1d') renderHeatmap();
     }
   })();
