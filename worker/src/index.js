@@ -196,6 +196,184 @@ async function _fetchClaudeModels(apiKey) {
     .reverse();
 }
 
+// ══════════════════════════════════════════════════════════════
+// AI コンテキスト・プリフェッチ
+// 質問内容(カテゴリ)に応じて Finnhub から必要なデータだけ取得し、
+// LLM の system prompt に注入できる Markdown 文字列を返す。
+//
+// POST body:
+//   { categories: ['news','fundamentals','earnings','recommendation','insider'],
+//     targetSymbols: ['AAPL', '9983.T'],
+//     question: '...' }
+//
+// レスポンス:
+//   { contextSection: '# 参考データ（プリフェッチ済み）\n...', gathered: 7 }
+//
+// 各フェッチャは独立 catch。全失敗でも空 contextSection を返す。
+// ══════════════════════════════════════════════════════════════
+async function handleAIContext(request, env, origin) {
+  if (request.method !== 'POST') return errRes('POST のみ許可', 405, origin);
+  if (!env.FINNHUB_API_KEY)      return jsonRes({ contextSection: '', gathered: 0 }, 200, origin);
+
+  let body;
+  try { body = await request.json(); } catch { return errRes('JSON が不正です', 400, origin); }
+  const { categories = [], targetSymbols = [], question = '' } = body;
+
+  const gathered = await _gatherContext({ categories, targetSymbols, question }, env);
+  const contextSection = _buildContextSection(gathered);
+  return jsonRes({ contextSection, gathered: gathered.length }, 200, origin);
+}
+
+// ── Yahoo Finance symbol → Finnhub symbol（フロント src/data.js と揃える）──
+function _workerToFinnhubSymbol(ySymbol) {
+  if (!ySymbol) return null;
+  // 東証: 9983.T → TYO:9983
+  if (ySymbol.endsWith('.T')) return `TYO:${ySymbol.slice(0, -2)}`;
+  // 香港: 0700.HK → HKG:0700
+  if (ySymbol.endsWith('.HK')) return `HKG:${ySymbol.slice(0, -3)}`;
+  // 米国: そのまま
+  return ySymbol;
+}
+
+// ── 個別フェッチャ ──
+async function _fetchFinnhubNews(ySym, env) {
+  const fSym = _workerToFinnhubSymbol(ySym);
+  if (!fSym) return null;
+  const to = new Date();
+  const from = new Date(to.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const fmt = d => d.toISOString().slice(0, 10);
+  const url = `https://finnhub.io/api/v1/company-news?symbol=${fSym}&from=${fmt(from)}&to=${fmt(to)}&token=${env.FINNHUB_API_KEY}`;
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  const data = await res.json();
+  if (!Array.isArray(data)) return null;
+  return data.slice(0, 5).map(n => ({
+    headline: n.headline, summary: n.summary, source: n.source, url: n.url,
+    datetime: n.datetime ? new Date(n.datetime * 1000).toISOString() : '',
+  }));
+}
+
+async function _fetchFinnhubFundamentals(ySym, env) {
+  const fSym = _workerToFinnhubSymbol(ySym);
+  if (!fSym) return null;
+  const url = `https://finnhub.io/api/v1/stock/metric?symbol=${fSym}&metric=all&token=${env.FINNHUB_API_KEY}`;
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  const data = await res.json();
+  const m = data.metric || {};
+  return {
+    peTTM: m.peTTM, pbAnnual: m.pbAnnual, epsTTM: m.epsTTM, psTTM: m.psTTM,
+    roeTTM: m.roeTTM, dividendYield: m.dividendYieldIndicatedAnnual,
+    weekHigh52: m['52WeekHigh'], weekLow52: m['52WeekLow'],
+  };
+}
+
+async function _fetchFinnhubEarnings(ySym, env) {
+  const fSym = _workerToFinnhubSymbol(ySym);
+  if (!fSym) return null;
+  const url = `https://finnhub.io/api/v1/stock/earnings?symbol=${fSym}&token=${env.FINNHUB_API_KEY}`;
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  const data = await res.json();
+  return Array.isArray(data) ? data.slice(0, 4) : null;
+}
+
+async function _fetchFinnhubRecommendation(ySym, env) {
+  const fSym = _workerToFinnhubSymbol(ySym);
+  if (!fSym) return null;
+  const url = `https://finnhub.io/api/v1/stock/recommendation?symbol=${fSym}&token=${env.FINNHUB_API_KEY}`;
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  const data = await res.json();
+  return Array.isArray(data) ? data.slice(0, 3) : null;
+}
+
+async function _fetchFinnhubInsider(ySym, env) {
+  const fSym = _workerToFinnhubSymbol(ySym);
+  if (!fSym) return null;
+  const url = `https://finnhub.io/api/v1/stock/insider-transactions?symbol=${fSym}&token=${env.FINNHUB_API_KEY}`;
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  const data = await res.json();
+  return (data?.data || []).slice(0, 10);
+}
+
+const _FETCHER_MAP = {
+  news:           _fetchFinnhubNews,
+  fundamentals:   _fetchFinnhubFundamentals,
+  earnings:       _fetchFinnhubEarnings,
+  recommendation: _fetchFinnhubRecommendation,
+  insider:        _fetchFinnhubInsider,
+};
+const _SYMBOL_BOUND = new Set(Object.keys(_FETCHER_MAP));
+
+async function _gatherContext({ categories, targetSymbols }, env) {
+  const tasks = [];
+  for (const cat of categories) {
+    if (_SYMBOL_BOUND.has(cat)) {
+      for (const sym of targetSymbols || []) {
+        tasks.push(
+          _FETCHER_MAP[cat](sym, env)
+            .then(data => ({ cat, sym, data }))
+            .catch(() => ({ cat, sym, data: null })),
+        );
+      }
+    }
+    // macro 等の銘柄非依存カテゴリは今回未実装（将来 Brave Search を足すならここに分岐追加）
+  }
+  const results = await Promise.all(tasks);
+  return results.filter(r => r.data);
+}
+
+function _buildContextSection(gathered) {
+  if (!gathered.length) return '';
+  // 銘柄×カテゴリでグルーピング
+  const bySym = {};
+  for (const r of gathered) {
+    bySym[r.sym] ||= {};
+    bySym[r.sym][r.cat] = r.data;
+  }
+  let out = '# 参考データ（プリフェッチ済み・出典: Finnhub）\n';
+  for (const [sym, cats] of Object.entries(bySym)) {
+    out += `\n## ${sym}\n`;
+    if (cats.news) {
+      out += `### 直近ニュース（過去1週間, 最大5件）\n`;
+      cats.news.forEach((n, i) => {
+        const date = (n.datetime || '').slice(0, 10);
+        out += `${i + 1}. ${n.headline} — ${n.source} (${date})\n   ${n.summary || ''}\n   ${n.url || ''}\n`;
+      });
+    }
+    if (cats.fundamentals) {
+      const f = cats.fundamentals;
+      const fmt = v => (v != null ? Number(v).toFixed(2) : 'N/A');
+      out += `### ファンダメンタル指標\n`
+           + `- PER(TTM): ${fmt(f.peTTM)} / PBR: ${fmt(f.pbAnnual)} / PSR: ${fmt(f.psTTM)}\n`
+           + `- EPS(TTM): ${fmt(f.epsTTM)} / ROE: ${fmt(f.roeTTM)}%\n`
+           + `- 配当利回り: ${fmt(f.dividendYield)}%\n`
+           + `- 52週高値/安値: ${fmt(f.weekHigh52)} / ${fmt(f.weekLow52)}\n`;
+    }
+    if (cats.earnings) {
+      out += `### 直近決算（最大4四半期）\n`;
+      cats.earnings.forEach(e => {
+        out += `- ${e.period ?? '?'}: 実績EPS ${e.actual ?? 'N/A'} / 予想 ${e.estimate ?? 'N/A'} / Surprise ${e.surprisePercent ?? 'N/A'}%\n`;
+      });
+    }
+    if (cats.recommendation) {
+      out += `### アナリスト評価（直近3ヶ月）\n`;
+      cats.recommendation.forEach(r => {
+        out += `- ${r.period}: 強買${r.strongBuy} / 買${r.buy} / 中立${r.hold} / 売${r.sell} / 強売${r.strongSell}\n`;
+      });
+    }
+    if (cats.insider) {
+      out += `### インサイダー取引（直近10件）\n`;
+      cats.insider.forEach(t => {
+        out += `- ${t.transactionDate ?? '?'} ${t.name ?? '?'}: ${t.share ?? '?'}株 (${t.transactionCode ?? '?'})\n`;
+      });
+    }
+  }
+  return out;
+}
+
 // ── AI プロキシ ───────────────────────────────────────
 async function handleAI(request, path, env, origin) {
   if (request.method !== 'POST') return errRes('POST のみ許可', 405, origin);
@@ -457,6 +635,7 @@ export default {
     if (path === '/yahoo')           return handleYahoo(url, org);
     if (path === '/finnhub')         return handleFinnhub(url, env, org);
     if (path === '/ai/models')       return handleAIModels(env, org);
+    if (path === '/ai/context')      return handleAIContext(request, env, org);
     if (path.startsWith('/ai/'))     return handleAI(request, path, env, org);
     if (path === '/watchlist')       return handleWatchlist(request, env, org);
     if (path === '/positions')       return handlePositions(request, env, org);
