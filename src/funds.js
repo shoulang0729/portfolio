@@ -36,12 +36,13 @@ const FUND_DEFS = [
   },
   {
     // ひふみ投信は最後（"ひふみ"は他にマッチしなかったときのフォールバック）
-    // 中小型成長株中心 → TOPIX Small（小型株指数）が最も近い
+    // 1312.T（TOPIX Small）は Yahoo Finance が履歴データを返さないため、
+    // ひふみMS と同じ 2516.T（東証グロース250）を採用（中小型成長テーマで類似）
     patterns: ['ひふみ投信', 'ひふみ'],
     symbol:   'ひふみ投信',
     canonicalName: 'ひふみ投信',
-    ySymbol:  '1312.T',
-    proxyName:'NEXT FUNDS TOPIX Small ETF',
+    ySymbol:  '2516.T',
+    proxyName:'NEXT FUNDS 東証グロース市場250指数ETF',
   },
 ];
 
