@@ -266,20 +266,10 @@ async function handleRefreshSelect(val) {
   const cd = document.getElementById('countdown');
   cd.textContent = '';
 
-  // Highlight active refresh button
-  if (val !== 'now') {
-    document.querySelectorAll('.refresh-btn').forEach(b =>
-      b.classList.toggle('active', b.dataset.val === val));
-  }
+  document.querySelectorAll('.refresh-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.val === val));
 
   if (val === '0') return;
-
-  if (val === 'now') {
-    await refreshPrices();
-    // After live shot, switch to 1分 auto-refresh
-    handleRefreshSelect('60');
-    return;
-  }
 
   state.autoSec = parseInt(val);
   state.countdownVal = state.autoSec;
