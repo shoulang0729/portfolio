@@ -266,10 +266,20 @@ async function handleRefreshSelect(val) {
   const cd = document.getElementById('countdown');
   cd.textContent = '';
 
-  document.querySelectorAll('.refresh-btn').forEach(b =>
-    b.classList.toggle('active', b.dataset.val === val));
+  // Highlight active refresh button
+  if (val !== 'now') {
+    document.querySelectorAll('.refresh-btn').forEach(b =>
+      b.classList.toggle('active', b.dataset.val === val));
+  }
 
   if (val === '0') return;
+
+  if (val === 'now') {
+    await refreshPrices();
+    // After live shot, switch to 1分 auto-refresh
+    handleRefreshSelect('60');
+    return;
+  }
 
   state.autoSec = parseInt(val);
   state.countdownVal = state.autoSec;
@@ -600,6 +610,13 @@ if (typeof d3 === 'undefined') {
   const atTop = () =>
     (window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0) <= 0;
 
+  /**
+   * Returns the pull-to-refresh indicator element, creating and inserting it into the document on first call.
+   *
+   * The element contains the circular refresh SVG and associated styles; subsequent calls return the same instance.
+   *
+   * @returns {HTMLDivElement} The pull-to-refresh indicator element.
+   */
   function getIndicator() {
     if (indicator) return indicator;
     indicator = document.createElement('div');
@@ -636,6 +653,12 @@ if (typeof d3 === 'undefined') {
     return indicator;
   }
 
+  /**
+   * Collapse and hide the pull-to-refresh indicator, resetting its visual state.
+   *
+   * Sets the indicator's height to zero with a short transition and, if present,
+   * clears the arrow SVG's transition and animation and resets its rotation to 0 degrees.
+   */
   function collapseIndicator() {
     if (!indicator) return;
     indicator.style.transition = 'height 0.2s ease';
