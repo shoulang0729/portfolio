@@ -49,8 +49,9 @@ const state = {
   lastChangePeriod: '1d',       // remembers last change period for PnL toggle-back
   // historicalCache[range][symbol] = [{date, close}]  (range: '1y'|'5y'|'10y')
   historicalCache:  { '1y': {}, '5y': {}, '10y': {} },
-  fetchingRanges:   new Set(),  // レンジ別取得中フラグ（同一レンジの重複リクエストを防ぐ）
-  yahooCrumb:       null,       // Yahoo Finance crumb（認証トークン）
+  fetchingRanges:      new Set(),  // レンジ別取得中フラグ（同一レンジの重複リクエストを防ぐ）
+  historicalAttempted: {},        // { range: true } fetchAllHistorical を試行済みのレンジフラグ
+  yahooCrumb:          null,      // Yahoo Finance crumb（認証トークン）
   yahooCrumbExpiry: 0,          // crumb の有効期限（msタイムスタンプ）
   autoInterval:     null,       // 自動更新インターバルID
   countdownTimer:   null,
