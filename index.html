@@ -21,23 +21,13 @@
 <link rel="manifest" href="assets/manifest.json">
 
 <!-- スタイルシート -->
-<link rel="stylesheet" href="assets/01-base.css?v=20260525B">
-<link rel="stylesheet" href="assets/02-tables.css?v=20260525B">
-<link rel="stylesheet" href="assets/03-misc.css?v=20260525B">
-<link rel="stylesheet" href="assets/04-auth.css?v=20260525B">
-<link rel="stylesheet" href="assets/05-ai-tab.css?v=20260525B">
+<link rel="stylesheet" href="assets/01-base.css?v=20260525C">
+<link rel="stylesheet" href="assets/02-tables.css?v=20260525C">
+<link rel="stylesheet" href="assets/03-misc.css?v=20260525C">
+<link rel="stylesheet" href="assets/04-auth.css?v=20260525C">
+<link rel="stylesheet" href="assets/05-ai-tab.css?v=20260525C">
 <!-- 銘柄リスト列表示制御（JS が動的に書き込む） -->
 <style id="sl-col-style"></style>
-<!-- ★ モバイルレイアウト CSS フォールバック
-     portfolio.js の旧版が読まれても基本レイアウトを保証する
-     !important で HTML の inline style="flex-wrap:wrap" を上書き -->
-<style>
-@media (max-width: 600px) {
-  .controls { flex-wrap: nowrap !important; overflow-x: auto !important; }
-  #refresh-ctrl-group { display: none !important; }
-  .controls .divider   { display: none !important; }
-}
-</style>
 
 <!-- D3.js v7（CDN フォールバック x3） -->
 <script src="https://cdn.bootcdn.net/ajax/libs/d3/7.8.5/d3.min.js" crossorigin="anonymous"></script>
@@ -59,21 +49,29 @@
     <div class="title">Portfolio Manager</div>
   </div>
   <div class="controls">
-    <!-- 更新頻度スイッチ -->
-    <div class="ctrl-group" id="refresh-ctrl-group">
-      <span class="ctrl-label">更新頻度</span>
-      <div class="refresh-switch" id="refresh-switch">
-        <button class="refresh-btn active" data-val="0"    data-action="handleRefreshSelect" data-arg="0">OFF</button>
-        <button class="refresh-btn"        data-val="3600" data-action="handleRefreshSelect" data-arg="3600">60分</button>
-      </div>
-    </div>
     <span class="countdown" id="countdown"></span>
-    <div class="divider"></div>
     <div id="hm-menu-wrap">
       <button id="hm-menu-btn" data-action="toggleHmMenu" title="メニュー" aria-expanded="false" aria-haspopup="true">
         <span class="hm-bar">☰</span><span class="hm-x">✕</span>
       </button>
       <div id="hm-menu-dropdown" role="menu">
+        <!-- 自動更新 -->
+        <div class="hm-refresh-row">
+          <span class="hm-refresh-label">
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M7 2V0.5L4.5 3 7 5.5V4a4 4 0 1 1-3.46 6L2.1 11A6 6 0 1 0 7 2z" fill="currentColor"/>
+            </svg>
+            自動更新
+          </span>
+          <div class="hm-refresh-btns" id="hm-refresh-btns">
+            <button class="hm-refresh-btn active" data-val="0"    data-action="handleRefreshSelect" data-arg="0">OFF</button>
+            <button class="hm-refresh-btn"        data-val="300"  data-action="handleRefreshSelect" data-arg="300">5分</button>
+            <button class="hm-refresh-btn"        data-val="600"  data-action="handleRefreshSelect" data-arg="600">10分</button>
+            <button class="hm-refresh-btn"        data-val="1800" data-action="handleRefreshSelect" data-arg="1800">30分</button>
+            <button class="hm-refresh-btn"        data-val="3600" data-action="handleRefreshSelect" data-arg="3600">60分</button>
+          </div>
+        </div>
+        <div class="hm-menu-divider"></div>
         <button class="hm-menu-item" id="theme-btn" data-action="cycleTheme" title="ライト/ダーク/自動">
           <span class="hm-icon" id="theme-icon">☀</span>テーマ切替
         </button>
@@ -135,6 +133,17 @@
             </svg>
           </span>スナップショット保存
         </button>
+        <div class="hm-menu-divider"></div>
+        <a class="hm-menu-item" href="https://github.com/shoulang0729/portfolio/blob/main/docs/SPEC.md" target="_blank" rel="noopener">
+          <span class="hm-icon">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="1" y="1" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.4" fill="none"/>
+              <line x1="3.5" y1="4.5" x2="10.5" y2="4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+              <line x1="3.5" y1="7"   x2="10.5" y2="7"   stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+              <line x1="3.5" y1="9.5" x2="7.5"  y2="9.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+            </svg>
+          </span>マニュアル
+        </a>
       </div>
     </div>
   </div>
@@ -290,28 +299,28 @@
 
 
 <!-- ★ 保有データ（銘柄の追加・変更はこのファイルのみ編集すれば OK） -->
-<script src="src/auth-pin.js?v=20260525B"></script>
-<script src="src/auth-crypto.js?v=20260525B"></script>
-<script src="src/auth-passkey.js?v=20260525B"></script>
-<script src="src/auth-ui.js?v=20260525B"></script>
-<script src="src/positions.js?v=20260525B"></script>
+<script src="src/auth-pin.js?v=20260525C"></script>
+<script src="src/auth-crypto.js?v=20260525C"></script>
+<script src="src/auth-passkey.js?v=20260525C"></script>
+<script src="src/auth-ui.js?v=20260525C"></script>
+<script src="src/positions.js?v=20260525C"></script>
 <!-- アプリロジック（分割ファイル） -->
-<script src="src/state.js?v=20260525B"></script>
-<script src="src/funds.js?v=20260525B"></script>
-<script src="src/csv.js?v=20260525B"></script>
-<script src="src/utils.js?v=20260525B"></script>
-<script src="src/data.js?v=20260525B"></script>
-<script src="src/heatmap.js?v=20260525B"></script>
-<script src="src/chart.js?v=20260525B"></script>
-<script src="src/stock-list.js?v=20260525B"></script>
-<script src="src/watchlist.js?v=20260525B"></script>
-<script src="src/positions-store.js?v=20260525B"></script>
-<script src="src/import-parse.js?v=20260525B"></script>
-<script src="src/import-ui.js?v=20260525B"></script>
+<script src="src/state.js?v=20260525C"></script>
+<script src="src/funds.js?v=20260525C"></script>
+<script src="src/csv.js?v=20260525C"></script>
+<script src="src/utils.js?v=20260525C"></script>
+<script src="src/data.js?v=20260525C"></script>
+<script src="src/heatmap.js?v=20260525C"></script>
+<script src="src/chart.js?v=20260525C"></script>
+<script src="src/stock-list.js?v=20260525C"></script>
+<script src="src/watchlist.js?v=20260525C"></script>
+<script src="src/positions-store.js?v=20260525C"></script>
+<script src="src/import-parse.js?v=20260525C"></script>
+<script src="src/import-ui.js?v=20260525C"></script>
 <!-- AI相談タブは現在無効化中。再開時は下のコメントを外す -->
-<!-- <script src="src/ai-system-prompt.js?v=20260525B"></script> -->
-<!-- <script src="src/ai-tab.js?v=20260525B"></script> -->
-<script src="src/app.js?v=20260525B"></script>
+<!-- <script src="src/ai-system-prompt.js?v=20260525C"></script> -->
+<!-- <script src="src/ai-tab.js?v=20260525C"></script> -->
+<script src="src/app.js?v=20260525C"></script>
 
 <!-- フォールバック JS：旧版 portfolio.js でもヒートマップが描画されるよう保証 -->
 <script>

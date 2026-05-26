@@ -102,7 +102,7 @@ body {
   flex-wrap: nowrap;
   gap: 8px;
 }
-.title { font-size: 24px; font-weight: 700; letter-spacing: 0.3px; }
+.title { font-size: 20px; font-weight: 700; letter-spacing: 0.3px; white-space: nowrap; }
 .subtitle { font-size: 12px; color: var(--text2); margin-top: 3px; }
 
 /* コントロール：横スクロール可能1行（nowrap統一） */
@@ -336,10 +336,45 @@ body {
   border-radius: 10px;
   padding: 4px;
   flex-direction: column;
-  min-width: 150px;
+  min-width: 190px;
   box-shadow: 0 6px 20px var(--shadow2);
   z-index: 9999;
 }
+/* 自動更新セクション（メニュー内） */
+.hm-refresh-row {
+  padding: 8px 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.hm-refresh-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text2);
+  font-weight: 500;
+}
+.hm-refresh-btns {
+  display: flex;
+  gap: 4px;
+}
+.hm-refresh-btn {
+  flex: 1;
+  padding: 5px 2px;
+  font-size: 12px;
+  font-family: inherit;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface2);
+  color: var(--text);
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.1s;
+  white-space: nowrap;
+}
+.hm-refresh-btn:hover { background: var(--surface3); }
+.hm-refresh-btn.active { background: var(--text); color: var(--bg); border-color: var(--text); font-weight: 600; }
 #hm-menu-dropdown.open {
   display: flex;
 }
