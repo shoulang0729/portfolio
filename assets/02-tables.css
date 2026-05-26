@@ -91,10 +91,9 @@
 @media (min-width: 601px) {
   body { padding: 20px; padding-top: 0; padding-bottom: max(20px, env(safe-area-inset-bottom)); /* sticky-top を y=0 から開始 */ }
   .mobile-refresh-top .refresh-btn { padding: 5px 10px; font-size: 13px; min-height: unset; }
-  /* PC: ボタン高さ統一（refresh-switch=34px枠内でrefresh-btn=32px） */
+  /* PC: ボタン高さ統一（#hm-menu-wrapはボタン自身の高さに任せる） */
   .mobile-refresh-top .refresh-switch,
   .mobile-refresh-top .theme-btn,
-  .mobile-refresh-top #hm-menu-wrap,
   .mobile-refresh-top .csv-btn   { height: 34px; box-sizing: border-box; }
   .mobile-refresh-top .refresh-btn { height: 32px; box-sizing: border-box; }
   .mobile-status-row { font-size: 12px; gap: 6px; }

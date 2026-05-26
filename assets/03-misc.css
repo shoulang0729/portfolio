@@ -86,8 +86,27 @@
   font-size: 24px; font-weight: 700;
   color: var(--text);
   letter-spacing: 0.3px;
-  margin-bottom: 6px;
+  margin-bottom: 14px;
 }
+
+.pin-passkey-btn {
+  width: 100%;
+  padding: 11px 16px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s;
+  margin-bottom: 18px;
+}
+.pin-passkey-btn:hover { background: var(--surface3); }
+.pin-passkey-btn:active { background: var(--surface3); transform: scale(0.98); }
 
 .pin-subtitle {
   font-size: 13px;

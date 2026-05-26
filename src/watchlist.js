@@ -353,7 +353,7 @@ export function renderWatchlist() {
     const periodCells = makePeriodCells(periodId => wlGetPct(item, periodId));
 
     return `<tr>
-      <td class="sl-sym">${item.symbol}<span class="sl-inline-name">${item.name}</span></td>
+      <td data-col="symbol" class="sl-sym">${item.symbol}<span class="sl-inline-name">${item.name}</span></td>
       <td class="wl-market-cell"><span class="wl-type-badge">${item.exchange}</span></td>
       <td class="wl-price-cell">${priceStr}</td>
       ${periodCells}
