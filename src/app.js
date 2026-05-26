@@ -266,7 +266,7 @@ async function handleRefreshSelect(val) {
   const cd = document.getElementById('countdown');
   cd.textContent = '';
 
-  document.querySelectorAll('.refresh-btn').forEach(b =>
+  document.querySelectorAll('.hm-refresh-btn').forEach(b =>
     b.classList.toggle('active', b.dataset.val === val));
 
   if (val === '0') return;
