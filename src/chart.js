@@ -5,6 +5,10 @@
 //        data.js (fetchViaProxy)
 // ══════════════════════════════════════════════════════════════
 
+import { state, CHART_RANGES } from './state.js';
+import { cssVar, fmtPct, sgn } from './utils.js';
+import { fetchViaProxy } from './data.js';
+
 // ══════════════════════════════════════════════════════════════
 // CHART HELPERS  ―  renderChart のサブ関数群
 // ══════════════════════════════════════════════════════════════
@@ -390,3 +394,5 @@ function renderChart(points, interval = '1d', dateFmt = '%m/%d') {
   _initChartCrosshair(g, x, y, points, m, iW, iH, interval, cur, lineColor, maStyles);
   _renderChartStats(points, avgCost, cur, maStyles);
 }
+
+export { openChart, loadChart, setRange, closeModal, handleOverlayClick };

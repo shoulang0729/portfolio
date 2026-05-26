@@ -3,10 +3,13 @@
 //
 // 依存: auth-pin.js (_auth, AUTH_*, _hashPin, isAuthenticated, _isLocked, _lockRemain),
 //       auth-crypto.js (_deriveEncKey, _restoreEncKey, _AUTH_ENC_SS),
-//       auth-passkey.js (authenticatePasskey)
-//
-// 読込順: auth-pin → auth-crypto → auth-passkey → auth-ui
+//       data.js (WORKER_URL)
+// 注: authenticatePasskey は window に登録されるため直接 import しない（循環回避）
 // ══════════════════════════════════════════════════════════════
+
+import { _auth, AUTH_PIN_LEN, AUTH_MAX_FAIL, AUTH_LOCK_SEC, AUTH_SESSION_KEY, AUTH_LS_HASH_KEY, _getActivePinHash, _hashPin, _isLocked, _lockRemain, _saveLockout, isAuthenticated } from './auth-pin.js';
+import { _AUTH_ENC_SS, _deriveEncKey, _restoreEncKey } from './auth-crypto.js';
+import { WORKER_URL } from './data.js';
 
 // ── キーパッド制御 ──
 function _setKeypadEnabled(on) {
@@ -376,7 +379,9 @@ function _showChangePinButton() {
   //    一度パスキーログインに成功するとフラグ ON、初回登録前は自動起動しない。
   if (window.PublicKeyCredential && localStorage.getItem('hm-passkey-seen') === '1') {
     setTimeout(() => {
-      if (typeof authenticatePasskey === 'function') authenticatePasskey();
+      if (typeof window.authenticatePasskey === 'function') window.authenticatePasskey();
     }, 250);
   }
 }());
+
+export { authKeyPress, authBackspace, pcKeyPress, pcBackspace, openPinChange, closePinChange, _showChangePinButton };

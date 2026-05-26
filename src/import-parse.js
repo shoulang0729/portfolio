@@ -8,6 +8,10 @@
 //       data.js (WORKER_URL, fetchWithTimeout)
 // ══════════════════════════════════════════════════════════════
 
+import { parseCsvText, normalizeStr, parseNum, detectCsvType } from './csv.js';
+import { fundSymbolFromName, fundProxyOf } from './funds.js';
+import { WORKER_URL, fetchWithTimeout } from './data.js';
+
 const FUND_FALLBACK_PROXY = { ySymbol: '^N225', proxyName: '日経平均' };
 
 // ── マネックス CSV → フル Position オブジェクト ─────────────────────────────
@@ -165,6 +169,8 @@ async function parseMoneyForwardImage(file) {
   const parsed = JSON.parse(m[0]);
   return (parsed.assets || []).map(a => _mfAssetToPosition(a)).filter(Boolean);
 }
+
+export { parseManexFiles, parseMoneyForwardImage };
 
 function _mfAssetToPosition(a) {
   if (!a.name) return null;
