@@ -23,13 +23,11 @@
 .sl-table td.sl-pct-cell { width: 56px; min-width: 56px; }
 .sl-table td[style*="background"] { border-radius: 3px; }
 /* ティッカー列：幅を固定してバーグラフ左端が動かないようにする / 横スクロール時に固定 */
-.sl-table th[data-col="symbol"],
-.sl-table td[data-col="symbol"] { width: 150px; max-width: 150px; position: sticky; left: 0; z-index: 1; background: var(--surface); }
-.sl-table thead th[data-col="symbol"] { z-index: 2; }
+.sl-table th[data-col="symbol"] { width: 150px; max-width: 150px; position: sticky; left: 0; z-index: 2; background: var(--surface3); box-shadow: 1px 0 0 var(--border2); }
+.sl-table td[data-col="symbol"] { width: 150px; max-width: 150px; position: sticky; left: 0; z-index: 1; background: var(--surface); box-shadow: 1px 0 0 var(--border2); }
 /* ウォッチリスト：ティッカー列も固定 */
-.wl-table th[data-col="symbol"],
-.wl-table td[data-col="symbol"] { position: sticky; left: 0; z-index: 1; background: var(--surface); }
-.wl-table thead th[data-col="symbol"] { z-index: 2; }
+.wl-table th[data-col="symbol"] { position: sticky; left: 0; z-index: 2; background: var(--surface3); box-shadow: 1px 0 0 var(--border2); }
+.wl-table td[data-col="symbol"] { position: sticky; left: 0; z-index: 1; background: var(--surface); box-shadow: 1px 0 0 var(--border2); }
 .sl-sym  { font-weight: 600; font-size: 13px; }
 .sl-name { color: var(--text2); font-size: 11.5px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
 /* ── 列表示/非表示（data-col を使ってCSS動的制御） ── */
@@ -77,10 +75,10 @@
 .mobile-refresh-top .theme-btn { flex-shrink: 0; align-self: stretch; }
 .mobile-refresh-top .csv-btn   { flex-shrink: 0; align-self: stretch; }
 .mobile-status-row { display: flex; align-items: center; gap: 5px; color: var(--text2);
-  white-space: nowrap; justify-content: flex-end; overflow: hidden; min-width: 0; }
+  white-space: nowrap; justify-content: flex-end; overflow: hidden; align-self: stretch; }
 .mobile-status-row .status-line { white-space: nowrap; justify-content: flex-end;
-  overflow: hidden; min-width: 0; max-width: min(220px, calc(50vw - 32px)); }
-#status-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  overflow: hidden; min-width: 0; }
+#status-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .mobile-status-row .dot { width: 6px; height: 6px; }
 
 /* period-switch：ボタン枠外にはみ出しを許容（overflow:hidden の round-clip 解除） */
@@ -106,9 +104,9 @@
   .controls { padding: 0; gap: 8px; }
   .stats-outer { margin-bottom: 20px; }
   .stat { min-width: 76px; }
-  /* PC: ティッカー列を少し広げる（sticky は上書きしない） */
-  .sl-table th[data-col="symbol"],
-  .sl-table td[data-col="symbol"] { width: 190px; max-width: 190px; background: var(--surface); }
+  /* PC: ティッカー列を少し広げる（sticky/z-index/background は上書きしない） */
+  .sl-table th[data-col="symbol"] { width: 190px; max-width: 190px; }
+  .sl-table td[data-col="symbol"] { width: 190px; max-width: 190px; }
   .sl-inline-name { max-width: none; }
 }
 
