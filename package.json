@@ -6,7 +6,7 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:spec": "node --test tests/spec_validation.test.js",
+    "test:spec": "node --test tests/spec_validation.test.cjs",
     "lint": "eslint src/ --ext .js",
     "lint:fix": "eslint src/ --ext .js --fix",
     "format": "prettier --write 'src/**/*.js' 'worker/src/**/*.js'"
