@@ -85,3 +85,5 @@ function canonicalizeFundPosition(p) {
   }
   return p;
 }
+
+export { FUND_DEFS, fundSymbolFromName, fundProxyOf, canonicalizeFundPosition };

@@ -73,3 +73,5 @@ const state = {
   wlSortDir:        'desc',
   prevPrices:       {},         // { ySymbol: price } 前回のライブ価格（フラッシュアニメーション用）
 };
+
+export { C, CHART_RANGES, SL_DETAIL_COLS, state };

@@ -7,6 +7,8 @@
 // 読込順: funds.js → csv.js → data.js → import.js
 // ══════════════════════════════════════════════════════════════
 
+import { fundSymbolFromName } from './funds.js';
+
 /** 全角英数字・記号 → 半角変換 ＋ 全角スペース → 半角 ＋ trim */
 function normalizeStr(s) {
   return s.replace(/[！-～]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
@@ -105,3 +107,5 @@ function parseFundRow(row) {
   return { symbol, price: parseNum(row[5]), shares,
            avgCost: parseNum(row[11]), value, pnl, pnlPct };
 }
+
+export { normalizeStr, parseCsvText, parseNum, detectCsvType, parseJpRow, parseUsRow, parseFundRow };

@@ -1,9 +1,12 @@
 // ══════════════════════════════════════════════════════════════
 // data.js  ―  データ取得・CSV インポート
 //
-// 依存: state.js (state), funds.js (fundSymbolFromName), utils.js (setStatus,
-//        renderStats, renderHeatmap ※ app.js / heatmap.js から), positions.js
+// 依存: state.js (state), positions.js (positions)
+// 注: renderStats / renderHeatmap は CustomEvent 'hm:prices-updated' で呼び出す（循環依存回避）
 // ══════════════════════════════════════════════════════════════
+
+import { state } from './state.js';
+import { positions } from './positions.js';
 
 // ══════════════════════════════════════════════
 // FETCH HELPER
@@ -237,8 +240,7 @@ async function applyPricesCache() {
     }
     if (applied > 0) {
       console.log(`[prices:cache] ${applied}銘柄に Cron キャッシュ価格を適用`);
-      if (typeof renderStats === 'function') renderStats();
-      if (typeof renderHeatmap === 'function') renderHeatmap();
+      document.dispatchEvent(new CustomEvent('hm:prices-updated'));
     }
   } catch (e) {
     console.warn('[prices:cache] 読込失敗:', e);
@@ -468,8 +470,7 @@ async function refreshPrices() {
     const msg = `${n}銘柄 最終更新: ${ts2}`;
     state.lastUpdateText = msg;  // 履歴データ取得後に復元できるよう保存
     setStatus(msg, 'green');
-    renderStats();
-    renderHeatmap();
+    document.dispatchEvent(new CustomEvent('hm:prices-updated'));
     // 価格変化をフラッシュアニメーションで表示（前回価格がある場合のみ）
     flashPriceChanges(fetched);
   } else {
@@ -530,3 +531,5 @@ function setStatus(msg, color) {
 
 // CSV パース系（normalizeStr, parseCsvText, parseNum, detectCsvType, parseJpRow, parseUsRow, parseFundRow）は src/csv.js に移動。
 // 旧 importMonexCsvs / handleCsvImport は廃止（取込モーダル import.js に統合済み）。
+
+export { WORKER_URL, fetchWithTimeout, sleep, fetchViaProxy, fetchFinnhubQuote, fetchFinnhubCandles, ensureYahooCrumb, loadCacheFromSession, saveCacheToSession, clearCacheSession, fetchAllHistorical, fetchSymbolHistory, fetchLivePrice, refreshPrices, flashPriceChanges, setStatus, applyPricesCache };

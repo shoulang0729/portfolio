@@ -1,8 +1,11 @@
 // ══════════════════════════════════════════════════════════════
 // utils.js  ―  フォーマッター・色ユーティリティ
 //
-// 依存: state.js (state), positions.js (PERIOD_MAP), D3.js
+// 依存: state.js (state), positions.js (PERIOD_MAP, PERIOD_COLS), D3.js
 // ══════════════════════════════════════════════════════════════
+
+import { state } from './state.js';
+import { positions, PERIOD_COLS, PERIOD_MAP } from './positions.js';
 
 // ══════════════════════════════════════════════
 // FORMATTERS
@@ -182,7 +185,7 @@ function makeTh(label, col, align, activeSortCol, sortDir, sortFnName) {
   const alignCls = align === 'center' ? 'sl-th-center' : '';
   const cls      = [sortCls, alignCls].filter(Boolean).join(' ');
   const dataCol  = col ? `data-col="${col}"` : '';
-  const click    = (col && sortFnName) ? `onclick="${sortFnName}('${col}')"` : '';
+  const click    = (col && sortFnName) ? `data-action="${sortFnName}" data-arg="${col}"` : '';
   return `<th class="${cls}" ${dataCol} ${click}>${label}</th>`;
 }
 
@@ -256,3 +259,5 @@ function makePeriodHeaderCells(activeSortCol, sortDir, sortFnName) {
     .map(pc => makeTh(pc.label, pc.id, 'center', activeSortCol, sortDir, sortFnName))
     .join('');
 }
+
+export { fmtJPY, fmtJPYFull, fmtPct, fmtPrice, sgn, fmtJPYInt, fmtPctInt, fmtShares, cssVar, getColor, getCellTextColor, getCellTextColorSub, getHistoricalChangePct, getDisplayPct, calcPortfolioPeriodPct, makeTh, makePctCell, _tableSort, makePeriodCells, makePeriodHeaderCells };

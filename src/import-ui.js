@@ -2,10 +2,20 @@
 // import-ui.js  ―  資産取込モーダルUI
 //
 // 依存: import-parse.js (parseManexFiles, parseMoneyForwardImage),
-//       positions-store.js (savePositionsToKV, computeImportDiff),
+//       positions-store.js (savePositionsToKV, computeImportDiff, mergeDuplicatePositions),
+//       funds.js (canonicalizeFundPosition),
 //       data.js (clearCacheSession, refreshPrices),
 //       state.js (state), positions.js (positions)
 // ══════════════════════════════════════════════════════════════
+
+import { state } from './state.js';
+import { positions } from './positions.js';
+import { canonicalizeFundPosition } from './funds.js';
+import { savePositionsToKV, computeImportDiff, mergeDuplicatePositions } from './positions-store.js';
+import { clearCacheSession, refreshPrices } from './data.js';
+import { parseManexFiles, parseMoneyForwardImage } from './import-parse.js';
+import { renderStockList } from './stock-list.js';
+import { renderWatchlist } from './watchlist.js';
 
 let _importState = { source: null, parsed: [], current: [], pendingPositions: [] };
 
@@ -22,9 +32,7 @@ function openImportModal(source) {
 
 function openManagePositionsModal() {
   // 整理モーダル表示時点で投信名を canonical 化（プレビューでも正しく見える）
-  const normalized = (typeof canonicalizeFundPosition === 'function')
-    ? positions.map(canonicalizeFundPosition)
-    : [...positions];
+  const normalized = positions.map(canonicalizeFundPosition);
   _importState = { source: 'manage', parsed: normalized, current: [...positions] };
   const overlay = document.getElementById('import-modal-overlay');
   const title   = document.getElementById('import-modal-title');
@@ -232,13 +240,9 @@ async function _confirmImport() {
   }
 
   // 投資信託の銘柄名・シンボルを canonical 化（マイクロプラス → ひふみマイクロスコープpro 等）
-  if (typeof canonicalizeFundPosition === 'function') {
-    finalPositions = finalPositions.map(canonicalizeFundPosition);
-  }
+  finalPositions = finalPositions.map(canonicalizeFundPosition);
   // 同一 symbol を1件にマージ（保有数合算・取得単価加重平均）
-  if (typeof mergeDuplicatePositions === 'function') {
-    finalPositions = mergeDuplicatePositions(finalPositions);
-  }
+  finalPositions = mergeDuplicatePositions(finalPositions);
 
   _importState.pendingPositions = finalPositions;
 
@@ -251,15 +255,14 @@ async function _doSavePositions(finalPositions, pinHashOverride) {
     await savePositionsToKV(finalPositions, pinHashOverride);
     positions.splice(0, positions.length, ...finalPositions);
     state.historicalCache = { '1y': {}, '5y': {}, '10y': {} };
-    if (typeof clearCacheSession === 'function') clearCacheSession();
+    clearCacheSession();
     state.lastUpdateText = null;
     _renderImportStep('done', `${finalPositions.length}銘柄を保存しました`);
     setTimeout(() => {
-      if (typeof renderStats === 'function') renderStats();
-      if (typeof renderHeatmap === 'function') renderHeatmap();
-      if (typeof renderStockList === 'function') renderStockList();
-      if (typeof renderWatchlist === 'function') renderWatchlist();
-      if (typeof refreshPrices === 'function') refreshPrices();
+      document.dispatchEvent(new CustomEvent('hm:prices-updated'));
+      renderStockList();
+      renderWatchlist();
+      refreshPrices();
     }, 300);
   } catch (e) {
     if (e.message.includes('PIN認証失敗')) {
@@ -329,3 +332,12 @@ function escapeHTML(s) {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
+
+// ── 動的 HTML の onclick から参照される内部関数を window に登録 ──
+// （ES Modules でモジュールスコープの関数は inline onclick からアクセスできないため）
+window._renderImportStep = _renderImportStep;
+window._confirmImport    = _confirmImport;
+window._retryWithPin     = _retryWithPin;
+window.closeImportModal  = closeImportModal;
+
+export { openImportModal, closeImportModal, openManagePositionsModal, handleImportOverlayClick, handleManexFileSelect, handleMoneyForwardImageSelect };
