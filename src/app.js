@@ -1,12 +1,47 @@
 // ══════════════════════════════════════════════════════════════
-// app.js  ―  初期化・テーマ・モード切替・更新頻度・レイアウト
+// app.js  ―  ES Module エントリーポイント
 //
-// 依存: state.js (state), utils.js (cssVar, calcPortfolioPeriodPct,
-//        fmtJPYInt, fmtPctInt, sgn), data.js (fetchAllHistorical,
-//        refreshPrices, setStatus), heatmap.js (renderHeatmap),
-//        chart.js (loadChart), stock-list.js (renderStockList,
-//        applyStockBars), positions.js (positions, PERIODS)
+// 全モジュールのインポート・初期化・data-action ディスパッチャを担当。
 // ══════════════════════════════════════════════════════════════
+
+// ── ES Module imports ──
+import { positions, PERIODS, PERIOD_MAP, PERIOD_COLS, PERIOD_IDS } from './positions.js';
+import { state, C, CHART_RANGES, SL_DETAIL_COLS } from './state.js';
+import { FUND_DEFS, fundSymbolFromName, fundProxyOf, canonicalizeFundPosition } from './funds.js';
+import { normalizeStr, parseCsvText, parseNum, detectCsvType, parseJpRow, parseUsRow, parseFundRow } from './csv.js';
+import { AUTH_PIN_HASH, AUTH_SESSION_KEY, AUTH_LS_HASH_KEY, AUTH_LOCKOUT_KEY, AUTH_PIN_LEN, AUTH_MAX_FAIL, AUTH_LOCK_SEC, _auth, _getActivePinHash, _hashPin, _isLocked, _lockRemain, _saveLockout, isAuthenticated } from './auth-pin.js';
+import { _deriveEncKey, _restoreEncKey, _AUTH_ENC_SS, aiEncrypt, aiDecrypt } from './auth-crypto.js';
+import { authenticatePasskey, registerPasskey, setPasskeySuccessCallback } from './auth-passkey.js';
+import { authKeyPress, authBackspace, pcKeyPress, pcBackspace, openPinChange, closePinChange, _showChangePinButton } from './auth-ui.js';
+import { fmtJPY, fmtJPYFull, fmtPct, fmtPrice, sgn, fmtJPYInt, fmtPctInt, fmtShares, cssVar, getColor, getCellTextColor, getHistoricalChangePct, getDisplayPct, calcPortfolioPeriodPct, makeTh, makePctCell, _tableSort, makePeriodCells, makePeriodHeaderCells } from './utils.js';
+import { WORKER_URL, fetchWithTimeout, sleep, fetchViaProxy, fetchFinnhubQuote, fetchFinnhubCandles, loadCacheFromSession, saveCacheToSession, clearCacheSession, fetchAllHistorical, fetchSymbolHistory, fetchLivePrice, refreshPrices, flashPriceChanges, setStatus, applyPricesCache } from './data.js';
+import { renderHeatmap, positionTooltip } from './heatmap.js';
+import { openChart, loadChart, setRange, closeModal, handleOverlayClick } from './chart.js';
+import { renderStockList, slSort, slToggleDetail, applyStockBars, updateSlColStyle } from './stock-list.js';
+import { renderWatchlist, wlSort, onWatchlistSearch, addToWatchlist, removeFromWatchlist, wlSelectItem, fetchWatchlistData, saveWatchlist, _loadWatchlistFromWorker } from './watchlist.js';
+import { loadPositionsFromKV, savePositionsToKV, mergeDuplicatePositions, computeImportDiff } from './positions-store.js';
+import { parseManexFiles, parseMoneyForwardImage } from './import-parse.js';
+import { openImportModal, closeImportModal, openManagePositionsModal, handleImportOverlayClick, handleManexFileSelect, handleMoneyForwardImageSelect } from './import-ui.js';
+
+// ── 循環依存解消: data.js が発火するイベントを app.js でリッスン ──
+document.addEventListener('hm:prices-updated', () => {
+  renderStats();
+  renderHeatmap();
+});
+
+// ── PIN キーパッドの onclick は例外的に window に登録（auth-ui.js 設計上の既知例外）──
+window.authKeyPress        = authKeyPress;
+window.authBackspace       = authBackspace;
+window.pcKeyPress          = pcKeyPress;
+window.pcBackspace         = pcBackspace;
+window.authenticatePasskey = authenticatePasskey;
+window.closePinChange      = closePinChange;
+
+// ── フォールバックスクリプトから参照できるように renderHeatmap を window に登録 ──
+window.renderHeatmap       = renderHeatmap;
+
+// ── auth-passkey の成功コールバックを接続 ──
+setPasskeySuccessCallback(_showChangePinButton);
 
 // ══════════════════════════════════════════════
 // STATS BAR
@@ -144,9 +179,7 @@ function _buildPortfolioSnapshotPayload() {
         const pos = positions.find(p => p.ySymbol === ySymbol);
         perf['1d'] = pos?.dayPct ?? null;
       } else {
-        perf[period.id] = typeof getHistoricalChangePct === 'function'
-          ? getHistoricalChangePct(ySymbol, period.id)
-          : null;
+        perf[period.id] = getHistoricalChangePct(ySymbol, period.id);
       }
     }
     return perf;
@@ -162,9 +195,7 @@ function _buildPortfolioSnapshotPayload() {
 
   const portPerf = {};
   for (const period of PERIODS) {
-    portPerf[period.id] = typeof calcPortfolioPeriodPct === 'function'
-      ? calcPortfolioPeriodPct(period.id)
-      : null;
+    portPerf[period.id] = calcPortfolioPeriodPct(period.id);
   }
 
   // ウォッチリスト：保有していない注目銘柄。期間パフォーマンスのみ出力
@@ -175,9 +206,7 @@ function _buildPortfolioSnapshotPayload() {
       if (period.id === '1d') {
         perf['1d'] = state.watchlistPrices?.[item.symbol]?.dayPct ?? null;
       } else {
-        perf[period.id] = typeof getHistoricalChangePct === 'function'
-          ? getHistoricalChangePct(ySymbol, period.id)
-          : null;
+        perf[period.id] = getHistoricalChangePct(ySymbol, period.id);
       }
     }
     return {
@@ -363,6 +392,31 @@ function _setupMobileLayout() {
 }
 
 /**
+// ── data-action ディスパッチャ用アクションマップ ──
+// NOTE: このオブジェクトは _dispatchAction より前に定義する必要があるが、
+//       関数定義は後に来る場合がある。JS の var 宣言ホイスティングを使わず
+//       初期化時に参照される関数は全て先に定義済みであること。
+// （実際には関数宣言は巻き上げられるため、ここに書いても動作する）
+const ACTION_MAP = {
+  // app.js
+  toggleStats, cycleTheme, toggleHmMenu, closeHmMenu,
+  setChangePeriod, setColorModePnl, handleRefreshSelect,
+  switchTab, triggerPortfolioSnapshot,
+  // auth-ui.js
+  openPinChange, closePinChange,
+  // auth-passkey.js
+  registerPasskey, authenticatePasskey,
+  // chart.js
+  setRange, closeModal, handleOverlayClick,
+  // stock-list.js
+  slSort, slToggleDetail,
+  // watchlist.js
+  wlSort, onWatchlistSearch, removeFromWatchlist, wlSelectItem,
+  // import-ui.js
+  openImportModal, closeImportModal, openManagePositionsModal,
+  handleImportOverlayClick, handleManexFileSelect, handleMoneyForwardImageSelect,
+};
+
 /**
  * data-action 属性で宣言されたハンドラの委譲ディスパッチャ。
  *
@@ -370,8 +424,6 @@ function _setupMobileLayout() {
  *         <button data-action="fnA|fnB">                          → fnA(event); fnB(event)
  *         <input  data-event="input" data-action="onSearch">      → onSearch(event.target.value, event)
  *         <div    data-action="handleOverlayClick">               → handleOverlayClick(event, event)
- *
- * 全てのハンドラは window.* グローバル関数として既存。
  */
 function _dispatchAction(el, event) {
   const actions = (el.dataset.action || '').split('|').filter(Boolean);
@@ -379,7 +431,7 @@ function _dispatchAction(el, event) {
   // input value が必要な関数は event.target.value を内部で読む。
   const arg = (el.dataset.arg !== undefined) ? el.dataset.arg : event;
   for (const name of actions) {
-    const fn = window[name];
+    const fn = ACTION_MAP[name];
     if (typeof fn !== 'function') {
       console.warn(`[dispatch] unknown action: ${name}`);
       continue;
@@ -457,24 +509,20 @@ function init() {
   // 起動時に KV から保有銘柄を読み込んでから価格取得
   (async () => {
     // 1. KV から保有銘柄を取得（あれば positions.js の内容を上書き）
-    if (typeof loadPositionsFromKV === 'function') {
-      const loaded = await loadPositionsFromKV();
-      if (loaded) { renderStats(); renderHeatmap(); }
-    }
+    const loaded = await loadPositionsFromKV();
+    if (loaded) { renderStats(); renderHeatmap(); }
     // 2. Cron キャッシュ価格を即時反映（ライブ取得前の暫定表示）
-    if (typeof applyPricesCache === 'function') {
-      applyPricesCache(); // fire-and-forget
-    }
+    applyPricesCache(); // fire-and-forget
     // 3. ライブ価格取得
     await refreshPrices();
     _hideHeatmapSkeleton();
-    if (typeof recordTodayAsset === 'function') recordTodayAsset();
+    // recordTodayAsset は history.js（未統合）のため呼ばない
     for (const range of ['1y', '5y', '10y']) {
       await fetchAllHistorical(range);
       renderStats();
       // 各レンジ完了ごとに銘柄リスト・ウォッチリストを再描画して "…" を実値に置換
-      if (typeof renderStockList === 'function') renderStockList();
-      if (typeof renderWatchlist === 'function' && state.activeTab === 'watchlist') renderWatchlist();
+      renderStockList();
+      if (state.activeTab === 'watchlist') renderWatchlist();
       if (state.changePeriod && state.changePeriod !== '1d') renderHeatmap();
     }
   })();
@@ -537,12 +585,7 @@ function switchTab(name) {
 
   // ウォッチリストに切り替えたとき KV から同期後に描画
   if (name === 'watchlist') {
-    if (typeof _loadWatchlistFromWorker === 'function') {
-      _loadWatchlistFromWorker().then(() => { renderWatchlist(); fetchWatchlistData(); });
-    } else {
-      renderWatchlist();
-      fetchWatchlistData();
-    }
+    _loadWatchlistFromWorker().then(() => { renderWatchlist(); fetchWatchlistData(); });
   }
 
   // AI 相談タブは現在無効化中（renderAiTab を呼ばない）
@@ -688,7 +731,7 @@ if (typeof d3 === 'undefined') {
 
 // ── デバッグ：読み込んだファイルのバージョンをタイトル横に表示 ──
 (function() {
-  const s = document.querySelector('script[src*="app.js"]');
+  const s = document.querySelector('script[src*="app.js"]') || document.querySelector('script[type="module"][src*="app.js"]');
   const ver = s ? (s.src.match(/[?&]v=([^&]+)/) || [,'?'])[1] : '?';
   const title = document.querySelector('.title');
   if (title) {

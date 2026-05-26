@@ -66,3 +66,5 @@ function _saveLockout() {
     localStorage.removeItem(AUTH_LOCKOUT_KEY);
   }
 }());
+
+export { AUTH_PIN_HASH, AUTH_SESSION_KEY, AUTH_LS_HASH_KEY, AUTH_LOCKOUT_KEY, AUTH_PIN_LEN, AUTH_MAX_FAIL, AUTH_LOCK_SEC, _auth, _getActivePinHash, _hashPin, _isLocked, _lockRemain, _saveLockout, isAuthenticated };

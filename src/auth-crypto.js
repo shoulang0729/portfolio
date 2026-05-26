@@ -6,6 +6,8 @@
 // ai-tab.js が aiEncrypt / aiDecrypt を直接呼ぶ。
 // ══════════════════════════════════════════════════════════════
 
+import { _auth } from './auth-pin.js';
+
 const _AUTH_ENC_SALT = 'hm-ai-keys-v1';
 const _AUTH_ENC_SS   = 'hm-enc-key-v1'; // sessionStorage キー
 
@@ -57,3 +59,5 @@ async function aiDecrypt(ciphertext) {
   );
   return new TextDecoder().decode(dec);
 }
+
+export { _deriveEncKey, _restoreEncKey, _AUTH_ENC_SS, aiEncrypt, aiDecrypt };

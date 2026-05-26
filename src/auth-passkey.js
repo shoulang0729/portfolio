@@ -4,8 +4,16 @@
 // RP ID = location.hostname（shoulang0729.github.io / localhost）
 // 依存: auth-pin.js (_auth, AUTH_SESSION_KEY),
 //       auth-crypto.js (_AUTH_ENC_SS),
-//       auth-ui.js (_showChangePinButton)
+//       auth-ui.js (_showChangePinButton) ← コールバックで解消
 // ══════════════════════════════════════════════════════════════
+
+import { _auth, AUTH_SESSION_KEY } from './auth-pin.js';
+import { _AUTH_ENC_SS } from './auth-crypto.js';
+import { WORKER_URL } from './data.js';
+
+// ── 循環依存解消: auth-ui._showChangePinButton をコールバックで受け取る ──
+let _onPasskeySuccess = null;
+export function setPasskeySuccessCallback(fn) { _onPasskeySuccess = fn; }
 
 const _PASSKEY_RP_ID   = location.hostname;
 const _PASSKEY_RP_NAME = 'Portfolio Heatmap';
@@ -18,7 +26,7 @@ function _u8ToB64url(u8) {
   return btoa(String.fromCharCode(...u8)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
 }
 
-async function registerPasskey() {
+export async function registerPasskey() {
   if (!navigator.credentials || !window.PublicKeyCredential) {
     alert('このブラウザはパスキーに対応していません。');
     return;
@@ -60,7 +68,7 @@ async function registerPasskey() {
   }
 }
 
-async function authenticatePasskey() {
+export async function authenticatePasskey() {
   if (!navigator.credentials || !window.PublicKeyCredential) return;
   try {
     const challengeRes = await fetch(`${WORKER_URL}/auth/challenge`);
@@ -100,7 +108,7 @@ async function authenticatePasskey() {
       _auth.fails = 0;
       const ov = document.getElementById('pin-overlay');
       if (ov) { ov.style.opacity = '0'; setTimeout(() => { ov.remove(); document.body.style.overflow = ''; }, 380); }
-      _showChangePinButton();
+      if (_onPasskeySuccess) _onPasskeySuccess();
     } else {
       const errEl = document.getElementById('pin-error');
       if (errEl) { errEl.textContent = 'パスキー認証失敗'; errEl.classList.add('visible'); }

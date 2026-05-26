@@ -4,8 +4,13 @@
 // 依存: state.js (state), utils.js (makeTh, makePctCell, getColor,
 //        getCellTextColor, getHistoricalChangePct, fmtPrice, fmtPctInt),
 //       positions.js (PERIOD_COLS, PERIOD_IDS, PERIOD_MAP),
-//       data.js (fetchViaProxy, fetchLivePrice, fetchSymbolHistory)
+//       data.js (fetchViaProxy, fetchLivePrice, fetchAllHistorical, WORKER_URL)
 // ══════════════════════════════════════════════════════════════
+
+import { state } from './state.js';
+import { PERIOD_COLS, PERIOD_IDS, PERIOD_MAP } from './positions.js';
+import { makeTh, makePctCell, getColor, getCellTextColor, getHistoricalChangePct, fmtPrice, fmtPctInt, _tableSort, makePeriodCells, makePeriodHeaderCells } from './utils.js';
+import { fetchViaProxy, fetchLivePrice, fetchAllHistorical, WORKER_URL } from './data.js';
 
 // ══════════════════════════════════════════════
 // STORAGE
@@ -300,7 +305,7 @@ function wlGetPct(item, periodId) {
   return getHistoricalChangePct(item.symbol, periodId);
 }
 
-function renderWatchlist() {
+export function renderWatchlist() {
   const wrap = document.getElementById('watchlist-table-wrap');
   if (!wrap) return;
 
@@ -369,3 +374,5 @@ function renderWatchlist() {
     <tbody>${rows}</tbody>
   </table>`;
 }
+
+export { saveWatchlist, _loadWatchlistFromWorker, addToWatchlist, removeFromWatchlist, wlSort, onWatchlistSearch, wlSelectItem, fetchWatchlistData };

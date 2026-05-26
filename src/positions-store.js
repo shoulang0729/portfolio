@@ -4,6 +4,9 @@
 // 依存: data.js (WORKER_URL, fetchWithTimeout), positions.js (positions)
 // ══════════════════════════════════════════════════════════════
 
+import { WORKER_URL, fetchWithTimeout } from './data.js';
+import { positions } from './positions.js';
+
 const DEFAULT_PIN_HASH = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4'; // SHA-256 of "1234"
 
 async function loadPositionsFromKV() {
@@ -91,3 +94,5 @@ function computeImportDiff(current, incoming) {
 
   return { added, removed, changed, unchanged };
 }
+
+export { loadPositionsFromKV, savePositionsToKV, mergeDuplicatePositions, computeImportDiff };
