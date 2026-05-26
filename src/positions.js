@@ -162,3 +162,5 @@ const PERIOD_MAP  = Object.fromEntries(PERIODS.map(p => [p.id, p]));
 // テーブルヘッダー・セル描画用（PERIODS から自動生成）
 const PERIOD_COLS = PERIODS.map(p => ({ id: p.id, label: p.label }));
 const PERIOD_IDS  = PERIOD_COLS.map(pc => pc.id);
+
+export { positions, PERIODS, PERIOD_MAP, PERIOD_COLS, PERIOD_IDS };
