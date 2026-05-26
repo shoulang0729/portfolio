@@ -29,14 +29,6 @@ document.addEventListener('hm:prices-updated', () => {
   renderHeatmap();
 });
 
-// ── PIN キーパッドの onclick は例外的に window に登録（auth-ui.js 設計上の既知例外）──
-window.authKeyPress        = authKeyPress;
-window.authBackspace       = authBackspace;
-window.pcKeyPress          = pcKeyPress;
-window.pcBackspace         = pcBackspace;
-window.authenticatePasskey = authenticatePasskey;
-window.closePinChange      = closePinChange;
-
 // ── フォールバックスクリプトから参照できるように renderHeatmap を window に登録 ──
 window.renderHeatmap       = renderHeatmap;
 
@@ -398,6 +390,7 @@ const ACTION_MAP = {
   setChangePeriod, setColorModePnl, handleRefreshSelect,
   switchTab, triggerPortfolioSnapshot,
   // auth-ui.js
+  authKeyPress, authBackspace, pcKeyPress, pcBackspace,
   openPinChange, closePinChange,
   // auth-passkey.js
   registerPasskey, authenticatePasskey,
@@ -589,8 +582,13 @@ function switchTab(name) {
 if (typeof d3 === 'undefined') {
   document.getElementById('d3-load-error').style.display = 'flex';
 } else {
+  let _resizeRaf = null;
   window.addEventListener('resize', () => {
-    renderHeatmap(); renderStockList(); applyStockBars(); updateListHeight();
+    if (_resizeRaf) cancelAnimationFrame(_resizeRaf);
+    _resizeRaf = requestAnimationFrame(() => {
+      _resizeRaf = null;
+      renderHeatmap(); renderStockList(); applyStockBars(); updateListHeight();
+    });
   });
 
   // システムのカラースキーム変化を監視（auto モード時のみ再描画）
@@ -617,114 +615,7 @@ if (typeof d3 === 'undefined') {
   }
 }
 
-// ── Pull-to-refresh（上端で引っ張るとリロード） ──
-// iOS Safari PWA モード対応：touchstart 時点で「上端にいるか」を判定し、
-// 上端にいなければそのターゲットを一切追跡しない。
-(function() {
-  if (!('ontouchstart' in window)) return; // デスクトップではスキップ
-
-  const THRESHOLD = 72;
-  let startY  = 0;
-  let pulling = false;
-  let indicator = null;
-  let arrow    = null;
-
-  const atTop = () =>
-    (window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0) <= 0;
-
-  function getIndicator() {
-    if (indicator) return indicator;
-    indicator = document.createElement('div');
-    indicator.id = 'ptr-indicator';
-    indicator.style.cssText = [
-      'position:fixed', 'top:0', 'left:0', 'right:0', 'z-index:99999',
-      'display:flex', 'align-items:center', 'justify-content:center',
-      'height:0', 'overflow:hidden', 'transition:none',
-      'background:var(--surface)', 'pointer-events:none',
-    ].join(';');
-
-    // 円形リフレッシュアイコン（SVG）
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('width', '24');
-    svg.setAttribute('height', '24');
-    svg.setAttribute('viewBox', '0 0 24 24');
-    svg.setAttribute('fill', 'none');
-    svg.style.cssText = 'transition:transform 0.05s linear;color:var(--text2);will-change:transform;';
-    svg.innerHTML = `
-      <path d="M12 4V1L8 5l4 4V6a6 6 0 1 1-5.66 7.99L4.68 13A8 8 0 1 0 12 4z"
-            fill="currentColor"/>`;
-    arrow = svg;
-    indicator.appendChild(svg);
-
-    // スピンアニメーション用 keyframes（1回だけ注入）
-    if (!document.getElementById('ptr-style')) {
-      const st = document.createElement('style');
-      st.id = 'ptr-style';
-      st.textContent = '@keyframes ptr-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}';
-      document.head.appendChild(st);
-    }
-
-    document.body.prepend(indicator);
-    return indicator;
-  }
-
-  function collapseIndicator() {
-    if (!indicator) return;
-    indicator.style.transition = 'height 0.2s ease';
-    indicator.style.height = '0';
-    if (arrow) {
-      arrow.style.transition = 'none';
-      arrow.style.animation  = 'none';
-      arrow.style.transform  = 'rotate(0deg)';
-    }
-  }
-
-  document.addEventListener('touchstart', e => {
-    pulling = atTop();
-    startY  = e.touches[0].clientY;
-  }, { passive: true });
-
-  document.addEventListener('touchmove', e => {
-    if (!pulling) return;
-    const delta = e.touches[0].clientY - startY;
-    if (delta <= 0) return;
-    const ind = getIndicator();
-    ind.style.transition = 'none';
-    ind.style.height = Math.min(delta * 0.55, 56) + 'px';
-    // 引っ張り量に比例してアイコンを回転（0 → 360deg）、閾値到達でアクセントカラーに変化
-    const progress = Math.min(delta / THRESHOLD, 1);
-    if (arrow) {
-      arrow.style.transition = 'none';
-      arrow.style.animation  = 'none';
-      arrow.style.transform  = `rotate(${Math.round(progress * 360)}deg)`;
-      arrow.style.opacity    = 0.4 + progress * 0.6;
-      arrow.style.color      = progress >= 1 ? 'var(--accent)' : 'var(--text2)';
-    }
-  }, { passive: true });
-
-  document.addEventListener('touchend', e => {
-    if (!pulling) return;
-    const delta = e.changedTouches[0].clientY - startY;
-    pulling = false;
-    if (delta >= THRESHOLD) {
-      // 閾値超え：連続スピンしながらリロード
-      if (arrow) {
-        arrow.style.transition = 'none';
-        arrow.style.animation  = 'ptr-spin 0.5s linear infinite';
-        arrow.style.opacity    = '1';
-        arrow.style.color      = 'var(--accent)';
-      }
-      setTimeout(() => location.reload(), 650);
-    } else {
-      collapseIndicator();
-    }
-  }, { passive: true });
-
-  document.addEventListener('touchcancel', () => {
-    pulling = false;
-    collapseIndicator();
-  }, { passive: true });
-}());
+import './ptr.js';
 
 // ── デバッグ：読み込んだファイルのバージョンをタイトル横に表示 ──
 (function() {

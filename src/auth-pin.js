@@ -12,7 +12,7 @@
 const AUTH_PIN_HASH     = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
 const AUTH_SESSION_KEY  = 'hm-auth-v1';
 const AUTH_LS_HASH_KEY  = 'hm-pin-hash';    // localStorage キー
-const AUTH_LOCKOUT_KEY  = 'hm-lockout-at';  // ロックアウト時刻 localStorage キー
+const AUTH_LOCKOUT_KEY  = 'hm-lockout';     // ロックアウト時刻 localStorage キー
 const AUTH_PIN_LEN      = 4;
 const AUTH_MAX_FAIL     = 5;
 const AUTH_LOCK_SEC     = 30;

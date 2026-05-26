@@ -134,7 +134,7 @@ function _buildPinScreen() {
         <line x1="18" y1="30.5" x2="18" y2="35" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
       </svg>
       <div class="pin-title">Portfolio Manager</div>
-      <button class="pin-passkey-btn" onclick="authenticatePasskey()" title="パスキー（指紋/顔認証）でログイン">
+      <button class="pin-passkey-btn" data-action="authenticatePasskey" title="パスキー（指紋/顔認証）でログイン">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px">
           <path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"/>
           <path d="M14 13.12c0 2.38 0 6.38-1 8.88"/>
@@ -159,14 +159,14 @@ function _buildPinScreen() {
 }
 
 // ── 共有キーパッド HTML ──
-function _pinKeypadHTML(onPress, onBack) {
+function _pinKeypadHTML(pressAction, backAction) {
   return `<div class="pin-keypad">
     ${'123456789'.split('').map(n =>
-      `<button class="pin-key" onclick="${onPress}('${n}')">${n}</button>`
+      `<button class="pin-key" data-action="${pressAction}" data-arg="${n}">${n}</button>`
     ).join('')}
     <span class="pin-key-empty"></span>
-    <button class="pin-key" onclick="${onPress}('0')">0</button>
-    <button class="pin-key pin-key-back" onclick="${onBack}()" aria-label="削除">
+    <button class="pin-key" data-action="${pressAction}" data-arg="0">0</button>
+    <button class="pin-key pin-key-back" data-action="${backAction}" aria-label="削除">
       <svg width="22" height="16" viewBox="0 0 22 16" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M8 1H20a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H8l-7-7 7-7z" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linejoin="round"/>
         <line x1="12" y1="6" x2="17" y2="11" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
@@ -295,7 +295,7 @@ function openPinChange() {
     <div class="pin-card pc-card">
       <div class="pc-header">
         <span class="pc-title">PINを変更</span>
-        <button class="pc-close" onclick="closePinChange()" aria-label="閉じる">✕</button>
+        <button class="pc-close" data-action="closePinChange" aria-label="閉じる">✕</button>
       </div>
 
       <div class="pc-progress" id="pc-progress">
