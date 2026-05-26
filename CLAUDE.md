@@ -7,7 +7,7 @@ AI相談タブは現在無効化中（ソースは `src/_disabled/` に保管）
 
 - **本番 URL**: https://shoulang0729.github.io/portfolio/
 - **GitHub**: https://github.com/shoulang0729/portfolio
-- **現在バージョン**: `20260526A`
+- **現在バージョン**: `20260526B`
 
 ---
 
