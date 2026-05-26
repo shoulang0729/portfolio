@@ -90,11 +90,13 @@ async function _submitPin() {
 
     if (_auth.fails >= AUTH_MAX_FAIL) {
       _auth.lockedAt = Date.now();
+      _saveLockout();
       _showError(`${AUTH_MAX_FAIL}回失敗。${AUTH_LOCK_SEC}秒後に再試行できます`);
       const _t = setInterval(() => {
         if (!_isLocked()) {
           clearInterval(_t);
           _auth.fails = 0; _auth.lockedAt = null;
+          _saveLockout();
           _setKeypadEnabled(true); _hideError();
         } else { _showError(`${_lockRemain()}秒後に再試行できます`); }
       }, 1000);

@@ -213,6 +213,23 @@ function makePctCell(pct, scale, dataCol = '') {
 }
 
 /**
+ * テーブルのソート状態を切り替える共通ヘルパー。
+ * stock-list / watchlist 両方で使用し、同じパターンの二重実装を避ける。
+ * @param {string} colKey         - state のソート列キー名 (例: 'listSortCol')
+ * @param {string} dirKey         - state のソート方向キー名 (例: 'listSortDir')
+ * @param {string} col            - クリックされた列 ID
+ * @param {string[]} defaultAscCols - 新列選択時に昇順をデフォルトにする列 ID 一覧
+ */
+function _tableSort(colKey, dirKey, col, defaultAscCols = []) {
+  if (state[colKey] === col) {
+    state[dirKey] = state[dirKey] === 'desc' ? 'asc' : 'desc';
+  } else {
+    state[colKey] = col;
+    state[dirKey] = defaultAscCols.includes(col) ? 'asc' : 'desc';
+  }
+}
+
+/**
  * 「期間パフォーマンス列群」を一括生成するヘルパー。
  * Historical Heatmap (銘柄リスト) と Watchlist Historical Heatmap の両方で
  * 共通使用することで、片方だけ修正漏れする事故を防ぐ。

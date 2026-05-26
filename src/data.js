@@ -251,7 +251,6 @@ async function applyPricesCache() {
 async function fetchAllHistorical(neededRange = '1y') {
   if (state.fetchingRanges.has(neededRange)) return; // 同じレンジが既に取得中なら重複スキップ
   state.fetchingRanges.add(neededRange);
-  state.historicalAttempted = state.historicalAttempted || {};
   try {
     if (!state.historicalCache[neededRange]) state.historicalCache[neededRange] = {};
     // 保有銘柄 + ウォッチリスト銘柄を一括処理（Historical Heatmap と Watchlist Historical Heatmap で

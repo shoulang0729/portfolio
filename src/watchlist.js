@@ -207,7 +207,7 @@ async function searchTicker(q) {
          data-name="${(item.name || item.symbol).replace(/"/g, '&quot;')}"
          data-market="${market}"
          data-badge="${badge}"
-         onclick="wlSelectItem(this)">
+         data-action="wlSelectItem">
       <span class="wl-sym">${item.symbol}</span>
       <span class="wl-type-badge wl-badge-${badge}">${badge}</span>
       <span class="wl-market-label">${market}</span>
@@ -220,8 +220,11 @@ async function searchTicker(q) {
   }).join('');
 }
 
-function wlSelectItem(el) {
-  if (el.classList.contains('wl-already')) return;
+function wlSelectItem(arg, event) {
+  const el = event instanceof Event
+    ? event.target.closest('.wl-search-item')
+    : arg;
+  if (!el || el.classList.contains('wl-already')) return;
   const symbol   = el.dataset.symbol;
   const name     = el.dataset.name;
   const exchange = el.dataset.market;
@@ -283,12 +286,7 @@ async function fetchWatchlistData() {
 // ══════════════════════════════════════════════
 
 function wlSort(col) {
-  if (state.wlSortCol === col) {
-    state.wlSortDir = state.wlSortDir === 'desc' ? 'asc' : 'desc';
-  } else {
-    state.wlSortCol = col;
-    state.wlSortDir = col === 'symbol' ? 'asc' : 'desc';
-  }
+  _tableSort('wlSortCol', 'wlSortDir', col, ['symbol']);
   renderWatchlist();
 }
 
@@ -355,7 +353,7 @@ function renderWatchlist() {
       <td class="wl-price-cell">${priceStr}</td>
       ${periodCells}
       <td class="wl-del-cell">
-        <button class="wl-del-btn" onclick="removeFromWatchlist('${item.symbol}')" title="ウォッチリストから削除">×</button>
+        <button class="wl-del-btn" data-action="removeFromWatchlist" data-arg="${item.symbol.replace(/"/g, '&quot;')}" title="ウォッチリストから削除">×</button>
       </td>
     </tr>`;
   }).join('');

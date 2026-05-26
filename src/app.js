@@ -76,13 +76,6 @@ function applyTheme() {
   el && (el.title = { light: 'ライトモード', dark: 'ダークモード', auto: 'システムに合わせる' }[state.themeMode]);
 }
 
-// システムテーマ変更時に auto モードを追従させる
-window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-  if (state.themeMode === 'auto') {
-    applyTheme();
-    renderHeatmap();
-  }
-});
 
 function toggleHmMenu() {
   const dropdown = document.getElementById('hm-menu-dropdown');
@@ -565,6 +558,7 @@ if (typeof d3 === 'undefined') {
   // システムのカラースキーム変化を監視（auto モード時のみ再描画）
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
     if (state.themeMode !== 'auto') return;
+    applyTheme();
     renderHeatmap();
     const overlay = document.getElementById('modal-overlay');
     if (overlay && overlay.style.display !== 'none' && state.currentPos?.ySymbol) {
