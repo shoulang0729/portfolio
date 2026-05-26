@@ -391,12 +391,7 @@ function _setupMobileLayout() {
   // ── 5. 凡例バーはpanel-heatmap内footerに残す（タブ連動のため移動しない） ──
 }
 
-/**
 // ── data-action ディスパッチャ用アクションマップ ──
-// NOTE: このオブジェクトは _dispatchAction より前に定義する必要があるが、
-//       関数定義は後に来る場合がある。JS の var 宣言ホイスティングを使わず
-//       初期化時に参照される関数は全て先に定義済みであること。
-// （実際には関数宣言は巻き上げられるため、ここに書いても動作する）
 const ACTION_MAP = {
   // app.js
   toggleStats, cycleTheme, toggleHmMenu, closeHmMenu,
