@@ -691,13 +691,14 @@ if (typeof d3 === 'undefined') {
     const ind = getIndicator();
     ind.style.transition = 'none';
     ind.style.height = Math.min(delta * 0.55, 56) + 'px';
-    // 引っ張り量に比例してアイコンを回転（0 → 270deg）
+    // 引っ張り量に比例してアイコンを回転（0 → 360deg）、閾値到達でアクセントカラーに変化
     const progress = Math.min(delta / THRESHOLD, 1);
     if (arrow) {
       arrow.style.transition = 'none';
       arrow.style.animation  = 'none';
-      arrow.style.transform  = `rotate(${Math.round(progress * 270)}deg)`;
+      arrow.style.transform  = `rotate(${Math.round(progress * 360)}deg)`;
       arrow.style.opacity    = 0.4 + progress * 0.6;
+      arrow.style.color      = progress >= 1 ? 'var(--accent)' : 'var(--text2)';
     }
   }, { passive: true });
 
@@ -706,13 +707,14 @@ if (typeof d3 === 'undefined') {
     const delta = e.changedTouches[0].clientY - startY;
     pulling = false;
     if (delta >= THRESHOLD) {
-      // 閾値超え：スピンさせてからリロード
+      // 閾値超え：連続スピンしながらリロード
       if (arrow) {
         arrow.style.transition = 'none';
-        arrow.style.animation  = 'ptr-spin 0.4s linear';
+        arrow.style.animation  = 'ptr-spin 0.5s linear infinite';
         arrow.style.opacity    = '1';
+        arrow.style.color      = 'var(--accent)';
       }
-      setTimeout(() => location.reload(), 400);
+      setTimeout(() => location.reload(), 650);
     } else {
       collapseIndicator();
     }
