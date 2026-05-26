@@ -9,12 +9,13 @@
 // ══════════════════════════════════════════════════════════════
 
 // ── ハードコードされたデフォルト PIN ハッシュ（SHA-256 of "1234"）──
-const AUTH_PIN_HASH    = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
-const AUTH_SESSION_KEY = 'hm-auth-v1';
-const AUTH_LS_HASH_KEY = 'hm-pin-hash'; // localStorage キー
-const AUTH_PIN_LEN     = 4;
-const AUTH_MAX_FAIL    = 5;
-const AUTH_LOCK_SEC    = 30;
+const AUTH_PIN_HASH     = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
+const AUTH_SESSION_KEY  = 'hm-auth-v1';
+const AUTH_LS_HASH_KEY  = 'hm-pin-hash';    // localStorage キー
+const AUTH_LOCKOUT_KEY  = 'hm-lockout-at';  // ロックアウト時刻 localStorage キー
+const AUTH_PIN_LEN      = 4;
+const AUTH_MAX_FAIL     = 5;
+const AUTH_LOCK_SEC     = 30;
 
 // ── 有効な PIN ハッシュ（localStorage 優先） ──
 function _getActivePinHash() {
@@ -43,3 +44,25 @@ async function _hashPin(pin) {
 // ── ロックアウト ──
 function _isLocked()   { return _auth.lockedAt && (Date.now() - _auth.lockedAt) / 1000 < AUTH_LOCK_SEC; }
 function _lockRemain() { return Math.ceil(AUTH_LOCK_SEC - (Date.now() - _auth.lockedAt) / 1000); }
+
+// ロックアウト状態を localStorage に保存（リロード後も持続させる）
+function _saveLockout() {
+  if (_auth.lockedAt) {
+    localStorage.setItem(AUTH_LOCKOUT_KEY, String(_auth.lockedAt));
+  } else {
+    localStorage.removeItem(AUTH_LOCKOUT_KEY);
+  }
+}
+
+// 起動時に localStorage からロックアウト状態を復元
+(function _loadLockout() {
+  const stored = localStorage.getItem(AUTH_LOCKOUT_KEY);
+  if (!stored) return;
+  const ts = parseInt(stored, 10);
+  if (isNaN(ts)) { localStorage.removeItem(AUTH_LOCKOUT_KEY); return; }
+  if ((Date.now() - ts) / 1000 < AUTH_LOCK_SEC) {
+    _auth.lockedAt = ts;
+  } else {
+    localStorage.removeItem(AUTH_LOCKOUT_KEY);
+  }
+}());
