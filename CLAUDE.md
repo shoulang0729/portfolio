@@ -7,7 +7,7 @@ AI相談タブは現在無効化中（ソースは `src/_disabled/` に保管）
 
 - **本番 URL**: https://shoulang0729.github.io/portfolio/
 - **GitHub**: https://github.com/shoulang0729/portfolio
-- **現在バージョン**: `20260526D`
+- **現在バージョン**: `20260526E`
 
 ---
 
@@ -224,6 +224,7 @@ POST /auth/verify                   パスキー検証
 
 | バージョン | 内容 |
 |---|---|
+| 20260526E | ウォッチリストstickyティッカー列にwidth:130px固定追加（行固定崩れ修正） |
 | 20260526D | コード品質改善: escapeHTML追加・XSS対策、PTRをptr.jsに分離、PINキーパッドdata-action化、resizeデバウンス、SW/PWA、vitest+CI、ESLint、Workerレート制限、localStorage quota対応 |
 | 20260526C | sticky列固定・ステータス見切れ・ハンバーガー44px・パスキーボタン幅修正 |
 | 20260526B | sticky列固定・ステータス見切れ・ハンバーガー44px化 |
