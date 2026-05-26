@@ -298,29 +298,8 @@
 
 
 
-<!-- ★ 保有データ（銘柄の追加・変更はこのファイルのみ編集すれば OK） -->
-<script src="src/auth-pin.js?v=20260526A"></script>
-<script src="src/auth-crypto.js?v=20260526A"></script>
-<script src="src/auth-passkey.js?v=20260526A"></script>
-<script src="src/auth-ui.js?v=20260526A"></script>
-<script src="src/positions.js?v=20260526A"></script>
-<!-- アプリロジック（分割ファイル） -->
-<script src="src/state.js?v=20260526A"></script>
-<script src="src/funds.js?v=20260526A"></script>
-<script src="src/csv.js?v=20260526A"></script>
-<script src="src/utils.js?v=20260526A"></script>
-<script src="src/data.js?v=20260526A"></script>
-<script src="src/heatmap.js?v=20260526A"></script>
-<script src="src/chart.js?v=20260526A"></script>
-<script src="src/stock-list.js?v=20260526A"></script>
-<script src="src/watchlist.js?v=20260526A"></script>
-<script src="src/positions-store.js?v=20260526A"></script>
-<script src="src/import-parse.js?v=20260526A"></script>
-<script src="src/import-ui.js?v=20260526A"></script>
-<!-- AI相談タブは現在無効化中。再開時は src/_disabled/ から src/ に戻してコメントを外す -->
-<!-- <script src="src/_disabled/ai-system-prompt.js?v=20260526A"></script> -->
-<!-- <script src="src/_disabled/ai-tab.js?v=20260526A"></script> -->
-<script src="src/app.js?v=20260526A"></script>
+<!-- ES Module エントリーポイント（全ファイルを import する単一スクリプト） -->
+<script type="module" src="src/app.js?v=20260526A"></script>
 
 <!-- フォールバック JS：旧版 portfolio.js でもヒートマップが描画されるよう保証 -->
 <script>

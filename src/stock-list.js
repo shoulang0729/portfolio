@@ -7,6 +7,10 @@
 //       positions.js (positions, PERIOD_COLS, PERIOD_IDS, PERIOD_MAP)
 // ══════════════════════════════════════════════════════════════
 
+import { state, SL_DETAIL_COLS } from './state.js';
+import { positions, PERIOD_COLS, PERIOD_IDS, PERIOD_MAP } from './positions.js';
+import { makeTh, makePctCell, getColor, getCellTextColor, getHistoricalChangePct, fmtJPYInt, fmtPctInt, fmtPrice, fmtShares, sgn, _tableSort, makePeriodCells, makePeriodHeaderCells } from './utils.js';
+
 // ══════════════════════════════════════════════
 // STOCK LIST
 // ══════════════════════════════════════════════
@@ -180,3 +184,5 @@ function slSort(col) {
   _tableSort('listSortCol', 'listSortDir', col);
   renderStockList();
 }
+
+export { renderStockList, slSort, slToggleDetail, applyStockBars, updateSlColStyle };

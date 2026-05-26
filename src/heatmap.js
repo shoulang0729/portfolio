@@ -6,6 +6,12 @@
 //        fmtJPYFull, sgn), positions.js (positions, PERIOD_MAP)
 // ══════════════════════════════════════════════════════════════
 
+import { state, C } from './state.js';
+import { positions, PERIOD_MAP } from './positions.js';
+import { cssVar, getColor, getDisplayPct, getCellTextColor, getCellTextColorSub, fmtPct, fmtPrice, fmtJPY, fmtJPYFull, sgn } from './utils.js';
+import { renderStockList } from './stock-list.js';
+import { openChart } from './chart.js';
+
 // ══════════════════════════════════════════════
 // HEATMAP
 // ══════════════════════════════════════════════
@@ -168,3 +174,5 @@ function positionTooltip(event, el) {
   el.style.left = (tx + w > window.innerWidth - 10 ? event.clientX - w - 10 : tx) + 'px';
   el.style.top = (ty + h > window.innerHeight - 10 ? event.clientY - h - 10 : ty) + 'px';
 }
+
+export { renderHeatmap, positionTooltip };
