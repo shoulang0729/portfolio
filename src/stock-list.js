@@ -177,11 +177,6 @@ function applyStockBars() {
 }
 
 function slSort(col) {
-  if (state.listSortCol === col) {
-    state.listSortDir = state.listSortDir === 'desc' ? 'asc' : 'desc';
-  } else {
-    state.listSortCol = col;
-    state.listSortDir = 'desc';
-  }
+  _tableSort('listSortCol', 'listSortDir', col);
   renderStockList();
 }
