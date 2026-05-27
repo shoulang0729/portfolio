@@ -35,7 +35,8 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          prompt: |
+          mode: agent
+          direct_prompt: |
             以下の手順で GitHub の open issues をまとめて処理してください。
 
             ## Step 1: open issues を確認
