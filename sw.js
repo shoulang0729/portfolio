@@ -1,7 +1,9 @@
 // Portfolio Manager — Service Worker
 // オフライン時に最後にキャッシュしたスナップショットを表示する。
 
-const CACHE = 'portfolio-v20260527A';
+// CACHE 名は SW 登録 URL の ?v= から動的生成（index.html 側の version とのズレを防ぐ）。
+const VERSION = (self.location.search.match(/[?&]v=([^&]+)/) || [, 'dev'])[1];
+const CACHE = `portfolio-v${VERSION}`;
 const OFFLINE_ASSETS = [
   './',
   './index.html',
