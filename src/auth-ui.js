@@ -11,6 +11,21 @@ import { _auth, AUTH_PIN_LEN, AUTH_MAX_FAIL, AUTH_LOCK_SEC, AUTH_SESSION_KEY, AU
 import { _AUTH_ENC_SS, _deriveEncKey, _restoreEncKey } from './auth-crypto.js';
 import { WORKER_URL } from './data.js';
 
+// ── フォーカストラップ（PIN オーバーレイがキーボードフォーカスを保持する） ──
+function _trapFocus(container) {
+  const focusable = container.querySelectorAll('button:not([disabled])');
+  if (!focusable.length) return;
+  const first = focusable[0], last = focusable[focusable.length - 1];
+  container.addEventListener('keydown', e => {
+    if (e.key !== 'Tab') return;
+    if (e.shiftKey ? document.activeElement === first : document.activeElement === last) {
+      e.preventDefault();
+      (e.shiftKey ? last : first).focus();
+    }
+  });
+  first.focus();
+}
+
 // ── キーパッド制御 ──
 function _setKeypadEnabled(on) {
   document.querySelectorAll('#pin-overlay .pin-key').forEach(b => { b.disabled = !on; });
@@ -372,7 +387,10 @@ function _showChangePinButton() {
   document.body.style.overflow = 'hidden';
   const ov = _buildPinScreen();
   document.body.appendChild(ov);
-  requestAnimationFrame(() => requestAnimationFrame(() => { ov.style.opacity = '1'; }));
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    ov.style.opacity = '1';
+    _trapFocus(ov);
+  }));
 
   // ── パスキー画面を自動起動（WebAuthn 対応端末・ローカルにフラグありの場合のみ）
   //    PIN を打ち始める前に Face ID/Touch ID シートを開いてユーザーを混乱させない。
