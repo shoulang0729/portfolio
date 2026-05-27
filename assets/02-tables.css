@@ -269,7 +269,7 @@
   border: none;
   outline: none;
   color: var(--text);
-  font-size: 14px;
+  font-size: 16px;
   min-width: 0;
 }
 .wl-search-input::placeholder { color: var(--text2); }
