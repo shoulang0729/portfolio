@@ -30,6 +30,27 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+      - name: Configure Claude Code permissions for CI
+        run: |
+          mkdir -p .claude
+          cat > .claude/settings.json << 'EOF'
+          {
+            "permissions": {
+              "allow": [
+                "Bash(*)",
+                "Read",
+                "Write",
+                "Edit",
+                "MultiEdit",
+                "Glob",
+                "Grep",
+                "LS",
+                "TodoWrite"
+              ]
+            }
+          }
+          EOF
+
       - name: Run Claude Code to fix issues and create PR
         uses: anthropics/claude-code-action@beta
         with:
@@ -37,7 +58,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           mode: agent
           model: claude-sonnet-4-6
-          allowed_tools: "Bash(git *),Bash(gh *),Bash(npm test*),Bash(npm install*),Bash(npm run*),Bash(curl *),Bash(node *),Read,Write,Edit,MultiEdit,Glob,Grep,LS,TodoWrite"
+          allowed_tools: "Bash(*),Read,Write,Edit,MultiEdit,Glob,Grep,LS,TodoWrite"
           direct_prompt: |
             以下の手順で GitHub の open issues をまとめて処理してください。
 
@@ -47,30 +68,46 @@ jobs:
             ```
             issues が空なら「No open issues today.」と出力して終了。
 
-            ## Step 2: 作業ブランチを作成
+            ## Step 2: 各 issue の評価
+            各 issue について以下を判断する：
+            - **実装可能** → Step 3 へ進む
+            - **要件が曖昧・破壊的変更・承認が必要** → 以下のコマンドでスキップ理由をコメントして次の issue へ:
+              ```
+              gh issue comment <number> --body "⚠️ **自動修正をスキップしました**
+
+              理由: <具体的な理由>
+
+              対応が必要な場合は手動で確認・承認してください。"
+              ```
+
+            ## Step 3: 作業ブランチを作成
             ```
             git checkout -b auto-fix/$(date +%Y%m%d)
             ```
 
-            ## Step 3: 各 issue を実装
+            ## Step 4: 各 issue を実装
             - issue の内容を読んでコードを修正・追加する
-            - 実装が難しい or 要件が曖昧な issue はスキップし、issue にコメントで理由を残す
+            - 実装できなかった issue は `gh issue comment` でスキップ理由を残す
             - 1つの issue を修正したら `git commit -m "fix: #<issue番号> <概要>"` でコミット
 
-            ## Step 4: テストを実行
+            ## Step 5: テストを実行
             ```
             npm test
             ```
             失敗した場合は原因を修正してから次へ進む。
 
-            ## Step 5: ブランチを push して PR を作成
+            ## Step 6: ブランチを push して PR を作成
+            実装した issue が1つ以上ある場合のみ実行する:
             ```
             git push -u origin auto-fix/$(date +%Y%m%d)
+            gh pr create \
+              --title "[Auto] Daily issues fix $(date +%Y-%m-%d)" \
+              --body "対応した issue の一覧と実装サマリー（Closes #N 形式）"
             ```
-            PR タイトル: `[Auto] Daily issues fix $(date +%Y-%m-%d)`
-            PR 本文: 対応した issue の一覧（Closes #N 形式）と実装サマリーを記載。
+            実装した issue が0件の場合は PR を作成しない。
 
             ## 注意事項
             - index.html の `?v=` バージョンを上げる（現在の日付 + 連番で更新）
+            - sw.js の `const CACHE` も同じバージョン値に更新すること
             - 破壊的な変更は行わない
             - テストが最終的にパスしていることを確認してから PR を作成する
