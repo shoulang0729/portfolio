@@ -1,7 +1,7 @@
 // Portfolio Manager — Service Worker
 // オフライン時に最後にキャッシュしたスナップショットを表示する。
 
-const CACHE = 'portfolio-v20260526F';
+const CACHE = 'portfolio-v20260527A';
 const OFFLINE_ASSETS = [
   './',
   './index.html',
