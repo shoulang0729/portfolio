@@ -101,8 +101,10 @@ body {
   margin-bottom: 8px;
   flex-wrap: nowrap;
   gap: 8px;
+  overflow: hidden;
 }
-.title { font-size: 20px; font-weight: 700; letter-spacing: 0.3px; white-space: nowrap; }
+.header > div:first-child { min-width: 0; overflow: hidden; }
+.title { font-size: 20px; font-weight: 700; letter-spacing: 0.3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .subtitle { font-size: 12px; color: var(--text2); margin-top: 3px; }
 
 /* コントロール：横スクロール可能1行（nowrap統一） */
@@ -110,6 +112,7 @@ body {
   display: flex; flex-direction: row; flex-wrap: nowrap;
   overflow-x: auto; -webkit-overflow-scrolling: touch;
   align-items: center; gap: 6px; padding: 0; background: var(--bg);
+  flex-shrink: 0;
 }
 .controls::-webkit-scrollbar { display: none; }
 
