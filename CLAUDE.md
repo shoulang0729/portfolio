@@ -61,9 +61,8 @@ AI相談タブは現在無効化中（ソースは `src/_disabled/` に保管）
 │   ├── src/index.js    # Worker 本体
 │   └── wrangler.toml   # Worker 設定
 └── docs/               # 設計書・ルーティン定義
-    ├── SPEC.md                 # 機能仕様書（日本語）
-    ├── SPEC_cn.md              # ★新設：機能仕様書（中国語）
-    ├── DESIGN.md               # ★新設：フロントエンド設計規約（カラー・コンポーネント等）
+    ├── SPEC_cn.md              # 機能仕様書（中国語）
+    ├── DESIGN.md               # フロントエンド設計規約（カラー・コンポーネント等）
     ├── ai-system-prompt.md     # AI相談ペルソナ定義（ai-system-prompt.js と同期）
     ├── routine_japan_1700.md   # 国内株ルーティン
     └── routine_us_0600.md      # 米国株ルーティン
@@ -263,7 +262,6 @@ npm run test:watch # ウォッチモード
 - GitHub Actions `.github/workflows/test.yml` が push/PR 時に自動実行
 - GitHub Actions `.github/workflows/daily-issues.yml` が毎日 0:00 UTC（9:00 JST）に open issues を自動修正して PR 作成
 - `tests/fmt.test.js`: `fmtJPYInt`, `fmtPctInt`, `fmtShares`, `escapeHTML`, `getColor` の純関数テスト（vitest）
-- `tests/spec_validation.test.cjs`: `docs/SPEC.md` の内容検証（Node built-in test runner）— `npm run test:spec` で実行・CI からは除外
 
 ### リント・フォーマット
 ```bash

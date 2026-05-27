@@ -8,7 +8,7 @@
 
 import { state, C } from './state.js';
 import { positions, PERIOD_MAP } from './positions.js';
-import { cssVar, getColor, getDisplayPct, getCellTextColor, getCellTextColorSub, fmtPct, fmtPrice, fmtJPY, fmtJPYFull, sgn } from './utils.js';
+import { cssVar, getColor, getDisplayPct, getCellTextColor, getCellTextColorSub, fmtPct, fmtPctInt, fmtPrice, fmtJPY, fmtJPYFull, sgn } from './utils.js';
 import { renderStockList } from './stock-list.js';
 import { openChart } from './chart.js';
 
@@ -75,7 +75,7 @@ function renderHeatmap() {
     .attr('role', 'img')
     .attr('aria-label', d => {
       const pct = getDisplayPct(d.data);
-      return `${d.data.name} ${pct !== null ? fmtPct(pct) : 'データなし'}`;
+      return `${d.data.name} ${pct !== null ? fmtPctInt(pct) : 'データなし'}`;
     });
 
   cells.append('rect')
