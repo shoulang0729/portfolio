@@ -280,6 +280,29 @@ npm run format      # Prettier 整形
 
 ---
 
+## Claude Code 自律実行ルール
+
+**以下の操作は確認なしで自律実行してよい**（環境非依存・全端末共通）:
+
+| 操作 | 内容 |
+|------|------|
+| レビュー対応 | CodeRabbit 等のレビューコメントを読んで修正し、コメントに返信する |
+| テスト対応 | テスト失敗を修正し、対応内容を Issue にコメントする |
+| PR 操作 | PR を作成・マージし、マージ済みブランチを削除する |
+| 自動 PR | `daily-issues.yml` が自動生成した PR をマージする |
+| 依存追加 | `npm install <pkg> --save-dev` で devDependency を追加する |
+| バージョン更新 | `?v=YYYYMMDDX` のバージョン文字列を更新する |
+| Issue 管理 | Issue を作成・クローズする |
+| CI 軽微修正 | GitHub Actions のタイムアウト・トリガー条件など軽微な修正 |
+
+**以下は確認してから実行（変更しない）**:
+- `git push --force` / `git reset --hard` / main ブランチ削除
+- Secrets・認証情報の変更
+- `CLAUDE.md` / `.claude/settings.json` の変更
+- GitHub Actions ワークフローの大幅な変更
+
+---
+
 ## よくある作業パターン
 
 ### 保有銘柄を更新する
