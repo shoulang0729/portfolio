@@ -5,22 +5,17 @@
 // ══════════════════════════════════════════════════════════════
 
 // ── ES Module imports ──
-import { positions, PERIODS, PERIOD_MAP, PERIOD_COLS, PERIOD_IDS } from './positions.js';
-import { state, C, CHART_RANGES, SL_DETAIL_COLS } from './state.js';
-import { FUND_DEFS, fundSymbolFromName, fundProxyOf, canonicalizeFundPosition } from './funds.js';
-import { normalizeStr, parseCsvText, parseNum, detectCsvType, parseJpRow, parseUsRow, parseFundRow } from './csv.js';
-import { AUTH_PIN_HASH, AUTH_SESSION_KEY, AUTH_LS_HASH_KEY, AUTH_LOCKOUT_KEY, AUTH_PIN_LEN, AUTH_MAX_FAIL, AUTH_LOCK_SEC, _auth, _getActivePinHash, _hashPin, _isLocked, _lockRemain, _saveLockout, isAuthenticated } from './auth-pin.js';
-import { _deriveEncKey, _restoreEncKey, _AUTH_ENC_SS, aiEncrypt, aiDecrypt } from './auth-crypto.js';
+import { positions, PERIODS, PERIOD_MAP } from './positions.js';
+import { state } from './state.js';
 import { authenticatePasskey, registerPasskey, setPasskeySuccessCallback } from './auth-passkey.js';
 import { authKeyPress, authBackspace, pcKeyPress, pcBackspace, openPinChange, closePinChange, _showChangePinButton } from './auth-ui.js';
-import { fmtJPY, fmtJPYFull, fmtPct, fmtPrice, sgn, fmtJPYInt, fmtPctInt, fmtShares, cssVar, getColor, getCellTextColor, getHistoricalChangePct, getDisplayPct, calcPortfolioPeriodPct, makeTh, makePctCell, _tableSort, makePeriodCells, makePeriodHeaderCells } from './utils.js';
-import { WORKER_URL, fetchWithTimeout, sleep, fetchViaProxy, fetchFinnhubQuote, fetchFinnhubCandles, loadCacheFromSession, saveCacheToSession, clearCacheSession, fetchAllHistorical, fetchSymbolHistory, fetchLivePrice, refreshPrices, flashPriceChanges, setStatus, applyPricesCache } from './data.js';
-import { renderHeatmap, positionTooltip } from './heatmap.js';
-import { openChart, loadChart, setRange, closeModal, handleOverlayClick } from './chart.js';
+import { sgn, fmtJPYInt, fmtPctInt, getHistoricalChangePct, calcPortfolioPeriodPct } from './utils.js';
+import { WORKER_URL, fetchAllHistorical, refreshPrices, setStatus, applyPricesCache } from './data.js';
+import { renderHeatmap } from './heatmap.js';
+import { loadChart, setRange, closeModal, handleOverlayClick } from './chart.js';
 import { renderStockList, slSort, slToggleDetail, applyStockBars, updateSlColStyle } from './stock-list.js';
-import { renderWatchlist, wlSort, onWatchlistSearch, addToWatchlist, removeFromWatchlist, wlSelectItem, fetchWatchlistData, saveWatchlist, _loadWatchlistFromWorker } from './watchlist.js';
-import { loadPositionsFromKV, savePositionsToKV, mergeDuplicatePositions, computeImportDiff } from './positions-store.js';
-import { parseManexFiles, parseMoneyForwardImage } from './import-parse.js';
+import { renderWatchlist, wlSort, onWatchlistSearch, removeFromWatchlist, wlSelectItem, fetchWatchlistData, _loadWatchlistFromWorker } from './watchlist.js';
+import { loadPositionsFromKV } from './positions-store.js';
 import { openImportModal, closeImportModal, openManagePositionsModal, handleImportOverlayClick, handleManexFileSelect, handleMoneyForwardImageSelect } from './import-ui.js';
 
 // ── 循環依存解消: data.js が発火するイベントを app.js でリッスン ──
@@ -334,10 +329,6 @@ window.addEventListener('scroll', () => {
 function _setupMobileLayout() {
   const stickyTop = document.querySelector('.sticky-top');
   if (!stickyTop) return;
-  const parent       = stickyTop.parentNode; // = document.body
-  const panelHeatmap = document.getElementById('panel-heatmap');
-  const panelList    = document.getElementById('panel-list');
-  const heatmapWrap  = document.getElementById('heatmap-wrap');
   const header       = stickyTop.querySelector('.header');
 
   // ── 2. ヘッダー右列を構成（上段：スイッチ＋テーマ ／ 下段：カウントダウン＋ステータス） ──
