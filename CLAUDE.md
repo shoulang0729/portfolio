@@ -259,10 +259,11 @@ POST /auth/verify                   パスキー検証
 npm test          # vitest 単発実行（CI 相当）
 npm run test:watch # ウォッチモード
 ```
-- テストファイルは `tests/` 以下（`*.test.js`）
+- テストファイルは `tests/` 以下
 - GitHub Actions `.github/workflows/test.yml` が push/PR 時に自動実行
-- `tests/fmt.test.js`: `fmtJPYInt`, `fmtPctInt`, `fmtShares`, `escapeHTML`, `getColor` の純関数テスト
-- `tests/spec_validation.test.js`: `docs/SPEC.md` の内容検証（Node built-in test runner）
+- GitHub Actions `.github/workflows/daily-issues.yml` が毎日 0:00 UTC（9:00 JST）に open issues を自動修正して PR 作成
+- `tests/fmt.test.js`: `fmtJPYInt`, `fmtPctInt`, `fmtShares`, `escapeHTML`, `getColor` の純関数テスト（vitest）
+- `tests/spec_validation.test.cjs`: `docs/SPEC.md` の内容検証（Node built-in test runner）— `npm run test:spec` で実行・CI からは除外
 
 ### リント・フォーマット
 ```bash
@@ -286,6 +287,7 @@ npm run format      # Prettier 整形
 
 ### バージョンを上げる
 index.html 内の `?v=YYYYMMDDX` を新しい値に全置換する。CSS・JS 合わせて10箇所以上ある。
+`sw.js` の `const CACHE = 'portfolio-vXXXX'` も同じ値に更新すること（忘れると古いキャッシュが配信され続ける）。
 
 ### 新しいソート列を追加する（Historical Heatmap）
 1. `stock-list.js` の `slSort()` に case を追加
