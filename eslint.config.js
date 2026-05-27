@@ -1,7 +1,9 @@
 // ESLint flat config (ESLint v9+)
+import globals from 'globals';
+
 export default [
   {
-    ignores: ['src/_disabled/**', 'tests/spec_validation.test.js'],
+    ignores: ['src/_disabled/**', 'tests/spec_validation.test.js', 'dist/**'],
   },
   {
     files: ['src/**/*.js', 'worker/src/**/*.js'],
@@ -9,32 +11,8 @@ export default [
       ecmaVersion: 2022,
       sourceType: 'module',
       globals: {
-        window: 'readonly',
-        document: 'readonly',
-        navigator: 'readonly',
-        location: 'readonly',
-        localStorage: 'readonly',
-        sessionStorage: 'readonly',
-        fetch: 'readonly',
-        console: 'readonly',
-        setTimeout: 'readonly',
-        clearTimeout: 'readonly',
-        setInterval: 'readonly',
-        clearInterval: 'readonly',
-        requestAnimationFrame: 'readonly',
-        cancelAnimationFrame: 'readonly',
-        ResizeObserver: 'readonly',
-        crypto: 'readonly',
+        ...globals.browser,
         d3: 'readonly',
-        alert: 'readonly',
-        confirm: 'readonly',
-        URL: 'readonly',
-        URLSearchParams: 'readonly',
-        Response: 'readonly',
-        Request: 'readonly',
-        Headers: 'readonly',
-        caches: 'readonly',
-        self: 'readonly',
       },
     },
     rules: {

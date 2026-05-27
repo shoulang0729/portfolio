@@ -8,8 +8,8 @@
 // ══════════════════════════════════════════════════════════════
 
 import { state, SL_DETAIL_COLS } from './state.js';
-import { positions, PERIOD_COLS, PERIOD_IDS, PERIOD_MAP } from './positions.js';
-import { makeTh, makePctCell, getColor, getCellTextColor, getHistoricalChangePct, fmtJPYInt, fmtPctInt, fmtPrice, fmtShares, sgn, _tableSort, makePeriodCells, makePeriodHeaderCells } from './utils.js';
+import { positions, PERIOD_IDS } from './positions.js';
+import { makeTh, getColor, getCellTextColor, getHistoricalChangePct, fmtJPYInt, fmtPctInt, fmtPrice, fmtShares, _tableSort, makePeriodCells, makePeriodHeaderCells } from './utils.js';
 
 // ══════════════════════════════════════════════
 // STOCK LIST
