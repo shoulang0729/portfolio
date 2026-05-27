@@ -89,7 +89,7 @@
 | **マネフォ取込** | マネーフォワードのスクリーンショットを取込 | ログイン後のみ |
 | **銘柄を整理** | 保有銘柄の削除・整理 | ログイン後のみ |
 | **スナップショット保存** | 現在のポートフォリオをGitHubに保存 | ログイン後のみ |
-| **マニュアル** | 本仕様書（SPEC.md）を開く | 常時 |
+| **マニュアル** | 本仕様書（Wiki）を開く | 常時 |
 
 ### プル・トゥ・リフレッシュ（スマートフォン専用）
 
@@ -247,7 +247,7 @@
 ## 6. 資産推移タブ（未有効化）
 
 > `src/history.js` として実装済みだが、`index.html` に読み込まれていないため表示されない。
-> 有効化手順は CLAUDE.md を参照。
+> 有効化手順は [Claude Code Guide](Claude-Code-Guide) を参照。
 
 ### できること（実装済み）
 
@@ -397,14 +397,13 @@ Worker の環境変数（Cloudflare Secrets）:
 | `src/import-parse.js` | マネックスCSV/マネフォ画像パース |
 | `src/import-ui.js` | 取込モーダルUI |
 | `src/app.js` | 初期化・タブ切替・テーマ・自動更新・スナップショット |
-| `src/history.js` | 資産推移タブ ⚠️ **index.html に未ロード** |
-| `src/ai-system-prompt.js` | AI相談ペルソナ 🚫 **index.html でコメントアウト** |
-| `src/ai-tab.js` | AI相談タブ 🚫 **index.html でコメントアウト** |
+| `src/_disabled/history.js` | 資産推移タブ ⚠️ **index.html に未ロード** |
+| `src/_disabled/ai-system-prompt.js` | AI相談ペルソナ 🚫 **無効化中** |
+| `src/_disabled/ai-tab.js` | AI相談タブ 🚫 **無効化中** |
 | `assets/01-base.css` | CSS変数・テーマ・レイアウト・モーダル基本 |
 | `assets/02-tables.css` | 銘柄リスト・ウォッチリスト・ヒートマップセル |
 | `assets/03-misc.css` | タブバー・検索・タイプバッジ・PINキーパッド |
 | `assets/04-auth.css` | PIN変更ダイアログ |
-| `assets/05-ai-tab.css` | AI相談タブ全般（現在ほぼ未使用） |
 | `data/portfolio-snapshot.json` | スナップショット保存先（Worker → GitHub API で更新） |
 | `data/positions.json` | KV保有銘柄のGit同期（Worker → GitHub API で更新） |
 
@@ -425,7 +424,7 @@ auth-pin → auth-crypto → auth-passkey → auth-ui
 → app
 ```
 
-`history.js` / `ai-system-prompt.js` / `ai-tab.js` は index.html でコメントアウト中（ソース存在）。
+`_disabled/` 内の各ファイルは index.html でコメントアウト中（ソース存在）。
 
 ---
 
@@ -645,7 +644,7 @@ AI 相談タブで利用する各 LLM のモデル名は `src/ai-tab.js` の `AI
 
 ### メンテナンス対象
 
-`src/ai-tab.js` の `AI_MODELS` 配列の各 `versions` プロパティ。**先頭要素がデフォルト**。
+`src/_disabled/ai-tab.js` の `AI_MODELS` 配列の各 `versions` プロパティ。**先頭要素がデフォルト**。
 
 ### 2週間ごとの作業手順
 

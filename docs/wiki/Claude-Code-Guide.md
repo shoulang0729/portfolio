@@ -35,8 +35,8 @@ AI相談タブは現在無効化中（ソースは `src/_disabled/` に保管）
 │   ├── positions-store.js  # KV保存/読込・差分計算
 │   ├── import-parse.js     # マネックスCSV/マネフォ画像パース
 │   ├── import-ui.js        # 取込モーダルUI
-│   ├── ptr.js              # ★新設：Pull-to-refresh（app.js から分離）
-│   ├── _disabled/          # 無効化中コード（再有効化可能。再開手順は CLAUDE.md 参照）
+│   ├── ptr.js              # Pull-to-refresh（app.js から分離）
+│   ├── _disabled/          # 無効化中コード（再有効化可能。再開手順は下記参照）
 │   │   ├── history.js          # 資産推移記録＋D3グラフ（未統合）
 │   │   ├── ai-system-prompt.js # AI相談ペルソナ
 │   │   ├── ai-tab.js           # AI相談タブ
@@ -49,24 +49,26 @@ AI相談タブは現在無効化中（ソースは `src/_disabled/` に保管）
 │   ├── 04-auth.css         # PIN変更ダイアログ
 │   ├── manifest.json       # PWA マニフェスト
 │   └── *.png / *.svg       # アイコン類（favicon.svg・apple-touch-icon.png 等）
-├── sw.js               # ★新設：PWA Service Worker（オフラインキャッシュ）
-├── package.json        # ★新設：npm スクリプト（test / lint / format）
-├── vitest.config.js    # ★新設：vitest テスト設定
-├── eslint.config.js    # ★新設：ESLint flat config (v9)
-├── .prettierrc         # ★新設：Prettier コードスタイル
-├── data/               # ★新設：Workerが生成するデータファイル
+├── sw.js               # PWA Service Worker（オフラインキャッシュ）
+├── package.json        # npm スクリプト（test / lint / format）
+├── vitest.config.js    # vitest テスト設定
+├── eslint.config.js    # ESLint flat config (v9)
+├── .prettierrc         # Prettier コードスタイル
+├── data/               # Workerが生成するデータファイル
 │   ├── portfolio-snapshot.json  # スナップショット保存先（Worker → GitHub API で更新）
 │   └── positions.json           # KV保有銘柄のGit同期（Worker → GitHub API で更新）
 ├── worker/             # Cloudflare Worker
 │   ├── src/index.js    # Worker 本体
 │   └── wrangler.toml   # Worker 設定
 └── docs/               # 設計書・ルーティン定義
-    ├── SPEC_cn.md              # 機能仕様書（中国語）
     ├── DESIGN.md               # フロントエンド設計規約（カラー・コンポーネント等）
+    ├── SPEC_cn.md              # 機能仕様書（中国語）
     ├── ai-system-prompt.md     # AI相談ペルソナ定義（ai-system-prompt.js と同期）
     ├── routine_japan_1700.md   # 国内株ルーティン
     └── routine_us_0600.md      # 米国株ルーティン
 ```
+
+> **仕様書（アプリ機能の詳細）**: [Specification](Specification) を参照
 
 ### スクリプト読込順（index.html）
 
@@ -223,6 +225,7 @@ POST /auth/verify                   パスキー検証
 
 | バージョン | 内容 |
 |---|---|
+| 20260527A | heatmap.jsのfmtPctInt修正・aria属性追加、daily-issues.yml Wait除外対応 |
 | 20260526F | Issue#17修正: statsバー横スクロール対応(flex:none→min-width:0)、バージョン表示をimport.meta.urlに変更 |
 | 20260526E | ウォッチリストstickyティッカー列にwidth:130px固定追加（行固定崩れ修正） |
 | 20260526D | コード品質改善: escapeHTML追加・XSS対策、PTRをptr.jsに分離、PINキーパッドdata-action化、resizeデバウンス、SW/PWA、vitest+CI、ESLint、Workerレート制限、localStorage quota対応 |
@@ -239,15 +242,6 @@ POST /auth/verify                   パスキー検証
 | 20260517D | スナップショットにウォッチリスト（performance 付き）を追加 |
 | 20260517B | スナップショットから historicals を除外（5.5MB→約20KB に削減） |
 | 20260517A | タブ名修正: 保有銘柄リスト → Historical Heatmap |
-| 20260517g | AI相談 system prompt を「投資壁打ちAIペルソナ」に高度化。`docs/ai-system-prompt.md` / `src/ai-system-prompt.js` 新設 |
-| 20260517f | **大規模リファクタリング**: バグ修正、funds.js/csv.js 新設、CSS 5分割、import.js 3分割、auth.js 4分割、HTML の onclick → data-action 全置換 |
-| 20260516i | マネックスCSV/マネフォスクショ取込モーダル、保有銘柄KV化、Worker Cron 6h価格キャッシュ |
-| 20260516h | AI相談タブ全面リデザイン、Claude Desktop ウォームトーンデザイン |
-| 20260516c | ディレクトリ構成整理（src/ assets/ docs/）、AI API外部化、パスキー認証追加 |
-| 20260516b | Cloudflare Worker プロキシ実装、APIキーをWorker Secretsに移管 |
-| 20260322f | PWA アイコン実装（SVG favicon、PNG 512/192/180px、manifest.json） |
-| 20260322a | Finnhub 実装（Finnhub 優先→Yahoo フォールバック） |
-| 20260311k | ウォッチリストタブ実装 |
 
 ---
 
