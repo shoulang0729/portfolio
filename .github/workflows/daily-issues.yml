@@ -30,6 +30,17 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+      - name: Delete old auto-fix branches
+        run: |
+          gh api repos/${{ github.repository }}/branches --paginate --jq '.[].name' \
+            | grep '^auto-fix/' \
+            | while read branch; do
+                gh api -X DELETE "repos/${{ github.repository }}/git/refs/heads/${branch}" && \
+                  echo "Deleted branch: ${branch}" || true
+              done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Configure Claude Code permissions for CI
         run: |
           mkdir -p .claude
@@ -109,6 +120,6 @@ jobs:
 
             ## 注意事項
             - index.html の `?v=` バージョンを上げる（現在の日付 + 連番で更新）
-            - sw.js の `const CACHE` も同じバージョン値に更新すること
+            - sw.js の CACHE は index.html の `?v=` から動的生成されるため変更不要
             - 破壊的な変更は行わない
             - テストが最終的にパスしていることを確認してから PR を作成する
