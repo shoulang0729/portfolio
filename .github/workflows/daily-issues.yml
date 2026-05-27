@@ -1,0 +1,73 @@
+name: Daily Issues Auto-Fix
+
+on:
+  schedule:
+    - cron: '0 0 * * *'   # 毎日 0:00 UTC = 9:00 JST
+  workflow_dispatch:        # 手動実行（テスト用）
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  auto-fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm install
+
+      - name: Configure git
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Run Claude Code to fix issues and create PR
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            以下の手順で GitHub の open issues をまとめて処理してください。
+
+            ## Step 1: open issues を確認
+            ```
+            gh issue list --state open --json number,title,body,labels --limit 50
+            ```
+            issues が空なら「No open issues today.」と出力して終了。
+
+            ## Step 2: 作業ブランチを作成
+            ```
+            git checkout -b auto-fix/$(date +%Y%m%d)
+            ```
+
+            ## Step 3: 各 issue を実装
+            - issue の内容を読んでコードを修正・追加する
+            - 実装が難しい or 要件が曖昧な issue はスキップし、issue にコメントで理由を残す
+            - 1つの issue を修正したら `git commit -m "fix: #<issue番号> <概要>"` でコミット
+
+            ## Step 4: テストを実行
+            ```
+            npm test
+            ```
+            失敗した場合は原因を修正してから次へ進む。
+
+            ## Step 5: ブランチを push して PR を作成
+            ```
+            git push -u origin auto-fix/$(date +%Y%m%d)
+            ```
+            PR タイトル: `[Auto] Daily issues fix $(date +%Y-%m-%d)`
+            PR 本文: 対応した issue の一覧（Closes #N 形式）と実装サマリーを記載。
+
+            ## 注意事項
+            - index.html の `?v=` バージョンを上げる（現在の日付 + 連番で更新）
+            - 破壊的な変更は行わない
+            - テストが最終的にパスしていることを確認してから PR を作成する

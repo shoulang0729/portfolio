@@ -9,7 +9,7 @@
 
 import { state } from './state.js';
 import { PERIOD_COLS, PERIOD_IDS, PERIOD_MAP } from './positions.js';
-import { makeTh, makePctCell, getColor, getCellTextColor, getHistoricalChangePct, fmtPrice, fmtPctInt, _tableSort, makePeriodCells, makePeriodHeaderCells } from './utils.js';
+import { escapeHTML, makeTh, makePctCell, getColor, getCellTextColor, getHistoricalChangePct, fmtPrice, fmtPctInt, _tableSort, makePeriodCells, makePeriodHeaderCells } from './utils.js';
 import { fetchViaProxy, fetchLivePrice, fetchAllHistorical, WORKER_URL } from './data.js';
 
 // ══════════════════════════════════════════════
@@ -17,7 +17,11 @@ import { fetchViaProxy, fetchLivePrice, fetchAllHistorical, WORKER_URL } from '.
 // ══════════════════════════════════════════════
 
 function saveWatchlist() {
-  localStorage.setItem('hm-watchlist', JSON.stringify(state.watchlist));
+  try {
+    localStorage.setItem('hm-watchlist', JSON.stringify(state.watchlist));
+  } catch (e) {
+    console.warn('[watchlist] localStorage 保存失敗（容量超過の可能性）:', e);
+  }
   clearTimeout(_wlKvSyncTimer);
   _wlKvSyncTimer = setTimeout(_syncWatchlistToWorker, 1000);
 }
@@ -42,7 +46,9 @@ async function _loadWatchlistFromWorker() {
     if (Array.isArray(remote) && remote.length > 0) {
       // 通常: KV のデータをローカルへ反映
       state.watchlist = remote;
-      localStorage.setItem('hm-watchlist', JSON.stringify(remote));
+      try { localStorage.setItem('hm-watchlist', JSON.stringify(remote)); } catch (e) {
+        console.warn('[watchlist] localStorage 保存失敗（容量超過の可能性）:', e);
+      }
     } else if (state.watchlist.length > 0) {
       // 初期シード: KV が空でローカルにデータがある → ローカルを KV に push
       console.log(`[watchlist] KV is empty; seeding KV with ${state.watchlist.length} local items`);
@@ -207,16 +213,20 @@ async function searchTicker(q) {
     const pctStr   = item.dayPct != null
       ? `${item.dayPct >= 0 ? '+' : ''}${item.dayPct.toFixed(2)}%`
       : '';
+    const sym  = escapeHTML(item.symbol);
+    const name = escapeHTML(item.name || item.symbol);
+    const mkt  = escapeHTML(market);
+    const bdg  = escapeHTML(badge);
     return `<div class="wl-search-item${already ? ' wl-already' : ''}"
-         data-symbol="${item.symbol}"
-         data-name="${(item.name || item.symbol).replace(/"/g, '&quot;')}"
-         data-market="${market}"
-         data-badge="${badge}"
+         data-symbol="${sym}"
+         data-name="${name}"
+         data-market="${mkt}"
+         data-badge="${bdg}"
          data-action="wlSelectItem">
-      <span class="wl-sym">${item.symbol}</span>
-      <span class="wl-type-badge wl-badge-${badge}">${badge}</span>
-      <span class="wl-market-label">${market}</span>
-      <span class="wl-item-name">${item.name || ''}</span>
+      <span class="wl-sym">${sym}</span>
+      <span class="wl-type-badge">${bdg}</span>
+      <span class="wl-market-label">${mkt}</span>
+      <span class="wl-item-name">${name}</span>
       <span class="wl-item-price">${priceStr}${pctStr ? ` <span class="wl-item-pct ${item.dayPct >= 0 ? 'pos' : 'neg'}">${pctStr}</span>` : ''}</span>
       ${already
         ? '<span class="wl-status-tag wl-registered">登録済</span>'

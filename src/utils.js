@@ -8,6 +8,13 @@ import { state } from './state.js';
 import { positions, PERIOD_COLS, PERIOD_MAP } from './positions.js';
 
 // ══════════════════════════════════════════════
+// XSS
+// ══════════════════════════════════════════════
+const _ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+/** ユーザー由来文字列を innerHTML に埋め込む前に HTML エスケープする */
+const escapeHTML = s => String(s).replace(/[&<>"']/g, c => _ESC[c]);
+
+// ══════════════════════════════════════════════
 // FORMATTERS
 // ══════════════════════════════════════════════
 /** 円建て評価額を「+1.2万」「-30.5万」形式にフォーマット */
@@ -260,4 +267,4 @@ function makePeriodHeaderCells(activeSortCol, sortDir, sortFnName) {
     .join('');
 }
 
-export { fmtJPY, fmtJPYFull, fmtPct, fmtPrice, sgn, fmtJPYInt, fmtPctInt, fmtShares, cssVar, getColor, getCellTextColor, getCellTextColorSub, getHistoricalChangePct, getDisplayPct, calcPortfolioPeriodPct, makeTh, makePctCell, _tableSort, makePeriodCells, makePeriodHeaderCells };
+export { escapeHTML, fmtJPY, fmtJPYFull, fmtPct, fmtPrice, sgn, fmtJPYInt, fmtPctInt, fmtShares, cssVar, getColor, getCellTextColor, getCellTextColorSub, getHistoricalChangePct, getDisplayPct, calcPortfolioPeriodPct, makeTh, makePctCell, _tableSort, makePeriodCells, makePeriodHeaderCells };

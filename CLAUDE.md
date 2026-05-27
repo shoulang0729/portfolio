@@ -7,7 +7,7 @@ AI相談タブは現在無効化中（ソースは `src/_disabled/` に保管）
 
 - **本番 URL**: https://shoulang0729.github.io/portfolio/
 - **GitHub**: https://github.com/shoulang0729/portfolio
-- **現在バージョン**: `20260526B`
+- **現在バージョン**: `20260526F`
 
 ---
 
@@ -35,6 +35,7 @@ AI相談タブは現在無効化中（ソースは `src/_disabled/` に保管）
 │   ├── positions-store.js  # KV保存/読込・差分計算
 │   ├── import-parse.js     # マネックスCSV/マネフォ画像パース
 │   ├── import-ui.js        # 取込モーダルUI
+│   ├── ptr.js              # ★新設：Pull-to-refresh（app.js から分離）
 │   ├── _disabled/          # 無効化中コード（再有効化可能。再開手順は CLAUDE.md 参照）
 │   │   ├── history.js          # 資産推移記録＋D3グラフ（未統合）
 │   │   ├── ai-system-prompt.js # AI相談ペルソナ
@@ -48,6 +49,11 @@ AI相談タブは現在無効化中（ソースは `src/_disabled/` に保管）
 │   ├── 04-auth.css         # PIN変更ダイアログ
 │   ├── manifest.json       # PWA マニフェスト
 │   └── *.png / *.svg       # アイコン類（favicon.svg・apple-touch-icon.png 等）
+├── sw.js               # ★新設：PWA Service Worker（オフラインキャッシュ）
+├── package.json        # ★新設：npm スクリプト（test / lint / format）
+├── vitest.config.js    # ★新設：vitest テスト設定
+├── eslint.config.js    # ★新設：ESLint flat config (v9)
+├── .prettierrc         # ★新設：Prettier コードスタイル
 ├── data/               # ★新設：Workerが生成するデータファイル
 │   ├── portfolio-snapshot.json  # スナップショット保存先（Worker → GitHub API で更新）
 │   └── positions.json           # KV保有銘柄のGit同期（Worker → GitHub API で更新）
@@ -218,6 +224,11 @@ POST /auth/verify                   パスキー検証
 
 | バージョン | 内容 |
 |---|---|
+| 20260526F | Issue#17修正: statsバー横スクロール対応(flex:none→min-width:0)、バージョン表示をimport.meta.urlに変更 |
+| 20260526E | ウォッチリストstickyティッカー列にwidth:130px固定追加（行固定崩れ修正） |
+| 20260526D | コード品質改善: escapeHTML追加・XSS対策、PTRをptr.jsに分離、PINキーパッドdata-action化、resizeデバウンス、SW/PWA、vitest+CI、ESLint、Workerレート制限、localStorage quota対応 |
+| 20260526C | sticky列固定・ステータス見切れ・ハンバーガー44px・パスキーボタン幅修正 |
+| 20260526B | sticky列固定・ステータス見切れ・ハンバーガー44px化 |
 | 20260526A | コードレビュー改善案#1-6適用: watchlist XSS修正、matchMedia二重登録解消、ロックアウト永続化、state.historicalAttempted正式定義、デッドコードをsrc/_disabled/に移動、_tableSortヘルパー追加 |
 | 20260525C | 自動更新UIをハンバーガーメニューへ移動（5/10/30/60分）、マニュアルリンク追加、タイトル1行化 |
 | 20260525B | Pull-to-refreshをSVGアイコンアニメーション（0→270deg回転→スピン）に変更 |
@@ -238,6 +249,33 @@ POST /auth/verify                   パスキー検証
 | 20260322f | PWA アイコン実装（SVG favicon、PNG 512/192/180px、manifest.json） |
 | 20260322a | Finnhub 実装（Finnhub 優先→Yahoo フォールバック） |
 | 20260311k | ウォッチリストタブ実装 |
+
+---
+
+## 開発ツール
+
+### テスト
+```bash
+npm test          # vitest 単発実行（CI 相当）
+npm run test:watch # ウォッチモード
+```
+- テストファイルは `tests/` 以下（`*.test.js`）
+- GitHub Actions `.github/workflows/test.yml` が push/PR 時に自動実行
+- `tests/fmt.test.js`: `fmtJPYInt`, `fmtPctInt`, `fmtShares`, `escapeHTML`, `getColor` の純関数テスト
+- `tests/spec_validation.test.js`: `docs/SPEC.md` の内容検証（Node built-in test runner）
+
+### リント・フォーマット
+```bash
+npm run lint        # ESLint（src/ / worker/src/）
+npm run lint:fix    # 自動修正
+npm run format      # Prettier 整形
+```
+- `eslint.config.js`: ESLint v9 flat config
+- `.prettierrc`: シングルクォート・印刷幅 120
+
+### utils.js の escapeHTML
+- Yahoo Finance API 等の外部値を `innerHTML` に埋め込む前に必ず `escapeHTML(s)` を通す
+- `escapeHTML` は `utils.js` に定義。`src/watchlist.js` の検索ドロップダウンで適用済み
 
 ---
 
