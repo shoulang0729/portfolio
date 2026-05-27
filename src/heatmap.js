@@ -71,7 +71,12 @@ function renderHeatmap() {
   });
 
   // Leaf cells
-  const cells = svg.selectAll('.cell-g').data(root.leaves()).enter().append('g').attr('class', 'cell-g');
+  const cells = svg.selectAll('.cell-g').data(root.leaves()).enter().append('g').attr('class', 'cell-g')
+    .attr('role', 'img')
+    .attr('aria-label', d => {
+      const pct = getDisplayPct(d.data);
+      return `${d.data.name} ${pct !== null ? fmtPct(pct) : 'データなし'}`;
+    });
 
   cells.append('rect')
     .attr('x', d => d.x0).attr('y', d => d.y0)
