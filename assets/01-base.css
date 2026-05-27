@@ -164,7 +164,7 @@ body {
 .stats {
   display: flex; gap: 0; background: var(--surface);
   border: 1px solid var(--border); border-radius: 8px;
-  overflow-x: auto; flex: none; scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+  overflow-x: auto; min-width: 0; scrollbar-width: thin; scrollbar-color: var(--border) transparent;
   flex-wrap: nowrap; -webkit-overflow-scrolling: touch;
 }
 .stats::-webkit-scrollbar { display: none; }

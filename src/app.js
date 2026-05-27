@@ -619,8 +619,7 @@ import './ptr.js';
 
 // ── デバッグ：読み込んだファイルのバージョンをタイトル横に表示 ──
 (function() {
-  const s = document.querySelector('script[src*="app.js"]') || document.querySelector('script[type="module"][src*="app.js"]');
-  const ver = s ? (s.src.match(/[?&]v=([^&]+)/) || [,'?'])[1] : '?';
+  const ver = (import.meta.url.match(/[?&]v=([^&]+)/) || [,'?'])[1];
   const title = document.querySelector('.title');
   if (title) {
     const badge = document.createElement('span');
@@ -629,8 +628,5 @@ import './ptr.js';
     badge.textContent = 'v.' + ver;
     title.appendChild(badge);
   }
-  // コンソールにも出力
-  const css = document.querySelector('link[href*="portfolio.css"]');
-  console.log('[Heatmap] app.js:', s ? s.src : 'unknown');
-  console.log('[Heatmap] portfolio.css:', css ? css.href : 'unknown');
+  console.log('[Heatmap] app.js:', import.meta.url);
 }());
