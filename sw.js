@@ -1,7 +1,9 @@
 // Portfolio Manager — Service Worker
 // オフライン時に最後にキャッシュしたスナップショットを表示する。
 
-const CACHE = 'portfolio-v20260527B';
+// CACHE 名は SW 登録 URL の ?v= から動的生成（index.html 側の version とのズレを防ぐ）。
+const VERSION = (self.location.search.match(/[?&]v=([^&]+)/) || [, 'dev'])[1];
+const CACHE = `portfolio-v${VERSION}`;
 const OFFLINE_ASSETS = [
   './',
   './index.html',
@@ -9,25 +11,7 @@ const OFFLINE_ASSETS = [
   './assets/02-tables.css',
   './assets/03-misc.css',
   './assets/04-auth.css',
-  './src/auth-pin.js',
-  './src/auth-crypto.js',
-  './src/auth-passkey.js',
-  './src/auth-ui.js',
-  './src/positions.js',
-  './src/state.js',
-  './src/funds.js',
-  './src/csv.js',
-  './src/utils.js',
-  './src/data.js',
-  './src/heatmap.js',
-  './src/chart.js',
-  './src/stock-list.js',
-  './src/watchlist.js',
-  './src/positions-store.js',
-  './src/import-parse.js',
-  './src/import-ui.js',
-  './src/ptr.js',
-  './src/app.js',
+  './dist/app.js',
   'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js',
 ];
 

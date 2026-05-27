@@ -7,7 +7,7 @@ AI相談タブは現在無効化中（ソースは `src/_disabled/` に保管）
 
 - **本番 URL**: https://shoulang0729.github.io/portfolio/
 - **GitHub**: https://github.com/shoulang0729/portfolio
-- **現在バージョン**: `20260526F`
+- **現在バージョン**: `20260527B`
 
 ---
 
@@ -223,6 +223,8 @@ POST /auth/verify                   パスキー検証
 
 | バージョン | 内容 |
 |---|---|
+| 20260527B | Issue#15修正: sw.js の CACHE 名を SW 登録 URL の `?v=` から動的生成。index.html のバージョン更新だけで自動同期 |
+| 20260527A | Issue#11対応: アクセシビリティ改善 |
 | 20260526F | Issue#17修正: statsバー横スクロール対応(flex:none→min-width:0)、バージョン表示をimport.meta.urlに変更 |
 | 20260526E | ウォッチリストstickyティッカー列にwidth:130px固定追加（行固定崩れ修正） |
 | 20260526D | コード品質改善: escapeHTML追加・XSS対策、PTRをptr.jsに分離、PINキーパッドdata-action化、resizeデバウンス、SW/PWA、vitest+CI、ESLint、Workerレート制限、localStorage quota対応 |
@@ -278,14 +280,37 @@ npm run format      # Prettier 整形
 
 ---
 
+## Claude Code 自律実行ルール
+
+**以下の操作は確認なしで自律実行してよい**（環境非依存・全端末共通）:
+
+| 操作 | 内容 |
+|------|------|
+| レビュー対応 | CodeRabbit 等のレビューコメントを読んで修正し、コメントに返信する |
+| テスト対応 | テスト失敗を修正し、対応内容を Issue にコメントする |
+| PR 操作 | PR を作成・マージし、マージ済みブランチを削除する |
+| 自動 PR | `daily-issues.yml` が自動生成した PR をマージする |
+| 依存追加 | `npm install <pkg> --save-dev` で devDependency を追加する |
+| バージョン更新 | `?v=YYYYMMDDX` のバージョン文字列を更新する |
+| Issue 管理 | Issue を作成・クローズする |
+| CI 軽微修正 | GitHub Actions のタイムアウト・トリガー条件など軽微な修正 |
+
+**以下は確認してから実行（変更しない）**:
+- `git push --force` / `git reset --hard` / main ブランチ削除
+- Secrets・認証情報の変更
+- `CLAUDE.md` / `.claude/settings.json` の変更
+- GitHub Actions ワークフローの大幅な変更
+
+---
+
 ## よくある作業パターン
 
 ### 保有銘柄を更新する
 `positions.js` の `positions` 配列を編集するだけ。他のファイルは不要。
 
 ### バージョンを上げる
-index.html 内の `?v=YYYYMMDDX` を新しい値に全置換する。CSS・JS 合わせて10箇所以上ある。
-`sw.js` の `const CACHE = 'portfolio-vXXXX'` も同じ値に更新すること（忘れると古いキャッシュが配信され続ける）。
+index.html 内の `?v=YYYYMMDDX` を新しい値に全置換する。CSS・JS・SW 登録 URL（`./sw.js?v=...`）合わせて全箇所を同じ値に揃える。
+`sw.js` の `CACHE` 名は SW 登録 URL の `?v=` から自動生成されるため、`sw.js` 本体の更新は不要（Issue#15 対応・v=20260527B〜）。
 
 ### 新しいソート列を追加する（Historical Heatmap）
 1. `stock-list.js` の `slSort()` に case を追加

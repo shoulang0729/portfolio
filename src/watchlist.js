@@ -8,8 +8,7 @@
 // ══════════════════════════════════════════════════════════════
 
 import { state } from './state.js';
-import { PERIOD_COLS, PERIOD_IDS, PERIOD_MAP } from './positions.js';
-import { escapeHTML, makeTh, makePctCell, getColor, getCellTextColor, getHistoricalChangePct, fmtPrice, fmtPctInt, _tableSort, makePeriodCells, makePeriodHeaderCells } from './utils.js';
+import { escapeHTML, makeTh, getHistoricalChangePct, fmtPrice, _tableSort, makePeriodCells, makePeriodHeaderCells } from './utils.js';
 import { fetchViaProxy, fetchLivePrice, fetchAllHistorical, WORKER_URL } from './data.js';
 
 // ══════════════════════════════════════════════

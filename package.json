@@ -4,14 +4,20 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build": "esbuild src/app.js --bundle --format=esm --outfile=dist/app.js --external:d3",
+    "build:watch": "esbuild src/app.js --bundle --format=esm --outfile=dist/app.js --external:d3 --watch",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "lint": "eslint src/ --ext .js",
     "lint:fix": "eslint src/ --ext .js --fix",
     "format": "prettier --write 'src/**/*.js' 'worker/src/**/*.js'"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^1.6.1",
+    "esbuild": "^0.28.0",
     "eslint": "^9.0.0",
+    "globals": "^17.6.0",
     "prettier": "^3.0.0",
     "vitest": "^1.0.0"
   }
