@@ -5,7 +5,9 @@
       "Bash(gh *)",
       "Bash(npm test*)",
       "Bash(npm install*)",
-      "Bash(curl *)"
+      "Bash(npm run*)",
+      "Bash(curl *)",
+      "Bash(node *)"
     ]
   }
 }
