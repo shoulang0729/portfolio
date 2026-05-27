@@ -532,9 +532,9 @@ describe('SPEC.md — source file references exist on disk', () => {
     'src/import-parse.js',
     'src/import-ui.js',
     'src/app.js',
-    'src/history.js',
-    'src/ai-system-prompt.js',
-    'src/ai-tab.js',
+    'src/_disabled/history.js',
+    'src/_disabled/ai-system-prompt.js',
+    'src/_disabled/ai-tab.js',
   ];
 
   for (const relPath of srcFiles) {
@@ -549,7 +549,7 @@ describe('SPEC.md — source file references exist on disk', () => {
     'assets/02-tables.css',
     'assets/03-misc.css',
     'assets/04-auth.css',
-    'assets/05-ai-tab.css',
+    'src/_disabled/05-ai-tab.css',
   ];
 
   for (const relPath of assetFiles) {

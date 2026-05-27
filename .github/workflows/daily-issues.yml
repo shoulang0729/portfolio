@@ -37,6 +37,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           mode: agent
           model: claude-sonnet-4-6
+          allowed_tools: "Bash(git *),Bash(gh *),Bash(npm test*),Bash(npm install*),Bash(npm run*),Bash(curl *),Bash(node *),Read,Write,Edit,MultiEdit,Glob,Grep,LS,TodoWrite"
           direct_prompt: |
             以下の手順で GitHub の open issues をまとめて処理してください。
 
