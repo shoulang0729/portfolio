@@ -21,10 +21,10 @@
 <link rel="manifest" href="assets/manifest.json">
 
 <!-- スタイルシート -->
-<link rel="stylesheet" href="assets/01-base.css?v=20260526F">
-<link rel="stylesheet" href="assets/02-tables.css?v=20260526F">
-<link rel="stylesheet" href="assets/03-misc.css?v=20260526F">
-<link rel="stylesheet" href="assets/04-auth.css?v=20260526F">
+<link rel="stylesheet" href="assets/01-base.css?v=20260528C">
+<link rel="stylesheet" href="assets/02-tables.css?v=20260528C">
+<link rel="stylesheet" href="assets/03-misc.css?v=20260528C">
+<link rel="stylesheet" href="assets/04-auth.css?v=20260528C">
 <!-- assets/05-ai-tab.css は src/_disabled/05-ai-tab.css に移動（AIタブ無効化中）-->
 <!-- 銘柄リスト列表示制御（JS が動的に書き込む） -->
 <style id="sl-col-style"></style>
@@ -177,8 +177,7 @@
 <!-- シミュレーションバー -->
 <div class="sim-bar">
   <div class="ctrl-group">
-    <span class="ctrl-label">シミュレーション</span>
-    <div class="period-switch" id="period-switch">
+<div class="period-switch" id="period-switch">
       <button class="period-btn active" data-period="1d"  data-action="setChangePeriod" data-arg="1d">1d</button>
       <button class="period-btn"        data-period="1w"  data-action="setChangePeriod" data-arg="1w">1w</button>
       <button class="period-btn"        data-period="1m"  data-action="setChangePeriod" data-arg="1m">1m</button>
@@ -299,7 +298,7 @@
 
 
 <!-- ES Module エントリーポイント（全ファイルを import する単一スクリプト） -->
-<script type="module" src="src/app.js?v=20260526F"></script>
+<script type="module" src="dist/app.js?v=20260528C"></script>
 
 <!-- PWA Service Worker 登録 -->
 <script>

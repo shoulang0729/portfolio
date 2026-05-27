@@ -4,6 +4,7 @@
    ══════════════════════════════════════════════════════════════ */
 
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html { overflow-x: hidden; }
 
 /* ── CSS Variables (Light / Dark / Auto) ── */
 /* Claude デスクトップアプリ準拠のウォームトーンパレット */
@@ -97,11 +98,12 @@ body {
 .header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   margin-bottom: 8px;
   flex-wrap: nowrap;
   gap: 8px;
 }
+.header > div:first-child { min-width: 0; }
 .title { font-size: 20px; font-weight: 700; letter-spacing: 0.3px; white-space: nowrap; }
 .subtitle { font-size: 12px; color: var(--text2); margin-top: 3px; }
 
@@ -292,7 +294,7 @@ body {
   border: none !important;
   background: transparent !important;
   padding: 4px 6px;
-  width: 44px; height: 44px;
+  width: 48px; height: 48px;
   display: flex; align-items: center; justify-content: center;
   position: relative;
   color: var(--text2);
