@@ -1,0 +1,48 @@
+// ESLint flat config (ESLint v9+)
+export default [
+  {
+    ignores: ['src/_disabled/**', 'tests/spec_validation.test.js'],
+  },
+  {
+    files: ['src/**/*.js', 'worker/src/**/*.js'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'module',
+      globals: {
+        window: 'readonly',
+        document: 'readonly',
+        navigator: 'readonly',
+        location: 'readonly',
+        localStorage: 'readonly',
+        sessionStorage: 'readonly',
+        fetch: 'readonly',
+        console: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
+        requestAnimationFrame: 'readonly',
+        cancelAnimationFrame: 'readonly',
+        ResizeObserver: 'readonly',
+        crypto: 'readonly',
+        d3: 'readonly',
+        alert: 'readonly',
+        confirm: 'readonly',
+        URL: 'readonly',
+        URLSearchParams: 'readonly',
+        Response: 'readonly',
+        Request: 'readonly',
+        Headers: 'readonly',
+        caches: 'readonly',
+        self: 'readonly',
+      },
+    },
+    rules: {
+      'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      'no-undef': 'error',
+      'no-var': 'error',
+      'prefer-const': 'warn',
+      'eqeqeq': ['error', 'always', { null: 'ignore' }],
+    },
+  },
+];

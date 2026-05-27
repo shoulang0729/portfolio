@@ -18,3 +18,4 @@ push.sh
 worker/node_modules/
 worker/package-lock.json
 worker/.wrangler/
+node_modules/

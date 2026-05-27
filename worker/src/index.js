@@ -28,6 +28,22 @@
 
 const FINNHUB_BASE = 'https://finnhub.io/api/v1';
 
+// ── レート制限（/yahoo・/finnhub プロキシ向け、KV 使用） ──────────
+// 同一 CF-Connecting-IP から 1 分間に最大 MAX_RPM リクエストまで。
+// KV に "rl:<ip>" キーで件数を記録（TTL 60s で自動期限切れ）。
+const RATE_LIMIT_MAX = 120; // リクエスト/分
+
+async function checkRateLimit(request, env) {
+  if (!env.KV) return false; // KV 未設定時はスキップ
+  const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+  const key = `rl:${ip}`;
+  const current = parseInt(await env.KV.get(key) || '0', 10);
+  if (current >= RATE_LIMIT_MAX) return true; // 超過
+  // 初回は TTL 60s でカウンター作成、以降はインクリメント
+  await env.KV.put(key, String(current + 1), { expirationTtl: 60 });
+  return false;
+}
+
 // ── CORS ──────────────────────────────────────────────
 function corsHeaders(origin) {
   return {
@@ -938,6 +954,9 @@ export default {
 
     const path = url.pathname;
     if (path === '/')                return new Response('portfolio-proxy OK', { status: 200 });
+    if (path === '/yahoo' || path === '/finnhub') {
+      if (await checkRateLimit(request, env)) return errRes('Too Many Requests', 429, org);
+    }
     if (path === '/yahoo')           return handleYahoo(url, org);
     if (path === '/finnhub')         return handleFinnhub(url, env, org);
     if (path === '/ai/models')       return handleAIModels(env, org);
