@@ -608,6 +608,7 @@ async function _restoreEncKey() {
 }
 
 // src/data.js
+var WORKER_URL = "https://portfolio-proxy.shoulang.workers.dev";
 function fetchWithTimeout(url, ms = 7e3, opts = {}) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), ms);
@@ -636,7 +637,6 @@ async function fetchViaProxy(url, timeoutMs = 7e3) {
   }
   return null;
 }
-var WORKER_URL = "https://portfolio-proxy.shoulang.workers.dev";
 function toFinnhubSymbol(ySymbol) {
   if (!ySymbol) return null;
   if (ySymbol.endsWith(".T")) return "TYO:" + ySymbol.slice(0, -2);

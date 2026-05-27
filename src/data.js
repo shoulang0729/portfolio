@@ -9,6 +9,11 @@ import { state } from './state.js';
 import { positions } from './positions.js';
 
 // ══════════════════════════════════════════════
+// WORKER / FINNHUB CONFIG
+// ══════════════════════════════════════════════
+const WORKER_URL = 'https://portfolio-proxy.shoulang.workers.dev';
+
+// ══════════════════════════════════════════════
 // FETCH HELPER
 // ══════════════════════════════════════════════
 /**
@@ -54,11 +59,6 @@ async function fetchViaProxy(url, timeoutMs = 7000) {
   }
   return null;
 }
-
-// ══════════════════════════════════════════════
-// WORKER / FINNHUB CONFIG
-// ══════════════════════════════════════════════
-const WORKER_URL = 'https://portfolio-proxy.shoulang.workers.dev';
 
 /**
  * Yahoo Finance シンボルを Finnhub シンボルに変換
