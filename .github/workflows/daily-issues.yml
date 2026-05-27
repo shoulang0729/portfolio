@@ -36,6 +36,7 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           mode: agent
+          model: claude-sonnet-4-6
           direct_prompt: |
             以下の手順で GitHub の open issues をまとめて処理してください。
 
