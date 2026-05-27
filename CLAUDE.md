@@ -286,6 +286,7 @@ npm run format      # Prettier 整形
 
 ### バージョンを上げる
 index.html 内の `?v=YYYYMMDDX` を新しい値に全置換する。CSS・JS 合わせて10箇所以上ある。
+`sw.js` の `const CACHE = 'portfolio-vXXXX'` も同じ値に更新すること（忘れると古いキャッシュが配信され続ける）。
 
 ### 新しいソート列を追加する（Historical Heatmap）
 1. `stock-list.js` の `slSort()` に case を追加
