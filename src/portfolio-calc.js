@@ -39,7 +39,7 @@ function calcPortfolioPeriodPct(periodId) {
   let weightedSum = 0, totalWeight = 0;
   positions.forEach(p => {
     let pct = null;
-    if (periodId === '1d' && p.dayPct !== null) {
+    if (periodId === '1d' && p.dayPct != null) {
       pct = p.dayPct;
     } else if (p.ySymbol) {
       pct = getHistoricalChangePct(p.ySymbol, periodId);
