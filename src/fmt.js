@@ -15,16 +15,16 @@ const escapeHTML = s => String(s).replace(/[&<>"']/g, c => _ESC[c]);
 
 const fmtJPY = v => {
   const m = v / 10000;
-  return m.toFixed(1) + '\u4e07';
+  return `${m.toFixed(1)  }\u4e07`;
 };
 
-const fmtJPYFull = v => (v >= 0 ? '+' : '') + Math.round(v).toLocaleString() + '\u5186';
+const fmtJPYFull = v => `${(v >= 0 ? '+' : '') + Math.round(v).toLocaleString()  }\u5186`;
 
-const fmtPct = v => v.toFixed(1) + '%';
+const fmtPct = v => `${v.toFixed(1)  }%`;
 
 const fmtPrice = (v, cur) => {
   if (v == null) return '\u2015';
-  return cur === 'USD' ? '$' + v.toFixed(2) : '\u00a5' + Math.round(v).toLocaleString();
+  return cur === 'USD' ? `$${  v.toFixed(2)}` : `\u00a5${  Math.round(v).toLocaleString()}`;
 };
 
 const sgn = v => v >= 0 ? 'pos' : 'neg';
@@ -35,21 +35,21 @@ const fmtJPYInt = v => {
   const abs = Math.abs(m);
   if (abs >= 10000) {
     const s = (abs / 10000).toFixed(2);
-    return sign + (s.endsWith('0') ? (abs / 10000).toFixed(1) : s) + '\u5104';
+    return `${sign + (s.endsWith('0') ? (abs / 10000).toFixed(1) : s)  }\u5104`;
   }
-  return sign + abs.toLocaleString() + '\u4e07';
+  return `${sign + abs.toLocaleString()  }\u4e07`;
 };
 
-const fmtPctInt = v => Math.round(v) + '%';
+const fmtPctInt = v => `${Math.round(v)  }%`;
 
 const fmtShares = n => {
   if (n >= 1000000) {
     const v = Math.round(n / 100000) / 10;
-    return v.toFixed(1).replace(/\.0$/, '') + 'M';
+    return `${v.toFixed(1).replace(/\.0$/, '')  }M`;
   }
   if (n >= 1000) {
     const v = Math.round(n / 100) / 10;
-    return v.toFixed(1).replace(/\.0$/, '') + 'K';
+    return `${v.toFixed(1).replace(/\.0$/, '')  }K`;
   }
   return n.toLocaleString();
 };

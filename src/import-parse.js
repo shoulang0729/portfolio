@@ -161,7 +161,7 @@ async function parseMoneyForwardImage(file) {
   if (!res.ok) {
     let detail = '';
     try { const e = await res.json(); detail = e?.error?.message || JSON.stringify(e); } catch {}
-    throw new Error(`AI API エラー (${res.status})${detail ? ': ' + detail : ''}`);
+    throw new Error(`AI API エラー (${res.status})${detail ? `: ${  detail}` : ''}`);
   }
   const data = await res.json();
   const text = data?.choices?.[0]?.message?.content || '';

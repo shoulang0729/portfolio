@@ -227,8 +227,8 @@ async function setChangePeriod(periodId) {
 // REFRESH FREQUENCY
 // ══════════════════════════════════════════════
 function fmtCountdown(sec) {
-  if (sec >= 3600) { const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60); return `次回更新: ${h}時間${m>0?m+'分':''}後`; }
-  if (sec >= 60)   { const m = Math.floor(sec/60), s = sec%60; return `次回更新: ${m}分${s>0?s+'秒':''}後`; }
+  if (sec >= 3600) { const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60); return `次回更新: ${h}時間${m>0?`${m}分`:''}後`; }
+  if (sec >= 60)   { const m = Math.floor(sec/60), s = sec%60; return `次回更新: ${m}分${s>0?`${s}秒`:''}後`; }
   return `次回更新: ${sec}秒`;
 }
 
@@ -489,7 +489,7 @@ import './ptr.js';
     const badge = document.createElement('span');
     badge.id = 'debug-ver';
     badge.style.cssText = 'display:block;font-size:9px;font-weight:400;color:var(--text2);opacity:0.6;margin-top:1px;line-height:1.2;';
-    badge.textContent = 'v.' + ver;
+    badge.textContent = `v.${  ver}`;
     title.appendChild(badge);
   }
 }());

@@ -68,7 +68,7 @@ if ('ontouchstart' in window) {
     if (delta <= 0) return;
     const ind = getIndicator();
     ind.style.transition = 'none';
-    ind.style.height = Math.min(delta * 0.55, 56) + 'px';
+    ind.style.height = `${Math.min(delta * 0.55, 56)  }px`;
     const progress = Math.min(delta / THRESHOLD, 1);
     if (arrow) {
       arrow.style.transition = 'none';
