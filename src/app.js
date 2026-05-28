@@ -9,7 +9,7 @@ import { positions, PERIODS, PERIOD_MAP } from './positions.js';
 import { state } from './state.js';
 import { authenticatePasskey, registerPasskey, setPasskeySuccessCallback } from './auth-passkey.js';
 import { authKeyPress, authBackspace, pcKeyPress, pcBackspace, openPinChange, closePinChange, _showChangePinButton } from './auth-ui.js';
-import { sgn, fmtJPYInt, fmtPctInt, getHistoricalChangePct, calcPortfolioPeriodPct } from './utils.js';
+import { getHistoricalChangePct, calcPortfolioPeriodPct } from './utils.js';
 import { fetchAllHistorical, refreshPrices, setStatus, applyPricesCache } from './data.js';
 import { WORKER_URL } from './config.js';
 import { renderHeatmap } from './heatmap.js';
@@ -21,12 +21,7 @@ import { renderWatchlist, wlSort, onWatchlistSearch, removeFromWatchlist, wlSele
 import { loadPositionsFromKV } from './positions-store.js';
 import { openImportModal, closeImportModal, openManagePositionsModal, handleImportOverlayClick, handleManexFileSelect, handleMoneyForwardImageSelect, focusImportFileInput, _renderImportStep, _confirmImport, _retryWithPin } from './import-ui.js';
 import { showConfirm, showAlert } from './modal.js';
-
-// ── 循環依存解消: data.js が発火するイベントを app.js でリッスン ──
-document.addEventListener('hm:prices-updated', () => {
-  renderStats();
-  renderHeatmap();
-});
+import { renderStats, refreshHistoricalAndRender, setupPriceUpdateListener, hideHeatmapSkeleton, updateListHeight } from './render.js';
 
 // ── フォールバックスクリプトから参照できるように renderHeatmap を window に登録 ──
 window.renderHeatmap       = renderHeatmap;
@@ -45,40 +40,6 @@ function toggleStats() {
   document.getElementById('eye-slash').style.display = state.statsVisible ? 'none' : '';
   // stats-outer の高さ変化に合わせてリスト高さを再計算
   requestAnimationFrame(updateListHeight);
-}
-
-function renderStats() {
-  const totalValue = positions.reduce((s, p) => s + p.value, 0);
-  const totalPnl   = positions.reduce((s, p) => s + p.pnl,   0);
-  const totalCost  = totalValue - totalPnl;
-  const pnlPct     = totalCost > 0 ? totalPnl / totalCost * 100 : 0;
-
-  // 資産総額セル
-  let html = `<div class="stat">
-    <span class="stat-label">資産総額</span>
-    <span class="stat-value neu">${fmtJPYInt(totalValue)}</span>
-  </div>`;
-
-  // 含み損益セル
-  html += `<div class="stat">
-    <span class="stat-label">含み損益</span>
-    <span class="stat-value ${sgn(totalPnl)}">${fmtJPYInt(totalPnl)}</span>
-    <span class="stat-sub ${sgn(pnlPct)}">${fmtPctInt(pnlPct)}</span>
-  </div>`;
-
-  // 期間別パフォーマンス（現在の保有ポジションで加重平均シミュレーション）
-  for (const p of PERIODS) {
-    const pct = calcPortfolioPeriodPct(p.id);
-    const amt = pct !== null ? totalValue * pct / 100 : null;
-    const cls = pct !== null ? sgn(pct) : 'neu';
-    html += `<div class="stat">
-      <span class="stat-label">${p.statsLabel}</span>
-      <span class="stat-value ${cls}">${amt !== null ? fmtJPYInt(amt) : '―'}</span>
-      <span class="stat-sub ${cls}">${pct !== null ? fmtPctInt(pct) : '―'}</span>
-    </div>`;
-  }
-
-  document.getElementById('stats').innerHTML = html;
 }
 
 // ══════════════════════════════════════════════
@@ -458,6 +419,7 @@ function _bindActionDispatcher() {
 function init() {
   _bindActionDispatcher();
   _setupMobileLayout();
+  setupPriceUpdateListener();
   applyTheme();
   document.getElementById('btn-pnl').classList.remove('active');
   document.querySelectorAll('.period-btn[data-period]').forEach(b =>
@@ -513,7 +475,7 @@ function init() {
     applyPricesCache(); // fire-and-forget
     // 3. ライブ価格取得
     await refreshPrices();
-    _hideHeatmapSkeleton();
+    hideHeatmapSkeleton();
     // recordTodayAsset は history.js（未統合）のため呼ばない
 
     // 1y は最優先で取得（UIの初期表示に必要）
@@ -524,46 +486,8 @@ function init() {
     if (state.changePeriod && state.changePeriod !== '1d') renderHeatmap();
 
     // 5y / 10y は並列で取得（完了ごとに描画、片方失敗してももう片方は描画する）
-    const results = await Promise.allSettled(['5y', '10y'].map(async range => {
-      await fetchAllHistorical(range);
-      renderStats();
-      renderStockList();
-      if (state.activeTab === 'watchlist') renderWatchlist();
-      if (state.changePeriod && state.changePeriod !== '1d') renderHeatmap();
-      return range;
-    }));
-    const failed = results.filter(r => r.status === 'rejected');
-    failed.forEach(r => console.warn('[historical] fetch failed:', r.reason));
-    if (failed.length > 0) {
-      setStatus(`履歴データ取得失敗（${failed.length}/${results.length}）`, 'red');
-    }
+    await refreshHistoricalAndRender();
   })();
-}
-
-/**
- * 初回データ取得完了後にスケルトンを非表示にし SVG を表示する（初回のみ）。
- */
-function _hideHeatmapSkeleton() {
-  const sk = document.getElementById('heatmap-skeleton');
-  const sv = document.getElementById('heatmap');
-  if (sk) { sk.style.transition = 'opacity 0.3s ease'; sk.style.opacity = '0'; setTimeout(() => sk.remove(), 320); }
-  if (sv) sv.style.display = '';
-}
-
-// ── 銘柄リストの高さをビューポートに合わせて動的設定 ──
-// sticky-top（stats-outer・tab-bar含む全固定ヘッダー）+ sl-controls を除いた残りの高さを設定
-function updateListHeight() {
-  const wrap    = document.getElementById('stock-list-wrap');
-  if (!wrap) return;
-  const sticky  = document.querySelector('.sticky-top');
-  const slCtrl  = document.querySelector('.sl-controls');
-  const stickyH = sticky ? sticky.offsetHeight : 0;
-  const ctrlH   = slCtrl ? slCtrl.offsetHeight : 0;
-  // body の padding-bottom 分だけ余白を確保（モバイル10px・PC20px）
-  // + 4px の余裕を持たせてページが一切スクロールしないようにする
-  const padBot = parseFloat(getComputedStyle(document.body).paddingBottom) || 16;
-  const h = Math.max(160, window.innerHeight - stickyH - ctrlH - padBot - 4);
-  wrap.style.maxHeight = h + 'px';
 }
 
 setupEventListeners(applyTheme);
