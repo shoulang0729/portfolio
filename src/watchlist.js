@@ -51,7 +51,6 @@ async function _loadWatchlistFromWorker() {
       }
     } else if (state.watchlist.length > 0) {
       // 初期シード: KV が空でローカルにデータがある → ローカルを KV に push
-      console.log(`[watchlist] KV is empty; seeding KV with ${state.watchlist.length} local items`);
       _syncWatchlistToWorker();
     }
   } catch { /* localStorageをそのまま使用 */ }

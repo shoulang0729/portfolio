@@ -192,7 +192,6 @@ function loadCacheFromSession() {
     if (!raw) return;
     const obj = JSON.parse(raw);
     if (obj._v !== SS_CACHE_VER) return; // バージョン不一致は破棄（クリア）
-    let total = 0;
     for (const range of ['1y', '5y', '10y']) {
       if (!obj[range]) continue;
       for (const [sym, entries] of Object.entries(obj[range])) {
@@ -201,10 +200,8 @@ function loadCacheFromSession() {
           date:  new Date(e.date),
           close: e.close,
         }));
-        total++;
       }
     }
-    if (total > 0) console.log(`[cache] sessionStorage から ${total} 銘柄×レンジを復元`);
   } catch (e) {
     console.warn('[cache] sessionStorage 復元失敗:', e);
     sessionStorage.removeItem(SS_CACHE_KEY);
@@ -283,7 +280,6 @@ async function applyPricesCache() {
       applied++;
     }
     if (applied > 0) {
-      console.log(`[prices:cache] ${applied}銘柄に Cron キャッシュ価格を適用`);
       document.dispatchEvent(new CustomEvent('hm:prices-updated'));
     }
   } catch (e) {
