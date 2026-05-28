@@ -16,6 +16,7 @@ import { clearCacheSession, refreshPrices } from './data.js';
 import { parseManexFiles, parseMoneyForwardImage } from './import-parse.js';
 import { renderStockList } from './stock-list.js';
 import { renderWatchlist } from './watchlist.js';
+import { _hashPin } from './auth-pin.js';
 
 let _importState = { source: null, parsed: [], current: [], pendingPositions: [] };
 
@@ -280,8 +281,7 @@ async function _retryWithPin() {
   const pin = pinInput?.value?.trim();
   if (!pin) { if (pinInput) pinInput.focus(); return; }
 
-  const hashBuf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin));
-  const pinHash = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
+  const pinHash = await _hashPin(pin);
   localStorage.setItem('hm-pin-hash', pinHash);
 
   const finalPositions = _importState.pendingPositions;

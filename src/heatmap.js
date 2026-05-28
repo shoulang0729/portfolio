@@ -15,11 +15,27 @@ import { openChart } from './chart.js';
 // ══════════════════════════════════════════════
 // HEATMAP
 // ══════════════════════════════════════════════
+let _heatmapRetryCount = 0;
+const HEATMAP_MAX_RETRY = 30;
+
 function renderHeatmap() {
+  // ヒートマップタブが非表示なら描画スキップ
+  const panel = document.getElementById('panel-heatmap');
+  if (panel?.hidden) return;
+
   const wrap = document.getElementById('heatmap-wrap');
+  if (!wrap) return;
   const W = wrap.clientWidth;
-  // W=0 は DOM 再配置直後のレイアウト未計算を示す → 次フレームで再試行
-  if (W === 0) { requestAnimationFrame(renderHeatmap); return; }
+  if (W === 0) {
+    if (_heatmapRetryCount++ < HEATMAP_MAX_RETRY) {
+      requestAnimationFrame(renderHeatmap);
+    } else {
+      console.warn('[heatmap] clientWidth=0 が継続 → 描画中止');
+      _heatmapRetryCount = 0;
+    }
+    return;
+  }
+  _heatmapRetryCount = 0;
   // モバイル（幅600px未満）は縦長比率を高く（画面を有効活用）
   const aspectRatio = W < C.MOBILE_BREAKPOINT ? C.HEATMAP_ASPECT_MOB : C.HEATMAP_ASPECT_DSK;
   const minH = W < C.MOBILE_BREAKPOINT ? C.HEATMAP_MINH_MOB : C.HEATMAP_MINH_DSK;

@@ -10,7 +10,8 @@
 
 import { parseCsvText, normalizeStr, parseNum, detectCsvType } from './csv.js';
 import { fundSymbolFromName, fundProxyOf } from './funds.js';
-import { WORKER_URL, fetchWithTimeout } from './data.js';
+import { WORKER_URL } from './config.js';
+import { fetchWithTimeout } from './data.js';
 
 const FUND_FALLBACK_PROXY = { ySymbol: '^N225', proxyName: '日経平均' };
 
