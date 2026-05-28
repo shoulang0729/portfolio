@@ -22,6 +22,7 @@ import { loadPositionsFromKV } from './positions-store.js';
 import { openImportModal, closeImportModal, openManagePositionsModal, handleImportOverlayClick, handleManexFileSelect, handleMoneyForwardImageSelect, focusImportFileInput, _renderImportStep, _confirmImport, _retryWithPin } from './import-ui.js';
 import { showConfirm, showAlert } from './modal.js';
 import { renderStats, refreshHistoricalAndRender, setupPriceUpdateListener, hideHeatmapSkeleton, updateListHeight } from './render.js';
+import { toggleHmMenu, closeHmMenu } from './menu.js';
 
 // ── フォールバックスクリプトから参照できるように renderHeatmap を window に登録 ──
 window.renderHeatmap       = renderHeatmap;
@@ -63,22 +64,6 @@ function applyTheme() {
   el && (el.title = { light: 'ライトモード', dark: 'ダークモード', auto: 'システムに合わせる' }[state.themeMode]);
 }
 
-
-function toggleHmMenu() {
-  const dropdown = document.getElementById('hm-menu-dropdown');
-  const btn = document.getElementById('hm-menu-btn');
-  if (!dropdown) return;
-  const isOpen = dropdown.classList.toggle('open');
-  if (btn) { btn.classList.toggle('open', isOpen); btn.setAttribute('aria-expanded', String(isOpen)); }
-}
-
-function closeHmMenu() {
-  const dropdown = document.getElementById('hm-menu-dropdown');
-  const btn = document.getElementById('hm-menu-btn');
-  if (!dropdown) return;
-  dropdown.classList.remove('open');
-  if (btn) { btn.classList.remove('open'); btn.setAttribute('aria-expanded', 'false'); }
-}
 
 function cycleTheme() {
   const order = ['auto', 'light', 'dark'];
