@@ -7,8 +7,9 @@
 
 import { state } from './state.js';
 import { renderHeatmap } from './heatmap.js';
-import { renderStockList, updateListHeight, applyStockBars } from './stock-list.js';
+import { renderStockList, applyStockBars } from './stock-list.js';
 import { loadChart } from './chart.js';
+import { updateListHeight } from './render.js';
 
 export function setupEventListeners(applyThemeFn) {
   if (typeof d3 === 'undefined') {
