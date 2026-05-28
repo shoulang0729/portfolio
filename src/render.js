@@ -10,7 +10,8 @@ import { fmtJPYInt, fmtPctInt, sgn, calcPortfolioPeriodPct } from './utils.js';
 import { renderHeatmap } from './heatmap.js';
 import { renderStockList } from './stock-list.js';
 import { renderWatchlist } from './watchlist.js';
-import { fetchAllHistorical, setStatus } from './data.js';
+import { fetchAllHistorical } from './data.js';
+import { setStatus } from './ui-status.js';
 
 /**
  * Stats バー（資産総額・含み損益・期間パフォーマンス）の再描画
