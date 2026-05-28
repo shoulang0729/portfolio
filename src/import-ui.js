@@ -56,6 +56,12 @@ function handleImportOverlayClick(e) {
   if (e.target === document.getElementById('import-modal-overlay')) closeImportModal();
 }
 
+function focusImportFileInput() {
+  const isManex = _importState.source === 'manex';
+  const inputId = isManex ? 'import-manex-input' : 'import-mf-input';
+  document.getElementById(inputId)?.click();
+}
+
 function _renderImportStep(step, payload) {
   const body = document.getElementById('import-modal-body');
   if (!body) return;
@@ -67,7 +73,7 @@ function _renderImportStep(step, payload) {
         <div class="import-icon">${isManex ? '📄' : '📷'}</div>
         <div class="import-select-title">${isManex ? 'CSVファイルを選択' : 'スクリーンショットを選択'}</div>
         <div class="import-select-hint">${isManex ? '国内株・米国株・投資信託の3ファイルまとめて選択できます' : 'マネーフォワードの資産一覧画面のスクショ'}</div>
-        <button class="import-file-btn" onclick="${isManex ? 'document.getElementById(\'import-manex-input\').click()' : 'document.getElementById(\'import-mf-input\').click()'}">
+        <button class="import-file-btn" data-action="focusImportFileInput">
           ファイルを選択
         </button>
       </div>`;
@@ -85,7 +91,7 @@ function _renderImportStep(step, payload) {
     body.innerHTML = `
       <div class="import-error-msg">
         <div>⚠️ ${escapeHTML(payload || '解析に失敗しました')}</div>
-        <button class="import-file-btn" style="margin-top:12px" onclick="_renderImportStep('select')">やり直す</button>
+        <button class="import-file-btn" style="margin-top:12px" data-action="_renderImportStep" data-arg="select">やり直す</button>
       </div>`;
   }
 
@@ -146,8 +152,8 @@ function _renderImportStep(step, payload) {
 
     const confirmLabel = _importState.source === 'manage' ? '保存 →' : '取込確定 →';
     html += `<div class="import-footer">
-      <button class="import-cancel-btn" onclick="closeImportModal()">キャンセル</button>
-      <button class="import-confirm-btn" onclick="_confirmImport()">${confirmLabel}</button>
+      <button class="import-cancel-btn" data-action="closeImportModal">キャンセル</button>
+      <button class="import-confirm-btn" data-action="_confirmImport">${confirmLabel}</button>
     </div>`;
     html += `</div>`;
     body.innerHTML = html;
@@ -158,14 +164,21 @@ function _renderImportStep(step, payload) {
       <div class="import-pin-auth">
         <div class="import-pin-msg">🔒 PIN認証に失敗しました。PINを入力してください。</div>
         <input type="password" id="import-pin-input" class="import-pin-input"
-          inputmode="numeric" maxlength="4" placeholder="••••"
-          onkeydown="if(event.key==='Enter')_retryWithPin()">
+          inputmode="numeric" maxlength="4" placeholder="••••">
         <div class="import-footer">
-          <button class="import-cancel-btn" onclick="closeImportModal()">キャンセル</button>
-          <button class="import-confirm-btn" onclick="_retryWithPin()">保存する →</button>
+          <button class="import-cancel-btn" data-action="closeImportModal">キャンセル</button>
+          <button class="import-confirm-btn" data-action="_retryWithPin">保存する →</button>
         </div>
       </div>`;
-    requestAnimationFrame(() => document.getElementById('import-pin-input')?.focus());
+    requestAnimationFrame(() => {
+      const pinInput = document.getElementById('import-pin-input');
+      if (pinInput) {
+        pinInput.focus();
+        pinInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') _retryWithPin();
+        });
+      }
+    });
   }
 
   if (step === 'saving') {
@@ -181,7 +194,7 @@ function _renderImportStep(step, payload) {
       <div class="import-done">
         <div class="import-done-icon">✓</div>
         <div class="import-done-text">${escapeHTML(payload || '取込が完了しました')}</div>
-        <button class="import-confirm-btn" onclick="closeImportModal()">閉じる</button>
+        <button class="import-confirm-btn" data-action="closeImportModal">閉じる</button>
       </div>`;
   }
 }
@@ -333,11 +346,4 @@ function escapeHTML(s) {
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
-// ── 動的 HTML の onclick から参照される内部関数を window に登録 ──
-// （ES Modules でモジュールスコープの関数は inline onclick からアクセスできないため）
-window._renderImportStep = _renderImportStep;
-window._confirmImport    = _confirmImport;
-window._retryWithPin     = _retryWithPin;
-window.closeImportModal  = closeImportModal;
-
-export { openImportModal, closeImportModal, openManagePositionsModal, handleImportOverlayClick, handleManexFileSelect, handleMoneyForwardImageSelect };
+export { openImportModal, closeImportModal, openManagePositionsModal, handleImportOverlayClick, handleManexFileSelect, handleMoneyForwardImageSelect, focusImportFileInput, _renderImportStep, _confirmImport, _retryWithPin };

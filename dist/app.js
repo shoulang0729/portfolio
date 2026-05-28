@@ -2850,6 +2850,11 @@ function closeImportModal() {
 function handleImportOverlayClick(e) {
   if (e.target === document.getElementById("import-modal-overlay")) closeImportModal();
 }
+function focusImportFileInput() {
+  const isManex = _importState.source === "manex";
+  const inputId = isManex ? "import-manex-input" : "import-mf-input";
+  document.getElementById(inputId)?.click();
+}
 function _renderImportStep(step, payload) {
   const body = document.getElementById("import-modal-body");
   if (!body) return;
@@ -2860,7 +2865,7 @@ function _renderImportStep(step, payload) {
         <div class="import-icon">${isManex ? "\u{1F4C4}" : "\u{1F4F7}"}</div>
         <div class="import-select-title">${isManex ? "CSV\u30D5\u30A1\u30A4\u30EB\u3092\u9078\u629E" : "\u30B9\u30AF\u30EA\u30FC\u30F3\u30B7\u30E7\u30C3\u30C8\u3092\u9078\u629E"}</div>
         <div class="import-select-hint">${isManex ? "\u56FD\u5185\u682A\u30FB\u7C73\u56FD\u682A\u30FB\u6295\u8CC7\u4FE1\u8A17\u306E3\u30D5\u30A1\u30A4\u30EB\u307E\u3068\u3081\u3066\u9078\u629E\u3067\u304D\u307E\u3059" : "\u30DE\u30CD\u30FC\u30D5\u30A9\u30EF\u30FC\u30C9\u306E\u8CC7\u7523\u4E00\u89A7\u753B\u9762\u306E\u30B9\u30AF\u30B7\u30E7"}</div>
-        <button class="import-file-btn" onclick="${isManex ? "document.getElementById('import-manex-input').click()" : "document.getElementById('import-mf-input').click()"}">
+        <button class="import-file-btn" data-action="focusImportFileInput">
           \u30D5\u30A1\u30A4\u30EB\u3092\u9078\u629E
         </button>
       </div>`;
@@ -2876,7 +2881,7 @@ function _renderImportStep(step, payload) {
     body.innerHTML = `
       <div class="import-error-msg">
         <div>\u26A0\uFE0F ${escapeHTML2(payload || "\u89E3\u6790\u306B\u5931\u6557\u3057\u307E\u3057\u305F")}</div>
-        <button class="import-file-btn" style="margin-top:12px" onclick="_renderImportStep('select')">\u3084\u308A\u76F4\u3059</button>
+        <button class="import-file-btn" style="margin-top:12px" data-action="_renderImportStep" data-arg="select">\u3084\u308A\u76F4\u3059</button>
       </div>`;
   }
   if (step === "review") {
@@ -2930,8 +2935,8 @@ function _renderImportStep(step, payload) {
     }
     const confirmLabel = _importState.source === "manage" ? "\u4FDD\u5B58 \u2192" : "\u53D6\u8FBC\u78BA\u5B9A \u2192";
     html += `<div class="import-footer">
-      <button class="import-cancel-btn" onclick="closeImportModal()">\u30AD\u30E3\u30F3\u30BB\u30EB</button>
-      <button class="import-confirm-btn" onclick="_confirmImport()">${confirmLabel}</button>
+      <button class="import-cancel-btn" data-action="closeImportModal">\u30AD\u30E3\u30F3\u30BB\u30EB</button>
+      <button class="import-confirm-btn" data-action="_confirmImport">${confirmLabel}</button>
     </div>`;
     html += `</div>`;
     body.innerHTML = html;
@@ -2941,14 +2946,21 @@ function _renderImportStep(step, payload) {
       <div class="import-pin-auth">
         <div class="import-pin-msg">\u{1F512} PIN\u8A8D\u8A3C\u306B\u5931\u6557\u3057\u307E\u3057\u305F\u3002PIN\u3092\u5165\u529B\u3057\u3066\u304F\u3060\u3055\u3044\u3002</div>
         <input type="password" id="import-pin-input" class="import-pin-input"
-          inputmode="numeric" maxlength="4" placeholder="\u2022\u2022\u2022\u2022"
-          onkeydown="if(event.key==='Enter')_retryWithPin()">
+          inputmode="numeric" maxlength="4" placeholder="\u2022\u2022\u2022\u2022">
         <div class="import-footer">
-          <button class="import-cancel-btn" onclick="closeImportModal()">\u30AD\u30E3\u30F3\u30BB\u30EB</button>
-          <button class="import-confirm-btn" onclick="_retryWithPin()">\u4FDD\u5B58\u3059\u308B \u2192</button>
+          <button class="import-cancel-btn" data-action="closeImportModal">\u30AD\u30E3\u30F3\u30BB\u30EB</button>
+          <button class="import-confirm-btn" data-action="_retryWithPin">\u4FDD\u5B58\u3059\u308B \u2192</button>
         </div>
       </div>`;
-    requestAnimationFrame(() => document.getElementById("import-pin-input")?.focus());
+    requestAnimationFrame(() => {
+      const pinInput = document.getElementById("import-pin-input");
+      if (pinInput) {
+        pinInput.focus();
+        pinInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") _retryWithPin();
+        });
+      }
+    });
   }
   if (step === "saving") {
     body.innerHTML = `
@@ -2962,7 +2974,7 @@ function _renderImportStep(step, payload) {
       <div class="import-done">
         <div class="import-done-icon">\u2713</div>
         <div class="import-done-text">${escapeHTML2(payload || "\u53D6\u8FBC\u304C\u5B8C\u4E86\u3057\u307E\u3057\u305F")}</div>
-        <button class="import-confirm-btn" onclick="closeImportModal()">\u9589\u3058\u308B</button>
+        <button class="import-confirm-btn" data-action="closeImportModal">\u9589\u3058\u308B</button>
       </div>`;
   }
 }
@@ -3086,10 +3098,6 @@ async function handleMoneyForwardImageSelect(event) {
 function escapeHTML2(s) {
   return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
-window._renderImportStep = _renderImportStep;
-window._confirmImport = _confirmImport;
-window._retryWithPin = _retryWithPin;
-window.closeImportModal = closeImportModal;
 
 // src/ptr.js
 if ("ontouchstart" in window) {
@@ -3495,7 +3503,11 @@ var ACTION_MAP = {
   openManagePositionsModal,
   handleImportOverlayClick,
   handleManexFileSelect,
-  handleMoneyForwardImageSelect
+  handleMoneyForwardImageSelect,
+  focusImportFileInput,
+  _renderImportStep,
+  _confirmImport,
+  _retryWithPin
 };
 function _dispatchAction(el, event) {
   const actions = (el.dataset.action || "").split("|").filter(Boolean);
