@@ -10,7 +10,7 @@
 export function setStatus(msg, color) {
   const dot = document.getElementById('status-dot');
   const txt = document.getElementById('status-text');
-  dot.className = 'dot' + (color === 'red' ? ' red' : color === 'yellow' ? ' yellow' : '');
+  dot.className = `dot${  color === 'red' ? ' red' : color === 'yellow' ? ' yellow' : ''}`;
   txt.textContent = msg;
 }
 

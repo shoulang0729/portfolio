@@ -89,7 +89,7 @@ export function updateListHeight() {
   const ctrlH   = slCtrl ? slCtrl.offsetHeight : 0;
   const padBot = parseFloat(getComputedStyle(document.body).paddingBottom) || 16;
   const h = Math.max(160, window.innerHeight - stickyH - ctrlH - padBot - 4);
-  wrap.style.maxHeight = h + 'px';
+  wrap.style.maxHeight = `${h  }px`;
 }
 
 /**
