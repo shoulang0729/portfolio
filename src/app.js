@@ -18,6 +18,7 @@ import { renderStockList, slSort, slToggleDetail, applyStockBars, updateSlColSty
 import { renderWatchlist, wlSort, onWatchlistSearch, removeFromWatchlist, wlSelectItem, fetchWatchlistData, _loadWatchlistFromWorker } from './watchlist.js';
 import { loadPositionsFromKV } from './positions-store.js';
 import { openImportModal, closeImportModal, openManagePositionsModal, handleImportOverlayClick, handleManexFileSelect, handleMoneyForwardImageSelect, focusImportFileInput, _renderImportStep, _confirmImport, _retryWithPin } from './import-ui.js';
+import { showConfirm, showAlert } from './modal.js';
 
 // ── 循環依存解消: data.js が発火するイベントを app.js でリッスン ──
 document.addEventListener('hm:prices-updated', () => {
@@ -136,7 +137,13 @@ function cycleTheme() {
 //   失敗時は Worker 側で自前再生成にフォールバック（payload なし指定）。
 // ══════════════════════════════════════════════
 async function triggerPortfolioSnapshot() {
-  if (!confirm('現在のポートフォリオを GitHub にスナップショット保存します。\n（data/portfolio-snapshot.json が更新されます）')) return;
+  const confirmed = await showConfirm({
+    title: 'スナップショット保存',
+    message: '現在のポートフォリオを GitHub にスナップショット保存します。\n（data/portfolio-snapshot.json が更新されます）',
+    okLabel: '保存',
+    cancelLabel: 'キャンセル',
+  });
+  if (!confirmed) return;
   try {
     setStatus('スナップショット作成中...', 'yellow');
     const payload = _buildPortfolioSnapshotPayload();
@@ -151,10 +158,18 @@ async function triggerPortfolioSnapshot() {
     }
     const data = await res.json();
     setStatus(`スナップショット保存完了（${data.positions} 銘柄）`, 'green');
-    alert(`保存完了:\nhttps://github.com/shoulang0729/portfolio/blob/main/data/portfolio-snapshot.json\n\n反映まで raw.githubusercontent.com 側で最大5分のキャッシュラグあり。`);
+    await showAlert({
+      title: '保存完了',
+      message: `https://github.com/shoulang0729/portfolio/blob/main/data/portfolio-snapshot.json\n\n反映まで raw.githubusercontent.com 側で最大5分のキャッシュラグあり。`,
+      okLabel: 'OK',
+    });
   } catch (e) {
     setStatus(`スナップショット保存失敗: ${e.message}`, 'red');
-    alert(`スナップショット保存失敗:\n${e.message}`);
+    await showAlert({
+      title: 'エラー',
+      message: `スナップショット保存失敗:\n${e.message}`,
+      okLabel: 'OK',
+    });
   }
 }
 
