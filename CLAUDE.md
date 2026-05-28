@@ -223,6 +223,12 @@ POST /auth/verify                   パスキー検証
 
 | バージョン | 内容 |
 |---|---|
+| 20260528Y | Issue#66対応: dist/app.js を main マージ後に CI で自動ビルド |
+| 20260528X | ESLint no-console: warn 導入、不要 console.log を整理 |
+| 20260528W | utils.js のテストカバレッジ拡張（getColor 境界値・_tableSort 等） |
+| 20260528V | Issue#54対応: import-ui.js の inline onclick を data-action 化（CSP前提条件） |
+| 20260528U | positions-store.js の単体テスト追加 |
+| 20260528T | Issue#58対応: csv.js の単体テスト追加（23ケース） |
 | 20260527B | Issue#15修正: sw.js の CACHE 名を SW 登録 URL の `?v=` から動的生成。index.html のバージョン更新だけで自動同期 |
 | 20260527A | Issue#11対応: アクセシビリティ改善 |
 | 20260526F | Issue#17修正: statsバー横スクロール対応(flex:none→min-width:0)、バージョン表示をimport.meta.urlに変更 |
