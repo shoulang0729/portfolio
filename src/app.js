@@ -497,14 +497,22 @@ function init() {
     await refreshPrices();
     _hideHeatmapSkeleton();
     // recordTodayAsset は history.js（未統合）のため呼ばない
-    for (const range of ['1y', '5y', '10y']) {
+
+    // 1y は最優先で取得（UIの初期表示に必要）
+    await fetchAllHistorical('1y');
+    renderStats();
+    renderStockList();
+    if (state.activeTab === 'watchlist') renderWatchlist();
+    if (state.changePeriod && state.changePeriod !== '1d') renderHeatmap();
+
+    // 5y / 10y は並列で取得（完了ごとに描画）
+    await Promise.all(['5y', '10y'].map(async range => {
       await fetchAllHistorical(range);
       renderStats();
-      // 各レンジ完了ごとに銘柄リスト・ウォッチリストを再描画して "…" を実値に置換
       renderStockList();
       if (state.activeTab === 'watchlist') renderWatchlist();
       if (state.changePeriod && state.changePeriod !== '1d') renderHeatmap();
-    }
+    }));
   })();
 }
 
