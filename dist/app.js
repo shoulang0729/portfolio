@@ -1275,13 +1275,13 @@ var _ESC = {
 var escapeHTML = (s) => String(s).replace(/[&<>"']/g, (c) => _ESC[c]);
 var fmtJPY = (v) => {
   const m = v / 1e4;
-  return m.toFixed(1) + "\u4E07";
+  return `${m.toFixed(1)}\u4E07`;
 };
-var fmtJPYFull = (v) => (v >= 0 ? "+" : "") + Math.round(v).toLocaleString() + "\u5186";
-var fmtPct = (v) => v.toFixed(1) + "%";
+var fmtJPYFull = (v) => `${(v >= 0 ? "+" : "") + Math.round(v).toLocaleString()}\u5186`;
+var fmtPct = (v) => `${v.toFixed(1)}%`;
 var fmtPrice = (v, cur) => {
   if (v == null) return "\u2015";
-  return cur === "USD" ? "$" + v.toFixed(2) : "\xA5" + Math.round(v).toLocaleString();
+  return cur === "USD" ? `$${v.toFixed(2)}` : `\xA5${Math.round(v).toLocaleString()}`;
 };
 var sgn = (v) => v >= 0 ? "pos" : "neg";
 var fmtJPYInt = (v) => {
@@ -1290,19 +1290,19 @@ var fmtJPYInt = (v) => {
   const abs = Math.abs(m);
   if (abs >= 1e4) {
     const s = (abs / 1e4).toFixed(2);
-    return sign + (s.endsWith("0") ? (abs / 1e4).toFixed(1) : s) + "\u5104";
+    return `${sign + (s.endsWith("0") ? (abs / 1e4).toFixed(1) : s)}\u5104`;
   }
-  return sign + abs.toLocaleString() + "\u4E07";
+  return `${sign + abs.toLocaleString()}\u4E07`;
 };
-var fmtPctInt = (v) => Math.round(v) + "%";
+var fmtPctInt = (v) => `${Math.round(v)}%`;
 var fmtShares = (n) => {
   if (n >= 1e6) {
     const v = Math.round(n / 1e5) / 10;
-    return v.toFixed(1).replace(/\.0$/, "") + "M";
+    return `${v.toFixed(1).replace(/\.0$/, "")}M`;
   }
   if (n >= 1e3) {
     const v = Math.round(n / 100) / 10;
-    return v.toFixed(1).replace(/\.0$/, "") + "K";
+    return `${v.toFixed(1).replace(/\.0$/, "")}K`;
   }
   return n.toLocaleString();
 };
@@ -1492,7 +1492,7 @@ async function fetchForexRate(from, to) {
 function setStatus(msg, color) {
   const dot = document.getElementById("status-dot");
   const txt = document.getElementById("status-text");
-  dot.className = "dot" + (color === "red" ? " red" : color === "yellow" ? " yellow" : "");
+  dot.className = `dot${color === "red" ? " red" : color === "yellow" ? " yellow" : ""}`;
   txt.textContent = msg;
 }
 function flashPriceChanges(fetched) {
@@ -1577,8 +1577,8 @@ loadCacheFromSession();
 // src/data-finnhub.js
 function toFinnhubSymbol(ySymbol) {
   if (!ySymbol) return null;
-  if (ySymbol.endsWith(".T")) return "TYO:" + ySymbol.slice(0, -2);
-  if (ySymbol.endsWith(".HK")) return "HKG:" + ySymbol.slice(0, -3);
+  if (ySymbol.endsWith(".T")) return `TYO:${ySymbol.slice(0, -2)}`;
+  if (ySymbol.endsWith(".HK")) return `HKG:${ySymbol.slice(0, -3)}`;
   return ySymbol;
 }
 async function fetchFinnhubQuote(fSymbol) {
@@ -1986,7 +1986,7 @@ function _drawChartContent(g, x, y, iW, iH, points, avgCost, cur, lineColor, def
   g.append("path").datum(points).attr("d", d3.area().x((d) => x(d.date)).y0(iH).y1((d) => y(d.close)).curve(d3.curveMonotoneX)).attr("fill", "url(#area-grad)");
   const cy = y(avgCost);
   g.append("line").attr("x1", 0).attr("x2", iW).attr("y1", cy).attr("y2", cy).attr("stroke", cssVar("--cost-line")).attr("stroke-width", 0.7).attr("stroke-dasharray", "4,3");
-  g.append("text").attr("x", 2).attr("y", cy - 4).attr("fill", cssVar("--cost-text")).attr("font-size", 10).text("\u53D6\u5F97\u5358\u4FA1: " + (cur === "USD" ? "$" + avgCost.toFixed(2) : "\xA5" + Math.round(avgCost).toLocaleString()));
+  g.append("text").attr("x", 2).attr("y", cy - 4).attr("fill", cssVar("--cost-text")).attr("font-size", 10).text(`\u53D6\u5F97\u5358\u4FA1: ${cur === "USD" ? `$${avgCost.toFixed(2)}` : `\xA5${Math.round(avgCost).toLocaleString()}`}`);
   const maLineFn = d3.line().x((d) => x(d.date)).y((d) => y(d.ma)).curve(d3.curveMonotoneX);
   maStyles.forEach((ma) => {
     if (!ma.data.length) return;
@@ -1995,7 +1995,7 @@ function _drawChartContent(g, x, y, iW, iH, points, avgCost, cur, lineColor, def
   g.append("path").datum(points).attr("d", d3.line().x((d) => x(d.date)).y((d) => y(d.close)).curve(d3.curveMonotoneX)).attr("fill", "none").attr("stroke", lineColor).attr("stroke-width", 2);
   const lp = points[points.length - 1];
   g.append("circle").attr("cx", x(lp.date)).attr("cy", y(lp.close)).attr("r", 4).attr("fill", lineColor);
-  const tickFmt = cur === "USD" ? (d) => "$" + (d >= 1e3 ? (d / 1e3).toFixed(1) + "k" : d.toFixed(0)) : (d) => d >= 1e5 ? "\xA5" + (d / 1e4).toFixed(0) + "\u4E07" : d >= 1e4 ? "\xA5" + (d / 1e3).toFixed(0) + "k" : "\xA5" + Math.round(d);
+  const tickFmt = cur === "USD" ? (d) => `$${d >= 1e3 ? `${(d / 1e3).toFixed(1)}k` : d.toFixed(0)}` : (d) => d >= 1e5 ? `\xA5${(d / 1e4).toFixed(0)}\u4E07` : d >= 1e4 ? `\xA5${(d / 1e3).toFixed(0)}k` : `\xA5${Math.round(d)}`;
   g.append("g").attr("transform", `translate(0,${iH})`).call(d3.axisBottom(x).ticks(6).tickFormat(d3.timeFormat(dateFmt))).call((g2) => {
     g2.select(".domain").attr("stroke", cssVar("--border"));
     g2.selectAll(".tick text").attr("fill", cssVar("--text2")).attr("font-size", 11);
@@ -2009,7 +2009,7 @@ function _drawChartContent(g, x, y, iW, iH, points, avgCost, cur, lineColor, def
 }
 function _initChartCrosshair(g, x, y, points, m, iW, iH, interval, cur, lineColor, maStyles) {
   const bisect = d3.bisector((d) => d.date).left;
-  const pf2 = (v) => cur === "USD" ? "$" + v.toFixed(2) : "\xA5" + Math.round(v).toLocaleString();
+  const pf2 = (v) => cur === "USD" ? `$${v.toFixed(2)}` : `\xA5${Math.round(v).toLocaleString()}`;
   const crosshair = g.append("g").style("display", "none");
   const chLineV = crosshair.append("line").attr("stroke", cssVar("--text2")).attr("stroke-dasharray", "3,3").attr("stroke-width", 1);
   const chLineH = crosshair.append("line").attr("stroke", cssVar("--text2")).attr("stroke-dasharray", "3,3").attr("stroke-width", 1);
@@ -2063,7 +2063,7 @@ function _renderChartStats(points, avgCost, cur, maStyles) {
   const lastPrice = points[points.length - 1].close;
   const chgPct = (lastPrice - fp) / fp * 100;
   const pnlPct = (lastPrice - avgCost) / avgCost * 100;
-  const pf = (v) => cur === "USD" ? "$" + v.toFixed(2) : "\xA5" + Math.round(v).toLocaleString();
+  const pf = (v) => cur === "USD" ? `$${v.toFixed(2)}` : `\xA5${Math.round(v).toLocaleString()}`;
   const maLegend = maStyles.filter((ma) => ma.data.length > 0).map((ma) => {
     const last = ma.data[ma.data.length - 1].ma;
     return `<span style="display:inline-flex;align-items:center;gap:4px"><svg width="8" height="8"><circle cx="4" cy="4" r="3.5" fill="${ma.color}"/></svg><span style="color:${ma.color};font-size:11px">${ma.label}</span> <strong>${pf(last)}</strong></span>`;
@@ -2079,7 +2079,7 @@ function _renderChartStats(points, avgCost, cur, maStyles) {
 }
 function openChart(pos) {
   state.currentPos = pos;
-  const proxyNote = pos.isProxy ? ' <span class="modal-sym" style="color:#e3b341">\u203B ' + pos.proxyName + "</span>" : ' <span class="modal-sym">' + pos.symbol + "</span>";
+  const proxyNote = pos.isProxy ? ` <span class="modal-sym" style="color:#e3b341">\u203B ${pos.proxyName}</span>` : ` <span class="modal-sym">${pos.symbol}</span>`;
   document.getElementById("modal-title").innerHTML = pos.name + proxyNote;
   updateRangeBtns();
   document.getElementById("modal-overlay").style.display = "flex";
@@ -2312,8 +2312,8 @@ function renderHeatmap() {
 function positionTooltip(event, el) {
   const tx = event.clientX + 16, ty = event.clientY - 10;
   const w = el.offsetWidth, h = el.offsetHeight;
-  el.style.left = (tx + w > window.innerWidth - 10 ? event.clientX - w - 10 : tx) + "px";
-  el.style.top = (ty + h > window.innerHeight - 10 ? event.clientY - h - 10 : ty) + "px";
+  el.style.left = `${tx + w > window.innerWidth - 10 ? event.clientX - w - 10 : tx}px`;
+  el.style.top = `${ty + h > window.innerHeight - 10 ? event.clientY - h - 10 : ty}px`;
 }
 
 // src/watchlist.js
@@ -2656,7 +2656,7 @@ function updateListHeight() {
   const ctrlH = slCtrl ? slCtrl.offsetHeight : 0;
   const padBot = parseFloat(getComputedStyle(document.body).paddingBottom) || 16;
   const h = Math.max(160, window.innerHeight - stickyH - ctrlH - padBot - 4);
-  wrap.style.maxHeight = h + "px";
+  wrap.style.maxHeight = `${h}px`;
 }
 function setupPriceUpdateListener() {
   document.addEventListener("hm:prices-updated", () => {
@@ -3073,7 +3073,7 @@ async function parseMoneyForwardImage(file) {
       detail = e?.error?.message || JSON.stringify(e);
     } catch {
     }
-    throw new Error(`AI API \u30A8\u30E9\u30FC (${res.status})${detail ? ": " + detail : ""}`);
+    throw new Error(`AI API \u30A8\u30E9\u30FC (${res.status})${detail ? `: ${detail}` : ""}`);
   }
   const data = await res.json();
   const text = data?.choices?.[0]?.message?.content || "";
@@ -3499,7 +3499,7 @@ if ("ontouchstart" in window) {
     if (delta <= 0) return;
     const ind = getIndicator();
     ind.style.transition = "none";
-    ind.style.height = Math.min(delta * 0.55, 56) + "px";
+    ind.style.height = `${Math.min(delta * 0.55, 56)}px`;
     const progress = Math.min(delta / THRESHOLD, 1);
     if (arrow) {
       arrow.style.transition = "none";
@@ -3691,11 +3691,11 @@ async function setChangePeriod(periodId) {
 function fmtCountdown(sec) {
   if (sec >= 3600) {
     const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60);
-    return `\u6B21\u56DE\u66F4\u65B0: ${h}\u6642\u9593${m > 0 ? m + "\u5206" : ""}\u5F8C`;
+    return `\u6B21\u56DE\u66F4\u65B0: ${h}\u6642\u9593${m > 0 ? `${m}\u5206` : ""}\u5F8C`;
   }
   if (sec >= 60) {
     const m = Math.floor(sec / 60), s = sec % 60;
-    return `\u6B21\u56DE\u66F4\u65B0: ${m}\u5206${s > 0 ? s + "\u79D2" : ""}\u5F8C`;
+    return `\u6B21\u56DE\u66F4\u65B0: ${m}\u5206${s > 0 ? `${s}\u79D2` : ""}\u5F8C`;
   }
   return `\u6B21\u56DE\u66F4\u65B0: ${sec}\u79D2`;
 }
@@ -3894,7 +3894,7 @@ init();
     const badge = document.createElement("span");
     badge.id = "debug-ver";
     badge.style.cssText = "display:block;font-size:9px;font-weight:400;color:var(--text2);opacity:0.6;margin-top:1px;line-height:1.2;";
-    badge.textContent = "v." + ver;
+    badge.textContent = `v.${ver}`;
     title.appendChild(badge);
   }
 })();
