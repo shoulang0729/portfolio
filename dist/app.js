@@ -1432,7 +1432,7 @@ function calcPortfolioPeriodPct(periodId) {
   return totalWeight > 0 ? weightedSum / totalWeight : null;
 }
 
-// src/data.js
+// src/data-helpers.js
 function fetchWithTimeout(url, ms = 7e3, opts = {}) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), ms);
@@ -1469,6 +1469,28 @@ async function batchWithRetry(items, fn, opts = {}) {
   }
   return results;
 }
+
+// src/data-finnhub.js
+function toFinnhubSymbol(ySymbol) {
+  if (!ySymbol) return null;
+  if (ySymbol.endsWith(".T")) return "TYO:" + ySymbol.slice(0, -2);
+  if (ySymbol.endsWith(".HK")) return "HKG:" + ySymbol.slice(0, -3);
+  return ySymbol;
+}
+async function fetchFinnhubQuote(fSymbol) {
+  const url = `${WORKER_URL}/finnhub?path=/quote&symbol=${encodeURIComponent(fSymbol)}`;
+  try {
+    const res = await fetchWithTimeout(url, 7e3);
+    if (!res.ok) return null;
+    const d = await res.json();
+    if (!d || !d.c) return null;
+    return { price: d.c, dayPct: d.dp ?? null };
+  } catch {
+    return null;
+  }
+}
+
+// src/data-yahoo.js
 async function fetchViaProxy(url, timeoutMs = 7e3) {
   const q2url = url.replace("query1.finance.yahoo.com", "query2.finance.yahoo.com");
   const attempts = [
@@ -1491,24 +1513,8 @@ async function fetchViaProxy(url, timeoutMs = 7e3) {
   }
   return null;
 }
-function toFinnhubSymbol(ySymbol) {
-  if (!ySymbol) return null;
-  if (ySymbol.endsWith(".T")) return "TYO:" + ySymbol.slice(0, -2);
-  if (ySymbol.endsWith(".HK")) return "HKG:" + ySymbol.slice(0, -3);
-  return ySymbol;
-}
-async function fetchFinnhubQuote(fSymbol) {
-  const url = `${WORKER_URL}/finnhub?path=/quote&symbol=${encodeURIComponent(fSymbol)}`;
-  try {
-    const res = await fetchWithTimeout(url, 7e3);
-    if (!res.ok) return null;
-    const d = await res.json();
-    if (!d || !d.c) return null;
-    return { price: d.c, dayPct: d.dp ?? null };
-  } catch {
-    return null;
-  }
-}
+
+// src/data.js
 var SS_CACHE_KEY = "hm-hist-cache";
 var SS_CACHE_VER = "2";
 function loadCacheFromSession() {
