@@ -2000,13 +2000,24 @@ function renderChart(points, interval = "1d", dateFmt = "%m/%d") {
 }
 
 // src/heatmap.js
+var _heatmapRetryCount = 0;
+var HEATMAP_MAX_RETRY = 30;
 function renderHeatmap() {
+  const panel = document.getElementById("panel-heatmap");
+  if (panel?.hidden) return;
   const wrap = document.getElementById("heatmap-wrap");
+  if (!wrap) return;
   const W = wrap.clientWidth;
   if (W === 0) {
-    requestAnimationFrame(renderHeatmap);
+    if (_heatmapRetryCount++ < HEATMAP_MAX_RETRY) {
+      requestAnimationFrame(renderHeatmap);
+    } else {
+      console.warn("[heatmap] clientWidth=0 \u304C\u7D99\u7D9A \u2192 \u63CF\u753B\u4E2D\u6B62");
+      _heatmapRetryCount = 0;
+    }
     return;
   }
+  _heatmapRetryCount = 0;
   const aspectRatio = W < C.MOBILE_BREAKPOINT ? C.HEATMAP_ASPECT_MOB : C.HEATMAP_ASPECT_DSK;
   const minH = W < C.MOBILE_BREAKPOINT ? C.HEATMAP_MINH_MOB : C.HEATMAP_MINH_DSK;
   const stickyEl = document.querySelector(".sticky-top");
