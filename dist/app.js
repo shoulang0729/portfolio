@@ -625,7 +625,7 @@ async function showConfirm({ title, message, okLabel = "OK", cancelLabel = "\u30
     const overlay = document.createElement("div");
     overlay.className = "modal-overlay";
     overlay.style.display = "flex";
-    overlay.role = "dialog";
+    overlay.setAttribute("role", "dialog");
     overlay.setAttribute("aria-modal", "true");
     const modal = document.createElement("div");
     modal.className = "modal";
@@ -697,7 +697,7 @@ async function showAlert({ title, message, okLabel = "OK" }) {
     const overlay = document.createElement("div");
     overlay.className = "modal-overlay";
     overlay.style.display = "flex";
-    overlay.role = "dialog";
+    overlay.setAttribute("role", "dialog");
     overlay.setAttribute("aria-modal", "true");
     const modal = document.createElement("div");
     modal.className = "modal";
@@ -3780,7 +3780,11 @@ function switchTab(name) {
   if (panelList) panelList.hidden = name !== "list";
   if (panelWatchlist) panelWatchlist.hidden = name !== "watchlist";
   if (panelAi) panelAi.hidden = name !== "ai";
-  document.querySelectorAll(".tab-btn[data-tab]").forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
+  document.querySelectorAll(".tab-btn[data-tab]").forEach((b) => {
+    const isActive = b.dataset.tab === name;
+    b.classList.toggle("active", isActive);
+    b.setAttribute("aria-selected", isActive);
+  });
   if (name === "heatmap") renderHeatmap();
   if (name === "list") {
     renderStockList();
