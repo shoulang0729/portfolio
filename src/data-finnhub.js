@@ -7,8 +7,8 @@ import { fetchWithTimeout } from './data-helpers.js';
  */
 export function toFinnhubSymbol(ySymbol) {
   if (!ySymbol) return null;
-  if (ySymbol.endsWith('.T')) return 'TYO:' + ySymbol.slice(0, -2);
-  if (ySymbol.endsWith('.HK')) return 'HKG:' + ySymbol.slice(0, -3);
+  if (ySymbol.endsWith('.T')) return `TYO:${  ySymbol.slice(0, -2)}`;
+  if (ySymbol.endsWith('.HK')) return `HKG:${  ySymbol.slice(0, -3)}`;
   return ySymbol;
 }
 

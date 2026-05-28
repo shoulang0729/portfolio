@@ -24,8 +24,19 @@ export default [
       'no-undef': 'error',
       'no-var': 'error',
       'prefer-const': 'warn',
+      'prefer-template': 'warn',
       'eqeqeq': ['error', 'always', { null: 'ignore' }],
       'no-console': ['warn', { allow: ['warn', 'error'] }],
+      'no-restricted-syntax': ['error',
+        {
+          selector: "CallExpression[callee.object.name='document'][callee.property.name='write']",
+          message: 'document.write() is forbidden (XSS risk)',
+        },
+        {
+          selector: "NewExpression[callee.name='Function']",
+          message: 'new Function() is forbidden (CSP eval)',
+        },
+      ],
       'import/order': ['warn', {
         groups: ['builtin', 'external', 'internal', 'parent', 'sibling', 'index'],
         'newlines-between': 'always',
