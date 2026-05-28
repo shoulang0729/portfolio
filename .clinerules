@@ -1,0 +1,48 @@
+# Cline Rules
+
+## 自律実行ルール
+
+### 確認なしで自律実行してよい操作（環境非依存・全端末共通）
+
+- **レビュー対応**: CodeRabbit 等のレビューコメントを読んで修正し、コメントに返信する
+- **テスト対応**: テスト失敗を修正し、対応内容を Issue にコメントする
+- **PR 操作**: PR を作成・マージし、マージ済みブランチを削除する
+- **自動 PR**: `daily-issues.yml` が自動生成した PR をマージする
+- **依存追加**: `npm install <pkg> --save-dev` で devDependency を追加する
+- **バージョン更新**: `?v=YYYYMMDDX` のバージョン文字列を更新する
+- **Issue 管理**: Issue を作成・クローズする
+- **CI 軽微修正**: GitHub Actions のタイムアウト・トリガー条件など軽微な修正
+
+### 確認してから実行する操作（変更しない）
+
+- `git push --force` / `git reset --hard` / main ブランチ削除
+- Secrets・認証情報の変更
+- `CLAUDE.md` / `.claude/settings.json` の変更
+- GitHub Actions ワークフローの大幅な変更
+
+## コーディング規約
+
+### HTML
+- ID はシングルトン、class は再利用可能
+- `data-*` 属性で JS フック、スタイルフックには使わない
+- `onclick=` はグローバル関数に限定
+
+### JavaScript
+- グローバル変数/関数は最小化、モジュールごとにファイル分割
+- 状態は `state` オブジェクトに集約
+- DOM 操作は初期化時に querySelector でキャッシュ
+- API 呼び出しは `try/catch`、エラーは UI に表示
+- `async/await` + `Promise.allSettled()` で並列呼び出し
+
+### CSS
+- 色・サイズ・シャドウは CSS 変数のみ
+- クラス命名: `コンポーネント名-要素名-修飾子` の BEM ライク規則
+- セレクター深さは3段まで
+- `!important` は使わない
+
+## セキュリティ
+
+- ユーザー入力は `textContent` か `escapeHTML()` でエスケープ
+- APIキーは Cloudflare Secrets / 環境変数
+- CORS ホワイトリストを Worker で管理
+- `.gitignore` に `.env`, `push.sh`, `*secret*` を追加
