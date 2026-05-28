@@ -341,3 +341,16 @@
   background: var(--border);
   color: var(--text2);
 }
+
+/* 銘柄リスト時価評価額バーグラフ（CSS変数経由で reflow 削減） */
+.sl-table tr[data-bar] {
+  background-image: linear-gradient(
+    to right,
+    transparent var(--bar-start, 0),
+    rgba(142,142,147,0.16) var(--bar-start, 0),
+    rgba(142,142,147,0.16) var(--bar-edge-start, 0),
+    rgba(142,142,147,0.55) var(--bar-edge-start, 0),
+    rgba(142,142,147,0.55) var(--bar-end, 0),
+    transparent var(--bar-end, 0)
+  );
+}
