@@ -12,6 +12,10 @@ exports[`state.js > state (initial values) > state matches snapshot 1`] = `
   "currentPos": null,
   "currentRange": "3m",
   "fetchingRanges": [],
+  "forexRate": {
+    "USDJPY": null,
+    "ts": 0,
+  },
   "historicalAttempted": {},
   "historicalCache": {
     "10y": {},
