@@ -6,8 +6,9 @@
 
 import { state } from './state.js';
 import { renderHeatmap } from './heatmap.js';
-import { renderStockList, updateListHeight } from './stock-list.js';
+import { renderStockList } from './stock-list.js';
 import { renderWatchlist, fetchWatchlistData, _loadWatchlistFromWorker } from './watchlist.js';
+import { updateListHeight } from './render.js';
 
 export function switchTab(name) {
   // 'heatmap' | 'list' | 'watchlist' | 'ai'
