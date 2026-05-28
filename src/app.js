@@ -17,7 +17,7 @@ import { loadChart, setRange, closeModal, handleOverlayClick } from './chart.js'
 import { renderStockList, slSort, slToggleDetail, applyStockBars, updateSlColStyle } from './stock-list.js';
 import { renderWatchlist, wlSort, onWatchlistSearch, removeFromWatchlist, wlSelectItem, fetchWatchlistData, _loadWatchlistFromWorker } from './watchlist.js';
 import { loadPositionsFromKV } from './positions-store.js';
-import { openImportModal, closeImportModal, openManagePositionsModal, handleImportOverlayClick, handleManexFileSelect, handleMoneyForwardImageSelect } from './import-ui.js';
+import { openImportModal, closeImportModal, openManagePositionsModal, handleImportOverlayClick, handleManexFileSelect, handleMoneyForwardImageSelect, focusImportFileInput, _renderImportStep, _confirmImport, _retryWithPin } from './import-ui.js';
 
 // ── 循環依存解消: data.js が発火するイベントを app.js でリッスン ──
 document.addEventListener('hm:prices-updated', () => {
@@ -395,6 +395,7 @@ const ACTION_MAP = {
   // import-ui.js
   openImportModal, closeImportModal, openManagePositionsModal,
   handleImportOverlayClick, handleManexFileSelect, handleMoneyForwardImageSelect,
+  focusImportFileInput, _renderImportStep, _confirmImport, _retryWithPin,
 };
 
 /**
