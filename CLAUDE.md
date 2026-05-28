@@ -7,7 +7,7 @@ AI相談タブは現在無効化中（ソースは `src/_disabled/` に保管）
 
 - **本番 URL**: https://shoulang0729.github.io/portfolio/
 - **GitHub**: https://github.com/shoulang0729/portfolio
-- **現在バージョン**: `20260529F`
+- **現在バージョン**: `20260529I`
 
 ---
 
@@ -27,7 +27,11 @@ AI相談タブは現在無効化中（ソースは `src/_disabled/` に保管）
 │   ├── funds.js            # 投資信託マッピング（FUND_DEFS）
 │   ├── csv.js              # マネックスCSVパース
 │   ├── utils.js            # 共通ユーティリティ
-│   ├── data.js             # Finnhub/Yahoo Finance API 通信
+│   ├── data-helpers.js     # ★新設：共有ヘルパー（fetchWithTimeout / sleep / batchWithRetry）
+│   ├── data-finnhub.js     # ★新設：Finnhub 専用関数（Task 4）
+│   ├── data-yahoo.js       # ★新設：Yahoo Finance 専用関数（Task 4）
+│   ├── data.js             # Finnhub/Yahoo Finance API オーケストレーション（Task 4 分割）
+│   ├── forex.js            # ★新設：Worker /forex 経由で為替レート取得（Task 5）
 │   ├── heatmap.js          # D3.js ヒートマップ描画
 │   ├── chart.js            # D3.js チャート描画
 │   ├── stock-list.js       # Historical Heatmap タブ（銘柄リスト＋期間別騰落率）
@@ -74,10 +78,10 @@ AI相談タブは現在無効化中（ソースは `src/_disabled/` に保管）
 
 ```
 auth-pin → auth-crypto → auth-passkey → auth-ui
-→ positions → state → funds → csv → utils → data
+→ positions → state → funds → csv → utils → data-helpers → data-finnhub → data-yahoo → data → forex
 → heatmap → chart → stock-list → watchlist
 → positions-store → import-parse → import-ui
-→ app
+→ menu → app
 ```
 
 `src/_disabled/` 内の各ファイルは index.html でコメントアウト中（git 履歴に残存）。
@@ -226,6 +230,9 @@ POST /auth/verify                   パスキー検証
 
 | バージョン | 内容 |
 |---|---|
+| 20260529I | feat: #36 USD建て銘柄を /forex 経由で JPY 換算 (Phase 2)、ci: dist/app.js サイズ監視、chore: coverage json-summary reporter |
+| 20260529H | refactor: #126 data.js を Finnhub / Yahoo / orchestrator に分割 |
+| 20260529G | refactor: #124 app.js を 500 行以下に削減（menu.js 分離） |
 | 20260529F | refactor: #113 app.js から描画オーケストレーションを src/render.js に分離 (Phase 3) |
 | 20260529E | chore: vitest coverage（@vitest/coverage-v8）・ESLint 未使用 import 削除・PWA manifest 拡張（shortcuts/categories）・Dependabot 設定 |
 | 20260529D | refactor: #32 init.js を新規作成、app.js の event listeners を分離 |
