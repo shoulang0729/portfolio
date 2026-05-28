@@ -505,14 +505,20 @@ function init() {
     if (state.activeTab === 'watchlist') renderWatchlist();
     if (state.changePeriod && state.changePeriod !== '1d') renderHeatmap();
 
-    // 5y / 10y は並列で取得（完了ごとに描画）
-    await Promise.all(['5y', '10y'].map(async range => {
+    // 5y / 10y は並列で取得（完了ごとに描画、片方失敗してももう片方は描画する）
+    const results = await Promise.allSettled(['5y', '10y'].map(async range => {
       await fetchAllHistorical(range);
       renderStats();
       renderStockList();
       if (state.activeTab === 'watchlist') renderWatchlist();
       if (state.changePeriod && state.changePeriod !== '1d') renderHeatmap();
+      return range;
     }));
+    results.forEach(r => {
+      if (r.status === 'rejected') {
+        console.warn('[historical] fetch failed:', r.reason);
+      }
+    });
   })();
 }
 
