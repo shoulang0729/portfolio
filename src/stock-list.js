@@ -55,6 +55,8 @@ function slMarketLabel(p) {
 }
 
 function renderStockList() {
+  const panel = document.getElementById('panel-list');
+  if (panel?.hidden) return;
   const wrap = document.getElementById('stock-list-wrap');
   if (!wrap) return;
   // 時価評価額の最大値（バーグラフ用）

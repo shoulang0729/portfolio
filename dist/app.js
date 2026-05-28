@@ -1672,6 +1672,8 @@ function slMarketLabel(p) {
   return "US";
 }
 function renderStockList() {
+  const panel = document.getElementById("panel-list");
+  if (panel?.hidden) return;
   const wrap = document.getElementById("stock-list-wrap");
   if (!wrap) return;
   const maxValue = Math.max(1, ...positions.map((p) => p.value || 0));
@@ -2361,6 +2363,8 @@ function wlGetPct(item, periodId) {
   return getHistoricalChangePct(item.symbol, periodId);
 }
 function renderWatchlist() {
+  const panel = document.getElementById("panel-watchlist");
+  if (panel?.hidden) return;
   const wrap = document.getElementById("watchlist-table-wrap");
   if (!wrap) return;
   if (state.watchlist.length === 0) {
