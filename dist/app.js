@@ -1753,27 +1753,32 @@ function renderStockList() {
   requestAnimationFrame(applyStockBars);
 }
 function applyStockBars() {
+  if (state.activeTab !== "list") return;
   const tbl = document.querySelector(".sl-table");
   if (!tbl) return;
   const symTh = tbl.querySelector('th[data-col="symbol"]');
   if (!symTh) return;
   const tblRect = tbl.getBoundingClientRect();
   const symRect = symTh.getBoundingClientRect();
+  const rows = tbl.querySelectorAll("tbody tr[data-bar]");
+  const fracs = Array.from(rows).map((tr) => parseFloat(tr.dataset.bar || "0"));
   const startX = symRect.right - tblRect.left;
   const totalW = tblRect.width;
   const barMaxW = totalW - startX;
-  const fill = "rgba(142,142,147,0.16)";
-  const edge = "rgba(142,142,147,0.55)";
   const edgePx = 2;
-  tbl.querySelectorAll("tbody tr[data-bar]").forEach((tr) => {
-    const frac = parseFloat(tr.dataset.bar || "0");
+  rows.forEach((tr, i) => {
+    const frac = fracs[i];
     if (frac <= 0 || barMaxW <= 0) {
-      tr.style.backgroundImage = "";
+      tr.style.removeProperty("--bar-start");
+      tr.style.removeProperty("--bar-edge-start");
+      tr.style.removeProperty("--bar-end");
       return;
     }
-    const barEndPx = startX + barMaxW * frac;
-    const edgeStart = Math.max(startX + 1, barEndPx - edgePx);
-    tr.style.backgroundImage = `linear-gradient(to right, transparent ${startX}px, ${fill} ${startX}px, ${fill} ${edgeStart.toFixed(1)}px, ${edge} ${edgeStart.toFixed(1)}px, ${edge} ${barEndPx.toFixed(1)}px, transparent ${barEndPx.toFixed(1)}px)`;
+    const barEnd = startX + barMaxW * frac;
+    const edgeStart = Math.max(startX + 1, barEnd - edgePx);
+    tr.style.setProperty("--bar-start", `${startX}px`);
+    tr.style.setProperty("--bar-edge-start", `${edgeStart.toFixed(1)}px`);
+    tr.style.setProperty("--bar-end", `${barEnd.toFixed(1)}px`);
   });
 }
 function slSort(col) {
