@@ -223,7 +223,10 @@ POST /auth/verify                   パスキー検証
 
 | バージョン | 内容 |
 |---|---|
-| 20260528Y | Issue#66対応: dist/app.js を main マージ後に CI で自動ビルド |
+| 20260529A | a11y: 主要 UI に aria-label と role を追加 |
+| 20260528Z | Issue#34 Phase 2 対応: 残りの confirm/alert を自作モーダルに置換 |
+| 20260528Y | Issue#34 Phase 1 対応: 自作 confirm/alert モーダル実装 |
+| 20260528X | Issue#66対応: dist/app.js を main マージ後に CI で自動ビルド |
 | 20260528X | ESLint no-console: warn 導入、不要 console.log を整理 |
 | 20260528W | utils.js のテストカバレッジ拡張（getColor 境界値・_tableSort 等） |
 | 20260528V | Issue#54対応: import-ui.js の inline onclick を data-action 化（CSP前提条件） |
