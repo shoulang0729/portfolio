@@ -10,83 +10,16 @@ import { positions } from './positions.js';
 import { WORKER_URL } from './config.js';
 import { fetchWithTimeout, batchWithRetry } from './data-helpers.js';
 import { fetchForexRate } from './forex.js';
+import { setStatus, flashPriceChanges } from './ui-status.js';
+import { saveCacheToSession } from './cache.js';
 // eslint-disable-next-line no-unused-vars
 import { toFinnhubSymbol, fetchFinnhubQuote, fetchFinnhubCandles } from './data-finnhub.js';
 // eslint-disable-next-line no-unused-vars
-import { fetchViaProxy, ensureYahooCrumb } from './data-yahoo.js';
+import { fetchViaProxy, ensureYahooCrumb, applySplitCorrection } from './data-yahoo.js';
 
 // ══════════════════════════════════════════════
-
-
+// KV CACHE PRICE APPLICATION
 // ══════════════════════════════════════════════
-// SESSION STORAGE CACHE  （履歴データの永続化）
-// ══════════════════════════════════════════════
-const SS_CACHE_KEY = 'hm-hist-cache';
-const SS_CACHE_VER = '2';  // キャッシュ構造変更時にインクリメントして自動破棄
-
-/**
- * sessionStorage から historicalCache を復元する。
- * ページリロード時に API を再取得しないようにする。
- * セッション終了（タブを閉じる）時に自動クリアされる。
- */
-function loadCacheFromSession() {
-  try {
-    const raw = sessionStorage.getItem(SS_CACHE_KEY);
-    if (!raw) return;
-    const obj = JSON.parse(raw);
-    if (obj._v !== SS_CACHE_VER) return; // バージョン不一致は破棄（クリア）
-    for (const range of ['1y', '5y', '10y']) {
-      if (!obj[range]) continue;
-      for (const [sym, entries] of Object.entries(obj[range])) {
-        // ISO文字列 → Date オブジェクトに復元
-        state.historicalCache[range][sym] = entries.map(e => ({
-          date:  new Date(e.date),
-          close: e.close,
-        }));
-      }
-    }
-  } catch (e) {
-    console.warn('[cache] sessionStorage 復元失敗:', e);
-    sessionStorage.removeItem(SS_CACHE_KEY);
-  }
-}
-
-/**
- * historicalCache を sessionStorage に保存する。
- * fetchSymbolHistory 完了後に呼ぶ。
- * 容量超過（QuotaExceededError）時は警告のみで続行。
- */
-function saveCacheToSession() {
-  try {
-    const obj = { _v: SS_CACHE_VER };
-    for (const range of ['1y', '5y', '10y']) {
-      obj[range] = {};
-      for (const [sym, entries] of Object.entries(state.historicalCache[range] || {})) {
-        // Date オブジェクト → ISO文字列（JSON シリアライズ可能にする）
-        obj[range][sym] = entries.map(e => ({
-          date:  e.date instanceof Date ? e.date.toISOString() : e.date,
-          close: e.close,
-        }));
-      }
-    }
-    sessionStorage.setItem(SS_CACHE_KEY, JSON.stringify(obj));
-  } catch (e) {
-    console.warn('[cache] sessionStorage 保存失敗（容量超過の可能性）:', e);
-  }
-}
-
-/**
- * sessionStorage の履歴キャッシュをクリアする。
- * CSV インポートなどでキャッシュを無効化する際に呼ぶ。
- */
-function clearCacheSession() {
-  sessionStorage.removeItem(SS_CACHE_KEY);
-}
-
-// ── 起動時に即時復元（state.js のロード後、API 取得前） ──
-loadCacheFromSession();
-
-// ── KV キャッシュ価格を positions に適用 ──────────────────────
 async function applyPricesCache() {
   try {
     const res = await fetchWithTimeout(`${WORKER_URL}/prices/cache`, 8000);
@@ -164,30 +97,6 @@ async function fetchAllHistorical(neededRange = '1y') {
   }
 }
 
-/**
- * 日足データの急激な価格変動（株式分割・合併）を検出し、最新価格を基準に補正する。
- * Yahoo Finance adjclose が超直近の分割に未対応の場合に自動正規化する。
- * 1日で ±50% 以上の変動を分割と判断（日本市場の値幅制限は通常 ±30% 以内）。
- * @param {Array<{date: Date, close: number}>} entries
- * @returns {Array<{date: Date, close: number}>}
- */
-function applySplitCorrection(entries) {
-  if (entries.length < 2) return entries;
-  // 最新日を基準に、古い方向へ遡りながら急変点を補正
-  for (let i = entries.length - 1; i >= 1; i--) {
-    const a = entries[i].close;
-    const b = entries[i - 1].close;
-    if (!a || !b || a <= 0 || b <= 0) continue;
-    const r = b / a;
-    // 1日で1.5倍以上（または0.67倍以下）の変動 → 分割・合併と判断
-    if (r >= 1.5 || r <= 1 / 1.5) {
-      for (let j = 0; j < i; j++) {
-        if (entries[j].close > 0) entries[j].close /= r;
-      }
-    }
-  }
-  return entries;
-}
 
 async function fetchSymbolHistory(symbol, range = '1y') {
   if (!state.historicalCache[range]) state.historicalCache[range] = {};
@@ -350,56 +259,6 @@ async function refreshPrices() {
   }
 }
 
-/**
- * 前回価格との差分を検出してヒートマップのセルをフラッシュさせる。
- * 上昇 → flash-up クラス（明るく）、下落 → flash-down クラス（暗く）
- * CSS animation が終了したら自動的にクラスを除去する。
- */
-function flashPriceChanges(fetched) {
-  const hasPrev = Object.keys(state.prevPrices).length > 0;
-  if (!hasPrev) {
-    // 初回取得時は次回のために価格を記録するだけ（アニメーションしない）
-    fetched.forEach(({ pos: p, live }) => {
-      if (live?.price && p.ySymbol) state.prevPrices[p.ySymbol] = live.price;
-    });
-    return;
-  }
-
-  const changes = [];
-  fetched.forEach(({ pos: p, live }) => {
-    if (!live?.price || !p.ySymbol) return;
-    const prev = state.prevPrices[p.ySymbol];
-    if (prev != null && prev !== live.price) {
-      changes.push({ ySymbol: p.ySymbol, direction: live.price > prev ? 'up' : 'down' });
-    }
-    state.prevPrices[p.ySymbol] = live.price;
-  });
-
-  if (changes.length === 0) return;
-
-  // 描画完了後の次フレームでアニメーションクラスを付与
-  requestAnimationFrame(() => {
-    const svg = document.getElementById('heatmap');
-    if (!svg) return;
-    changes.forEach(({ ySymbol, direction }) => {
-      const rect = svg.querySelector(`rect[data-ysymbol="${CSS.escape(ySymbol)}"]`);
-      if (!rect) return;
-      const cls = direction === 'up' ? 'flash-up' : 'flash-down';
-      // 既存クラスを除去してリフロー → 再付与（再トリガー）
-      rect.classList.remove('flash-up', 'flash-down');
-      void rect.getBoundingClientRect(); // reflow
-      rect.classList.add(cls);
-      rect.addEventListener('animationend', () => rect.classList.remove(cls), { once: true });
-    });
-  });
-}
-
-function setStatus(msg, color) {
-  const dot = document.getElementById('status-dot');
-  const txt = document.getElementById('status-text');
-  dot.className = 'dot' + (color === 'red' ? ' red' : color === 'yellow' ? ' yellow' : '');
-  txt.textContent = msg;
-}
 
 // CSV パース系（normalizeStr, parseCsvText, parseNum, detectCsvType, parseJpRow, parseUsRow, parseFundRow）は src/csv.js に移動。
 // 旧 importMonexCsvs / handleCsvImport は廃止（取込モーダル import.js に統合済み）。
@@ -407,6 +266,8 @@ function setStatus(msg, color) {
 // 後方互換性：ヘルパー・Finnhub/Yahoo 関数を再エクスポート
 export { fetchWithTimeout, sleep, batchWithRetry } from './data-helpers.js';
 export { toFinnhubSymbol, fetchFinnhubQuote, fetchFinnhubCandles } from './data-finnhub.js';
-export { fetchViaProxy, ensureYahooCrumb } from './data-yahoo.js';
+export { fetchViaProxy, ensureYahooCrumb, applySplitCorrection } from './data-yahoo.js';
+export { setStatus, flashPriceChanges } from './ui-status.js';
+export { loadCacheFromSession, saveCacheToSession, clearCacheSession } from './cache.js';
 
-export { loadCacheFromSession, saveCacheToSession, clearCacheSession, fetchAllHistorical, fetchSymbolHistory, fetchLivePrice, refreshPrices, flashPriceChanges, setStatus, applyPricesCache };
+export { fetchAllHistorical, fetchSymbolHistory, fetchLivePrice, refreshPrices, applyPricesCache };
