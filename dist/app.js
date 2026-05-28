@@ -1488,6 +1488,92 @@ async function fetchForexRate(from, to) {
   }
 }
 
+// src/ui-status.js
+function setStatus(msg, color) {
+  const dot = document.getElementById("status-dot");
+  const txt = document.getElementById("status-text");
+  dot.className = "dot" + (color === "red" ? " red" : color === "yellow" ? " yellow" : "");
+  txt.textContent = msg;
+}
+function flashPriceChanges(fetched) {
+  const { state: state2 } = window;
+  const hasPrev = Object.keys(state2.prevPrices).length > 0;
+  if (!hasPrev) {
+    fetched.forEach(({ pos: p, live }) => {
+      if (live?.price && p.ySymbol) state2.prevPrices[p.ySymbol] = live.price;
+    });
+    return;
+  }
+  const changes = [];
+  fetched.forEach(({ pos: p, live }) => {
+    if (!live?.price || !p.ySymbol) return;
+    const prev = state2.prevPrices[p.ySymbol];
+    if (prev != null && prev !== live.price) {
+      changes.push({ ySymbol: p.ySymbol, direction: live.price > prev ? "up" : "down" });
+    }
+    state2.prevPrices[p.ySymbol] = live.price;
+  });
+  if (changes.length === 0) return;
+  requestAnimationFrame(() => {
+    const svg = document.getElementById("heatmap");
+    if (!svg) return;
+    changes.forEach(({ ySymbol, direction }) => {
+      const rect = svg.querySelector(`rect[data-ysymbol="${CSS.escape(ySymbol)}"]`);
+      if (!rect) return;
+      const cls = direction === "up" ? "flash-up" : "flash-down";
+      rect.classList.remove("flash-up", "flash-down");
+      void rect.getBoundingClientRect();
+      rect.classList.add(cls);
+      rect.addEventListener("animationend", () => rect.classList.remove(cls), { once: true });
+    });
+  });
+}
+
+// src/cache.js
+var SS_CACHE_KEY = "hm-hist-cache";
+var SS_CACHE_VER = "2";
+function loadCacheFromSession() {
+  try {
+    const raw = sessionStorage.getItem(SS_CACHE_KEY);
+    if (!raw) return;
+    const obj = JSON.parse(raw);
+    if (obj._v !== SS_CACHE_VER) return;
+    for (const range of ["1y", "5y", "10y"]) {
+      if (!obj[range]) continue;
+      for (const [sym, entries] of Object.entries(obj[range])) {
+        state.historicalCache[range][sym] = entries.map((e) => ({
+          date: new Date(e.date),
+          close: e.close
+        }));
+      }
+    }
+  } catch (e) {
+    console.warn("[cache] sessionStorage load failed:", e);
+    sessionStorage.removeItem(SS_CACHE_KEY);
+  }
+}
+function saveCacheToSession() {
+  try {
+    const obj = { _v: SS_CACHE_VER };
+    for (const range of ["1y", "5y", "10y"]) {
+      obj[range] = {};
+      for (const [sym, entries] of Object.entries(state.historicalCache[range] || {})) {
+        obj[range][sym] = entries.map((e) => ({
+          date: e.date instanceof Date ? e.date.toISOString() : e.date,
+          close: e.close
+        }));
+      }
+    }
+    sessionStorage.setItem(SS_CACHE_KEY, JSON.stringify(obj));
+  } catch (e) {
+    console.warn("[cache] sessionStorage save failed (quota?):", e);
+  }
+}
+function clearCacheSession() {
+  sessionStorage.removeItem(SS_CACHE_KEY);
+}
+loadCacheFromSession();
+
 // src/data-finnhub.js
 function toFinnhubSymbol(ySymbol) {
   if (!ySymbol) return null;
@@ -1531,51 +1617,23 @@ async function fetchViaProxy(url, timeoutMs = 7e3) {
   }
   return null;
 }
+function applySplitCorrection(entries) {
+  if (entries.length < 2) return entries;
+  for (let i = entries.length - 1; i >= 1; i--) {
+    const a = entries[i].close;
+    const b = entries[i - 1].close;
+    if (!a || !b || a <= 0 || b <= 0) continue;
+    const r = b / a;
+    if (r >= 1.5 || r <= 1 / 1.5) {
+      for (let j = 0; j < i; j++) {
+        if (entries[j].close > 0) entries[j].close /= r;
+      }
+    }
+  }
+  return entries;
+}
 
 // src/data.js
-var SS_CACHE_KEY = "hm-hist-cache";
-var SS_CACHE_VER = "2";
-function loadCacheFromSession() {
-  try {
-    const raw = sessionStorage.getItem(SS_CACHE_KEY);
-    if (!raw) return;
-    const obj = JSON.parse(raw);
-    if (obj._v !== SS_CACHE_VER) return;
-    for (const range of ["1y", "5y", "10y"]) {
-      if (!obj[range]) continue;
-      for (const [sym, entries] of Object.entries(obj[range])) {
-        state.historicalCache[range][sym] = entries.map((e) => ({
-          date: new Date(e.date),
-          close: e.close
-        }));
-      }
-    }
-  } catch (e) {
-    console.warn("[cache] sessionStorage \u5FA9\u5143\u5931\u6557:", e);
-    sessionStorage.removeItem(SS_CACHE_KEY);
-  }
-}
-function saveCacheToSession() {
-  try {
-    const obj = { _v: SS_CACHE_VER };
-    for (const range of ["1y", "5y", "10y"]) {
-      obj[range] = {};
-      for (const [sym, entries] of Object.entries(state.historicalCache[range] || {})) {
-        obj[range][sym] = entries.map((e) => ({
-          date: e.date instanceof Date ? e.date.toISOString() : e.date,
-          close: e.close
-        }));
-      }
-    }
-    sessionStorage.setItem(SS_CACHE_KEY, JSON.stringify(obj));
-  } catch (e) {
-    console.warn("[cache] sessionStorage \u4FDD\u5B58\u5931\u6557\uFF08\u5BB9\u91CF\u8D85\u904E\u306E\u53EF\u80FD\u6027\uFF09:", e);
-  }
-}
-function clearCacheSession() {
-  sessionStorage.removeItem(SS_CACHE_KEY);
-}
-loadCacheFromSession();
 async function applyPricesCache() {
   try {
     const res = await fetchWithTimeout(`${WORKER_URL}/prices/cache`, 8e3);
@@ -1640,21 +1698,6 @@ async function fetchAllHistorical(neededRange = "1y") {
     state.fetchingRanges.delete(neededRange);
     state.historicalAttempted[neededRange] = true;
   }
-}
-function applySplitCorrection(entries) {
-  if (entries.length < 2) return entries;
-  for (let i = entries.length - 1; i >= 1; i--) {
-    const a = entries[i].close;
-    const b = entries[i - 1].close;
-    if (!a || !b || a <= 0 || b <= 0) continue;
-    const r = b / a;
-    if (r >= 1.5 || r <= 1 / 1.5) {
-      for (let j = 0; j < i; j++) {
-        if (entries[j].close > 0) entries[j].close /= r;
-      }
-    }
-  }
-  return entries;
 }
 async function fetchSymbolHistory(symbol, range = "1y") {
   if (!state.historicalCache[range]) state.historicalCache[range] = {};
@@ -1769,44 +1812,6 @@ async function refreshPrices() {
   } else {
     setStatus("\u53D6\u5F97\u5931\u6557\uFF08\u5E02\u5834\u6642\u9593\u5916\u307E\u305F\u306FAPI\u30A2\u30AF\u30BB\u30B9\u5236\u9650\uFF09", "red");
   }
-}
-function flashPriceChanges(fetched) {
-  const hasPrev = Object.keys(state.prevPrices).length > 0;
-  if (!hasPrev) {
-    fetched.forEach(({ pos: p, live }) => {
-      if (live?.price && p.ySymbol) state.prevPrices[p.ySymbol] = live.price;
-    });
-    return;
-  }
-  const changes = [];
-  fetched.forEach(({ pos: p, live }) => {
-    if (!live?.price || !p.ySymbol) return;
-    const prev = state.prevPrices[p.ySymbol];
-    if (prev != null && prev !== live.price) {
-      changes.push({ ySymbol: p.ySymbol, direction: live.price > prev ? "up" : "down" });
-    }
-    state.prevPrices[p.ySymbol] = live.price;
-  });
-  if (changes.length === 0) return;
-  requestAnimationFrame(() => {
-    const svg = document.getElementById("heatmap");
-    if (!svg) return;
-    changes.forEach(({ ySymbol, direction }) => {
-      const rect = svg.querySelector(`rect[data-ysymbol="${CSS.escape(ySymbol)}"]`);
-      if (!rect) return;
-      const cls = direction === "up" ? "flash-up" : "flash-down";
-      rect.classList.remove("flash-up", "flash-down");
-      void rect.getBoundingClientRect();
-      rect.classList.add(cls);
-      rect.addEventListener("animationend", () => rect.classList.remove(cls), { once: true });
-    });
-  });
-}
-function setStatus(msg, color) {
-  const dot = document.getElementById("status-dot");
-  const txt = document.getElementById("status-text");
-  dot.className = "dot" + (color === "red" ? " red" : color === "yellow" ? " yellow" : "");
-  txt.textContent = msg;
 }
 
 // src/stock-list.js
