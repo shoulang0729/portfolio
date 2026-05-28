@@ -31,6 +31,53 @@ function fetchWithTimeout(url, ms = 7000, opts = {}) {
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 /**
+ * バッチ処理 + 自動リトライの共通ヘルパー
+ * @param {Array} items - 処理対象の配列
+ * @param {Function} fn - 各アイテムを処理する非同期関数
+ * @param {Object} [opts] - オプション
+ * @param {number} [opts.batchSize=5] - バッチサイズ
+ * @param {number} [opts.batchDelay=300] - バッチ間の待機ms
+ * @param {number} [opts.retryDelay=2000] - リトライ前の待機ms
+ * @param {Function} [opts.isFailed] - 失敗判定関数（default: r => !r）
+ * @param {Function} [opts.onProgress] - 進捗コールバック (done, total) => void
+ * @returns {Promise<Array>} 全結果
+ */
+async function batchWithRetry(items, fn, opts = {}) {
+  const {
+    batchSize = 5,
+    batchDelay = 300,
+    retryDelay = 2000,
+    isFailed = r => !r,
+    onProgress = null,
+  } = opts;
+
+  const results = [];
+  let done = 0;
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize);
+    const batchResults = await Promise.all(batch.map(async item => {
+      const result = await fn(item);
+      done++;
+      if (onProgress) onProgress(done, items.length);
+      return result;
+    }));
+    results.push(...batchResults);
+    if (i + batchSize < items.length) await sleep(batchDelay);
+  }
+
+  // 失敗したアイテムをリトライ
+  const failedIndices = results.map((r, idx) => isFailed(r, idx) ? idx : -1).filter(idx => idx >= 0);
+  if (failedIndices.length > 0) {
+    await sleep(retryDelay);
+    await Promise.all(failedIndices.map(async idx => {
+      results[idx] = await fn(items[idx]);
+    }));
+  }
+
+  return results;
+}
+
+/**
  * Yahoo Finance API を CORS プロキシ経由で取得する（4段フォールバック）
  * query1 直接 → query2 直接 → corsproxy.io → allorigins の順に試行
  * @param {string} url - Yahoo Finance API URL（query1.finance.yahoo.com）
@@ -264,19 +311,10 @@ async function fetchAllHistorical(neededRange = '1y') {
     if (toFetch.length === 0) return;
     setStatus(`履歴データ取得中（${toFetch.length}銘柄 / ${neededRange}）...`, 'yellow');
 
-    // 5銘柄ずつバッチ取得（レートリミット対策）
-    const BATCH = 5;
-    for (let i = 0; i < toFetch.length; i += BATCH) {
-      await Promise.all(toFetch.slice(i, i + BATCH).map(s => fetchSymbolHistory(s, neededRange)));
-      if (i + BATCH < toFetch.length) await sleep(300);
-    }
-
-    // 失敗した銘柄（キャッシュに入らなかったもの）を2秒後にリトライ
-    const failed = toFetch.filter(s => !state.historicalCache[neededRange][s]);
-    if (failed.length > 0) {
-      await sleep(2000);
-      await Promise.all(failed.map(s => fetchSymbolHistory(s, neededRange)));
-    }
+    // batchWithRetry でバッチ取得＋自動リトライ（キャッシュ未投入を失敗と判定）
+    await batchWithRetry(toFetch, s => fetchSymbolHistory(s, neededRange), {
+      isFailed: (_result, idx) => !state.historicalCache[neededRange][toFetch[idx]],
+    });
 
     // 取得完了後はライブ更新ステータスを復元（あれば緑、なければ "未更新"）
     if (state.lastUpdateText) {
@@ -382,32 +420,16 @@ async function refreshPrices() {
   if (targets.length === 0) { setStatus('取得対象銘柄なし', 'yellow'); return; }
 
   setStatus(`ライブ価格を取得中（0/${targets.length}）...`, 'yellow');
-  let done = 0;
 
-  // 5銘柄ずつバッチ取得（レートリミット対策）
-  const BATCH = 5;
-  const fetched = [];
-  for (let i = 0; i < targets.length; i += BATCH) {
-    const batch = targets.slice(i, i + BATCH);
-    const results = await Promise.all(
-      batch.map(async p => {
-        const live = await fetchLivePrice(p.ySymbol);
-        setStatus(`ライブ価格を取得中（${++done}/${targets.length}）...`, 'yellow');
-        return { pos: p, live };
-      })
-    );
-    fetched.push(...results);
-    if (i + BATCH < targets.length) await sleep(300); // バッチ間に小休止
-  }
-
-  // 失敗した銘柄を2秒後にリトライ
-  const failed = fetched.filter(f => !f.live);
-  if (failed.length > 0) {
-    await sleep(2000);
-    await Promise.all(failed.map(async f => {
-      f.live = await fetchLivePrice(f.pos.ySymbol);
-    }));
-  }
+  // batchWithRetry でバッチ取得＋自動リトライ
+  const fetched = await batchWithRetry(
+    targets,
+    async p => ({ pos: p, live: await fetchLivePrice(p.ySymbol) }),
+    {
+      isFailed: r => !r.live,
+      onProgress: (done, total) => setStatus(`ライブ価格を取得中（${done}/${total}）...`, 'yellow'),
+    }
+  );
 
   const updateCache = (sym, price) => {
     if (!price || !isFinite(price) || price <= 0) return;
@@ -532,4 +554,4 @@ function setStatus(msg, color) {
 // CSV パース系（normalizeStr, parseCsvText, parseNum, detectCsvType, parseJpRow, parseUsRow, parseFundRow）は src/csv.js に移動。
 // 旧 importMonexCsvs / handleCsvImport は廃止（取込モーダル import.js に統合済み）。
 
-export { WORKER_URL, fetchWithTimeout, sleep, fetchViaProxy, fetchFinnhubQuote, fetchFinnhubCandles, ensureYahooCrumb, loadCacheFromSession, saveCacheToSession, clearCacheSession, fetchAllHistorical, fetchSymbolHistory, fetchLivePrice, refreshPrices, flashPriceChanges, setStatus, applyPricesCache };
+export { WORKER_URL, fetchWithTimeout, sleep, batchWithRetry, fetchViaProxy, fetchFinnhubQuote, fetchFinnhubCandles, ensureYahooCrumb, loadCacheFromSession, saveCacheToSession, clearCacheSession, fetchAllHistorical, fetchSymbolHistory, fetchLivePrice, refreshPrices, flashPriceChanges, setStatus, applyPricesCache };
