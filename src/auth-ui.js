@@ -7,7 +7,7 @@
 // 注: authenticatePasskey は window に登録されるため直接 import しない（循環回避）
 // ══════════════════════════════════════════════════════════════
 
-import { _auth, AUTH_PIN_LEN, AUTH_MAX_FAIL, AUTH_LOCK_SEC, AUTH_SESSION_KEY, AUTH_LS_HASH_KEY, _getActivePinHash, _hashPin, _isLocked, _lockRemain, _saveLockout, isAuthenticated } from './auth-pin.js';
+import { _auth, AUTH_PIN_LEN, AUTH_MAX_FAIL, AUTH_LOCK_SEC, AUTH_SESSION_KEY, AUTH_LS_HASH_KEY, _getActivePinHash, _hashPin, _isLocked, _lockRemain, _formatLockRemain, _saveLockout, isAuthenticated } from './auth-pin.js';
 import { _AUTH_ENC_SS, _deriveEncKey, _restoreEncKey } from './auth-crypto.js';
 import { WORKER_URL } from './data.js';
 
@@ -46,6 +46,9 @@ function _hideError() {
   const el = document.getElementById('pin-error');
   if (el) { el.textContent = ''; el.classList.remove('visible'); }
 }
+function _lockRemainMessage(seconds = _lockRemain()) {
+  return `${_formatLockRemain(seconds)}後に再試行できます`;
+}
 
 // ── シェイク / サクセス ──
 function _shake(type) {
@@ -62,7 +65,7 @@ function _shake(type) {
 // ══════════════════════════════════════════════
 
 function authKeyPress(n) {
-  if (_isLocked()) { _showError(`${_lockRemain()}秒後に再試行できます`); return; }
+  if (_isLocked()) { _showError(_lockRemainMessage()); return; }
   if (_auth.input.length >= AUTH_PIN_LEN) return;
   _auth.input += n;
   _updateDots();
@@ -109,14 +112,14 @@ async function _submitPin() {
     if (_auth.fails >= AUTH_MAX_FAIL) {
       _auth.lockedAt = Date.now();
       _saveLockout();
-      _showError(`${AUTH_MAX_FAIL}回失敗。${AUTH_LOCK_SEC}秒後に再試行できます`);
+      _showError(`${AUTH_MAX_FAIL}回失敗。${_lockRemainMessage(AUTH_LOCK_SEC)}`);
       const _t = setInterval(() => {
         if (!_isLocked()) {
           clearInterval(_t);
           _auth.fails = 0; _auth.lockedAt = null;
           _saveLockout();
           _setKeypadEnabled(true); _hideError();
-        } else { _showError(`${_lockRemain()}秒後に再試行できます`); }
+        } else { _showError(_lockRemainMessage()); }
       }, 1000);
     } else {
       _showError(`PINが違います（残り${AUTH_MAX_FAIL - _auth.fails}回）`);
