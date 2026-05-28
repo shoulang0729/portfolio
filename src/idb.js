@@ -94,3 +94,29 @@ export function idbGetAll(db, storeName) {
     req.onsuccess = () => resolve(req.result);
   });
 }
+
+/**
+ * オブジェクトストアのすべてのキーと値のペアを取得
+ *
+ * @param {IDBDatabase} db
+ * @param {string} storeName
+ * @returns {Promise<Array<{key: *, value: *}>>}
+ */
+export function idbGetAllEntries(db, storeName) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, 'readonly');
+    const store = tx.objectStore(storeName);
+    const req = store.openCursor();
+    const entries = [];
+    req.onerror = () => reject(req.error);
+    req.onsuccess = () => {
+      const cursor = req.result;
+      if (cursor) {
+        entries.push({ key: cursor.key, value: cursor.value });
+        cursor.continue();
+      } else {
+        resolve(entries);
+      }
+    };
+  });
+}

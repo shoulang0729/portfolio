@@ -10,7 +10,7 @@ import { state } from './state.js';
 import { authenticatePasskey, registerPasskey, setPasskeySuccessCallback } from './auth-passkey.js';
 import { authKeyPress, authBackspace, pcKeyPress, pcBackspace, openPinChange, closePinChange, _showChangePinButton } from './auth-ui.js';
 import { getHistoricalChangePct, calcPortfolioPeriodPct } from './utils.js';
-import { fetchAllHistorical, refreshPrices, applyPricesCache } from './data.js';
+import { fetchAllHistorical, refreshPrices, applyPricesCache, migrateFromSessionStorage, restoreFromIDB } from './data.js';
 import { setStatus } from './ui-status.js';
 import { WORKER_URL } from './config.js';
 import { renderHeatmap } from './heatmap.js';
@@ -454,6 +454,9 @@ function init() {
 
   // 起動時に KV から保有銘柄を読み込んでから価格取得
   (async () => {
+    // 0. sessionStorage → IDB マイグレーション（初回のみ有効）、その後 IDB からメモリ復元
+    await migrateFromSessionStorage();
+    await restoreFromIDB();
     // 1. KV から保有銘柄を取得（あれば positions.js の内容を上書き）
     const loaded = await loadPositionsFromKV();
     if (loaded) { renderStats(); renderHeatmap(); }
