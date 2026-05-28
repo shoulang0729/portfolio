@@ -11,13 +11,15 @@
     "test:watch": "vitest",
     "lint": "eslint src/ --ext .js",
     "lint:fix": "eslint src/ --ext .js --fix",
-    "format": "prettier --write 'src/**/*.js' 'worker/src/**/*.js'"
+    "format": "prettier --write 'src/**/*.js' 'worker/src/**/*.js'",
+    "check:circular": "madge --circular src/"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^1.6.1",
     "esbuild": "^0.28.0",
     "eslint": "^9.0.0",
     "globals": "^17.6.0",
+    "madge": "^8.0.0",
     "prettier": "^3.0.0",
     "vitest": "^1.0.0"
   }
