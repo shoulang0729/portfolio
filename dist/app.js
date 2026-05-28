@@ -1249,7 +1249,7 @@ function makePeriodHeaderCells(activeSortCol, sortDir, sortFnName) {
   return PERIOD_COLS.map((pc) => makeTh(pc.label, pc.id, "center", activeSortCol, sortDir, sortFnName)).join("");
 }
 
-// src/utils.js
+// src/portfolio-calc.js
 function getHistoricalChangePct(symbol, periodId) {
   const cfg = PERIOD_MAP[periodId];
   if (!cfg) return null;
