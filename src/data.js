@@ -9,6 +9,7 @@ import { state } from './state.js';
 import { positions } from './positions.js';
 import { WORKER_URL } from './config.js';
 import { fetchWithTimeout, batchWithRetry } from './data-helpers.js';
+import { fetchForexRate } from './forex.js';
 // eslint-disable-next-line no-unused-vars
 import { toFinnhubSymbol, fetchFinnhubQuote, fetchFinnhubCandles } from './data-finnhub.js';
 // eslint-disable-next-line no-unused-vars
@@ -255,6 +256,20 @@ async function refreshPrices() {
   if (targets.length === 0) { setStatus('取得対象銘柄なし', 'yellow'); return; }
 
   setStatus(`ライブ価格を取得中（0/${targets.length}）...`, 'yellow');
+
+  // USD為替レート取得（USD建て銘柄がある場合）
+  const hasUSD = targets.some(p => p.cur === 'USD');
+  if (hasUSD) {
+    const now = Date.now();
+    // 1時間以内のキャッシュがあれば再利用
+    if (!state.forexRate.USDJPY || (now - state.forexRate.ts) > 3600000) {
+      const rate = await fetchForexRate('USD', 'JPY');
+      if (rate) {
+        state.forexRate.USDJPY = rate;
+        state.forexRate.ts = now;
+      }
+    }
+  }
 
   // batchWithRetry でバッチ取得＋自動リトライ
   const fetched = await batchWithRetry(

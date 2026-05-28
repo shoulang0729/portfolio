@@ -72,6 +72,7 @@ const state = {
   wlSortCol:        '1d',       // ウォッチリストのデフォルトソート列
   wlSortDir:        'desc',
   prevPrices:       {},         // { ySymbol: price } 前回のライブ価格（フラッシュアニメーション用）
+  forexRate:        { USDJPY: null, ts: 0 },  // { USDJPY: rate, ts: timestamp }
 };
 
 export { C, CHART_RANGES, SL_DETAIL_COLS, state };

@@ -508,8 +508,10 @@ var state = {
   wlSortCol: "1d",
   // ウォッチリストのデフォルトソート列
   wlSortDir: "desc",
-  prevPrices: {}
+  prevPrices: {},
   // { ySymbol: price } 前回のライブ価格（フラッシュアニメーション用）
+  forexRate: { USDJPY: null, ts: 0 }
+  // { USDJPY: rate, ts: timestamp }
 };
 
 // src/auth-pin.js
@@ -1470,6 +1472,22 @@ async function batchWithRetry(items, fn, opts = {}) {
   return results;
 }
 
+// src/forex.js
+async function fetchForexRate(from, to) {
+  try {
+    const res = await fetchWithTimeout(
+      `${WORKER_URL}/forex?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+      8e3
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data?.rate ?? null;
+  } catch (e) {
+    console.warn(`[forex] \u70BA\u66FF\u30EC\u30FC\u30C8\u53D6\u5F97\u5931\u6557 ${from}/${to}:`, e);
+    return null;
+  }
+}
+
 // src/data-finnhub.js
 function toFinnhubSymbol(ySymbol) {
   if (!ySymbol) return null;
@@ -1678,6 +1696,17 @@ async function refreshPrices() {
     return;
   }
   setStatus(`\u30E9\u30A4\u30D6\u4FA1\u683C\u3092\u53D6\u5F97\u4E2D\uFF080/${targets.length}\uFF09...`, "yellow");
+  const hasUSD = targets.some((p) => p.cur === "USD");
+  if (hasUSD) {
+    const now = Date.now();
+    if (!state.forexRate.USDJPY || now - state.forexRate.ts > 36e5) {
+      const rate = await fetchForexRate("USD", "JPY");
+      if (rate) {
+        state.forexRate.USDJPY = rate;
+        state.forexRate.ts = now;
+      }
+    }
+  }
   const fetched = await batchWithRetry(
     targets,
     async (p) => ({ pos: p, live: await fetchLivePrice(p.ySymbol) }),
