@@ -3580,11 +3580,11 @@ function init() {
       if (state.changePeriod && state.changePeriod !== "1d") renderHeatmap();
       return range;
     }));
-    results.forEach((r) => {
-      if (r.status === "rejected") {
-        console.warn("[historical] fetch failed:", r.reason);
-      }
-    });
+    const failed = results.filter((r) => r.status === "rejected");
+    failed.forEach((r) => console.warn("[historical] fetch failed:", r.reason));
+    if (failed.length > 0) {
+      setStatus(`\u5C65\u6B74\u30C7\u30FC\u30BF\u53D6\u5F97\u5931\u6557\uFF08${failed.length}/${results.length}\uFF09`, "red");
+    }
   })();
 }
 function _hideHeatmapSkeleton() {

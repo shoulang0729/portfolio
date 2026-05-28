@@ -514,11 +514,11 @@ function init() {
       if (state.changePeriod && state.changePeriod !== '1d') renderHeatmap();
       return range;
     }));
-    results.forEach(r => {
-      if (r.status === 'rejected') {
-        console.warn('[historical] fetch failed:', r.reason);
-      }
-    });
+    const failed = results.filter(r => r.status === 'rejected');
+    failed.forEach(r => console.warn('[historical] fetch failed:', r.reason));
+    if (failed.length > 0) {
+      setStatus(`履歴データ取得失敗（${failed.length}/${results.length}）`, 'red');
+    }
   })();
 }
 
