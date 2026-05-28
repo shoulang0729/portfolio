@@ -1,12 +1,14 @@
 {
-  "name": "Portfolio Heatmap",
+  "name": "Portfolio Heatmap Manager",
   "short_name": "Heatmap",
-  "description": "ポートフォリオ可視化アプリ",
+  "description": "Finnhub + Yahoo Finance APIを使ったポートフォリオ可視化アプリ。リアルタイム価格・期間別騰落率・ウォッチリスト管理。",
   "start_url": "../",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
   "orientation": "portrait-primary",
+  "categories": ["finance", "productivity"],
   "icons": [
     {
       "src": "icon-192.png",
@@ -19,6 +21,53 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    },
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "ヒートマップ表示",
+      "short_name": "ヒートマップ",
+      "description": "ポートフォリオのヒートマップを表示",
+      "url": "../?tab=heatmap",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "銘柄リスト",
+      "short_name": "リスト",
+      "description": "保有銘柄の詳細情報を表示",
+      "url": "../?tab=list",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "ウォッチリスト",
+      "short_name": "ウォッチ",
+      "description": "ウォッチリストの騰落率を表示",
+      "url": "../?tab=watchlist",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     }
   ]
 }
