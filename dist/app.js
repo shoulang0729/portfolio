@@ -1458,8 +1458,14 @@ function _showChangePinButton() {
   }
 })();
 
-// src/utils.js
-var _ESC = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+// src/fmt.js
+var _ESC = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#39;"
+};
 var escapeHTML = (s) => String(s).replace(/[&<>"']/g, (c) => _ESC[c]);
 var fmtJPY = (v) => {
   const m = v / 1e4;
@@ -1494,9 +1500,6 @@ var fmtShares = (n) => {
   }
   return n.toLocaleString();
 };
-function cssVar(name) {
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-}
 function getColor(pct, mode, scaleOverride) {
   if (pct == null) return "var(--null-cell)";
   const scale = scaleOverride != null ? scaleOverride : mode === "pnl" ? 50 : 5;
@@ -1513,6 +1516,74 @@ function getColor(pct, mode, scaleOverride) {
     return `rgb(${r},${g},${b})`;
   }
 }
+
+// src/color.js
+function cssVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+function _lum(c) {
+  const lin = (v) => {
+    const s = v / 255;
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  };
+  return 0.2126 * lin(c.r) + 0.7152 * lin(c.g) + 0.0722 * lin(c.b);
+}
+function getCellTextColor(hexColor) {
+  const c = d3.color(hexColor);
+  if (!c) return cssVar("--text");
+  return _lum(c) > 0.35 ? "#1C1C1E" : "#FFFFFF";
+}
+function getCellTextColorSub(hexColor) {
+  const c = d3.color(hexColor);
+  if (!c) return cssVar("--text3");
+  return _lum(c) > 0.35 ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.82)";
+}
+
+// src/table.js
+function makeTh(label, col, align, activeSortCol, sortDir, sortFnName) {
+  const active = col && activeSortCol === col;
+  const sortCls = active ? sortDir === "desc" ? "sort-desc" : "sort-asc" : "";
+  const alignCls = align === "center" ? "sl-th-center" : "";
+  const cls = [sortCls, alignCls].filter(Boolean).join(" ");
+  const dataCol = col ? `data-col="${col}"` : "";
+  const click = col && sortFnName ? `data-action="${sortFnName}" data-arg="${col}"` : "";
+  return `<th class="${cls}" ${dataCol} ${click}>${label}</th>`;
+}
+function makePctCell(pct, scale, dataCol = "") {
+  const dataAttr = dataCol ? `data-col="${dataCol}" ` : "";
+  if (pct == null) {
+    const period = PERIOD_MAP[dataCol];
+    const range = period?.range;
+    const fetching = !!(range && state.fetchingRanges?.has?.(range));
+    const attempted = !!(range && state.historicalAttempted?.[range] === true);
+    const loading = fetching || range && !attempted;
+    const placeholder = loading ? '<span class="sl-pct-loading">\u2026</span>' : "\u2013";
+    return `<td ${dataAttr}class="sl-pct-cell">${placeholder}</td>`;
+  }
+  const bg = getColor(pct, "change", scale);
+  const fg = getCellTextColor(bg);
+  return `<td ${dataAttr}class="sl-pct-cell" style="background:${bg};color:${fg}">${fmtPctInt(pct)}</td>`;
+}
+function _tableSort(colKey, dirKey, col, defaultAscCols = []) {
+  if (state[colKey] === col) {
+    state[dirKey] = state[dirKey] === "desc" ? "asc" : "desc";
+  } else {
+    state[colKey] = col;
+    state[dirKey] = defaultAscCols.includes(col) ? "asc" : "desc";
+  }
+}
+function makePeriodCells(getPct) {
+  return PERIOD_COLS.map((pc) => {
+    const pct = getPct(pc.id);
+    const scale = PERIOD_MAP[pc.id]?.scale ?? 25;
+    return makePctCell(pct, scale, pc.id);
+  }).join("");
+}
+function makePeriodHeaderCells(activeSortCol, sortDir, sortFnName) {
+  return PERIOD_COLS.map((pc) => makeTh(pc.label, pc.id, "center", activeSortCol, sortDir, sortFnName)).join("");
+}
+
+// src/utils.js
 function getHistoricalChangePct(symbol, periodId) {
   const cfg = PERIOD_MAP[periodId];
   if (!cfg) return null;
@@ -1555,65 +1626,6 @@ function calcPortfolioPeriodPct(periodId) {
     totalWeight += p.value;
   });
   return totalWeight > 0 ? weightedSum / totalWeight : null;
-}
-function _lum(c) {
-  const lin = (v) => {
-    const s = v / 255;
-    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
-  };
-  return 0.2126 * lin(c.r) + 0.7152 * lin(c.g) + 0.0722 * lin(c.b);
-}
-function getCellTextColor(hexColor) {
-  const c = d3.color(hexColor);
-  if (!c) return cssVar("--text");
-  return _lum(c) > 0.35 ? "#1C1C1E" : "#FFFFFF";
-}
-function getCellTextColorSub(hexColor) {
-  const c = d3.color(hexColor);
-  if (!c) return cssVar("--text3");
-  return _lum(c) > 0.35 ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.82)";
-}
-function makeTh(label, col, align, activeSortCol, sortDir, sortFnName) {
-  const active = col && activeSortCol === col;
-  const sortCls = active ? sortDir === "desc" ? "sort-desc" : "sort-asc" : "";
-  const alignCls = align === "center" ? "sl-th-center" : "";
-  const cls = [sortCls, alignCls].filter(Boolean).join(" ");
-  const dataCol = col ? `data-col="${col}"` : "";
-  const click = col && sortFnName ? `data-action="${sortFnName}" data-arg="${col}"` : "";
-  return `<th class="${cls}" ${dataCol} ${click}>${label}</th>`;
-}
-function makePctCell(pct, scale, dataCol = "") {
-  const dataAttr = dataCol ? `data-col="${dataCol}" ` : "";
-  if (pct == null) {
-    const period = typeof PERIOD_MAP !== "undefined" ? PERIOD_MAP[dataCol] : null;
-    const range = period?.range;
-    const fetching = !!(range && state.fetchingRanges?.has?.(range));
-    const attempted = !!(range && state.historicalAttempted?.[range] === true);
-    const loading = fetching || range && !attempted;
-    const placeholder = loading ? '<span class="sl-pct-loading">\u2026</span>' : "\u2013";
-    return `<td ${dataAttr}class="sl-pct-cell">${placeholder}</td>`;
-  }
-  const bg = getColor(pct, "change", scale);
-  const fg = getCellTextColor(bg);
-  return `<td ${dataAttr}class="sl-pct-cell" style="background:${bg};color:${fg}">${fmtPctInt(pct)}</td>`;
-}
-function _tableSort(colKey, dirKey, col, defaultAscCols = []) {
-  if (state[colKey] === col) {
-    state[dirKey] = state[dirKey] === "desc" ? "asc" : "desc";
-  } else {
-    state[colKey] = col;
-    state[dirKey] = defaultAscCols.includes(col) ? "asc" : "desc";
-  }
-}
-function makePeriodCells(getPct) {
-  return PERIOD_COLS.map((pc) => {
-    const pct = getPct(pc.id);
-    const scale = PERIOD_MAP[pc.id]?.scale ?? 25;
-    return makePctCell(pct, scale, pc.id);
-  }).join("");
-}
-function makePeriodHeaderCells(activeSortCol, sortDir, sortFnName) {
-  return PERIOD_COLS.map((pc) => makeTh(pc.label, pc.id, "center", activeSortCol, sortDir, sortFnName)).join("");
 }
 
 // src/stock-list.js
