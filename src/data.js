@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════════════════════
-// data.js  ―  データ取得・CSV インポート
+// data.js  ―  データ取得オーケストレーション
 //
 // 依存: state.js (state), positions.js (positions)
 // 注: renderStats / renderHeatmap は CustomEvent 'hm:prices-updated' で呼び出す（循環依存回避）
@@ -8,172 +8,14 @@
 import { state } from './state.js';
 import { positions } from './positions.js';
 import { WORKER_URL } from './config.js';
+import { fetchWithTimeout, batchWithRetry } from './data-helpers.js';
+// eslint-disable-next-line no-unused-vars
+import { toFinnhubSymbol, fetchFinnhubQuote, fetchFinnhubCandles } from './data-finnhub.js';
+// eslint-disable-next-line no-unused-vars
+import { fetchViaProxy, ensureYahooCrumb } from './data-yahoo.js';
 
 // ══════════════════════════════════════════════
-// FETCH HELPER
-// ══════════════════════════════════════════════
-/**
- * タイムアウト付き fetch ラッパー
- * @param {string} url
- * @param {number} [ms=7000] タイムアウトミリ秒
- */
-function fetchWithTimeout(url, ms = 7000, opts = {}) {
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), ms);
-  return fetch(url, { signal: ctrl.signal, ...opts }).finally(() => clearTimeout(timer));
-}
 
-/** 指定ミリ秒待機する */
-const sleep = ms => new Promise(r => setTimeout(r, ms));
-
-/**
- * バッチ処理 + 自動リトライの共通ヘルパー
- * @param {Array} items - 処理対象の配列
- * @param {Function} fn - 各アイテムを処理する非同期関数
- * @param {Object} [opts] - オプション
- * @param {number} [opts.batchSize=5] - バッチサイズ
- * @param {number} [opts.batchDelay=300] - バッチ間の待機ms
- * @param {number} [opts.retryDelay=2000] - リトライ前の待機ms
- * @param {Function} [opts.isFailed] - 失敗判定関数（default: r => !r）
- * @param {Function} [opts.onProgress] - 進捗コールバック (done, total) => void
- * @returns {Promise<Array>} 全結果
- */
-async function batchWithRetry(items, fn, opts = {}) {
-  const {
-    batchSize = 5,
-    batchDelay = 300,
-    retryDelay = 2000,
-    isFailed = r => !r,
-    onProgress = null,
-  } = opts;
-
-  const results = [];
-  let done = 0;
-  for (let i = 0; i < items.length; i += batchSize) {
-    const batch = items.slice(i, i + batchSize);
-    const batchResults = await Promise.all(batch.map(async item => {
-      const result = await fn(item);
-      done++;
-      if (onProgress) onProgress(done, items.length);
-      return result;
-    }));
-    results.push(...batchResults);
-    if (i + batchSize < items.length) await sleep(batchDelay);
-  }
-
-  // 失敗したアイテムをリトライ
-  const failedIndices = results.map((r, idx) => isFailed(r, idx) ? idx : -1).filter(idx => idx >= 0);
-  if (failedIndices.length > 0) {
-    await sleep(retryDelay);
-    await Promise.all(failedIndices.map(async idx => {
-      results[idx] = await fn(items[idx]);
-    }));
-  }
-
-  return results;
-}
-
-/**
- * Yahoo Finance API を CORS プロキシ経由で取得する（4段フォールバック）
- * query1 直接 → query2 直接 → corsproxy.io → allorigins の順に試行
- * @param {string} url - Yahoo Finance API URL（query1.finance.yahoo.com）
- * @param {number} [timeoutMs=7000] 1試行あたりのタイムアウトミリ秒
- * @returns {Promise<Object|null>} パースされた JSON、失敗時は null
- */
-async function fetchViaProxy(url, timeoutMs = 7000) {
-  const q2url = url.replace('query1.finance.yahoo.com', 'query2.finance.yahoo.com');
-  const attempts = [
-    // Worker 経由（最優先：CORS 確実・APIキー不要）
-    { url: `${WORKER_URL}/yahoo?url=${encodeURIComponent(url)}`,               opts: {} },
-    // 以下は Worker が落ちているときのフォールバック
-    { url,                                                                      opts: { credentials: 'include' } },
-    { url: q2url,                                                               opts: { credentials: 'include' } },
-    { url: `https://corsproxy.io/?${encodeURIComponent(url)}`,                 opts: {} },
-    { url: `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,    opts: {} },
-  ];
-  for (const { url: u, opts } of attempts) {
-    try {
-      const res = await fetchWithTimeout(u, timeoutMs, opts);
-      if (!res.ok) continue;
-      const raw = await res.json();
-      // allorigins wraps content in { contents: "..." }
-      return raw?.contents ? JSON.parse(raw.contents) : raw;
-    } catch { /* try next */ }
-  }
-  return null;
-}
-
-/**
- * Yahoo Finance シンボルを Finnhub シンボルに変換
- * 例: '9983.T' → 'TYO:9983' / 'AAPL' → 'AAPL'
- */
-function toFinnhubSymbol(ySymbol) {
-  if (!ySymbol) return null;
-  if (ySymbol.endsWith('.T')) return 'TYO:' + ySymbol.slice(0, -2);
-  if (ySymbol.endsWith('.HK')) return 'HKG:' + ySymbol.slice(0, -3);
-  return ySymbol;
-}
-
-/**
- * Finnhub Quote API でライブ価格・当日騰落率を取得（Worker経由）
- * @returns {Promise<{price, dayPct}|null>}
- */
-async function fetchFinnhubQuote(fSymbol) {
-  const url = `${WORKER_URL}/finnhub?path=/quote&symbol=${encodeURIComponent(fSymbol)}`;
-  try {
-    const res = await fetchWithTimeout(url, 7000);
-    if (!res.ok) return null;
-    const d = await res.json();
-    if (!d || !d.c) return null;
-    return { price: d.c, dayPct: d.dp ?? null };
-  } catch { return null; }
-}
-
-/**
- * Finnhub Candles API で日足履歴データを取得（Worker経由）
- * @param {string} fSymbol - Finnhub シンボル
- * @param {number} fromTs  - 開始 UNIX タイムスタンプ（秒）
- * @param {number} toTs    - 終了 UNIX タイムスタンプ（秒）
- * @returns {Promise<Array<{date, close}>|null>}
- */
-async function fetchFinnhubCandles(fSymbol, fromTs, toTs) {
-  const url = `${WORKER_URL}/finnhub?path=/stock/candle&symbol=${encodeURIComponent(fSymbol)}&resolution=D&from=${fromTs}&to=${toTs}`;
-  try {
-    const res = await fetchWithTimeout(url, 10000);
-    if (!res.ok) return null;
-    const d = await res.json();
-    if (d?.s !== 'ok' || !d.t?.length) return null;
-    return d.t.map((ts, i) => ({ date: new Date(ts * 1000), close: d.c[i] }))
-              .filter(p => p.close != null && isFinite(p.close));
-  } catch { return null; }
-}
-
-/**
- * Yahoo Finance crumb を取得・キャッシュする（有効期限 55 分）
- * crumb は Yahoo Finance v7 API の認証に必要なトークン
- * @returns {Promise<string|null>}
- */
-async function ensureYahooCrumb() {
-  const now = Date.now();
-  if (state.yahooCrumb && now < state.yahooCrumbExpiry) return state.yahooCrumb;
-  try {
-    const res = await fetchWithTimeout(
-      'https://query1.finance.yahoo.com/v1/test/getcrumb', 5000,
-      { credentials: 'include' }
-    );
-    if (res.ok) {
-      const text = await res.text();
-      // crumb は短い文字列（HTMLでない）
-      if (text && text.length < 50 && !text.startsWith('<')) {
-        state.yahooCrumb = text.trim();
-        state.yahooCrumbExpiry = now + 55 * 60 * 1000; // 55分
-        return state.yahooCrumb;
-      }
-    }
-  } catch { /* crumb なしで継続 */ }
-  state.yahooCrumb = null;
-  return null;
-}
 
 // ══════════════════════════════════════════════
 // SESSION STORAGE CACHE  （履歴データの永続化）
@@ -547,4 +389,9 @@ function setStatus(msg, color) {
 // CSV パース系（normalizeStr, parseCsvText, parseNum, detectCsvType, parseJpRow, parseUsRow, parseFundRow）は src/csv.js に移動。
 // 旧 importMonexCsvs / handleCsvImport は廃止（取込モーダル import.js に統合済み）。
 
-export { toFinnhubSymbol, fetchWithTimeout, sleep, batchWithRetry, fetchViaProxy, fetchFinnhubQuote, fetchFinnhubCandles, ensureYahooCrumb, loadCacheFromSession, saveCacheToSession, clearCacheSession, fetchAllHistorical, fetchSymbolHistory, fetchLivePrice, refreshPrices, flashPriceChanges, setStatus, applyPricesCache };
+// 後方互換性：ヘルパー・Finnhub/Yahoo 関数を再エクスポート
+export { fetchWithTimeout, sleep, batchWithRetry } from './data-helpers.js';
+export { toFinnhubSymbol, fetchFinnhubQuote, fetchFinnhubCandles } from './data-finnhub.js';
+export { fetchViaProxy, ensureYahooCrumb } from './data-yahoo.js';
+
+export { loadCacheFromSession, saveCacheToSession, clearCacheSession, fetchAllHistorical, fetchSymbolHistory, fetchLivePrice, refreshPrices, flashPriceChanges, setStatus, applyPricesCache };
