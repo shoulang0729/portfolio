@@ -7,7 +7,7 @@ AI相談タブは現在無効化中（ソースは `src/_disabled/` に保管）
 
 - **本番 URL**: https://shoulang0729.github.io/portfolio/
 - **GitHub**: https://github.com/shoulang0729/portfolio
-- **現在バージョン**: `20260527B`
+- **現在バージョン**: `20260529E`
 
 ---
 
@@ -223,7 +223,12 @@ POST /auth/verify                   パスキー検証
 
 | バージョン | 内容 |
 |---|---|
-| 20260529A | a11y: 主要 UI に aria-label と role を追加 |
+| 20260529E | chore: vitest coverage（@vitest/coverage-v8）・ESLint 未使用 import 削除・PWA manifest 拡張（shortcuts/categories）・Dependabot 設定 |
+| 20260529D | refactor: #32 init.js を新規作成、app.js の event listeners を分離 |
+| 20260529C | refactor: #99 tabs.js を新規作成、switchTab 関数を分離 |
+| 20260529B | security: #37 Content Security Policy (CSP) を meta タグで実装 |
+| 20260529A | docs: #106 README.md を新規作成（スタック・開発コマンド・ドキュメント導線） |
+| 20260528Z | a11y: 主要 UI に aria-label と role を追加 |
 | 20260528Z | Issue#34 Phase 2 対応: 残りの confirm/alert を自作モーダルに置換 |
 | 20260528Y | Issue#34 Phase 1 対応: 自作 confirm/alert モーダル実装 |
 | 20260528X | Issue#66対応: dist/app.js を main マージ後に CI で自動ビルド |
