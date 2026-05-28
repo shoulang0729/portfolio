@@ -58,3 +58,28 @@ export async function ensureYahooCrumb() {
   state.yahooCrumb = null;
   return null;
 }
+
+/**
+ * Correct stock split / merger detected in historical data
+ * Yahoo adjclose doesn't always reflect the most recent splits,
+ * so we auto-adjust based on detecting ±50% daily moves.
+ * @param {Array<{date: Date, close: number}>} entries
+ * @returns {Array<{date: Date, close: number}>}
+ */
+export function applySplitCorrection(entries) {
+  if (entries.length < 2) return entries;
+  // Walk backwards from latest, correcting ancient prices by ratio
+  for (let i = entries.length - 1; i >= 1; i--) {
+    const a = entries[i].close;
+    const b = entries[i - 1].close;
+    if (!a || !b || a <= 0 || b <= 0) continue;
+    const r = b / a;
+    // 1.5x or 0.67x move in 1 day → split/merger
+    if (r >= 1.5 || r <= 1 / 1.5) {
+      for (let j = 0; j < i; j++) {
+        if (entries[j].close > 0) entries[j].close /= r;
+      }
+    }
+  }
+  return entries;
+}
