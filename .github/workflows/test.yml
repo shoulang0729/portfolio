@@ -17,3 +17,5 @@ jobs:
           cache: "npm"
       - run: npm install
       - run: npm test          # vitest (pure function tests)
+      - run: npm run lint      # eslint
+      - run: npm run build     # esbuild
