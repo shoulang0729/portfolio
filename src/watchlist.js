@@ -316,6 +316,8 @@ function wlGetPct(item, periodId) {
 }
 
 export function renderWatchlist() {
+  const panel = document.getElementById('panel-watchlist');
+  if (panel?.hidden) return;
   const wrap = document.getElementById('watchlist-table-wrap');
   if (!wrap) return;
 
