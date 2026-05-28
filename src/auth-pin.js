@@ -15,7 +15,7 @@ const AUTH_LS_HASH_KEY  = 'hm-pin-hash';    // localStorage キー
 const AUTH_LOCKOUT_KEY  = 'hm-lockout';     // ロックアウト時刻 localStorage キー
 const AUTH_PIN_LEN      = 4;
 const AUTH_MAX_FAIL     = 5;
-const AUTH_LOCK_SEC     = 30;
+const AUTH_LOCK_SEC     = 300;
 
 // ── 有効な PIN ハッシュ（localStorage 優先） ──
 function _getActivePinHash() {
@@ -44,6 +44,15 @@ async function _hashPin(pin) {
 // ── ロックアウト ──
 function _isLocked()   { return _auth.lockedAt && (Date.now() - _auth.lockedAt) / 1000 < AUTH_LOCK_SEC; }
 function _lockRemain() { return Math.ceil(AUTH_LOCK_SEC - (Date.now() - _auth.lockedAt) / 1000); }
+function _formatLockRemain(seconds) {
+  const remain = Math.max(0, Math.ceil(seconds));
+  if (remain >= 60) {
+    const minutes = Math.floor(remain / 60);
+    const secs = remain % 60;
+    return secs > 0 ? `${minutes}分${secs}秒` : `${minutes}分`;
+  }
+  return `${remain}秒`;
+}
 
 // ロックアウト状態を localStorage に保存（リロード後も持続させる）
 function _saveLockout() {
@@ -67,4 +76,4 @@ function _saveLockout() {
   }
 }());
 
-export { AUTH_PIN_HASH, AUTH_SESSION_KEY, AUTH_LS_HASH_KEY, AUTH_LOCKOUT_KEY, AUTH_PIN_LEN, AUTH_MAX_FAIL, AUTH_LOCK_SEC, _auth, _getActivePinHash, _hashPin, _isLocked, _lockRemain, _saveLockout, isAuthenticated };
+export { AUTH_PIN_HASH, AUTH_SESSION_KEY, AUTH_LS_HASH_KEY, AUTH_LOCKOUT_KEY, AUTH_PIN_LEN, AUTH_MAX_FAIL, AUTH_LOCK_SEC, _auth, _getActivePinHash, _hashPin, _isLocked, _lockRemain, _formatLockRemain, _saveLockout, isAuthenticated };
