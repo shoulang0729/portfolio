@@ -1282,7 +1282,7 @@ function calcPortfolioPeriodPct(periodId) {
   let weightedSum = 0, totalWeight = 0;
   positions.forEach((p) => {
     let pct = null;
-    if (periodId === "1d" && p.dayPct !== null) {
+    if (periodId === "1d" && p.dayPct != null) {
       pct = p.dayPct;
     } else if (p.ySymbol) {
       pct = getHistoricalChangePct(p.ySymbol, periodId);
@@ -1584,7 +1584,7 @@ async function refreshPrices() {
         p.pnl = p.value - costJPY;
         p.pnlPct = costJPY > 0 ? p.pnl / costJPY * 100 : 0;
       }
-      p.dayPct = live.dayPct;
+      p.dayPct = live.dayPct ?? null;
       updateCache(p.ySymbol, live.price);
     }
     n++;

@@ -477,7 +477,7 @@ async function refreshPrices() {
         p.pnl    = p.value - costJPY;
         p.pnlPct = costJPY > 0 ? (p.pnl / costJPY) * 100 : 0;
       }
-      p.dayPct = live.dayPct;
+      p.dayPct = live.dayPct ?? null;
       updateCache(p.ySymbol, live.price);
     }
     n++;
