@@ -1,55 +1,7 @@
-// Tests for pure formatter functions extracted from utils.js
-// These have no DOM/D3 dependencies and run in plain Node.js.
+// Tests for pure formatter functions in src/fmt.js
 
 import { describe, it, expect } from 'vitest';
-
-// ── inline copies of the pure functions (no import side-effects) ──
-const fmtJPYInt = v => {
-  const m = Math.round(v / 10000);
-  const sign = m < 0 ? '-' : '';
-  const abs = Math.abs(m);
-  if (abs >= 10000) {
-    const s = (abs / 10000).toFixed(2);
-    return sign + (s.endsWith('0') ? (abs / 10000).toFixed(1) : s) + '億';
-  }
-  return sign + abs.toLocaleString() + '万';
-};
-
-const fmtPctInt = v => Math.round(v) + '%';
-
-const fmtShares = n => {
-  if (n >= 1000000) {
-    const v = Math.round(n / 100000) / 10;
-    return v.toFixed(1).replace(/\.0$/, '') + 'M';
-  }
-  if (n >= 1000) {
-    const v = Math.round(n / 100) / 10;
-    return v.toFixed(1).replace(/\.0$/, '') + 'K';
-  }
-  return n.toLocaleString();
-};
-
-const escapeHTML = s => {
-  const _ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
-  return String(s).replace(/[&<>"']/g, c => _ESC[c]);
-};
-
-const getColor = (pct, mode, scaleOverride) => {
-  if (pct == null) return 'var(--null-cell)';
-  const scale = scaleOverride != null ? scaleOverride : (mode === 'pnl' ? 50 : 5);
-  const t = Math.max(-1, Math.min(1, pct / scale));
-  if (t >= 0) {
-    const r = Math.round(232 + t * (198 - 232));
-    const g = Math.round(232 + t * (40 - 232));
-    const b = Math.round(237 + t * (40 - 237));
-    return `rgb(${r},${g},${b})`;
-  } else {
-    const r = Math.round(232 - (-t) * (232 - 27));
-    const g = Math.round(232 - (-t) * (232 - 94));
-    const b = Math.round(237 - (-t) * (237 - 32));
-    return `rgb(${r},${g},${b})`;
-  }
-};
+import { fmtJPYInt, fmtPctInt, fmtShares, escapeHTML, getColor as getColorFn } from '../src/fmt.js';
 
 // ── fmtJPYInt ──────────────────────────────────────────────────────
 describe('fmtJPYInt', () => {
@@ -64,10 +16,10 @@ describe('fmtJPYInt', () => {
   });
 
   it('formats 億 values', () => {
-    expect(fmtJPYInt(100000000)).toBe('1.0億');      // 1億ちょうど → toFixed(1)
-    expect(fmtJPYInt(120000000)).toBe('1.2億');      // 1.20 → ends with 0 → toFixed(1)
-    expect(fmtJPYInt(123000000)).toBe('1.23億');     // 12300万 / 10000 = 1.23
-    expect(fmtJPYInt(1234000000)).toBe('12.34億');   // 123400万 / 10000 = 12.34
+    expect(fmtJPYInt(100000000)).toBe('1.0億');
+    expect(fmtJPYInt(120000000)).toBe('1.2億');
+    expect(fmtJPYInt(123000000)).toBe('1.23億');
+    expect(fmtJPYInt(1234000000)).toBe('12.34億');
   });
 
   it('handles zero', () => {
@@ -125,26 +77,26 @@ describe('escapeHTML', () => {
 // ── getColor ──────────────────────────────────────────────────────
 describe('getColor', () => {
   it('returns neutral for null', () => {
-    expect(getColor(null)).toBe('var(--null-cell)');
+    expect(getColorFn(null)).toBe('var(--null-cell)');
   });
 
   it('returns reddish rgb for positive', () => {
-    const c = getColor(5, 'change');
+    const c = getColorFn(5, 'change');
     expect(c).toMatch(/^rgb\(/);
-    const [r, g, b] = c.match(/\d+/g).map(Number);
-    expect(r).toBeGreaterThan(g); // red dominates for positive
+    const [r, g] = c.match(/\d+/g).map(Number);
+    expect(r).toBeGreaterThan(g);
   });
 
   it('returns greenish rgb for negative', () => {
-    const c = getColor(-5, 'change');
+    const c = getColorFn(-5, 'change');
     expect(c).toMatch(/^rgb\(/);
-    const [r, g, b] = c.match(/\d+/g).map(Number);
-    expect(g).toBeGreaterThan(r); // green dominates for negative
+    const [r, g] = c.match(/\d+/g).map(Number);
+    expect(g).toBeGreaterThan(r);
   });
 
   it('clamps at scale boundary', () => {
-    const full  = getColor(100, 'change', 5);
-    const clamped = getColor(50, 'change', 5);
-    expect(full).toBe(clamped); // both saturate at +5%
+    const full = getColorFn(100, 'change', 5);
+    const clamped = getColorFn(50, 'change', 5);
+    expect(full).toBe(clamped);
   });
 });
