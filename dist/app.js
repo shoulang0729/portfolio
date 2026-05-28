@@ -519,7 +519,7 @@ var AUTH_LS_HASH_KEY = "hm-pin-hash";
 var AUTH_LOCKOUT_KEY = "hm-lockout";
 var AUTH_PIN_LEN = 4;
 var AUTH_MAX_FAIL = 5;
-var AUTH_LOCK_SEC = 30;
+var AUTH_LOCK_SEC = 300;
 function _getActivePinHash() {
   return localStorage.getItem(AUTH_LS_HASH_KEY) || AUTH_PIN_HASH;
 }
@@ -542,6 +542,15 @@ function _isLocked() {
 }
 function _lockRemain() {
   return Math.ceil(AUTH_LOCK_SEC - (Date.now() - _auth.lockedAt) / 1e3);
+}
+function _formatLockRemain(seconds) {
+  const remain = Math.max(0, Math.ceil(seconds));
+  if (remain >= 60) {
+    const minutes = Math.floor(remain / 60);
+    const secs = remain % 60;
+    return secs > 0 ? `${minutes}\u5206${secs}\u79D2` : `${minutes}\u5206`;
+  }
+  return `${remain}\u79D2`;
 }
 function _saveLockout() {
   if (_auth.lockedAt) {
@@ -1095,6 +1104,9 @@ function _hideError() {
     el.classList.remove("visible");
   }
 }
+function _lockRemainMessage(seconds = _lockRemain()) {
+  return `${_formatLockRemain(seconds)}\u5F8C\u306B\u518D\u8A66\u884C\u3067\u304D\u307E\u3059`;
+}
 function _shake(type) {
   const el = document.getElementById("pin-dots");
   if (!el) return;
@@ -1105,7 +1117,7 @@ function _shake(type) {
 }
 function authKeyPress(n) {
   if (_isLocked()) {
-    _showError(`${_lockRemain()}\u79D2\u5F8C\u306B\u518D\u8A66\u884C\u3067\u304D\u307E\u3059`);
+    _showError(_lockRemainMessage());
     return;
   }
   if (_auth.input.length >= AUTH_PIN_LEN) return;
@@ -1150,7 +1162,7 @@ async function _submitPin() {
     if (_auth.fails >= AUTH_MAX_FAIL) {
       _auth.lockedAt = Date.now();
       _saveLockout();
-      _showError(`${AUTH_MAX_FAIL}\u56DE\u5931\u6557\u3002${AUTH_LOCK_SEC}\u79D2\u5F8C\u306B\u518D\u8A66\u884C\u3067\u304D\u307E\u3059`);
+      _showError(`${AUTH_MAX_FAIL}\u56DE\u5931\u6557\u3002${_lockRemainMessage(AUTH_LOCK_SEC)}`);
       const _t = setInterval(() => {
         if (!_isLocked()) {
           clearInterval(_t);
@@ -1160,7 +1172,7 @@ async function _submitPin() {
           _setKeypadEnabled(true);
           _hideError();
         } else {
-          _showError(`${_lockRemain()}\u79D2\u5F8C\u306B\u518D\u8A66\u884C\u3067\u304D\u307E\u3059`);
+          _showError(_lockRemainMessage());
         }
       }, 1e3);
     } else {
