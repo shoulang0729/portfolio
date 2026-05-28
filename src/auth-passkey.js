@@ -10,6 +10,7 @@
 import { _auth, AUTH_SESSION_KEY } from './auth-pin.js';
 import { _AUTH_ENC_SS } from './auth-crypto.js';
 import { WORKER_URL } from './config.js';
+import { showAlert } from './modal.js';
 
 // ── 循環依存解消: auth-ui._showChangePinButton をコールバックで受け取る ──
 let _onPasskeySuccess = null;
@@ -28,7 +29,7 @@ function _u8ToB64url(u8) {
 
 export async function registerPasskey() {
   if (!navigator.credentials || !window.PublicKeyCredential) {
-    alert('このブラウザはパスキーに対応していません。');
+    await showAlert({ title: 'ブラウザ対応', message: 'このブラウザはパスキーに対応していません。' });
     return;
   }
   try {
@@ -62,9 +63,9 @@ export async function registerPasskey() {
       }),
     });
     if (!(await regRes.json()).ok) throw new Error('登録失敗');
-    alert('パスキーを登録しました。次回からパスキーでログインできます。');
+    await showAlert({ title: 'パスキー登録', message: 'パスキーを登録しました。次回からパスキーでログインできます。' });
   } catch (e) {
-    if (e.name !== 'NotAllowedError') alert(`パスキー登録エラー: ${e.message}`);
+    if (e.name !== 'NotAllowedError') await showAlert({ title: 'エラー', message: `パスキー登録エラー: ${e.message}` });
   }
 }
 
