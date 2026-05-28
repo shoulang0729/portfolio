@@ -635,5 +635,4 @@ import './ptr.js';
     badge.textContent = 'v.' + ver;
     title.appendChild(badge);
   }
-  console.log('[Heatmap] app.js:', import.meta.url);
 }());

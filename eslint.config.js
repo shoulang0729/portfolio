@@ -21,6 +21,7 @@ export default [
       'no-var': 'error',
       'prefer-const': 'warn',
       'eqeqeq': ['error', 'always', { null: 'ignore' }],
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
     },
   },
 ];

@@ -1379,7 +1379,6 @@ function loadCacheFromSession() {
     if (!raw) return;
     const obj = JSON.parse(raw);
     if (obj._v !== SS_CACHE_VER) return;
-    let total = 0;
     for (const range of ["1y", "5y", "10y"]) {
       if (!obj[range]) continue;
       for (const [sym, entries] of Object.entries(obj[range])) {
@@ -1387,10 +1386,8 @@ function loadCacheFromSession() {
           date: new Date(e.date),
           close: e.close
         }));
-        total++;
       }
     }
-    if (total > 0) console.log(`[cache] sessionStorage \u304B\u3089 ${total} \u9298\u67C4\xD7\u30EC\u30F3\u30B8\u3092\u5FA9\u5143`);
   } catch (e) {
     console.warn("[cache] sessionStorage \u5FA9\u5143\u5931\u6557:", e);
     sessionStorage.removeItem(SS_CACHE_KEY);
@@ -1452,7 +1449,6 @@ async function applyPricesCache() {
       applied++;
     }
     if (applied > 0) {
-      console.log(`[prices:cache] ${applied}\u9298\u67C4\u306B Cron \u30AD\u30E3\u30C3\u30B7\u30E5\u4FA1\u683C\u3092\u9069\u7528`);
       document.dispatchEvent(new CustomEvent("hm:prices-updated"));
     }
   } catch (e) {
@@ -2176,7 +2172,6 @@ async function _loadWatchlistFromWorker() {
         console.warn("[watchlist] localStorage \u4FDD\u5B58\u5931\u6557\uFF08\u5BB9\u91CF\u8D85\u904E\u306E\u53EF\u80FD\u6027\uFF09:", e);
       }
     } else if (state.watchlist.length > 0) {
-      console.log(`[watchlist] KV is empty; seeding KV with ${state.watchlist.length} local items`);
       _syncWatchlistToWorker();
     }
   } catch {
@@ -2430,7 +2425,6 @@ async function loadPositionsFromKV() {
     const kvPositions = await res.json();
     if (!Array.isArray(kvPositions) || kvPositions.length === 0) return false;
     positions.splice(0, positions.length, ...kvPositions);
-    console.log(`[positions-store] KV\u304B\u3089${kvPositions.length}\u9298\u67C4\u3092\u8AAD\u307F\u8FBC\u307F\u307E\u3057\u305F`);
     return true;
   } catch (e) {
     console.warn("[positions-store] KV positions \u8AAD\u8FBC\u5931\u6557:", e);
@@ -3691,5 +3685,4 @@ if (typeof d3 === "undefined") {
     badge.textContent = "v." + ver;
     title.appendChild(badge);
   }
-  console.log("[Heatmap] app.js:", import.meta.url);
 })();
