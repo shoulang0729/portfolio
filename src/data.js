@@ -7,11 +7,7 @@
 
 import { state } from './state.js';
 import { positions } from './positions.js';
-
-// ══════════════════════════════════════════════
-// WORKER / FINNHUB CONFIG
-// ══════════════════════════════════════════════
-const WORKER_URL = 'https://portfolio-proxy.shoulang.workers.dev';
+import { WORKER_URL } from './config.js';
 
 // ══════════════════════════════════════════════
 // FETCH HELPER
@@ -554,4 +550,4 @@ function setStatus(msg, color) {
 // CSV パース系（normalizeStr, parseCsvText, parseNum, detectCsvType, parseJpRow, parseUsRow, parseFundRow）は src/csv.js に移動。
 // 旧 importMonexCsvs / handleCsvImport は廃止（取込モーダル import.js に統合済み）。
 
-export { WORKER_URL, fetchWithTimeout, sleep, batchWithRetry, fetchViaProxy, fetchFinnhubQuote, fetchFinnhubCandles, ensureYahooCrumb, loadCacheFromSession, saveCacheToSession, clearCacheSession, fetchAllHistorical, fetchSymbolHistory, fetchLivePrice, refreshPrices, flashPriceChanges, setStatus, applyPricesCache };
+export { fetchWithTimeout, sleep, batchWithRetry, fetchViaProxy, fetchFinnhubQuote, fetchFinnhubCandles, ensureYahooCrumb, loadCacheFromSession, saveCacheToSession, clearCacheSession, fetchAllHistorical, fetchSymbolHistory, fetchLivePrice, refreshPrices, flashPriceChanges, setStatus, applyPricesCache };

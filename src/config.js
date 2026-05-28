@@ -1,0 +1,1 @@
+export const WORKER_URL = 'https://portfolio-proxy.shoulang.workers.dev';
