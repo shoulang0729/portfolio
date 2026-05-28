@@ -148,35 +148,40 @@ function renderStockList() {
   requestAnimationFrame(applyStockBars);
 }
 
-// ── 時価評価額バーグラフ：ティッカー列右端〜テーブル右端を最大幅として tr に適用 ──
+// ── 時価評価額バーグラフ：CSS 変数で reflow 削減 ──
 function applyStockBars() {
+  // 銘柄リストタブ非表示なら何もしない
+  if (state.activeTab !== 'list') return;
+
+  // ── READ phase: DOM 計測を全て先に ──
   const tbl = document.querySelector('.sl-table');
   if (!tbl) return;
   const symTh = tbl.querySelector('th[data-col="symbol"]');
   if (!symTh) return;
   const tblRect = tbl.getBoundingClientRect();
   const symRect = symTh.getBoundingClientRect();
-  const startX  = symRect.right - tblRect.left;
-  const totalW  = tblRect.width;
-  const barMaxW = totalW - startX; // バーが使える最大幅
+  const rows = tbl.querySelectorAll('tbody tr[data-bar]');
+  const fracs = Array.from(rows).map(tr => parseFloat(tr.dataset.bar || '0'));
 
-  const fill = 'rgba(142,142,147,0.16)';  // バー本体
-  const edge = 'rgba(142,142,147,0.55)';  // 右端の縦線（バー終端を明示）
+  // ── WRITE phase: CSS 変数で一括設定 ──
+  const startX = symRect.right - tblRect.left;
+  const totalW = tblRect.width;
+  const barMaxW = totalW - startX;
   const edgePx = 2;
 
-  tbl.querySelectorAll('tbody tr[data-bar]').forEach(tr => {
-    const frac = parseFloat(tr.dataset.bar || '0');
-    if (frac <= 0 || barMaxW <= 0) { tr.style.backgroundImage = ''; return; }
-    const barEndPx  = startX + barMaxW * frac;
-    const edgeStart = Math.max(startX + 1, barEndPx - edgePx);
-    tr.style.backgroundImage =
-      `linear-gradient(to right,` +
-      ` transparent ${startX}px,` +
-      ` ${fill} ${startX}px,` +
-      ` ${fill} ${edgeStart.toFixed(1)}px,` +
-      ` ${edge} ${edgeStart.toFixed(1)}px,` +
-      ` ${edge} ${barEndPx.toFixed(1)}px,` +
-      ` transparent ${barEndPx.toFixed(1)}px)`;
+  rows.forEach((tr, i) => {
+    const frac = fracs[i];
+    if (frac <= 0 || barMaxW <= 0) {
+      tr.style.removeProperty('--bar-start');
+      tr.style.removeProperty('--bar-edge-start');
+      tr.style.removeProperty('--bar-end');
+      return;
+    }
+    const barEnd = startX + barMaxW * frac;
+    const edgeStart = Math.max(startX + 1, barEnd - edgePx);
+    tr.style.setProperty('--bar-start', `${startX}px`);
+    tr.style.setProperty('--bar-edge-start', `${edgeStart.toFixed(1)}px`);
+    tr.style.setProperty('--bar-end', `${barEnd.toFixed(1)}px`);
   });
 }
 
