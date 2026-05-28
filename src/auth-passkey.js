@@ -9,7 +9,7 @@
 
 import { _auth, AUTH_SESSION_KEY } from './auth-pin.js';
 import { _AUTH_ENC_SS } from './auth-crypto.js';
-import { WORKER_URL } from './data.js';
+import { WORKER_URL } from './config.js';
 
 // ── 循環依存解消: auth-ui._showChangePinButton をコールバックで受け取る ──
 let _onPasskeySuccess = null;

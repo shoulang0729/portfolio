@@ -9,7 +9,8 @@
 
 import { state } from './state.js';
 import { escapeHTML, makeTh, getHistoricalChangePct, fmtPrice, _tableSort, makePeriodCells, makePeriodHeaderCells } from './utils.js';
-import { fetchViaProxy, fetchLivePrice, fetchAllHistorical, WORKER_URL } from './data.js';
+import { fetchViaProxy, fetchLivePrice, fetchAllHistorical } from './data.js';
+import { WORKER_URL } from './config.js';
 
 // ══════════════════════════════════════════════
 // STORAGE
