@@ -95,6 +95,7 @@ describe('state.js', () => {
         'wlSortCol',
         'wlSortDir',
         'prevPrices',
+        'forexRate',
       ];
       for (const prop of requiredProps) {
         expect(state).toHaveProperty(prop);
