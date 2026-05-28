@@ -1,1 +1,108 @@
-name: Daily Issues Auto-Fix  on:   schedule:     - cron: '0 0 * * *'   # 毎日 0:00 UTC = 9:00 JST   workflow_dispatch:        # 手動実行（テスト用）  permissions:   contents: write   pull-requests: write   issues: write  jobs:   auto-fix:     runs-on: ubuntu-latest     steps:       - uses: actions/checkout@v4         with:           fetch-depth: 0        - uses: actions/setup-node@v4         with:           node-version: '20'           cache: 'npm'        - run: npm install        - name: Configure git         run: |           git config user.name  "github-actions[bot]"           git config user.email "github-actions[bot]@users.noreply.github.com"        - name: Delete old auto-fix branches         run: |           gh api repos/${{ github.repository }}/branches --paginate --jq '.[].name' \             | grep '^auto-fix/' \             | while read branch; do                 gh api -X DELETE "repos/${{ github.repository }}/git/refs/heads/${branch}" && \                   echo "Deleted branch: ${branch}" || true               done         env:           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}        - name: Fetch open issues         run: |           gh issue list --state open --json number,title,body,labels --limit 50 > open-issues.json           echo "Open issues: $(python3 -c 'import json; print(len(json.load(open("open-issues.json"))))')"         env:           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}        - name: Configure Claude Code permissions for CI         run: |           mkdir -p .claude           printf '%s\n' '{"permissions":{"allow":["Bash(*)","Read","Write","Edit","MultiEdit","Glob","Grep","LS","TodoWrite"]}}' > .claude/settings.json           echo "=== .claude/settings.json ===" && cat .claude/settings.json        - name: Run Claude Code to fix issues and create PR         uses: anthropics/claude-code-action@beta         with:           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}           github_token: ${{ secrets.GITHUB_TOKEN }}           mode: agent           model: claude-sonnet-4-6           allowed_tools: "Bash(*),Read,Write,Edit,MultiEdit,Glob,Grep,LS,TodoWrite"           direct_prompt: |             ワークスペースの `open-issues.json` に現在の GitHub open issues が保存されています。             このファイルを読んで以下の手順で処理してください。              ## Step 1: issues を評価             `open-issues.json` を読む。空配列なら「No open issues today.」と出力して終了。             各 issue について判断する：             - **"Wait" ラベルが付いている** → コメントなしで静かにスキップ             - **実装可能** → Step 2 へ             - **要件が曖昧・破壊的変更・承認が必要** → 以下でスキップ理由を記録して次の issue へ:               ```               gh issue comment <number> --body "⚠️ **自動修正をスキップしました**\n\n理由: <具体的な理由>\n\n対応が必要な場合は手動で確認・承認してください。"               ```              ## Step 2: 作業ブランチを作成（実装する issue が 1 件以上の場合のみ）             ```             git checkout -b auto-fix/$(date +%Y%m%d)             ```              ## Step 3: 各 issue を実装             - issue の内容を読んでコードを修正・追加する             - 実装できなかった issue は `gh issue comment` でスキップ理由を残す             - 1つの issue を修正したら `git commit -m "fix: #<issue番号> <概要>"` でコミット              ## Step 4: テストを実行             ```             npm test             ```             失敗した場合は原因を修正してから次へ進む。              ## Step 5: push して PR 作成（実装 issue が 1 件以上の場合のみ）             ```             git push -u origin auto-fix/$(date +%Y%m%d)             gh pr create \               --title "[Auto] Daily issues fix $(date +%Y-%m-%d)" \               --body "対応した issue の一覧と実装サマリー（Closes #N 形式）"             ```             実装した issue が 0 件の場合は PR を作成しない。              ## 注意事項             - index.html の `?v=` バージョンを上げる（現在の日付 + 連番で更新）             - sw.js の CACHE は index.html の `?v=` から動的生成されるため変更不要             - 破壊的な変更は行わない             - テストが最終的にパスしていることを確認してから PR を作成する
+name: Daily Issues Auto-Fix
+
+on:
+  schedule:
+    - cron: '0 0 * * *'   # 毎日 0:00 UTC = 9:00 JST
+  workflow_dispatch:        # 手動実行（テスト用）
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  auto-fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm install
+
+      - name: Configure git
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Delete old auto-fix branches
+        run: |
+          gh api repos/${{ github.repository }}/branches --paginate --jq '.[].name' \
+            | grep '^auto-fix/' \
+            | while read branch; do
+                gh api -X DELETE "repos/${{ github.repository }}/git/refs/heads/${branch}" && \
+                  echo "Deleted branch: ${branch}" || true
+              done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Fetch open issues
+        run: |
+          gh issue list --state open --json number,title,body,labels --limit 50 > open-issues.json
+          echo "Open issues: $(python3 -c 'import json; print(len(json.load(open("open-issues.json"))))')"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Claude Code permissions for CI
+        run: |
+          mkdir -p .claude
+          printf '%s\n' '{"permissions":{"allow":["Bash(*)","Read","Write","Edit","MultiEdit","Glob","Grep","LS","TodoWrite"]}}' > .claude/settings.json
+          echo "=== .claude/settings.json ===" && cat .claude/settings.json
+
+      - name: Run Claude Code to fix issues and create PR
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          mode: agent
+          model: claude-sonnet-4-6
+          allowed_tools: "Bash(*),Read,Write,Edit,MultiEdit,Glob,Grep,LS,TodoWrite"
+          direct_prompt: |
+            ワークスペースの `open-issues.json` に現在の GitHub open issues が保存されています。
+            このファイルを読んで以下の手順で処理してください。
+
+            ## Step 1: issues を評価
+            `open-issues.json` を読む。空配列なら「No open issues today.」と出力して終了。
+            各 issue について判断する：
+            - **"Wait" ラベルが付いている** → コメントなしで静かにスキップ
+            - **実装可能** → Step 2 へ
+            - **要件が曖昧・破壊的変更・承認が必要** → 以下でスキップ理由を記録して次の issue へ:
+              ```
+              gh issue comment <number> --body "⚠️ **自動修正をスキップしました**\n\n理由: <具体的な理由>\n\n対応が必要な場合は手動で確認・承認してください。"
+              ```
+
+            ## Step 2: 作業ブランチを作成（実装する issue が 1 件以上の場合のみ）
+            ```
+            git checkout -b auto-fix/$(date +%Y%m%d)
+            ```
+
+            ## Step 3: 各 issue を実装
+            - issue の内容を読んでコードを修正・追加する
+            - 実装できなかった issue は `gh issue comment` でスキップ理由を残す
+            - 1つの issue を修正したら `git commit -m "fix: #<issue番号> <概要>"` でコミット
+
+            ## Step 4: テストを実行
+            ```
+            npm test
+            ```
+            失敗した場合は原因を修正してから次へ進む。
+
+            ## Step 5: push して PR 作成（実装 issue が 1 件以上の場合のみ）
+            ```
+            git push -u origin auto-fix/$(date +%Y%m%d)
+            gh pr create \
+              --title "[Auto] Daily issues fix $(date +%Y-%m-%d)" \
+              --body "対応した issue の一覧と実装サマリー（Closes #N 形式）"
+            ```
+            実装した issue が 0 件の場合は PR を作成しない。
+
+            ## 注意事項
+            - index.html の `?v=` バージョンを上げる（現在の日付 + 連番で更新）
+            - sw.js の CACHE は index.html の `?v=` から動的生成されるため変更不要
+            - 破壊的な変更は行わない
+            - テストが最終的にパスしていることを確認してから PR を作成する
