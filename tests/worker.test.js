@@ -199,6 +199,26 @@ describe('worker/src/index.js helpers', () => {
     });
   });
 
+  // Helper: Forex symbol construction
+  describe('Forex symbol construction', () => {
+    function _buildForexSymbol(from, to) {
+      return `${from}${to}=X`;
+    }
+
+    it('USD と JPY から USDJPY=X を生成', () => {
+      expect(_buildForexSymbol('USD', 'JPY')).toBe('USDJPY=X');
+    });
+
+    it('EUR と USD から EURUSD=X を生成', () => {
+      expect(_buildForexSymbol('EUR', 'USD')).toBe('EURUSD=X');
+    });
+
+    it('任意の通貨ペアを生成', () => {
+      expect(_buildForexSymbol('GBP', 'JPY')).toBe('GBPJPY=X');
+      expect(_buildForexSymbol('CHF', 'EUR')).toBe('CHFEUR=X');
+    });
+  });
+
   // Helper: CORS headers
   describe('CORS headers generation', () => {
     function corsHeaders(origin) {
