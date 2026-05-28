@@ -3093,6 +3093,144 @@ function escapeHTML2(s) {
   return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
+// src/modal.js
+async function showConfirm({ title, message, okLabel = "OK", cancelLabel = "\u30AD\u30E3\u30F3\u30BB\u30EB" }) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    overlay.style.display = "flex";
+    overlay.role = "dialog";
+    overlay.setAttribute("aria-modal", "true");
+    const modal = document.createElement("div");
+    modal.className = "modal";
+    const header = document.createElement("div");
+    header.className = "modal-header";
+    const titleEl = document.createElement("div");
+    titleEl.className = "modal-title";
+    titleEl.textContent = title || "\u78BA\u8A8D";
+    header.appendChild(titleEl);
+    modal.appendChild(header);
+    const body = document.createElement("div");
+    body.style.padding = "16px";
+    body.style.color = "var(--text)";
+    const msg = document.createElement("p");
+    msg.textContent = message || "";
+    msg.style.margin = "0 0 16px 0";
+    msg.style.lineHeight = "1.5";
+    body.appendChild(msg);
+    const footer = document.createElement("div");
+    footer.style.display = "flex";
+    footer.style.gap = "8px";
+    footer.style.justifyContent = "flex-end";
+    footer.style.paddingTop = "8px";
+    footer.style.borderTop = "1px solid var(--border)";
+    const cancelBtn = document.createElement("button");
+    cancelBtn.textContent = cancelLabel;
+    cancelBtn.style.cssText = "padding: 8px 12px; border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500;";
+    cancelBtn.onclick = () => {
+      cleanup();
+      resolve(false);
+    };
+    const okBtn = document.createElement("button");
+    okBtn.textContent = okLabel;
+    okBtn.style.cssText = "padding: 8px 12px; border: none; background: var(--accent); color: white; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500;";
+    okBtn.onclick = () => {
+      cleanup();
+      resolve(true);
+    };
+    footer.appendChild(cancelBtn);
+    footer.appendChild(okBtn);
+    body.appendChild(footer);
+    modal.appendChild(body);
+    overlay.appendChild(modal);
+    const cleanup = () => {
+      overlay.classList.remove("open");
+      overlay.addEventListener("transitionend", () => overlay.remove(), { once: true });
+    };
+    const handleEsc = (e) => {
+      if (e.key === "Escape") {
+        cleanup();
+        resolve(false);
+      }
+    };
+    const handleOverlay = (e) => {
+      if (e.target === overlay) {
+        cleanup();
+        resolve(false);
+      }
+    };
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add("open"));
+    document.addEventListener("keydown", handleEsc, { once: true });
+    overlay.addEventListener("click", handleOverlay);
+    okBtn.focus();
+  });
+}
+async function showAlert({ title, message, okLabel = "OK" }) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    overlay.style.display = "flex";
+    overlay.role = "dialog";
+    overlay.setAttribute("aria-modal", "true");
+    const modal = document.createElement("div");
+    modal.className = "modal";
+    const header = document.createElement("div");
+    header.className = "modal-header";
+    const titleEl = document.createElement("div");
+    titleEl.className = "modal-title";
+    titleEl.textContent = title || "\u30A2\u30E9\u30FC\u30C8";
+    header.appendChild(titleEl);
+    modal.appendChild(header);
+    const body = document.createElement("div");
+    body.style.padding = "16px";
+    body.style.color = "var(--text)";
+    const msg = document.createElement("p");
+    msg.textContent = message || "";
+    msg.style.margin = "0 0 16px 0";
+    msg.style.lineHeight = "1.5";
+    body.appendChild(msg);
+    const footer = document.createElement("div");
+    footer.style.display = "flex";
+    footer.style.gap = "8px";
+    footer.style.justifyContent = "flex-end";
+    footer.style.paddingTop = "8px";
+    footer.style.borderTop = "1px solid var(--border)";
+    const okBtn = document.createElement("button");
+    okBtn.textContent = okLabel;
+    okBtn.style.cssText = "padding: 8px 12px; border: none; background: var(--accent); color: white; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500;";
+    okBtn.onclick = () => {
+      cleanup();
+      resolve();
+    };
+    footer.appendChild(okBtn);
+    body.appendChild(footer);
+    modal.appendChild(body);
+    overlay.appendChild(modal);
+    const cleanup = () => {
+      overlay.classList.remove("open");
+      overlay.addEventListener("transitionend", () => overlay.remove(), { once: true });
+    };
+    const handleEsc = (e) => {
+      if (e.key === "Escape") {
+        cleanup();
+        resolve();
+      }
+    };
+    const handleOverlay = (e) => {
+      if (e.target === overlay) {
+        cleanup();
+        resolve();
+      }
+    };
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add("open"));
+    document.addEventListener("keydown", handleEsc, { once: true });
+    overlay.addEventListener("click", handleOverlay);
+    okBtn.focus();
+  });
+}
+
 // src/ptr.js
 if ("ontouchstart" in window) {
   let getIndicator = function() {
@@ -3276,7 +3414,13 @@ function cycleTheme() {
   }
 }
 async function triggerPortfolioSnapshot() {
-  if (!confirm("\u73FE\u5728\u306E\u30DD\u30FC\u30C8\u30D5\u30A9\u30EA\u30AA\u3092 GitHub \u306B\u30B9\u30CA\u30C3\u30D7\u30B7\u30E7\u30C3\u30C8\u4FDD\u5B58\u3057\u307E\u3059\u3002\n\uFF08data/portfolio-snapshot.json \u304C\u66F4\u65B0\u3055\u308C\u307E\u3059\uFF09")) return;
+  const confirmed = await showConfirm({
+    title: "\u30B9\u30CA\u30C3\u30D7\u30B7\u30E7\u30C3\u30C8\u4FDD\u5B58",
+    message: "\u73FE\u5728\u306E\u30DD\u30FC\u30C8\u30D5\u30A9\u30EA\u30AA\u3092 GitHub \u306B\u30B9\u30CA\u30C3\u30D7\u30B7\u30E7\u30C3\u30C8\u4FDD\u5B58\u3057\u307E\u3059\u3002\n\uFF08data/portfolio-snapshot.json \u304C\u66F4\u65B0\u3055\u308C\u307E\u3059\uFF09",
+    okLabel: "\u4FDD\u5B58",
+    cancelLabel: "\u30AD\u30E3\u30F3\u30BB\u30EB"
+  });
+  if (!confirmed) return;
   try {
     setStatus("\u30B9\u30CA\u30C3\u30D7\u30B7\u30E7\u30C3\u30C8\u4F5C\u6210\u4E2D...", "yellow");
     const payload = _buildPortfolioSnapshotPayload();
@@ -3291,14 +3435,21 @@ async function triggerPortfolioSnapshot() {
     }
     const data = await res.json();
     setStatus(`\u30B9\u30CA\u30C3\u30D7\u30B7\u30E7\u30C3\u30C8\u4FDD\u5B58\u5B8C\u4E86\uFF08${data.positions} \u9298\u67C4\uFF09`, "green");
-    alert(`\u4FDD\u5B58\u5B8C\u4E86:
-https://github.com/shoulang0729/portfolio/blob/main/data/portfolio-snapshot.json
+    await showAlert({
+      title: "\u4FDD\u5B58\u5B8C\u4E86",
+      message: `https://github.com/shoulang0729/portfolio/blob/main/data/portfolio-snapshot.json
 
-\u53CD\u6620\u307E\u3067 raw.githubusercontent.com \u5074\u3067\u6700\u59275\u5206\u306E\u30AD\u30E3\u30C3\u30B7\u30E5\u30E9\u30B0\u3042\u308A\u3002`);
+\u53CD\u6620\u307E\u3067 raw.githubusercontent.com \u5074\u3067\u6700\u59275\u5206\u306E\u30AD\u30E3\u30C3\u30B7\u30E5\u30E9\u30B0\u3042\u308A\u3002`,
+      okLabel: "OK"
+    });
   } catch (e) {
     setStatus(`\u30B9\u30CA\u30C3\u30D7\u30B7\u30E7\u30C3\u30C8\u4FDD\u5B58\u5931\u6557: ${e.message}`, "red");
-    alert(`\u30B9\u30CA\u30C3\u30D7\u30B7\u30E7\u30C3\u30C8\u4FDD\u5B58\u5931\u6557:
-${e.message}`);
+    await showAlert({
+      title: "\u30A8\u30E9\u30FC",
+      message: `\u30B9\u30CA\u30C3\u30D7\u30B7\u30E7\u30C3\u30C8\u4FDD\u5B58\u5931\u6557:
+${e.message}`,
+      okLabel: "OK"
+    });
   }
 }
 function _buildPortfolioSnapshotPayload() {
