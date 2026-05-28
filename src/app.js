@@ -14,6 +14,7 @@ import { fetchAllHistorical, refreshPrices, setStatus, applyPricesCache } from '
 import { WORKER_URL } from './config.js';
 import { renderHeatmap } from './heatmap.js';
 import { loadChart, setRange, closeModal, handleOverlayClick } from './chart.js';
+import { switchTab } from './tabs.js';
 import { renderStockList, slSort, slToggleDetail, applyStockBars, updateSlColStyle } from './stock-list.js';
 import { renderWatchlist, wlSort, onWatchlistSearch, removeFromWatchlist, wlSelectItem, fetchWatchlistData, _loadWatchlistFromWorker } from './watchlist.js';
 import { loadPositionsFromKV } from './positions-store.js';
@@ -562,46 +563,6 @@ function updateListHeight() {
   const padBot = parseFloat(getComputedStyle(document.body).paddingBottom) || 16;
   const h = Math.max(160, window.innerHeight - stickyH - ctrlH - padBot - 4);
   wrap.style.maxHeight = h + 'px';
-}
-
-// ── タブ切替 ──
-function switchTab(name) {
-  // 'heatmap' | 'list' | 'watchlist' | 'ai'
-  if (state.activeTab === name) return;
-  state.activeTab = name;
-  try { localStorage.setItem('hm-active-tab', name); } catch {}
-
-  const panelHeatmap   = document.getElementById('panel-heatmap');
-  const panelList      = document.getElementById('panel-list');
-  const panelWatchlist = document.getElementById('panel-watchlist');
-  const panelAi        = document.getElementById('panel-ai');
-  if (panelHeatmap)   panelHeatmap.hidden   = (name !== 'heatmap');
-  if (panelList)      panelList.hidden      = (name !== 'list');
-  if (panelWatchlist) panelWatchlist.hidden = (name !== 'watchlist');
-  if (panelAi)        panelAi.hidden        = (name !== 'ai');
-
-  // タブボタンの active 状態と aria-selected を更新
-  document.querySelectorAll('.tab-btn[data-tab]').forEach(b => {
-    const isActive = b.dataset.tab === name;
-    b.classList.toggle('active', isActive);
-    b.setAttribute('aria-selected', isActive);
-  });
-
-  // ヒートマップタブに切り替えたとき W=0 で描画されている場合があるので再描画
-  if (name === 'heatmap') renderHeatmap();
-
-  // 銘柄リストに切り替えたとき高さを再計算（double RAF でレイアウト確定後に測定）
-  if (name === 'list') {
-    renderStockList();
-    requestAnimationFrame(() => requestAnimationFrame(updateListHeight));
-  }
-
-  // ウォッチリストに切り替えたとき KV から同期後に描画
-  if (name === 'watchlist') {
-    _loadWatchlistFromWorker().then(() => { renderWatchlist(); fetchWatchlistData(); });
-  }
-
-  // AI 相談タブは現在無効化中（renderAiTab を呼ばない）
 }
 
 if (typeof d3 === 'undefined') {
