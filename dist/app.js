@@ -3572,13 +3572,19 @@ function init() {
     renderStockList();
     if (state.activeTab === "watchlist") renderWatchlist();
     if (state.changePeriod && state.changePeriod !== "1d") renderHeatmap();
-    await Promise.all(["5y", "10y"].map(async (range) => {
+    const results = await Promise.allSettled(["5y", "10y"].map(async (range) => {
       await fetchAllHistorical(range);
       renderStats();
       renderStockList();
       if (state.activeTab === "watchlist") renderWatchlist();
       if (state.changePeriod && state.changePeriod !== "1d") renderHeatmap();
+      return range;
     }));
+    results.forEach((r) => {
+      if (r.status === "rejected") {
+        console.warn("[historical] fetch failed:", r.reason);
+      }
+    });
   })();
 }
 function _hideHeatmapSkeleton() {
