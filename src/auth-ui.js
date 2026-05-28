@@ -9,7 +9,7 @@
 
 import { _auth, AUTH_PIN_LEN, AUTH_MAX_FAIL, AUTH_LOCK_SEC, AUTH_SESSION_KEY, AUTH_LS_HASH_KEY, _getActivePinHash, _hashPin, _isLocked, _lockRemain, _formatLockRemain, _saveLockout, isAuthenticated } from './auth-pin.js';
 import { _AUTH_ENC_SS, _deriveEncKey, _restoreEncKey } from './auth-crypto.js';
-import { WORKER_URL } from './data.js';
+import { WORKER_URL } from './config.js';
 
 // ── フォーカストラップ（PIN オーバーレイがキーボードフォーカスを保持する） ──
 function _trapFocus(container) {

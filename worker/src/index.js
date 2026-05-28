@@ -28,6 +28,17 @@
 
 const FINNHUB_BASE = 'https://finnhub.io/api/v1';
 
+/**
+ * Yahoo Finance シンボルを Finnhub シンボルに変換
+ * 例: '9983.T' → 'TYO:9983' / '0700.HK' → 'HKG:0700'
+ */
+function _workerToFinnhubSymbol(ySymbol) {
+  if (!ySymbol) return ySymbol;
+  if (ySymbol.endsWith('.T')) return 'TYO:' + ySymbol.slice(0, -2);
+  if (ySymbol.endsWith('.HK')) return 'HKG:' + ySymbol.slice(0, -3);
+  return ySymbol;
+}
+
 // ── レート制限（/yahoo・/finnhub プロキシ向け、KV 使用） ──────────
 // 同一 CF-Connecting-IP から 1 分間に最大 MAX_RPM リクエストまで。
 // KV に "rl:<ip>" キーで件数を記録（TTL 60s で自動期限切れ）。
@@ -82,8 +93,20 @@ async function handleYahoo(url, origin) {
   if (!target) return errRes('url パラメータが必要です', 400, origin);
 
   const decoded = decodeURIComponent(target);
-  if (!decoded.includes('finance.yahoo.com')) {
-    return errRes('Yahoo Finance 以外の URL は許可されていません', 400, origin);
+  let parsed;
+  try {
+    parsed = new URL(decoded);
+  } catch {
+    return errRes('不正な URL です', 400, origin);
+  }
+
+  if (parsed.protocol !== 'https:') {
+    return errRes('HTTPS のみ許可されています', 400, origin);
+  }
+
+  const allowedHosts = ['query1.finance.yahoo.com', 'query2.finance.yahoo.com'];
+  if (!allowedHosts.includes(parsed.hostname)) {
+    return errRes('許可されていないホストです', 400, origin);
   }
 
   try {
@@ -103,6 +126,10 @@ async function handleFinnhub(url, env, origin) {
   if (!apiKey) return errRes('Finnhub APIキーが未設定です', 500, origin);
 
   const path = url.searchParams.get('path') || '/quote';
+  if (!/^\/[a-z0-9/_-]+$/i.test(path)) {
+    return errRes('不正な path です', 400, origin);
+  }
+
   const params = new URLSearchParams(url.searchParams);
   params.delete('path');
   params.set('token', apiKey);
@@ -474,17 +501,6 @@ async function handleAIContext(request, env, origin) {
   return jsonRes({ contextSection, gathered: gathered.length }, 200, origin);
 }
 
-// ── Yahoo Finance symbol → Finnhub symbol（フロント src/data.js と揃える）──
-function _workerToFinnhubSymbol(ySymbol) {
-  if (!ySymbol) return null;
-  // 東証: 9983.T → TYO:9983
-  if (ySymbol.endsWith('.T')) return `TYO:${ySymbol.slice(0, -2)}`;
-  // 香港: 0700.HK → HKG:0700
-  if (ySymbol.endsWith('.HK')) return `HKG:${ySymbol.slice(0, -3)}`;
-  // 米国: そのまま
-  return ySymbol;
-}
-
 // ── 個別フェッチャ ──
 async function _fetchFinnhubNews(ySym, env) {
   const fSym = _workerToFinnhubSymbol(ySym);
@@ -761,7 +777,8 @@ async function handleNotionSave(request, env, origin) {
 // ── 保有銘柄（KV・非公開）────────────────────────────────────
 // GET: 許可オリジンからのみ取得可能
 // PUT: 許可オリジンかつ X-Pin-Hash ヘッダーによる PIN 認証が必要
-const DEFAULT_PIN_HASH = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4'; // SHA-256("1234")
+// SHA-256("1234") — フロントの src/auth-pin.js:AUTH_PIN_HASH と同期させる
+const DEFAULT_PIN_HASH = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
 
 async function handlePositions(request, env, origin, ctx) {
   if (!env.KV) return errRes('KV 未設定', 500, origin);
@@ -992,10 +1009,7 @@ export default {
       await Promise.all(batch.map(async p => {
         if (!p.ySymbol) return;
         try {
-          // Finnhub シンボルに変換（東証: 9983.T → TYO:9983）
-          const fSym = p.ySymbol.endsWith('.T')
-            ? 'TYO:' + p.ySymbol.slice(0, -2)
-            : p.ySymbol;
+          const fSym = _workerToFinnhubSymbol(p.ySymbol);
           const res = await fetch(
             `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(fSym)}&token=${env.FINNHUB_API_KEY}`,
             { cf: { cacheTtl: 300 } }

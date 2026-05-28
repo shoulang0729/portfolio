@@ -616,342 +616,8 @@ async function _restoreEncKey() {
   );
 }
 
-// src/data.js
+// src/config.js
 var WORKER_URL = "https://portfolio-proxy.shoulang.workers.dev";
-function fetchWithTimeout(url, ms = 7e3, opts = {}) {
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), ms);
-  return fetch(url, { signal: ctrl.signal, ...opts }).finally(() => clearTimeout(timer));
-}
-var sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-async function fetchViaProxy(url, timeoutMs = 7e3) {
-  const q2url = url.replace("query1.finance.yahoo.com", "query2.finance.yahoo.com");
-  const attempts = [
-    // Worker 経由（最優先：CORS 確実・APIキー不要）
-    { url: `${WORKER_URL}/yahoo?url=${encodeURIComponent(url)}`, opts: {} },
-    // 以下は Worker が落ちているときのフォールバック
-    { url, opts: { credentials: "include" } },
-    { url: q2url, opts: { credentials: "include" } },
-    { url: `https://corsproxy.io/?${encodeURIComponent(url)}`, opts: {} },
-    { url: `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`, opts: {} }
-  ];
-  for (const { url: u, opts } of attempts) {
-    try {
-      const res = await fetchWithTimeout(u, timeoutMs, opts);
-      if (!res.ok) continue;
-      const raw = await res.json();
-      return raw?.contents ? JSON.parse(raw.contents) : raw;
-    } catch {
-    }
-  }
-  return null;
-}
-function toFinnhubSymbol(ySymbol) {
-  if (!ySymbol) return null;
-  if (ySymbol.endsWith(".T")) return "TYO:" + ySymbol.slice(0, -2);
-  return ySymbol;
-}
-async function fetchFinnhubQuote(fSymbol) {
-  const url = `${WORKER_URL}/finnhub?path=/quote&symbol=${encodeURIComponent(fSymbol)}`;
-  try {
-    const res = await fetchWithTimeout(url, 7e3);
-    if (!res.ok) return null;
-    const d = await res.json();
-    if (!d || !d.c) return null;
-    return { price: d.c, dayPct: d.dp ?? null };
-  } catch {
-    return null;
-  }
-}
-var SS_CACHE_KEY = "hm-hist-cache";
-var SS_CACHE_VER = "2";
-function loadCacheFromSession() {
-  try {
-    const raw = sessionStorage.getItem(SS_CACHE_KEY);
-    if (!raw) return;
-    const obj = JSON.parse(raw);
-    if (obj._v !== SS_CACHE_VER) return;
-    let total = 0;
-    for (const range of ["1y", "5y", "10y"]) {
-      if (!obj[range]) continue;
-      for (const [sym, entries] of Object.entries(obj[range])) {
-        state.historicalCache[range][sym] = entries.map((e) => ({
-          date: new Date(e.date),
-          close: e.close
-        }));
-        total++;
-      }
-    }
-    if (total > 0) console.log(`[cache] sessionStorage \u304B\u3089 ${total} \u9298\u67C4\xD7\u30EC\u30F3\u30B8\u3092\u5FA9\u5143`);
-  } catch (e) {
-    console.warn("[cache] sessionStorage \u5FA9\u5143\u5931\u6557:", e);
-    sessionStorage.removeItem(SS_CACHE_KEY);
-  }
-}
-function saveCacheToSession() {
-  try {
-    const obj = { _v: SS_CACHE_VER };
-    for (const range of ["1y", "5y", "10y"]) {
-      obj[range] = {};
-      for (const [sym, entries] of Object.entries(state.historicalCache[range] || {})) {
-        obj[range][sym] = entries.map((e) => ({
-          date: e.date instanceof Date ? e.date.toISOString() : e.date,
-          close: e.close
-        }));
-      }
-    }
-    sessionStorage.setItem(SS_CACHE_KEY, JSON.stringify(obj));
-  } catch (e) {
-    console.warn("[cache] sessionStorage \u4FDD\u5B58\u5931\u6557\uFF08\u5BB9\u91CF\u8D85\u904E\u306E\u53EF\u80FD\u6027\uFF09:", e);
-  }
-}
-function clearCacheSession() {
-  sessionStorage.removeItem(SS_CACHE_KEY);
-}
-loadCacheFromSession();
-async function applyPricesCache() {
-  try {
-    const res = await fetchWithTimeout(`${WORKER_URL}/prices/cache`, 8e3);
-    if (!res.ok) return;
-    const cache = await res.json();
-    if (!cache || typeof cache !== "object") return;
-    const now = Date.now();
-    let applied = 0;
-    for (const p of positions) {
-      const c = cache[p.ySymbol];
-      if (!c || !c.price) continue;
-      if (c.ts && now - c.ts > 8 * 3600 * 1e3) continue;
-      if (!p.isProxy && p.price > 0 && (c.price / p.price < 0.1 || c.price / p.price > 10)) continue;
-      if (p.isProxy) {
-        p.dayPct = c.dayPct ?? null;
-      } else {
-        const oldPrice = p.price;
-        p.price = c.price;
-        p.dayPct = c.dayPct ?? null;
-        if (p.cur === "JPY") {
-          p.value = Math.round(c.price * p.shares);
-          const cost = p.avgCost * p.shares;
-          p.pnl = p.value - cost;
-          p.pnlPct = cost > 0 ? p.pnl / cost * 100 : 0;
-        } else {
-          const costJPY = p.value != null && p.pnl != null ? p.value - p.pnl : 0;
-          const ratio = oldPrice > 0 ? c.price / oldPrice : 1;
-          p.value = Math.round(p.value * ratio);
-          p.pnl = p.value - costJPY;
-          p.pnlPct = costJPY > 0 ? p.pnl / costJPY * 100 : 0;
-        }
-      }
-      applied++;
-    }
-    if (applied > 0) {
-      console.log(`[prices:cache] ${applied}\u9298\u67C4\u306B Cron \u30AD\u30E3\u30C3\u30B7\u30E5\u4FA1\u683C\u3092\u9069\u7528`);
-      document.dispatchEvent(new CustomEvent("hm:prices-updated"));
-    }
-  } catch (e) {
-    console.warn("[prices:cache] \u8AAD\u8FBC\u5931\u6557:", e);
-  }
-}
-async function fetchAllHistorical(neededRange = "1y") {
-  if (state.fetchingRanges.has(neededRange)) return;
-  state.fetchingRanges.add(neededRange);
-  try {
-    if (!state.historicalCache[neededRange]) state.historicalCache[neededRange] = {};
-    const posSymbols = positions.filter((p) => p.ySymbol).map((p) => p.ySymbol);
-    const wlSymbols = (state.watchlist || []).map((w) => w.symbol).filter(Boolean);
-    const symbols = [.../* @__PURE__ */ new Set([...posSymbols, ...wlSymbols])];
-    const toFetch = symbols.filter((s) => !state.historicalCache[neededRange][s]);
-    if (toFetch.length === 0) return;
-    setStatus(`\u5C65\u6B74\u30C7\u30FC\u30BF\u53D6\u5F97\u4E2D\uFF08${toFetch.length}\u9298\u67C4 / ${neededRange}\uFF09...`, "yellow");
-    const BATCH = 5;
-    for (let i = 0; i < toFetch.length; i += BATCH) {
-      await Promise.all(toFetch.slice(i, i + BATCH).map((s) => fetchSymbolHistory(s, neededRange)));
-      if (i + BATCH < toFetch.length) await sleep(300);
-    }
-    const failed = toFetch.filter((s) => !state.historicalCache[neededRange][s]);
-    if (failed.length > 0) {
-      await sleep(2e3);
-      await Promise.all(failed.map((s) => fetchSymbolHistory(s, neededRange)));
-    }
-    if (state.lastUpdateText) {
-      setStatus(state.lastUpdateText, "green");
-    } else {
-      setStatus("\u672A\u66F4\u65B0", "yellow");
-    }
-  } finally {
-    state.fetchingRanges.delete(neededRange);
-    state.historicalAttempted[neededRange] = true;
-  }
-}
-function applySplitCorrection(entries) {
-  if (entries.length < 2) return entries;
-  for (let i = entries.length - 1; i >= 1; i--) {
-    const a = entries[i].close;
-    const b = entries[i - 1].close;
-    if (!a || !b || a <= 0 || b <= 0) continue;
-    const r = b / a;
-    if (r >= 1.5 || r <= 1 / 1.5) {
-      for (let j = 0; j < i; j++) {
-        if (entries[j].close > 0) entries[j].close /= r;
-      }
-    }
-  }
-  return entries;
-}
-async function fetchSymbolHistory(symbol, range = "1y") {
-  if (!state.historicalCache[range]) state.historicalCache[range] = {};
-  if (state.historicalCache[range][symbol]) return;
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=${range}`;
-  const data = await fetchViaProxy(url);
-  if (!data) return;
-  const result = data?.chart?.result?.[0];
-  if (!result) return;
-  const timestamps = result.timestamp || [];
-  const adjCloses = result.indicators?.adjclose?.[0]?.adjclose || [];
-  const rawCloses = result.indicators?.quote?.[0]?.close || [];
-  const closes = adjCloses.length ? adjCloses : rawCloses;
-  const entries = timestamps.map((ts, i) => ({ date: new Date(ts * 1e3), close: closes[i] })).filter((p) => p.close != null && isFinite(p.close));
-  state.historicalCache[range][symbol] = applySplitCorrection(entries);
-  saveCacheToSession();
-}
-async function fetchLivePrice(symbol) {
-  const fSymbol = toFinnhubSymbol(symbol);
-  if (fSymbol) {
-    const fh = await fetchFinnhubQuote(fSymbol);
-    if (fh) return fh;
-  }
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=2d&_=${Date.now()}`;
-  const data = await fetchViaProxy(url);
-  const result = data?.chart?.result?.[0];
-  if (!result) return null;
-  const price = result.meta?.regularMarketPrice ?? null;
-  if (price == null) return null;
-  const preCalcPct = result.meta?.regularMarketChangePercent ?? null;
-  const prevClose = result.meta?.regularMarketPreviousClose ?? result.meta?.chartPreviousClose ?? result.meta?.previousClose ?? null;
-  const dayPct = preCalcPct !== null ? preCalcPct : prevClose ? (price - prevClose) / prevClose * 100 : null;
-  return { price, dayPct };
-}
-async function refreshPrices() {
-  const targets = positions.filter((p) => p.ySymbol);
-  if (targets.length === 0) {
-    setStatus("\u53D6\u5F97\u5BFE\u8C61\u9298\u67C4\u306A\u3057", "yellow");
-    return;
-  }
-  setStatus(`\u30E9\u30A4\u30D6\u4FA1\u683C\u3092\u53D6\u5F97\u4E2D\uFF080/${targets.length}\uFF09...`, "yellow");
-  let done = 0;
-  const BATCH = 5;
-  const fetched = [];
-  for (let i = 0; i < targets.length; i += BATCH) {
-    const batch = targets.slice(i, i + BATCH);
-    const results = await Promise.all(
-      batch.map(async (p) => {
-        const live = await fetchLivePrice(p.ySymbol);
-        setStatus(`\u30E9\u30A4\u30D6\u4FA1\u683C\u3092\u53D6\u5F97\u4E2D\uFF08${++done}/${targets.length}\uFF09...`, "yellow");
-        return { pos: p, live };
-      })
-    );
-    fetched.push(...results);
-    if (i + BATCH < targets.length) await sleep(300);
-  }
-  const failed = fetched.filter((f) => !f.live);
-  if (failed.length > 0) {
-    await sleep(2e3);
-    await Promise.all(failed.map(async (f) => {
-      f.live = await fetchLivePrice(f.pos.ySymbol);
-    }));
-  }
-  const updateCache = (sym, price) => {
-    if (!price || !isFinite(price) || price <= 0) return;
-    for (const r of ["1y", "5y", "10y"]) {
-      const arr = state.historicalCache[r]?.[sym];
-      if (!arr?.length) continue;
-      const last = arr[arr.length - 1].close;
-      if (last > 0 && (price / last < 0.3 || price / last > 3)) {
-        console.warn(`[updateCache] \u7570\u5E38\u4FA1\u683C\u30B9\u30AD\u30C3\u30D7: ${sym} live=${price} hist=${last}`);
-        continue;
-      }
-      arr[arr.length - 1].close = price;
-    }
-  };
-  let n = 0;
-  fetched.forEach(({ pos: p, live }) => {
-    if (!live) return;
-    if (!p.isProxy && p.price > 0 && (live.price / p.price < 0.1 || live.price / p.price > 10)) {
-      console.warn(`[refreshPrices] \u7570\u5E38\u4FA1\u683C\u30B9\u30AD\u30C3\u30D7: ${p.symbol} live=${live.price} stored=${p.price}`);
-      return;
-    }
-    if (p.isProxy) {
-      p.dayPct = live.dayPct ?? null;
-      updateCache(p.ySymbol, live.price);
-    } else {
-      const oldPrice = p.price;
-      p.price = live.price;
-      if (p.cur === "JPY") {
-        p.value = Math.round(live.price * p.shares);
-        const costTotal = p.avgCost * p.shares;
-        p.pnl = p.value - costTotal;
-        p.pnlPct = costTotal > 0 ? p.pnl / costTotal * 100 : 0;
-      } else {
-        const costJPY = p.value != null && p.pnl != null ? p.value - p.pnl : 0;
-        const ratio = oldPrice > 0 ? live.price / oldPrice : 1;
-        p.value = Math.round(p.value * ratio);
-        p.pnl = p.value - costJPY;
-        p.pnlPct = costJPY > 0 ? p.pnl / costJPY * 100 : 0;
-      }
-      p.dayPct = live.dayPct;
-      updateCache(p.ySymbol, live.price);
-    }
-    n++;
-  });
-  if (n > 0) {
-    const now = /* @__PURE__ */ new Date();
-    const ts2 = now.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
-    const msg = `${n}\u9298\u67C4 \u6700\u7D42\u66F4\u65B0: ${ts2}`;
-    state.lastUpdateText = msg;
-    setStatus(msg, "green");
-    document.dispatchEvent(new CustomEvent("hm:prices-updated"));
-    flashPriceChanges(fetched);
-  } else {
-    setStatus("\u53D6\u5F97\u5931\u6557\uFF08\u5E02\u5834\u6642\u9593\u5916\u307E\u305F\u306FAPI\u30A2\u30AF\u30BB\u30B9\u5236\u9650\uFF09", "red");
-  }
-}
-function flashPriceChanges(fetched) {
-  const hasPrev = Object.keys(state.prevPrices).length > 0;
-  if (!hasPrev) {
-    fetched.forEach(({ pos: p, live }) => {
-      if (live?.price && p.ySymbol) state.prevPrices[p.ySymbol] = live.price;
-    });
-    return;
-  }
-  const changes = [];
-  fetched.forEach(({ pos: p, live }) => {
-    if (!live?.price || !p.ySymbol) return;
-    const prev = state.prevPrices[p.ySymbol];
-    if (prev != null && prev !== live.price) {
-      changes.push({ ySymbol: p.ySymbol, direction: live.price > prev ? "up" : "down" });
-    }
-    state.prevPrices[p.ySymbol] = live.price;
-  });
-  if (changes.length === 0) return;
-  requestAnimationFrame(() => {
-    const svg = document.getElementById("heatmap");
-    if (!svg) return;
-    changes.forEach(({ ySymbol, direction }) => {
-      const rect = svg.querySelector(`rect[data-ysymbol="${CSS.escape(ySymbol)}"]`);
-      if (!rect) return;
-      const cls = direction === "up" ? "flash-up" : "flash-down";
-      rect.classList.remove("flash-up", "flash-down");
-      void rect.getBoundingClientRect();
-      rect.classList.add(cls);
-      rect.addEventListener("animationend", () => rect.classList.remove(cls), { once: true });
-    });
-  });
-}
-function setStatus(msg, color) {
-  const dot = document.getElementById("status-dot");
-  const txt = document.getElementById("status-text");
-  dot.className = "dot" + (color === "red" ? " red" : color === "yellow" ? " yellow" : "");
-  txt.textContent = msg;
-}
 
 // src/auth-passkey.js
 var _onPasskeySuccess = null;
@@ -1628,6 +1294,352 @@ function calcPortfolioPeriodPct(periodId) {
   return totalWeight > 0 ? weightedSum / totalWeight : null;
 }
 
+// src/data.js
+function fetchWithTimeout(url, ms = 7e3, opts = {}) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  return fetch(url, { signal: ctrl.signal, ...opts }).finally(() => clearTimeout(timer));
+}
+var sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+async function batchWithRetry(items, fn, opts = {}) {
+  const {
+    batchSize = 5,
+    batchDelay = 300,
+    retryDelay = 2e3,
+    isFailed = (r) => !r,
+    onProgress = null
+  } = opts;
+  const results = [];
+  let done = 0;
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize);
+    const batchResults = await Promise.all(batch.map(async (item) => {
+      const result = await fn(item);
+      done++;
+      if (onProgress) onProgress(done, items.length);
+      return result;
+    }));
+    results.push(...batchResults);
+    if (i + batchSize < items.length) await sleep(batchDelay);
+  }
+  const failedIndices = results.map((r, idx) => isFailed(r, idx) ? idx : -1).filter((idx) => idx >= 0);
+  if (failedIndices.length > 0) {
+    await sleep(retryDelay);
+    await Promise.all(failedIndices.map(async (idx) => {
+      results[idx] = await fn(items[idx]);
+    }));
+  }
+  return results;
+}
+async function fetchViaProxy(url, timeoutMs = 7e3) {
+  const q2url = url.replace("query1.finance.yahoo.com", "query2.finance.yahoo.com");
+  const attempts = [
+    // Worker 経由（最優先：CORS 確実・APIキー不要）
+    { url: `${WORKER_URL}/yahoo?url=${encodeURIComponent(url)}`, opts: {} },
+    // 以下は Worker が落ちているときのフォールバック
+    { url, opts: { credentials: "include" } },
+    { url: q2url, opts: { credentials: "include" } },
+    { url: `https://corsproxy.io/?${encodeURIComponent(url)}`, opts: {} },
+    { url: `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`, opts: {} }
+  ];
+  for (const { url: u, opts } of attempts) {
+    try {
+      const res = await fetchWithTimeout(u, timeoutMs, opts);
+      if (!res.ok) continue;
+      const raw = await res.json();
+      return raw?.contents ? JSON.parse(raw.contents) : raw;
+    } catch {
+    }
+  }
+  return null;
+}
+function toFinnhubSymbol(ySymbol) {
+  if (!ySymbol) return null;
+  if (ySymbol.endsWith(".T")) return "TYO:" + ySymbol.slice(0, -2);
+  if (ySymbol.endsWith(".HK")) return "HKG:" + ySymbol.slice(0, -3);
+  return ySymbol;
+}
+async function fetchFinnhubQuote(fSymbol) {
+  const url = `${WORKER_URL}/finnhub?path=/quote&symbol=${encodeURIComponent(fSymbol)}`;
+  try {
+    const res = await fetchWithTimeout(url, 7e3);
+    if (!res.ok) return null;
+    const d = await res.json();
+    if (!d || !d.c) return null;
+    return { price: d.c, dayPct: d.dp ?? null };
+  } catch {
+    return null;
+  }
+}
+var SS_CACHE_KEY = "hm-hist-cache";
+var SS_CACHE_VER = "2";
+function loadCacheFromSession() {
+  try {
+    const raw = sessionStorage.getItem(SS_CACHE_KEY);
+    if (!raw) return;
+    const obj = JSON.parse(raw);
+    if (obj._v !== SS_CACHE_VER) return;
+    let total = 0;
+    for (const range of ["1y", "5y", "10y"]) {
+      if (!obj[range]) continue;
+      for (const [sym, entries] of Object.entries(obj[range])) {
+        state.historicalCache[range][sym] = entries.map((e) => ({
+          date: new Date(e.date),
+          close: e.close
+        }));
+        total++;
+      }
+    }
+    if (total > 0) console.log(`[cache] sessionStorage \u304B\u3089 ${total} \u9298\u67C4\xD7\u30EC\u30F3\u30B8\u3092\u5FA9\u5143`);
+  } catch (e) {
+    console.warn("[cache] sessionStorage \u5FA9\u5143\u5931\u6557:", e);
+    sessionStorage.removeItem(SS_CACHE_KEY);
+  }
+}
+function saveCacheToSession() {
+  try {
+    const obj = { _v: SS_CACHE_VER };
+    for (const range of ["1y", "5y", "10y"]) {
+      obj[range] = {};
+      for (const [sym, entries] of Object.entries(state.historicalCache[range] || {})) {
+        obj[range][sym] = entries.map((e) => ({
+          date: e.date instanceof Date ? e.date.toISOString() : e.date,
+          close: e.close
+        }));
+      }
+    }
+    sessionStorage.setItem(SS_CACHE_KEY, JSON.stringify(obj));
+  } catch (e) {
+    console.warn("[cache] sessionStorage \u4FDD\u5B58\u5931\u6557\uFF08\u5BB9\u91CF\u8D85\u904E\u306E\u53EF\u80FD\u6027\uFF09:", e);
+  }
+}
+function clearCacheSession() {
+  sessionStorage.removeItem(SS_CACHE_KEY);
+}
+loadCacheFromSession();
+async function applyPricesCache() {
+  try {
+    const res = await fetchWithTimeout(`${WORKER_URL}/prices/cache`, 8e3);
+    if (!res.ok) return;
+    const cache = await res.json();
+    if (!cache || typeof cache !== "object") return;
+    const now = Date.now();
+    let applied = 0;
+    for (const p of positions) {
+      const c = cache[p.ySymbol];
+      if (!c || !c.price) continue;
+      if (c.ts && now - c.ts > 8 * 3600 * 1e3) continue;
+      if (!p.isProxy && p.price > 0 && (c.price / p.price < 0.1 || c.price / p.price > 10)) continue;
+      if (p.isProxy) {
+        p.dayPct = c.dayPct ?? null;
+      } else {
+        const oldPrice = p.price;
+        p.price = c.price;
+        p.dayPct = c.dayPct ?? null;
+        if (p.cur === "JPY") {
+          p.value = Math.round(c.price * p.shares);
+          const cost = p.avgCost * p.shares;
+          p.pnl = p.value - cost;
+          p.pnlPct = cost > 0 ? p.pnl / cost * 100 : 0;
+        } else {
+          const costJPY = p.value != null && p.pnl != null ? p.value - p.pnl : 0;
+          const ratio = oldPrice > 0 ? c.price / oldPrice : 1;
+          p.value = Math.round(p.value * ratio);
+          p.pnl = p.value - costJPY;
+          p.pnlPct = costJPY > 0 ? p.pnl / costJPY * 100 : 0;
+        }
+      }
+      applied++;
+    }
+    if (applied > 0) {
+      console.log(`[prices:cache] ${applied}\u9298\u67C4\u306B Cron \u30AD\u30E3\u30C3\u30B7\u30E5\u4FA1\u683C\u3092\u9069\u7528`);
+      document.dispatchEvent(new CustomEvent("hm:prices-updated"));
+    }
+  } catch (e) {
+    console.warn("[prices:cache] \u8AAD\u8FBC\u5931\u6557:", e);
+  }
+}
+async function fetchAllHistorical(neededRange = "1y") {
+  if (state.fetchingRanges.has(neededRange)) return;
+  state.fetchingRanges.add(neededRange);
+  try {
+    if (!state.historicalCache[neededRange]) state.historicalCache[neededRange] = {};
+    const posSymbols = positions.filter((p) => p.ySymbol).map((p) => p.ySymbol);
+    const wlSymbols = (state.watchlist || []).map((w) => w.symbol).filter(Boolean);
+    const symbols = [.../* @__PURE__ */ new Set([...posSymbols, ...wlSymbols])];
+    const toFetch = symbols.filter((s) => !state.historicalCache[neededRange][s]);
+    if (toFetch.length === 0) return;
+    setStatus(`\u5C65\u6B74\u30C7\u30FC\u30BF\u53D6\u5F97\u4E2D\uFF08${toFetch.length}\u9298\u67C4 / ${neededRange}\uFF09...`, "yellow");
+    await batchWithRetry(toFetch, (s) => fetchSymbolHistory(s, neededRange), {
+      isFailed: (_result, idx) => !state.historicalCache[neededRange][toFetch[idx]]
+    });
+    if (state.lastUpdateText) {
+      setStatus(state.lastUpdateText, "green");
+    } else {
+      setStatus("\u672A\u66F4\u65B0", "yellow");
+    }
+  } finally {
+    state.fetchingRanges.delete(neededRange);
+    state.historicalAttempted[neededRange] = true;
+  }
+}
+function applySplitCorrection(entries) {
+  if (entries.length < 2) return entries;
+  for (let i = entries.length - 1; i >= 1; i--) {
+    const a = entries[i].close;
+    const b = entries[i - 1].close;
+    if (!a || !b || a <= 0 || b <= 0) continue;
+    const r = b / a;
+    if (r >= 1.5 || r <= 1 / 1.5) {
+      for (let j = 0; j < i; j++) {
+        if (entries[j].close > 0) entries[j].close /= r;
+      }
+    }
+  }
+  return entries;
+}
+async function fetchSymbolHistory(symbol, range = "1y") {
+  if (!state.historicalCache[range]) state.historicalCache[range] = {};
+  if (state.historicalCache[range][symbol]) return;
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=${range}`;
+  const data = await fetchViaProxy(url);
+  if (!data) return;
+  const result = data?.chart?.result?.[0];
+  if (!result) return;
+  const timestamps = result.timestamp || [];
+  const adjCloses = result.indicators?.adjclose?.[0]?.adjclose || [];
+  const rawCloses = result.indicators?.quote?.[0]?.close || [];
+  const closes = adjCloses.length ? adjCloses : rawCloses;
+  const entries = timestamps.map((ts, i) => ({ date: new Date(ts * 1e3), close: closes[i] })).filter((p) => p.close != null && isFinite(p.close));
+  state.historicalCache[range][symbol] = applySplitCorrection(entries);
+  saveCacheToSession();
+}
+async function fetchLivePrice(symbol) {
+  const fSymbol = toFinnhubSymbol(symbol);
+  if (fSymbol) {
+    const fh = await fetchFinnhubQuote(fSymbol);
+    if (fh) return fh;
+  }
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=2d&_=${Date.now()}`;
+  const data = await fetchViaProxy(url);
+  const result = data?.chart?.result?.[0];
+  if (!result) return null;
+  const price = result.meta?.regularMarketPrice ?? null;
+  if (price == null) return null;
+  const preCalcPct = result.meta?.regularMarketChangePercent ?? null;
+  const prevClose = result.meta?.regularMarketPreviousClose ?? result.meta?.chartPreviousClose ?? result.meta?.previousClose ?? null;
+  const dayPct = preCalcPct !== null ? preCalcPct : prevClose ? (price - prevClose) / prevClose * 100 : null;
+  return { price, dayPct };
+}
+async function refreshPrices() {
+  const targets = positions.filter((p) => p.ySymbol);
+  if (targets.length === 0) {
+    setStatus("\u53D6\u5F97\u5BFE\u8C61\u9298\u67C4\u306A\u3057", "yellow");
+    return;
+  }
+  setStatus(`\u30E9\u30A4\u30D6\u4FA1\u683C\u3092\u53D6\u5F97\u4E2D\uFF080/${targets.length}\uFF09...`, "yellow");
+  const fetched = await batchWithRetry(
+    targets,
+    async (p) => ({ pos: p, live: await fetchLivePrice(p.ySymbol) }),
+    {
+      isFailed: (r) => !r.live,
+      onProgress: (done, total) => setStatus(`\u30E9\u30A4\u30D6\u4FA1\u683C\u3092\u53D6\u5F97\u4E2D\uFF08${done}/${total}\uFF09...`, "yellow")
+    }
+  );
+  const updateCache = (sym, price) => {
+    if (!price || !isFinite(price) || price <= 0) return;
+    for (const r of ["1y", "5y", "10y"]) {
+      const arr = state.historicalCache[r]?.[sym];
+      if (!arr?.length) continue;
+      const last = arr[arr.length - 1].close;
+      if (last > 0 && (price / last < 0.3 || price / last > 3)) {
+        console.warn(`[updateCache] \u7570\u5E38\u4FA1\u683C\u30B9\u30AD\u30C3\u30D7: ${sym} live=${price} hist=${last}`);
+        continue;
+      }
+      arr[arr.length - 1].close = price;
+    }
+  };
+  let n = 0;
+  fetched.forEach(({ pos: p, live }) => {
+    if (!live) return;
+    if (!p.isProxy && p.price > 0 && (live.price / p.price < 0.1 || live.price / p.price > 10)) {
+      console.warn(`[refreshPrices] \u7570\u5E38\u4FA1\u683C\u30B9\u30AD\u30C3\u30D7: ${p.symbol} live=${live.price} stored=${p.price}`);
+      return;
+    }
+    if (p.isProxy) {
+      p.dayPct = live.dayPct ?? null;
+      updateCache(p.ySymbol, live.price);
+    } else {
+      const oldPrice = p.price;
+      p.price = live.price;
+      if (p.cur === "JPY") {
+        p.value = Math.round(live.price * p.shares);
+        const costTotal = p.avgCost * p.shares;
+        p.pnl = p.value - costTotal;
+        p.pnlPct = costTotal > 0 ? p.pnl / costTotal * 100 : 0;
+      } else {
+        const costJPY = p.value != null && p.pnl != null ? p.value - p.pnl : 0;
+        const ratio = oldPrice > 0 ? live.price / oldPrice : 1;
+        p.value = Math.round(p.value * ratio);
+        p.pnl = p.value - costJPY;
+        p.pnlPct = costJPY > 0 ? p.pnl / costJPY * 100 : 0;
+      }
+      p.dayPct = live.dayPct;
+      updateCache(p.ySymbol, live.price);
+    }
+    n++;
+  });
+  if (n > 0) {
+    const now = /* @__PURE__ */ new Date();
+    const ts2 = now.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
+    const msg = `${n}\u9298\u67C4 \u6700\u7D42\u66F4\u65B0: ${ts2}`;
+    state.lastUpdateText = msg;
+    setStatus(msg, "green");
+    document.dispatchEvent(new CustomEvent("hm:prices-updated"));
+    flashPriceChanges(fetched);
+  } else {
+    setStatus("\u53D6\u5F97\u5931\u6557\uFF08\u5E02\u5834\u6642\u9593\u5916\u307E\u305F\u306FAPI\u30A2\u30AF\u30BB\u30B9\u5236\u9650\uFF09", "red");
+  }
+}
+function flashPriceChanges(fetched) {
+  const hasPrev = Object.keys(state.prevPrices).length > 0;
+  if (!hasPrev) {
+    fetched.forEach(({ pos: p, live }) => {
+      if (live?.price && p.ySymbol) state.prevPrices[p.ySymbol] = live.price;
+    });
+    return;
+  }
+  const changes = [];
+  fetched.forEach(({ pos: p, live }) => {
+    if (!live?.price || !p.ySymbol) return;
+    const prev = state.prevPrices[p.ySymbol];
+    if (prev != null && prev !== live.price) {
+      changes.push({ ySymbol: p.ySymbol, direction: live.price > prev ? "up" : "down" });
+    }
+    state.prevPrices[p.ySymbol] = live.price;
+  });
+  if (changes.length === 0) return;
+  requestAnimationFrame(() => {
+    const svg = document.getElementById("heatmap");
+    if (!svg) return;
+    changes.forEach(({ ySymbol, direction }) => {
+      const rect = svg.querySelector(`rect[data-ysymbol="${CSS.escape(ySymbol)}"]`);
+      if (!rect) return;
+      const cls = direction === "up" ? "flash-up" : "flash-down";
+      rect.classList.remove("flash-up", "flash-down");
+      void rect.getBoundingClientRect();
+      rect.classList.add(cls);
+      rect.addEventListener("animationend", () => rect.classList.remove(cls), { once: true });
+    });
+  });
+}
+function setStatus(msg, color) {
+  const dot = document.getElementById("status-dot");
+  const txt = document.getElementById("status-text");
+  dot.className = "dot" + (color === "red" ? " red" : color === "yellow" ? " yellow" : "");
+  txt.textContent = msg;
+}
+
 // src/stock-list.js
 function updateSlColStyle() {
   const el = document.getElementById("sl-col-style");
@@ -1988,13 +2000,24 @@ function renderChart(points, interval = "1d", dateFmt = "%m/%d") {
 }
 
 // src/heatmap.js
+var _heatmapRetryCount = 0;
+var HEATMAP_MAX_RETRY = 30;
 function renderHeatmap() {
+  const panel = document.getElementById("panel-heatmap");
+  if (panel?.hidden) return;
   const wrap = document.getElementById("heatmap-wrap");
+  if (!wrap) return;
   const W = wrap.clientWidth;
   if (W === 0) {
-    requestAnimationFrame(renderHeatmap);
+    if (_heatmapRetryCount++ < HEATMAP_MAX_RETRY) {
+      requestAnimationFrame(renderHeatmap);
+    } else {
+      console.warn("[heatmap] clientWidth=0 \u304C\u7D99\u7D9A \u2192 \u63CF\u753B\u4E2D\u6B62");
+      _heatmapRetryCount = 0;
+    }
     return;
   }
+  _heatmapRetryCount = 0;
   const aspectRatio = W < C.MOBILE_BREAKPOINT ? C.HEATMAP_ASPECT_MOB : C.HEATMAP_ASPECT_DSK;
   const minH = W < C.MOBILE_BREAKPOINT ? C.HEATMAP_MINH_MOB : C.HEATMAP_MINH_DSK;
   const stickyEl = document.querySelector(".sticky-top");
@@ -2391,7 +2414,6 @@ function renderWatchlist() {
 }
 
 // src/positions-store.js
-var DEFAULT_PIN_HASH = "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4";
 async function loadPositionsFromKV() {
   try {
     const res = await fetchWithTimeout(`${WORKER_URL}/positions`, 1e4);
@@ -2407,7 +2429,7 @@ async function loadPositionsFromKV() {
   }
 }
 async function savePositionsToKV(newPositions, pinHashOverride) {
-  const pinHash = pinHashOverride || localStorage.getItem("hm-pin-hash") || DEFAULT_PIN_HASH;
+  const pinHash = pinHashOverride || localStorage.getItem("hm-pin-hash") || AUTH_PIN_HASH;
   const res = await fetchWithTimeout(`${WORKER_URL}/positions`, 3e4, {
     method: "PUT",
     headers: { "Content-Type": "application/json", "X-Pin-Hash": pinHash },
@@ -3011,8 +3033,7 @@ async function _retryWithPin() {
     if (pinInput) pinInput.focus();
     return;
   }
-  const hashBuf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(pin));
-  const pinHash = Array.from(new Uint8Array(hashBuf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  const pinHash = await _hashPin(pin);
   localStorage.setItem("hm-pin-hash", pinHash);
   const finalPositions = _importState.pendingPositions;
   if (!finalPositions?.length) {
