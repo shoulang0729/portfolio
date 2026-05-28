@@ -1,0 +1,36 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`state.js > state (initial values) > state matches snapshot 1`] = `
+{
+  "activeTab": "heatmap",
+  "autoInterval": null,
+  "autoSec": 0,
+  "changePeriod": "1d",
+  "colorMode": "change",
+  "countdownTimer": null,
+  "countdownVal": 0,
+  "currentPos": null,
+  "currentRange": "3m",
+  "fetchingRanges": [],
+  "historicalAttempted": {},
+  "historicalCache": {
+    "10y": {},
+    "1y": {},
+    "5y": {},
+  },
+  "lastChangePeriod": "1d",
+  "lastUpdateText": null,
+  "listSortCol": "1d",
+  "listSortDir": "desc",
+  "prevPrices": {},
+  "slDetailVisible": false,
+  "statsVisible": false,
+  "themeMode": "auto",
+  "watchlist": [],
+  "watchlistPrices": {},
+  "wlSortCol": "1d",
+  "wlSortDir": "desc",
+  "yahooCrumb": null,
+  "yahooCrumbExpiry": 0,
+}
+`;
