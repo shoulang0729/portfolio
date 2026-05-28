@@ -9,7 +9,7 @@ export async function showConfirm({ title, message, okLabel = 'OK', cancelLabel 
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     overlay.style.display = 'flex';
-    overlay.role = 'dialog';
+    overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-modal', 'true');
 
     const modal = document.createElement('div');
@@ -82,7 +82,7 @@ export async function showAlert({ title, message, okLabel = 'OK' }) {
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     overlay.style.display = 'flex';
-    overlay.role = 'dialog';
+    overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-modal', 'true');
 
     const modal = document.createElement('div');

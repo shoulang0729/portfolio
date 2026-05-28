@@ -580,9 +580,12 @@ function switchTab(name) {
   if (panelWatchlist) panelWatchlist.hidden = (name !== 'watchlist');
   if (panelAi)        panelAi.hidden        = (name !== 'ai');
 
-  // タブボタンの active 状態を更新
-  document.querySelectorAll('.tab-btn[data-tab]').forEach(b =>
-    b.classList.toggle('active', b.dataset.tab === name));
+  // タブボタンの active 状態と aria-selected を更新
+  document.querySelectorAll('.tab-btn[data-tab]').forEach(b => {
+    const isActive = b.dataset.tab === name;
+    b.classList.toggle('active', isActive);
+    b.setAttribute('aria-selected', isActive);
+  });
 
   // ヒートマップタブに切り替えたとき W=0 で描画されている場合があるので再描画
   if (name === 'heatmap') renderHeatmap();
