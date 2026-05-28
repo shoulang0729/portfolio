@@ -15,6 +15,7 @@ import { WORKER_URL } from './config.js';
 import { renderHeatmap } from './heatmap.js';
 import { loadChart, setRange, closeModal, handleOverlayClick } from './chart.js';
 import { switchTab } from './tabs.js';
+import { setupEventListeners } from './init.js';
 import { renderStockList, slSort, slToggleDetail, applyStockBars, updateSlColStyle } from './stock-list.js';
 import { renderWatchlist, wlSort, onWatchlistSearch, removeFromWatchlist, wlSelectItem, fetchWatchlistData, _loadWatchlistFromWorker } from './watchlist.js';
 import { loadPositionsFromKV } from './positions-store.js';
@@ -565,41 +566,8 @@ function updateListHeight() {
   wrap.style.maxHeight = h + 'px';
 }
 
-if (typeof d3 === 'undefined') {
-  document.getElementById('d3-load-error').style.display = 'flex';
-} else {
-  let _resizeRaf = null;
-  window.addEventListener('resize', () => {
-    if (_resizeRaf) cancelAnimationFrame(_resizeRaf);
-    _resizeRaf = requestAnimationFrame(() => {
-      _resizeRaf = null;
-      renderHeatmap(); renderStockList(); applyStockBars(); updateListHeight();
-    });
-  });
-
-  // システムのカラースキーム変化を監視（auto モード時のみ再描画）
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-    if (state.themeMode !== 'auto') return;
-    applyTheme();
-    renderHeatmap();
-    const overlay = document.getElementById('modal-overlay');
-    if (overlay && overlay.style.display !== 'none' && state.currentPos?.ySymbol) {
-      loadChart(state.currentPos.ySymbol, state.currentRange);
-    }
-  });
-
-  init();
-
-  // sticky-top の高さ変化を監視し、リスト高さを自動再計算（stats 折りたたみ等に対応）
-  if (typeof ResizeObserver !== 'undefined') {
-    const _stickyEl = document.querySelector('.sticky-top');
-    if (_stickyEl) {
-      new ResizeObserver(() => {
-        if (state.activeTab === 'list') updateListHeight();
-      }).observe(_stickyEl);
-    }
-  }
-}
+setupEventListeners(applyTheme);
+init();
 
 import './ptr.js';
 
