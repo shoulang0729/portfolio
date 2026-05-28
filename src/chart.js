@@ -82,7 +82,7 @@ function _drawChartContent(g, x, y, iW, iH, points, avgCost, cur, lineColor, def
     .attr('stroke', cssVar('--cost-line')).attr('stroke-width', 0.7).attr('stroke-dasharray', '4,3');
   g.append('text').attr('x', 2).attr('y', cy - 4)
     .attr('fill', cssVar('--cost-text')).attr('font-size', 10)
-    .text('取得単価: ' + (cur === 'USD' ? '$' + avgCost.toFixed(2) : '¥' + Math.round(avgCost).toLocaleString()));
+    .text(`取得単価: ${  cur === 'USD' ? `$${  avgCost.toFixed(2)}` : `¥${  Math.round(avgCost).toLocaleString()}`}`);
 
   // ── Moving average lines ──
   const maLineFn = d3.line().x(d => x(d.date)).y(d => y(d.ma)).curve(d3.curveMonotoneX);
@@ -103,8 +103,8 @@ function _drawChartContent(g, x, y, iW, iH, points, avgCost, cur, lineColor, def
 
   // ── Axes ──
   const tickFmt = cur === 'USD'
-    ? d => '$' + (d >= 1000 ? (d / 1000).toFixed(1) + 'k' : d.toFixed(0))
-    : d => d >= 100000 ? '¥' + (d / 10000).toFixed(0) + '万' : d >= 10000 ? '¥' + (d / 1000).toFixed(0) + 'k' : '¥' + Math.round(d);
+    ? d => `$${  d >= 1000 ? `${(d / 1000).toFixed(1)  }k` : d.toFixed(0)}`
+    : d => d >= 100000 ? `¥${  (d / 10000).toFixed(0)  }万` : d >= 10000 ? `¥${  (d / 1000).toFixed(0)  }k` : `¥${  Math.round(d)}`;
   g.append('g').attr('transform', `translate(0,${iH})`)
     .call(d3.axisBottom(x).ticks(6).tickFormat(d3.timeFormat(dateFmt)))
     .call(g2 => {
@@ -137,7 +137,7 @@ function _drawChartContent(g, x, y, iW, iH, points, avgCost, cur, lineColor, def
  */
 function _initChartCrosshair(g, x, y, points, m, iW, iH, interval, cur, lineColor, maStyles) {
   const bisect = d3.bisector(d => d.date).left;
-  const pf2 = v => cur === 'USD' ? '$' + v.toFixed(2) : '¥' + Math.round(v).toLocaleString();
+  const pf2 = v => cur === 'USD' ? `$${  v.toFixed(2)}` : `¥${  Math.round(v).toLocaleString()}`;
 
   // ── クロスヘア要素群 ──
   const crosshair = g.append('g').style('display', 'none');
@@ -223,7 +223,7 @@ function _renderChartStats(points, avgCost, cur, maStyles) {
   const lastPrice = points[points.length - 1].close;
   const chgPct = (lastPrice - fp) / fp * 100;
   const pnlPct = (lastPrice - avgCost) / avgCost * 100;
-  const pf = v => cur === 'USD' ? '$' + v.toFixed(2) : '¥' + Math.round(v).toLocaleString();
+  const pf = v => cur === 'USD' ? `$${  v.toFixed(2)}` : `¥${  Math.round(v).toLocaleString()}`;
 
   const maLegend = maStyles
     .filter(ma => ma.data.length > 0)
@@ -255,8 +255,8 @@ function _renderChartStats(points, avgCost, cur, maStyles) {
 function openChart(pos) {
   state.currentPos = pos;
   const proxyNote = pos.isProxy
-    ? ' <span class="modal-sym" style="color:#e3b341">※ ' + pos.proxyName + '</span>'
-    : ' <span class="modal-sym">' + pos.symbol + '</span>';
+    ? ` <span class="modal-sym" style="color:#e3b341">※ ${  pos.proxyName  }</span>`
+    : ` <span class="modal-sym">${  pos.symbol  }</span>`;
   document.getElementById('modal-title').innerHTML = pos.name + proxyNote;
   updateRangeBtns();
   document.getElementById('modal-overlay').style.display = 'flex';

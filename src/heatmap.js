@@ -192,8 +192,8 @@ function renderHeatmap() {
 function positionTooltip(event, el) {
   const tx = event.clientX + 16, ty = event.clientY - 10;
   const w = el.offsetWidth, h = el.offsetHeight;
-  el.style.left = (tx + w > window.innerWidth - 10 ? event.clientX - w - 10 : tx) + 'px';
-  el.style.top = (ty + h > window.innerHeight - 10 ? event.clientY - h - 10 : ty) + 'px';
+  el.style.left = `${tx + w > window.innerWidth - 10 ? event.clientX - w - 10 : tx  }px`;
+  el.style.top = `${ty + h > window.innerHeight - 10 ? event.clientY - h - 10 : ty  }px`;
 }
 
 export { renderHeatmap, positionTooltip };
