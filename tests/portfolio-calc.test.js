@@ -187,4 +187,25 @@ describe('calcPortfolioPeriodPct', () => {
     // (1000000 * 2 + 1000000 * 4) / 2000000 = 3
     expect(pct).toBeCloseTo(3, 0.001);
   });
+
+  it('should exclude positions where dayPct is undefined (1d period)', () => {
+    positions.push(
+      { ySymbol: 'AAPL', value: 1000000, dayPct: 5 },
+      { ySymbol: 'TSLA', value: 1000000 }  // dayPct プロパティ無し → undefined
+    );
+    const pct = calcPortfolioPeriodPct('1d');
+    // TSLA は dayPct undefined で除外、AAPL のみ計上
+    expect(pct).toBeCloseTo(5, 0.001);
+    expect(pct).not.toBeNaN();
+  });
+});
+
+describe('getDisplayPct with undefined dayPct', () => {
+  it('getDisplayPct should return null when dayPct is undefined for 1d', () => {
+    state.colorMode = 'change';
+    state.changePeriod = '1d';
+    const pos = { ySymbol: 'AAPL' };  // dayPct 無し
+    const pct = getDisplayPct(pos);
+    expect(pct).toBeNull();
+  });
 });
