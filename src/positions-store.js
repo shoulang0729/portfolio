@@ -16,7 +16,6 @@ async function loadPositionsFromKV() {
     const kvPositions = await res.json();
     if (!Array.isArray(kvPositions) || kvPositions.length === 0) return false;
     positions.splice(0, positions.length, ...kvPositions);
-    console.log(`[positions-store] KVから${kvPositions.length}銘柄を読み込みました`);
     return true;
   } catch (e) {
     console.warn('[positions-store] KV positions 読込失敗:', e);
