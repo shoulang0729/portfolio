@@ -1356,6 +1356,7 @@ async function fetchViaProxy(url, timeoutMs = 7e3) {
 function toFinnhubSymbol(ySymbol) {
   if (!ySymbol) return null;
   if (ySymbol.endsWith(".T")) return "TYO:" + ySymbol.slice(0, -2);
+  if (ySymbol.endsWith(".HK")) return "HKG:" + ySymbol.slice(0, -3);
   return ySymbol;
 }
 async function fetchFinnhubQuote(fSymbol) {
@@ -2402,7 +2403,6 @@ function renderWatchlist() {
 }
 
 // src/positions-store.js
-var DEFAULT_PIN_HASH = "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4";
 async function loadPositionsFromKV() {
   try {
     const res = await fetchWithTimeout(`${WORKER_URL}/positions`, 1e4);
@@ -2418,7 +2418,7 @@ async function loadPositionsFromKV() {
   }
 }
 async function savePositionsToKV(newPositions, pinHashOverride) {
-  const pinHash = pinHashOverride || localStorage.getItem("hm-pin-hash") || DEFAULT_PIN_HASH;
+  const pinHash = pinHashOverride || localStorage.getItem("hm-pin-hash") || AUTH_PIN_HASH;
   const res = await fetchWithTimeout(`${WORKER_URL}/positions`, 3e4, {
     method: "PUT",
     headers: { "Content-Type": "application/json", "X-Pin-Hash": pinHash },
@@ -3022,8 +3022,7 @@ async function _retryWithPin() {
     if (pinInput) pinInput.focus();
     return;
   }
-  const hashBuf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(pin));
-  const pinHash = Array.from(new Uint8Array(hashBuf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  const pinHash = await _hashPin(pin);
   localStorage.setItem("hm-pin-hash", pinHash);
   const finalPositions = _importState.pendingPositions;
   if (!finalPositions?.length) {
