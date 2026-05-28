@@ -20,3 +20,12 @@ jobs:
       - run: npm run lint      # eslint
       - run: npm run check:circular  # madge (circular dependency check)
       - run: npm run build     # esbuild
+      - name: Check dist size
+        run: |
+          SIZE=$(stat -c%s dist/app.js 2>/dev/null || stat -f%z dist/app.js)
+          LIMIT=180000
+          echo "dist/app.js size: $SIZE bytes (limit: $LIMIT)"
+          if [ "$SIZE" -gt "$LIMIT" ]; then
+            echo "::error::dist/app.js exceeded size limit ($SIZE > $LIMIT)"
+            exit 1
+          fi
