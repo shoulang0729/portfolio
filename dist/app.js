@@ -619,6 +619,144 @@ async function _restoreEncKey() {
 // src/config.js
 var WORKER_URL = "https://portfolio-proxy.shoulang.workers.dev";
 
+// src/modal.js
+async function showConfirm({ title, message, okLabel = "OK", cancelLabel = "\u30AD\u30E3\u30F3\u30BB\u30EB" }) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    overlay.style.display = "flex";
+    overlay.role = "dialog";
+    overlay.setAttribute("aria-modal", "true");
+    const modal = document.createElement("div");
+    modal.className = "modal";
+    const header = document.createElement("div");
+    header.className = "modal-header";
+    const titleEl = document.createElement("div");
+    titleEl.className = "modal-title";
+    titleEl.textContent = title || "\u78BA\u8A8D";
+    header.appendChild(titleEl);
+    modal.appendChild(header);
+    const body = document.createElement("div");
+    body.style.padding = "16px";
+    body.style.color = "var(--text)";
+    const msg = document.createElement("p");
+    msg.textContent = message || "";
+    msg.style.margin = "0 0 16px 0";
+    msg.style.lineHeight = "1.5";
+    body.appendChild(msg);
+    const footer = document.createElement("div");
+    footer.style.display = "flex";
+    footer.style.gap = "8px";
+    footer.style.justifyContent = "flex-end";
+    footer.style.paddingTop = "8px";
+    footer.style.borderTop = "1px solid var(--border)";
+    const cancelBtn = document.createElement("button");
+    cancelBtn.textContent = cancelLabel;
+    cancelBtn.style.cssText = "padding: 8px 12px; border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500;";
+    cancelBtn.onclick = () => {
+      cleanup();
+      resolve(false);
+    };
+    const okBtn = document.createElement("button");
+    okBtn.textContent = okLabel;
+    okBtn.style.cssText = "padding: 8px 12px; border: none; background: var(--accent); color: white; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500;";
+    okBtn.onclick = () => {
+      cleanup();
+      resolve(true);
+    };
+    footer.appendChild(cancelBtn);
+    footer.appendChild(okBtn);
+    body.appendChild(footer);
+    modal.appendChild(body);
+    overlay.appendChild(modal);
+    const cleanup = () => {
+      overlay.classList.remove("open");
+      overlay.addEventListener("transitionend", () => overlay.remove(), { once: true });
+    };
+    const handleEsc = (e) => {
+      if (e.key === "Escape") {
+        cleanup();
+        resolve(false);
+      }
+    };
+    const handleOverlay = (e) => {
+      if (e.target === overlay) {
+        cleanup();
+        resolve(false);
+      }
+    };
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add("open"));
+    document.addEventListener("keydown", handleEsc, { once: true });
+    overlay.addEventListener("click", handleOverlay);
+    okBtn.focus();
+  });
+}
+async function showAlert({ title, message, okLabel = "OK" }) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    overlay.style.display = "flex";
+    overlay.role = "dialog";
+    overlay.setAttribute("aria-modal", "true");
+    const modal = document.createElement("div");
+    modal.className = "modal";
+    const header = document.createElement("div");
+    header.className = "modal-header";
+    const titleEl = document.createElement("div");
+    titleEl.className = "modal-title";
+    titleEl.textContent = title || "\u30A2\u30E9\u30FC\u30C8";
+    header.appendChild(titleEl);
+    modal.appendChild(header);
+    const body = document.createElement("div");
+    body.style.padding = "16px";
+    body.style.color = "var(--text)";
+    const msg = document.createElement("p");
+    msg.textContent = message || "";
+    msg.style.margin = "0 0 16px 0";
+    msg.style.lineHeight = "1.5";
+    body.appendChild(msg);
+    const footer = document.createElement("div");
+    footer.style.display = "flex";
+    footer.style.gap = "8px";
+    footer.style.justifyContent = "flex-end";
+    footer.style.paddingTop = "8px";
+    footer.style.borderTop = "1px solid var(--border)";
+    const okBtn = document.createElement("button");
+    okBtn.textContent = okLabel;
+    okBtn.style.cssText = "padding: 8px 12px; border: none; background: var(--accent); color: white; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500;";
+    okBtn.onclick = () => {
+      cleanup();
+      resolve();
+    };
+    footer.appendChild(okBtn);
+    body.appendChild(footer);
+    modal.appendChild(body);
+    overlay.appendChild(modal);
+    const cleanup = () => {
+      overlay.classList.remove("open");
+      overlay.addEventListener("transitionend", () => overlay.remove(), { once: true });
+    };
+    const handleEsc = (e) => {
+      if (e.key === "Escape") {
+        cleanup();
+        resolve();
+      }
+    };
+    const handleOverlay = (e) => {
+      if (e.target === overlay) {
+        cleanup();
+        resolve();
+      }
+    };
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add("open"));
+    document.addEventListener("keydown", handleEsc, { once: true });
+    overlay.addEventListener("click", handleOverlay);
+    okBtn.focus();
+  });
+}
+
 // src/auth-passkey.js
 var _onPasskeySuccess = null;
 function setPasskeySuccessCallback(fn) {
@@ -635,7 +773,7 @@ function _u8ToB64url(u8) {
 }
 async function registerPasskey() {
   if (!navigator.credentials || !window.PublicKeyCredential) {
-    alert("\u3053\u306E\u30D6\u30E9\u30A6\u30B6\u306F\u30D1\u30B9\u30AD\u30FC\u306B\u5BFE\u5FDC\u3057\u3066\u3044\u307E\u305B\u3093\u3002");
+    await showAlert({ title: "\u30D6\u30E9\u30A6\u30B6\u5BFE\u5FDC", message: "\u3053\u306E\u30D6\u30E9\u30A6\u30B6\u306F\u30D1\u30B9\u30AD\u30FC\u306B\u5BFE\u5FDC\u3057\u3066\u3044\u307E\u305B\u3093\u3002" });
     return;
   }
   try {
@@ -666,9 +804,9 @@ async function registerPasskey() {
       })
     });
     if (!(await regRes.json()).ok) throw new Error("\u767B\u9332\u5931\u6557");
-    alert("\u30D1\u30B9\u30AD\u30FC\u3092\u767B\u9332\u3057\u307E\u3057\u305F\u3002\u6B21\u56DE\u304B\u3089\u30D1\u30B9\u30AD\u30FC\u3067\u30ED\u30B0\u30A4\u30F3\u3067\u304D\u307E\u3059\u3002");
+    await showAlert({ title: "\u30D1\u30B9\u30AD\u30FC\u767B\u9332", message: "\u30D1\u30B9\u30AD\u30FC\u3092\u767B\u9332\u3057\u307E\u3057\u305F\u3002\u6B21\u56DE\u304B\u3089\u30D1\u30B9\u30AD\u30FC\u3067\u30ED\u30B0\u30A4\u30F3\u3067\u304D\u307E\u3059\u3002" });
   } catch (e) {
-    if (e.name !== "NotAllowedError") alert(`\u30D1\u30B9\u30AD\u30FC\u767B\u9332\u30A8\u30E9\u30FC: ${e.message}`);
+    if (e.name !== "NotAllowedError") await showAlert({ title: "\u30A8\u30E9\u30FC", message: `\u30D1\u30B9\u30AD\u30FC\u767B\u9332\u30A8\u30E9\u30FC: ${e.message}` });
   }
 }
 async function authenticatePasskey() {
@@ -3091,144 +3229,6 @@ async function handleMoneyForwardImageSelect(event) {
 }
 function escapeHTML2(s) {
   return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-}
-
-// src/modal.js
-async function showConfirm({ title, message, okLabel = "OK", cancelLabel = "\u30AD\u30E3\u30F3\u30BB\u30EB" }) {
-  return new Promise((resolve) => {
-    const overlay = document.createElement("div");
-    overlay.className = "modal-overlay";
-    overlay.style.display = "flex";
-    overlay.role = "dialog";
-    overlay.setAttribute("aria-modal", "true");
-    const modal = document.createElement("div");
-    modal.className = "modal";
-    const header = document.createElement("div");
-    header.className = "modal-header";
-    const titleEl = document.createElement("div");
-    titleEl.className = "modal-title";
-    titleEl.textContent = title || "\u78BA\u8A8D";
-    header.appendChild(titleEl);
-    modal.appendChild(header);
-    const body = document.createElement("div");
-    body.style.padding = "16px";
-    body.style.color = "var(--text)";
-    const msg = document.createElement("p");
-    msg.textContent = message || "";
-    msg.style.margin = "0 0 16px 0";
-    msg.style.lineHeight = "1.5";
-    body.appendChild(msg);
-    const footer = document.createElement("div");
-    footer.style.display = "flex";
-    footer.style.gap = "8px";
-    footer.style.justifyContent = "flex-end";
-    footer.style.paddingTop = "8px";
-    footer.style.borderTop = "1px solid var(--border)";
-    const cancelBtn = document.createElement("button");
-    cancelBtn.textContent = cancelLabel;
-    cancelBtn.style.cssText = "padding: 8px 12px; border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500;";
-    cancelBtn.onclick = () => {
-      cleanup();
-      resolve(false);
-    };
-    const okBtn = document.createElement("button");
-    okBtn.textContent = okLabel;
-    okBtn.style.cssText = "padding: 8px 12px; border: none; background: var(--accent); color: white; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500;";
-    okBtn.onclick = () => {
-      cleanup();
-      resolve(true);
-    };
-    footer.appendChild(cancelBtn);
-    footer.appendChild(okBtn);
-    body.appendChild(footer);
-    modal.appendChild(body);
-    overlay.appendChild(modal);
-    const cleanup = () => {
-      overlay.classList.remove("open");
-      overlay.addEventListener("transitionend", () => overlay.remove(), { once: true });
-    };
-    const handleEsc = (e) => {
-      if (e.key === "Escape") {
-        cleanup();
-        resolve(false);
-      }
-    };
-    const handleOverlay = (e) => {
-      if (e.target === overlay) {
-        cleanup();
-        resolve(false);
-      }
-    };
-    document.body.appendChild(overlay);
-    requestAnimationFrame(() => overlay.classList.add("open"));
-    document.addEventListener("keydown", handleEsc, { once: true });
-    overlay.addEventListener("click", handleOverlay);
-    okBtn.focus();
-  });
-}
-async function showAlert({ title, message, okLabel = "OK" }) {
-  return new Promise((resolve) => {
-    const overlay = document.createElement("div");
-    overlay.className = "modal-overlay";
-    overlay.style.display = "flex";
-    overlay.role = "dialog";
-    overlay.setAttribute("aria-modal", "true");
-    const modal = document.createElement("div");
-    modal.className = "modal";
-    const header = document.createElement("div");
-    header.className = "modal-header";
-    const titleEl = document.createElement("div");
-    titleEl.className = "modal-title";
-    titleEl.textContent = title || "\u30A2\u30E9\u30FC\u30C8";
-    header.appendChild(titleEl);
-    modal.appendChild(header);
-    const body = document.createElement("div");
-    body.style.padding = "16px";
-    body.style.color = "var(--text)";
-    const msg = document.createElement("p");
-    msg.textContent = message || "";
-    msg.style.margin = "0 0 16px 0";
-    msg.style.lineHeight = "1.5";
-    body.appendChild(msg);
-    const footer = document.createElement("div");
-    footer.style.display = "flex";
-    footer.style.gap = "8px";
-    footer.style.justifyContent = "flex-end";
-    footer.style.paddingTop = "8px";
-    footer.style.borderTop = "1px solid var(--border)";
-    const okBtn = document.createElement("button");
-    okBtn.textContent = okLabel;
-    okBtn.style.cssText = "padding: 8px 12px; border: none; background: var(--accent); color: white; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500;";
-    okBtn.onclick = () => {
-      cleanup();
-      resolve();
-    };
-    footer.appendChild(okBtn);
-    body.appendChild(footer);
-    modal.appendChild(body);
-    overlay.appendChild(modal);
-    const cleanup = () => {
-      overlay.classList.remove("open");
-      overlay.addEventListener("transitionend", () => overlay.remove(), { once: true });
-    };
-    const handleEsc = (e) => {
-      if (e.key === "Escape") {
-        cleanup();
-        resolve();
-      }
-    };
-    const handleOverlay = (e) => {
-      if (e.target === overlay) {
-        cleanup();
-        resolve();
-      }
-    };
-    document.body.appendChild(overlay);
-    requestAnimationFrame(() => overlay.classList.add("open"));
-    document.addEventListener("keydown", handleEsc, { once: true });
-    overlay.addEventListener("click", handleOverlay);
-    okBtn.focus();
-  });
 }
 
 // src/ptr.js
