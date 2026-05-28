@@ -3558,13 +3558,18 @@ function init() {
     applyPricesCache();
     await refreshPrices();
     _hideHeatmapSkeleton();
-    for (const range of ["1y", "5y", "10y"]) {
+    await fetchAllHistorical("1y");
+    renderStats();
+    renderStockList();
+    if (state.activeTab === "watchlist") renderWatchlist();
+    if (state.changePeriod && state.changePeriod !== "1d") renderHeatmap();
+    await Promise.all(["5y", "10y"].map(async (range) => {
       await fetchAllHistorical(range);
       renderStats();
       renderStockList();
       if (state.activeTab === "watchlist") renderWatchlist();
       if (state.changePeriod && state.changePeriod !== "1d") renderHeatmap();
-    }
+    }));
   })();
 }
 function _hideHeatmapSkeleton() {
