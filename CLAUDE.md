@@ -7,7 +7,7 @@ AI相談タブは現在無効化中（ソースは `src/_disabled/` に保管）
 
 - **本番 URL**: https://shoulang0729.github.io/portfolio/
 - **GitHub**: https://github.com/shoulang0729/portfolio
-- **現在バージョン**: `20260529E`
+- **現在バージョン**: `20260529F`
 
 ---
 
@@ -36,6 +36,8 @@ AI相談タブは現在無効化中（ソースは `src/_disabled/` に保管）
 │   ├── import-parse.js     # マネックスCSV/マネフォ画像パース
 │   ├── import-ui.js        # 取込モーダルUI
 │   ├── ptr.js              # ★新設：Pull-to-refresh（app.js から分離）
+│   ├── render.js           # ★新設：描画オーケストレーション（app.js から分離）
+│   ├── idb.js             # ★新設：IndexedDB ラッパー（Phase 1, 未統合）
 │   ├── _disabled/          # 無効化中コード（再有効化可能。再開手順は CLAUDE.md 参照）
 │   │   ├── history.js          # 資産推移記録＋D3グラフ（未統合）
 │   │   ├── ai-system-prompt.js # AI相談ペルソナ
@@ -127,6 +129,7 @@ fetchSymbolHistory(ySymbol, range)
 ```
 GET  /yahoo?url=<encoded>           Yahoo Finance プロキシ（CORS回避）
 GET  /finnhub?path=<path>&<params>  Finnhub プロキシ（APIキー隠蔽）
+GET  /forex?from=<from>&to=<to>    為替レートプロキシ（Yahoo Finance）
 POST /ai/openai                     OpenAI プロキシ
 POST /ai/gemini                     Gemini プロキシ
 POST /ai/grok                       Grok プロキシ
@@ -223,6 +226,7 @@ POST /auth/verify                   パスキー検証
 
 | バージョン | 内容 |
 |---|---|
+| 20260529F | refactor: #113 app.js から描画オーケストレーションを src/render.js に分離 (Phase 3) |
 | 20260529E | chore: vitest coverage（@vitest/coverage-v8）・ESLint 未使用 import 削除・PWA manifest 拡張（shortcuts/categories）・Dependabot 設定 |
 | 20260529D | refactor: #32 init.js を新規作成、app.js の event listeners を分離 |
 | 20260529C | refactor: #99 tabs.js を新規作成、switchTab 関数を分離 |
