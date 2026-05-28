@@ -11,7 +11,7 @@ export default defineConfig({
       provider: 'v8',
       include: ['src/**/*.js'],
       exclude: ['src/_disabled/**'],
-      reporter: ['text', 'html'],
+      reporter: ['text', 'html', 'json-summary'],
     },
   },
 });
