@@ -2555,6 +2555,146 @@ function renderWatchlist() {
   </table>`;
 }
 
+// src/render.js
+function renderStats() {
+  const totalValue = positions.reduce((s, p) => s + p.value, 0);
+  const totalPnl = positions.reduce((s, p) => s + p.pnl, 0);
+  const totalCost = totalValue - totalPnl;
+  const pnlPct = totalCost > 0 ? totalPnl / totalCost * 100 : 0;
+  let html = `<div class="stat">
+    <span class="stat-label">\u8CC7\u7523\u7DCF\u984D</span>
+    <span class="stat-value neu">${fmtJPYInt(totalValue)}</span>
+  </div>`;
+  html += `<div class="stat">
+    <span class="stat-label">\u542B\u307F\u640D\u76CA</span>
+    <span class="stat-value ${sgn(totalPnl)}">${fmtJPYInt(totalPnl)}</span>
+    <span class="stat-sub ${sgn(pnlPct)}">${fmtPctInt(pnlPct)}</span>
+  </div>`;
+  for (const p of PERIODS) {
+    const pct = calcPortfolioPeriodPct(p.id);
+    const amt = pct !== null ? totalValue * pct / 100 : null;
+    const cls = pct !== null ? sgn(pct) : "neu";
+    html += `<div class="stat">
+      <span class="stat-label">${p.statsLabel}</span>
+      <span class="stat-value ${cls}">${amt !== null ? fmtJPYInt(amt) : "\u2015"}</span>
+      <span class="stat-sub ${cls}">${pct !== null ? fmtPctInt(pct) : "\u2015"}</span>
+    </div>`;
+  }
+  document.getElementById("stats").innerHTML = html;
+}
+async function refreshHistoricalAndRender() {
+  const results = await Promise.allSettled(["5y", "10y"].map(async (range) => {
+    await fetchAllHistorical(range);
+    renderStats();
+    renderStockList();
+    if (state.activeTab === "watchlist") renderWatchlist();
+    if (state.changePeriod && state.changePeriod !== "1d") renderHeatmap();
+    return range;
+  }));
+  const failed = results.filter((r) => r.status === "rejected");
+  failed.forEach((r) => console.warn("[historical] fetch failed:", r.reason));
+  if (failed.length > 0) {
+    setStatus(`\u5C65\u6B74\u30C7\u30FC\u30BF\u53D6\u5F97\u5931\u6557\uFF08${failed.length}/${results.length}\uFF09`, "red");
+  }
+}
+function hideHeatmapSkeleton() {
+  const sk = document.getElementById("heatmap-skeleton");
+  const sv = document.getElementById("heatmap");
+  if (sk) {
+    sk.style.transition = "opacity 0.3s ease";
+    sk.style.opacity = "0";
+    setTimeout(() => sk.remove(), 320);
+  }
+  if (sv) sv.style.display = "";
+}
+function updateListHeight() {
+  const wrap = document.getElementById("stock-list-wrap");
+  if (!wrap) return;
+  const sticky = document.querySelector(".sticky-top");
+  const slCtrl = document.querySelector(".sl-controls");
+  const stickyH = sticky ? sticky.offsetHeight : 0;
+  const ctrlH = slCtrl ? slCtrl.offsetHeight : 0;
+  const padBot = parseFloat(getComputedStyle(document.body).paddingBottom) || 16;
+  const h = Math.max(160, window.innerHeight - stickyH - ctrlH - padBot - 4);
+  wrap.style.maxHeight = h + "px";
+}
+function setupPriceUpdateListener() {
+  document.addEventListener("hm:prices-updated", () => {
+    renderStats();
+    renderHeatmap();
+  });
+}
+
+// src/tabs.js
+function switchTab(name) {
+  if (state.activeTab === name) return;
+  state.activeTab = name;
+  try {
+    localStorage.setItem("hm-active-tab", name);
+  } catch {
+  }
+  const panelHeatmap = document.getElementById("panel-heatmap");
+  const panelList = document.getElementById("panel-list");
+  const panelWatchlist = document.getElementById("panel-watchlist");
+  const panelAi = document.getElementById("panel-ai");
+  if (panelHeatmap) panelHeatmap.hidden = name !== "heatmap";
+  if (panelList) panelList.hidden = name !== "list";
+  if (panelWatchlist) panelWatchlist.hidden = name !== "watchlist";
+  if (panelAi) panelAi.hidden = name !== "ai";
+  document.querySelectorAll(".tab-btn[data-tab]").forEach((b) => {
+    const isActive = b.dataset.tab === name;
+    b.classList.toggle("active", isActive);
+    b.setAttribute("aria-selected", isActive);
+  });
+  if (name === "heatmap") renderHeatmap();
+  if (name === "list") {
+    renderStockList();
+    requestAnimationFrame(() => requestAnimationFrame(updateListHeight));
+  }
+  if (name === "watchlist") {
+    _loadWatchlistFromWorker().then(() => {
+      renderWatchlist();
+      fetchWatchlistData();
+    });
+  }
+}
+
+// src/init.js
+function setupEventListeners(applyThemeFn) {
+  if (typeof d3 === "undefined") {
+    document.getElementById("d3-load-error").style.display = "flex";
+    return;
+  }
+  let _resizeRaf = null;
+  window.addEventListener("resize", () => {
+    if (_resizeRaf) cancelAnimationFrame(_resizeRaf);
+    _resizeRaf = requestAnimationFrame(() => {
+      _resizeRaf = null;
+      renderHeatmap();
+      renderStockList();
+      applyStockBars();
+      updateListHeight();
+    });
+  });
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+    if (state.themeMode !== "auto") return;
+    applyThemeFn();
+    renderHeatmap();
+    const overlay = document.getElementById("modal-overlay");
+    if (overlay && overlay.style.display !== "none" && state.currentPos?.ySymbol) {
+      loadChart(state.currentPos.ySymbol, state.currentRange);
+    }
+  });
+  if (typeof ResizeObserver !== "undefined") {
+    const _stickyEl = document.querySelector(".sticky-top");
+    if (_stickyEl) {
+      new ResizeObserver(() => {
+        if (state.activeTab === "list") updateListHeight();
+      }).observe(_stickyEl);
+    }
+  }
+}
+
 // src/positions-store.js
 async function loadPositionsFromKV() {
   try {
@@ -3330,10 +3470,6 @@ if ("ontouchstart" in window) {
 }
 
 // src/app.js
-document.addEventListener("hm:prices-updated", () => {
-  renderStats();
-  renderHeatmap();
-});
 window.renderHeatmap = renderHeatmap;
 setPasskeySuccessCallback(_showChangePinButton);
 function toggleStats() {
@@ -3343,32 +3479,6 @@ function toggleStats() {
   eye.classList.toggle("hidden", !state.statsVisible);
   document.getElementById("eye-slash").style.display = state.statsVisible ? "none" : "";
   requestAnimationFrame(updateListHeight);
-}
-function renderStats() {
-  const totalValue = positions.reduce((s, p) => s + p.value, 0);
-  const totalPnl = positions.reduce((s, p) => s + p.pnl, 0);
-  const totalCost = totalValue - totalPnl;
-  const pnlPct = totalCost > 0 ? totalPnl / totalCost * 100 : 0;
-  let html = `<div class="stat">
-    <span class="stat-label">\u8CC7\u7523\u7DCF\u984D</span>
-    <span class="stat-value neu">${fmtJPYInt(totalValue)}</span>
-  </div>`;
-  html += `<div class="stat">
-    <span class="stat-label">\u542B\u307F\u640D\u76CA</span>
-    <span class="stat-value ${sgn(totalPnl)}">${fmtJPYInt(totalPnl)}</span>
-    <span class="stat-sub ${sgn(pnlPct)}">${fmtPctInt(pnlPct)}</span>
-  </div>`;
-  for (const p of PERIODS) {
-    const pct = calcPortfolioPeriodPct(p.id);
-    const amt = pct !== null ? totalValue * pct / 100 : null;
-    const cls = pct !== null ? sgn(pct) : "neu";
-    html += `<div class="stat">
-      <span class="stat-label">${p.statsLabel}</span>
-      <span class="stat-value ${cls}">${amt !== null ? fmtJPYInt(amt) : "\u2015"}</span>
-      <span class="stat-sub ${cls}">${pct !== null ? fmtPctInt(pct) : "\u2015"}</span>
-    </div>`;
-  }
-  document.getElementById("stats").innerHTML = html;
 }
 function applyTheme() {
   let resolved = state.themeMode;
@@ -3683,6 +3793,7 @@ function _bindActionDispatcher() {
 function init() {
   _bindActionDispatcher();
   _setupMobileLayout();
+  setupPriceUpdateListener();
   applyTheme();
   document.getElementById("btn-pnl").classList.remove("active");
   document.querySelectorAll(".period-btn[data-period]").forEach((b) => b.classList.toggle("active", b.dataset.period === "1d"));
@@ -3723,113 +3834,17 @@ function init() {
     }
     applyPricesCache();
     await refreshPrices();
-    _hideHeatmapSkeleton();
+    hideHeatmapSkeleton();
     await fetchAllHistorical("1y");
     renderStats();
     renderStockList();
     if (state.activeTab === "watchlist") renderWatchlist();
     if (state.changePeriod && state.changePeriod !== "1d") renderHeatmap();
-    const results = await Promise.allSettled(["5y", "10y"].map(async (range) => {
-      await fetchAllHistorical(range);
-      renderStats();
-      renderStockList();
-      if (state.activeTab === "watchlist") renderWatchlist();
-      if (state.changePeriod && state.changePeriod !== "1d") renderHeatmap();
-      return range;
-    }));
-    const failed = results.filter((r) => r.status === "rejected");
-    failed.forEach((r) => console.warn("[historical] fetch failed:", r.reason));
-    if (failed.length > 0) {
-      setStatus(`\u5C65\u6B74\u30C7\u30FC\u30BF\u53D6\u5F97\u5931\u6557\uFF08${failed.length}/${results.length}\uFF09`, "red");
-    }
+    await refreshHistoricalAndRender();
   })();
 }
-function _hideHeatmapSkeleton() {
-  const sk = document.getElementById("heatmap-skeleton");
-  const sv = document.getElementById("heatmap");
-  if (sk) {
-    sk.style.transition = "opacity 0.3s ease";
-    sk.style.opacity = "0";
-    setTimeout(() => sk.remove(), 320);
-  }
-  if (sv) sv.style.display = "";
-}
-function updateListHeight() {
-  const wrap = document.getElementById("stock-list-wrap");
-  if (!wrap) return;
-  const sticky = document.querySelector(".sticky-top");
-  const slCtrl = document.querySelector(".sl-controls");
-  const stickyH = sticky ? sticky.offsetHeight : 0;
-  const ctrlH = slCtrl ? slCtrl.offsetHeight : 0;
-  const padBot = parseFloat(getComputedStyle(document.body).paddingBottom) || 16;
-  const h = Math.max(160, window.innerHeight - stickyH - ctrlH - padBot - 4);
-  wrap.style.maxHeight = h + "px";
-}
-function switchTab(name) {
-  if (state.activeTab === name) return;
-  state.activeTab = name;
-  try {
-    localStorage.setItem("hm-active-tab", name);
-  } catch {
-  }
-  const panelHeatmap = document.getElementById("panel-heatmap");
-  const panelList = document.getElementById("panel-list");
-  const panelWatchlist = document.getElementById("panel-watchlist");
-  const panelAi = document.getElementById("panel-ai");
-  if (panelHeatmap) panelHeatmap.hidden = name !== "heatmap";
-  if (panelList) panelList.hidden = name !== "list";
-  if (panelWatchlist) panelWatchlist.hidden = name !== "watchlist";
-  if (panelAi) panelAi.hidden = name !== "ai";
-  document.querySelectorAll(".tab-btn[data-tab]").forEach((b) => {
-    const isActive = b.dataset.tab === name;
-    b.classList.toggle("active", isActive);
-    b.setAttribute("aria-selected", isActive);
-  });
-  if (name === "heatmap") renderHeatmap();
-  if (name === "list") {
-    renderStockList();
-    requestAnimationFrame(() => requestAnimationFrame(updateListHeight));
-  }
-  if (name === "watchlist") {
-    _loadWatchlistFromWorker().then(() => {
-      renderWatchlist();
-      fetchWatchlistData();
-    });
-  }
-}
-if (typeof d3 === "undefined") {
-  document.getElementById("d3-load-error").style.display = "flex";
-} else {
-  let _resizeRaf = null;
-  window.addEventListener("resize", () => {
-    if (_resizeRaf) cancelAnimationFrame(_resizeRaf);
-    _resizeRaf = requestAnimationFrame(() => {
-      _resizeRaf = null;
-      renderHeatmap();
-      renderStockList();
-      applyStockBars();
-      updateListHeight();
-    });
-  });
-  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
-    if (state.themeMode !== "auto") return;
-    applyTheme();
-    renderHeatmap();
-    const overlay = document.getElementById("modal-overlay");
-    if (overlay && overlay.style.display !== "none" && state.currentPos?.ySymbol) {
-      loadChart(state.currentPos.ySymbol, state.currentRange);
-    }
-  });
-  init();
-  if (typeof ResizeObserver !== "undefined") {
-    const _stickyEl = document.querySelector(".sticky-top");
-    if (_stickyEl) {
-      new ResizeObserver(() => {
-        if (state.activeTab === "list") updateListHeight();
-      }).observe(_stickyEl);
-    }
-  }
-}
+setupEventListeners(applyTheme);
+init();
 (function() {
   const ver = (import.meta.url.match(/[?&]v=([^&]+)/) || [, "?"])[1];
   const title = document.querySelector(".title");
