@@ -110,6 +110,7 @@ async function fetchViaProxy(url, timeoutMs = 7000) {
 function toFinnhubSymbol(ySymbol) {
   if (!ySymbol) return null;
   if (ySymbol.endsWith('.T')) return 'TYO:' + ySymbol.slice(0, -2);
+  if (ySymbol.endsWith('.HK')) return 'HKG:' + ySymbol.slice(0, -3);
   return ySymbol;
 }
 
@@ -550,4 +551,4 @@ function setStatus(msg, color) {
 // CSV パース系（normalizeStr, parseCsvText, parseNum, detectCsvType, parseJpRow, parseUsRow, parseFundRow）は src/csv.js に移動。
 // 旧 importMonexCsvs / handleCsvImport は廃止（取込モーダル import.js に統合済み）。
 
-export { fetchWithTimeout, sleep, batchWithRetry, fetchViaProxy, fetchFinnhubQuote, fetchFinnhubCandles, ensureYahooCrumb, loadCacheFromSession, saveCacheToSession, clearCacheSession, fetchAllHistorical, fetchSymbolHistory, fetchLivePrice, refreshPrices, flashPriceChanges, setStatus, applyPricesCache };
+export { toFinnhubSymbol, fetchWithTimeout, sleep, batchWithRetry, fetchViaProxy, fetchFinnhubQuote, fetchFinnhubCandles, ensureYahooCrumb, loadCacheFromSession, saveCacheToSession, clearCacheSession, fetchAllHistorical, fetchSymbolHistory, fetchLivePrice, refreshPrices, flashPriceChanges, setStatus, applyPricesCache };
