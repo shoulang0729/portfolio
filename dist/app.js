@@ -3371,6 +3371,28 @@ function escapeHTML2(s) {
   return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
+// src/menu.js
+function toggleHmMenu() {
+  const dropdown = document.getElementById("hm-menu-dropdown");
+  const btn = document.getElementById("hm-menu-btn");
+  if (!dropdown) return;
+  const isOpen = dropdown.classList.toggle("open");
+  if (btn) {
+    btn.classList.toggle("open", isOpen);
+    btn.setAttribute("aria-expanded", String(isOpen));
+  }
+}
+function closeHmMenu() {
+  const dropdown = document.getElementById("hm-menu-dropdown");
+  const btn = document.getElementById("hm-menu-btn");
+  if (!dropdown) return;
+  dropdown.classList.remove("open");
+  if (btn) {
+    btn.classList.remove("open");
+    btn.setAttribute("aria-expanded", "false");
+  }
+}
+
 // src/ptr.js
 if ("ontouchstart" in window) {
   let getIndicator = function() {
@@ -3491,26 +3513,6 @@ function applyTheme() {
   if (iconEl) iconEl.textContent = icons[state.themeMode] ?? "A";
   const el = document.getElementById("theme-btn");
   el && (el.title = { light: "\u30E9\u30A4\u30C8\u30E2\u30FC\u30C9", dark: "\u30C0\u30FC\u30AF\u30E2\u30FC\u30C9", auto: "\u30B7\u30B9\u30C6\u30E0\u306B\u5408\u308F\u305B\u308B" }[state.themeMode]);
-}
-function toggleHmMenu() {
-  const dropdown = document.getElementById("hm-menu-dropdown");
-  const btn = document.getElementById("hm-menu-btn");
-  if (!dropdown) return;
-  const isOpen = dropdown.classList.toggle("open");
-  if (btn) {
-    btn.classList.toggle("open", isOpen);
-    btn.setAttribute("aria-expanded", String(isOpen));
-  }
-}
-function closeHmMenu() {
-  const dropdown = document.getElementById("hm-menu-dropdown");
-  const btn = document.getElementById("hm-menu-btn");
-  if (!dropdown) return;
-  dropdown.classList.remove("open");
-  if (btn) {
-    btn.classList.remove("open");
-    btn.setAttribute("aria-expanded", "false");
-  }
 }
 function cycleTheme() {
   const order = ["auto", "light", "dark"];
