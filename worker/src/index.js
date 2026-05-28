@@ -3,6 +3,7 @@
 // ルート一覧:
 //   GET  /yahoo?url=<encoded>           Yahoo Finance プロキシ（CORS 回避）
 //   GET  /finnhub?path=<path>&<params>  Finnhub プロキシ（APIキー隠蔽）
+//   GET  /forex?from=<from>&to=<to>    為替レートプロキシ（Yahoo Finance）
 //   POST /ai/openai                     OpenAI (ChatGPT) プロキシ
 //   POST /ai/gemini                     Gemini プロキシ
 //   POST /ai/grok                       Grok プロキシ
@@ -85,6 +86,42 @@ function jsonRes(data, status, origin) {
 
 function errRes(msg, status, origin) {
   return jsonRes({ error: msg }, status, origin);
+}
+
+// ── 為替レートプロキシ ────────────────────────────
+async function handleForex(url, env, origin) {
+  const from = url.searchParams.get('from');
+  const to = url.searchParams.get('to');
+  if (!from || !to) return errRes('from と to パラメータが必要です', 400, origin);
+
+  const cacheKey = `forex:${from}${to}`;
+  const cached = await env.KV.get(cacheKey);
+  if (cached) {
+    try {
+      const data = JSON.parse(cached);
+      return jsonRes(data, 200, origin);
+    } catch {}
+  }
+
+  try {
+    const symbol = `${from}${to}=X`;
+    const res = await fetch(
+      `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}`,
+      { cf: { cacheTtl: 300 } }
+    );
+    if (!res.ok) return errRes('Yahoo Finance API エラー', 502, origin);
+
+    const data = await res.json();
+    const price = data?.chart?.result?.[0]?.regularMarketPrice;
+    if (!price) return errRes('レート取得失敗', 502, origin);
+
+    const result = { from, to, rate: price, ts: Date.now() };
+    await env.KV.put(cacheKey, JSON.stringify(result), { expirationTtl: 3600 });
+    return jsonRes(result, 200, origin);
+  } catch (e) {
+    console.error('[forex]', e);
+    return errRes('レート取得エラー', 502, origin);
+  }
 }
 
 // ── Yahoo Finance プロキシ ────────────────────────────
@@ -976,6 +1013,7 @@ export default {
     }
     if (path === '/yahoo')           return handleYahoo(url, org);
     if (path === '/finnhub')         return handleFinnhub(url, env, org);
+    if (path === '/forex')           return handleForex(url, env, org);
     if (path === '/ai/models')       return handleAIModels(env, org);
     if (path === '/ai/context')      return handleAIContext(request, env, org);
     if (path.startsWith('/ai/'))     return handleAI(request, path, env, org);
