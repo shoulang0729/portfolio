@@ -10,7 +10,7 @@ import { state } from './state.js';
 import { renderHeatmap } from './heatmap.js';
 import { renderStockList } from './stock-list.js';
 import { renderWatchlist, fetchWatchlistData, _loadWatchlistFromWorker } from './watchlist.js';
-import { updateListHeight } from './render.js';
+import { updateListHeight, updateWatchlistHeight } from './render.js';
 
 /**
  * Switch to a different tab and render its content
@@ -47,6 +47,11 @@ export function switchTab(name) {
   }
 
   if (name === 'watchlist') {
-    _loadWatchlistFromWorker().then(() => { renderWatchlist(); fetchWatchlistData(); });
+    requestAnimationFrame(() => requestAnimationFrame(updateWatchlistHeight));
+    _loadWatchlistFromWorker().then(() => {
+      renderWatchlist();
+      updateWatchlistHeight();
+      fetchWatchlistData();
+    });
   }
 }

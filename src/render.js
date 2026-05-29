@@ -59,7 +59,10 @@ export async function refreshHistoricalAndRender() {
     await fetchAllHistorical(range);
     renderStats();
     renderStockList();
-    if (state.activeTab === 'watchlist') renderWatchlist();
+    if (state.activeTab === 'watchlist') {
+      renderWatchlist();
+      updateWatchlistHeight();
+    }
     if (state.changePeriod && state.changePeriod !== '1d') renderHeatmap();
     return range;
   }));
@@ -95,6 +98,34 @@ export function updateListHeight() {
   const padBot = parseFloat(getComputedStyle(document.body).paddingBottom) || 16;
   const h = Math.max(160, window.innerHeight - stickyH - ctrlH - padBot - 4);
   wrap.style.maxHeight = `${h  }px`;
+}
+
+/**
+ * ウォッチリストの高さをビューポートに合わせて動的設定
+ * @returns {void}
+ */
+export function updateWatchlistHeight() {
+  const wrap = document.getElementById('watchlist-table-wrap');
+  if (!wrap) return;
+  const sticky = document.querySelector('.sticky-top');
+  const search = document.getElementById('wl-search-wrap');
+  const stickyH = sticky instanceof HTMLElement ? sticky.offsetHeight : 0;
+  const searchH = search instanceof HTMLElement ? search.offsetHeight : 0;
+  const padBot = parseFloat(getComputedStyle(document.body).paddingBottom) || 16;
+  const h = Math.max(160, window.innerHeight - stickyH - searchH - padBot - 4);
+  wrap.style.maxHeight = `${h  }px`;
+}
+
+/**
+ * 現在表示中のテーブル高さを再計算
+ * @returns {void}
+ */
+export function updateActiveTableHeight() {
+  if (state.activeTab === 'watchlist') {
+    updateWatchlistHeight();
+    return;
+  }
+  updateListHeight();
 }
 
 /**

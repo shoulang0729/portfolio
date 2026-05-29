@@ -9,7 +9,7 @@ import { state } from './state.js';
 import { renderHeatmap } from './heatmap.js';
 import { renderStockList, applyStockBars } from './stock-list.js';
 import { loadChart } from './chart.js';
-import { updateListHeight } from './render.js';
+import { updateListHeight, updateWatchlistHeight } from './render.js';
 
 export function setupEventListeners(applyThemeFn) {
   if (typeof d3 === 'undefined') {
@@ -22,7 +22,7 @@ export function setupEventListeners(applyThemeFn) {
     if (_resizeRaf) cancelAnimationFrame(_resizeRaf);
     _resizeRaf = requestAnimationFrame(() => {
       _resizeRaf = null;
-      renderHeatmap(); renderStockList(); applyStockBars(); updateListHeight();
+      renderHeatmap(); renderStockList(); applyStockBars(); updateListHeight(); updateWatchlistHeight();
     });
   });
 
@@ -41,6 +41,7 @@ export function setupEventListeners(applyThemeFn) {
     if (_stickyEl) {
       new ResizeObserver(() => {
         if (state.activeTab === 'list') updateListHeight();
+        if (state.activeTab === 'watchlist') updateWatchlistHeight();
       }).observe(_stickyEl);
     }
   }
