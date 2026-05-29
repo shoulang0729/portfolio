@@ -516,12 +516,20 @@ var state = {
 
 // src/auth-pin.js
 var AUTH_PIN_HASH = "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92";
+var _AUTH_PIN_HASH_4DIG = "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4";
 var AUTH_SESSION_KEY = "hm-auth-v1";
 var AUTH_LS_HASH_KEY = "hm-pin-hash";
 var AUTH_LOCKOUT_KEY = "hm-lockout";
 var AUTH_PIN_LEN = 6;
 var AUTH_MAX_FAIL = 5;
 var AUTH_LOCK_SEC = 300;
+(function _migratePinLen() {
+  try {
+    const stored = localStorage.getItem(AUTH_LS_HASH_KEY);
+    if (stored === _AUTH_PIN_HASH_4DIG) localStorage.removeItem(AUTH_LS_HASH_KEY);
+  } catch {
+  }
+})();
 function _getActivePinHash() {
   return localStorage.getItem(AUTH_LS_HASH_KEY) || AUTH_PIN_HASH;
 }
