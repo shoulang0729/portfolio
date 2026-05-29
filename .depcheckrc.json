@@ -1,0 +1,9 @@
+{
+  "ignores": [
+    "@vitest/coverage-v8",
+    "@playwright/test",
+    "http-server",
+    "fake-indexeddb"
+  ],
+  "skip-missing": true
+}
