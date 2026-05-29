@@ -36,10 +36,13 @@ setPasskeySuccessCallback(_showChangePinButton);
 // ══════════════════════════════════════════════
 function toggleStats() {
   state.statsVisible = !state.statsVisible;
-  document.getElementById('stats').style.display = state.statsVisible ? '' : 'none';
+  const stats = document.getElementById('stats');
+  if (stats) stats.style.display = state.statsVisible ? '' : 'none';
   const eye = document.getElementById('stats-eye');
-  eye.classList.toggle('hidden', !state.statsVisible);
-  document.getElementById('eye-slash').style.display = state.statsVisible ? 'none' : '';
+  if (eye) eye.classList.toggle('hidden', !state.statsVisible);
+  const eyeSlash = document.getElementById('eye-slash');
+  if (eyeSlash) eyeSlash.style.display = state.statsVisible ? 'none' : '';
+
   // stats-outer の高さ変化に合わせて表示中テーブルの高さを再計算
   requestAnimationFrame(updateActiveTableHeight);
 }
@@ -422,8 +425,10 @@ function init() {
   renderStats();
 
   // stats の初期表示状態を DOM に反映（state.statsVisible = false → 非表示）
-  document.getElementById('stats').style.display = state.statsVisible ? '' : 'none';
+  const _stats = document.getElementById('stats');
+  if (_stats) _stats.style.display = state.statsVisible ? '' : 'none';
   const _eye = document.getElementById('stats-eye');
+
   if (_eye) _eye.classList.toggle('hidden', !state.statsVisible);
   const _eyeSlash = document.getElementById('eye-slash');
   if (_eyeSlash) _eyeSlash.style.display = state.statsVisible ? 'none' : '';

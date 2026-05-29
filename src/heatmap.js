@@ -8,7 +8,7 @@
 
 import { state, C } from './state.js';
 import { positions, PERIOD_MAP } from './positions.js';
-import { cssVar, getColor, getDisplayPct, getCellTextColor, getCellTextColorSub, fmtPct, fmtPctInt, fmtPrice, fmtJPY, fmtJPYFull, sgn } from './utils.js';
+import { cssVar, getColor, getDisplayPct, getCellTextColor, getCellTextColorSub, fmtPct, fmtPctInt, fmtPrice, fmtJPY, fmtJPYFull, sgn, escapeHTML } from './utils.js';
 import { renderStockList } from './stock-list.js';
 import { openChart } from './chart.js';
 
@@ -186,7 +186,8 @@ function renderHeatmap() {
   cells
     .on('mousemove', function(event, d) {
       const p = d.data;
-      let html = `<div class="tt-hdr">${p.name} <span class="tt-sym">${p.symbol}</span></div>
+      let html = `<div class="tt-hdr">${escapeHTML(p.name)} <span class="tt-sym">${escapeHTML(p.symbol)}</span></div>
+
         <div class="tt-row"><span class="tt-label">現在値</span><span class="tt-val">${fmtPrice(p.price, p.cur)}</span></div>
         <div class="tt-row"><span class="tt-label">平均取得単価</span><span class="tt-val">${fmtPrice(p.avgCost, p.cur)}</span></div>
         <div class="tt-row"><span class="tt-label">保有数</span><span class="tt-val">${p.shares.toLocaleString()}${p.cat==='投資信託'?' 口':' 株'}</span></div>
@@ -197,7 +198,8 @@ function renderHeatmap() {
       if (p.dayPct !== null) html += `<div class="tt-sep"></div>
         <div class="tt-row"><span class="tt-label">前日比（円）</span><span class="tt-val ${sgn(p.dayCh)}">${fmtJPYFull(p.dayCh)}</span></div>
         <div class="tt-row"><span class="tt-label">前日比（%）</span><span class="tt-val ${sgn(p.dayPct)}">${fmtPct(p.dayPct)}</span></div>`;
-      if (p.isProxy) html += `<div class="tt-hint" style="color:var(--text2)">📊 騰落率は代替インデックスで近似<br>${p.proxyName}</div>`;
+      if (p.isProxy) html += `<div class="tt-hint" style="color:var(--text2)">📊 騰落率は代替インデックスで近似<br>${escapeHTML(p.proxyName)}</div>`;
+
       html += `<div class="tt-hint">クリックでチャートを表示</div>`;
       tt.innerHTML = html;
       tt.style.display = 'block';
