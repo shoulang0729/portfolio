@@ -50,20 +50,42 @@ function renderHeatmap() {
   const viewH    = window.innerHeight - stickyH - simBarH - footerH - padBot - 4;
   const H = Math.max(minH, viewH > 100 ? viewH : Math.round(W * aspectRatio));
 
-  const svg = d3.select('#heatmap').attr('width', W).attr('height', H);
+  const svg = d3.select('#heatmap')
+    .style('display', 'block')
+    .attr('width', W)
+    .attr('height', H);
   svg.selectAll('*').remove();
 
   // 2グループに統合：米国株・ETF / 日本株・ETF・投資信託
   const GROUP_DEFS = [
-    { name: '米国株・ETF',           cats: ['米国株・ETF'] },
-    { name: '日本株・ETF・投資信託', cats: ['日本株・ETF', '投資信託'] },
+    { key: 'us', name: '米国株・ETF' },
+    { key: 'jp', name: '日本株・ETF・投資信託' },
   ];
+  const groupKeyOf = p => {
+    if (p.cat === '米国株・ETF') return 'us';
+    if (p.cat === '日本株・ETF' || p.cat === '投資信託') return 'jp';
+    // Imported/future data may have slightly different category labels.
+    // Use stable market hints so a category mismatch cannot blank the heatmap.
+    if (p.cur === 'USD' && !String(p.ySymbol || '').endsWith('.T')) return 'us';
+    return 'jp';
+  };
   const groups = GROUP_DEFS.map(g => ({
     name: g.name,
-    children: positions.filter(p => g.cats.includes(p.cat))
+    children: positions.filter(p => groupKeyOf(p) === g.key)
       .sort((a, b) => (b.value ?? 0) - (a.value ?? 0))  // グループ内：円換算時価降順
       .map(p => ({ ...p, size: p.value ?? 0 }))
   })).filter(g => g.children.length > 0);
+  if (groups.length === 0) {
+    svg.append('text')
+      .attr('x', W / 2)
+      .attr('y', 32)
+      .attr('fill', cssVar('--text2'))
+      .attr('text-anchor', 'middle')
+      .attr('font-size', 13)
+      .text('表示できる保有銘柄がありません');
+    renderStockList();
+    return;
+  }
   // グループ自体も円換算合計の高い順に並べる
   groups.sort((a, b) =>
     b.children.reduce((s, c) => s + (c.size ?? 0), 0) -
@@ -76,7 +98,7 @@ function renderHeatmap() {
   d3.treemap().size([W, H]).paddingOuter(W < C.MOBILE_BREAKPOINT ? 0 : 6).paddingTop(20).paddingInner(4).tile(d3.treemapSquarify)(root);
 
   // Category backgrounds + labels
-  root.children.forEach(catNode => {
+  (root.children || []).forEach(catNode => {
     svg.append('rect')
       .attr('x', catNode.x0).attr('y', catNode.y0)
       .attr('width', catNode.x1 - catNode.x0).attr('height', catNode.y1 - catNode.y0)
