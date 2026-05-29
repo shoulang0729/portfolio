@@ -215,7 +215,8 @@ function _importRow(p, type, checked, hint, idx) {
     <span class="imp-name">${escapeHTML(p.name)}</span>
     ${hintHtml}
     ${badgeHtml}
-    <span class="imp-meta">${p.shares}株 @${p.avgCost}</span>
+    <span class="imp-meta">${escapeHTML(p.shares)}株 @${escapeHTML(p.avgCost)}</span>
+
   </label>`;
 }
 
