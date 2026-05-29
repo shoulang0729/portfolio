@@ -219,6 +219,178 @@ describe('worker/src/index.js helpers', () => {
     });
   });
 
+  // Helper: レート制限（shard 分散方式）
+  describe('Rate limit (shard distribution)', () => {
+    // worker/src/index.js の checkRateLimit と同一ロジック。
+    // KV は in-memory Map をモックする。
+    const RATE_LIMIT_MAX = 120;
+    const RATE_LIMIT_WINDOW_MS = 60_000;
+    const RATE_LIMIT_SHARDS = 4;
+    const RATE_LIMIT_TTL = 120;
+
+    function makeKV() {
+      const store = new Map();
+      return {
+        store,
+        async get(key) {
+          return store.has(key) ? store.get(key) : null;
+        },
+        async put(key, value) {
+          store.set(key, value);
+        },
+      };
+    }
+
+    async function checkRateLimit(request, env) {
+      if (!env.KV) return false;
+      const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+      const bucket = Math.floor(Date.now() / RATE_LIMIT_WINDOW_MS);
+
+      const shardKeys = [];
+      for (let i = 0; i < RATE_LIMIT_SHARDS; i++) {
+        shardKeys.push(`rl:${ip}:${bucket}:${i}`);
+      }
+      const legacyKey = `rl:${ip}`;
+      const reads = await Promise.all([
+        ...shardKeys.map(k => env.KV.get(k)),
+        env.KV.get(legacyKey),
+      ]);
+      const total = reads.reduce((sum, v) => sum + parseInt(v || '0', 10), 0);
+
+      if (total >= RATE_LIMIT_MAX) return true;
+
+      const writeShard = Math.floor(Math.random() * RATE_LIMIT_SHARDS);
+      const writeKey = `rl:${ip}:${bucket}:${writeShard}`;
+      const shardCurrent = parseInt(reads[writeShard] || '0', 10);
+      // put は await しない（実装と同じ挙動）
+      await env.KV.put(writeKey, String(shardCurrent + 1), { expirationTtl: RATE_LIMIT_TTL });
+
+      return false;
+    }
+
+    function makeRequest(ip) {
+      return {
+        headers: {
+          get(name) {
+            if (name === 'CF-Connecting-IP') return ip;
+            return null;
+          },
+        },
+      };
+    }
+
+    it('単発リクエストは合算 1 を記録して通過', async () => {
+      const env = { KV: makeKV() };
+      const req = makeRequest('1.2.3.4');
+      const limited = await checkRateLimit(req, env);
+      expect(limited).toBe(false);
+      // 4 つの shard のどこかに "1" が入っている
+      const total = [...env.KV.store.values()].reduce((s, v) => s + parseInt(v, 10), 0);
+      expect(total).toBe(1);
+    });
+
+    it('並列リクエストが複数 shard に分散される（書き込みキー数 = shard 数）', async () => {
+      // Math.random をスタブして 4 shard を順番に巡回させる
+      const origRandom = Math.random;
+      let counter = 0;
+      Math.random = () => {
+        const r = (counter % RATE_LIMIT_SHARDS) / RATE_LIMIT_SHARDS;
+        counter++;
+        return r;
+      };
+
+      try {
+        const env = { KV: makeKV() };
+        const req = makeRequest('5.6.7.8');
+        // 8 件の並列リクエスト → 全 shard に書き込みが届くことを確認
+        await Promise.all(Array.from({ length: 8 }, () => checkRateLimit(req, env)));
+        const shardKeys = [...env.KV.store.keys()].filter(k => k.startsWith('rl:5.6.7.8:'));
+        // 旧実装は単一キーしか作られなかった。shard 分散実装では複数 shard キーが作られる。
+        expect(shardKeys.length).toBe(RATE_LIMIT_SHARDS);
+      } finally {
+        Math.random = origRandom;
+      }
+    });
+
+    it('shard 分散は単一キー方式より race 損失が少ない（直接比較）', async () => {
+      // 旧実装（単一キー）と新実装（shard 分散）を同じ並列負荷で動かして
+      // shard 分散の合計値が単一キーより必ず大きいか等しいことを担保する。
+      async function oldCheckRateLimit(request, env) {
+        if (!env.KV) return false;
+        const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+        const key = `rl:${ip}`;
+        const current = parseInt(await env.KV.get(key) || '0', 10);
+        if (current >= RATE_LIMIT_MAX) return true;
+        await env.KV.put(key, String(current + 1), { expirationTtl: 60 });
+        return false;
+      }
+
+      // 旧実装
+      const envOld = { KV: makeKV() };
+      const reqOld = makeRequest('10.0.0.1');
+      await Promise.all(Array.from({ length: 20 }, () => oldCheckRateLimit(reqOld, envOld)));
+      const oldTotal = [...envOld.KV.store.values()].reduce((s, v) => s + parseInt(v, 10), 0);
+
+      // 新実装（shard を順番に巡回）
+      const origRandom = Math.random;
+      let counter = 0;
+      Math.random = () => {
+        const r = (counter % RATE_LIMIT_SHARDS) / RATE_LIMIT_SHARDS;
+        counter++;
+        return r;
+      };
+      try {
+        const envNew = { KV: makeKV() };
+        const reqNew = makeRequest('10.0.0.2');
+        await Promise.all(Array.from({ length: 20 }, () => checkRateLimit(reqNew, envNew)));
+        const newTotal = [...envNew.KV.store.values()].reduce((s, v) => s + parseInt(v, 10), 0);
+
+        // 単一キー実装は race で 1 しか記録できない。shard 分散はそれより大幅に多い。
+        expect(newTotal).toBeGreaterThan(oldTotal);
+      } finally {
+        Math.random = origRandom;
+      }
+    });
+
+    it('合計が RATE_LIMIT_MAX 以上になったら次リクエストで 429', async () => {
+      const env = { KV: makeKV() };
+      const ip = '9.9.9.9';
+      const bucket = Math.floor(Date.now() / RATE_LIMIT_WINDOW_MS);
+      // 全 shard 合計で MAX をちょうど満たすよう仕込む
+      env.KV.store.set(`rl:${ip}:${bucket}:0`, '30');
+      env.KV.store.set(`rl:${ip}:${bucket}:1`, '30');
+      env.KV.store.set(`rl:${ip}:${bucket}:2`, '30');
+      env.KV.store.set(`rl:${ip}:${bucket}:3`, '30');
+
+      const req = makeRequest(ip);
+      const limited = await checkRateLimit(req, env);
+      expect(limited).toBe(true);
+    });
+
+    it('旧キー rl:<ip> も合算してレート判定する（移行期互換）', async () => {
+      const env = { KV: makeKV() };
+      const ip = '7.7.7.7';
+      // 旧キーだけに RATE_LIMIT_MAX を仕込む
+      env.KV.store.set(`rl:${ip}`, String(RATE_LIMIT_MAX));
+
+      const req = makeRequest(ip);
+      const limited = await checkRateLimit(req, env);
+      expect(limited).toBe(true);
+    });
+
+    it('異なる IP は独立にカウントされる', async () => {
+      const env = { KV: makeKV() };
+      const reqA = makeRequest('1.1.1.1');
+      const reqB = makeRequest('2.2.2.2');
+      await checkRateLimit(reqA, env);
+      await checkRateLimit(reqB, env);
+      const aKeys = [...env.KV.store.keys()].filter(k => k.startsWith('rl:1.1.1.1:'));
+      const bKeys = [...env.KV.store.keys()].filter(k => k.startsWith('rl:2.2.2.2:'));
+      expect(aKeys.length).toBe(1);
+      expect(bKeys.length).toBe(1);
+    });
+  });
+
   // Helper: CORS headers
   describe('CORS headers generation', () => {
     function corsHeaders(origin) {

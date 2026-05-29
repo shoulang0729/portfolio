@@ -41,18 +41,49 @@ function _workerToFinnhubSymbol(ySymbol) {
 }
 
 // ── レート制限（/yahoo・/finnhub プロキシ向け、KV 使用） ──────────
-// 同一 CF-Connecting-IP から 1 分間に最大 MAX_RPM リクエストまで。
-// KV に "rl:<ip>" キーで件数を記録（TTL 60s で自動期限切れ）。
-const RATE_LIMIT_MAX = 120; // リクエスト/分
+// 同一 CF-Connecting-IP から RATE_LIMIT_WINDOW_MS 内に最大 RATE_LIMIT_MAX リクエストまで。
+//
+// 設計判断は worker/src/rate-limit.md を参照（案 A: Durable Objects /
+// 案 B: shard 分散 / 案 C: Cache API の比較）。本実装は案 B。
+//
+// KV キー: "rl:<ip>:<bucket>:<shard>"
+//   - bucket = floor(now / 60s)  → 1 分単位のタンブリングウィンドウ
+//   - shard  = 0..N-1            → 書き込みをランダムに分散してレース窓を 1/N に縮小
+// 読込時は全 shard を並列 GET → 合算して上限判定。
+// put は await しない（レイテンシ削減・失敗時は次のリクエストで挽回）。
+const RATE_LIMIT_MAX = 120;            // リクエスト / バケット
+const RATE_LIMIT_WINDOW_MS = 60_000;   // バケット幅（60秒）
+const RATE_LIMIT_SHARDS = 4;           // shard 数（増やすほどレース窓が分散）
+const RATE_LIMIT_TTL = 120;            // shard キー TTL（バケット境界跨ぎを許容）
 
 async function checkRateLimit(request, env) {
   if (!env.KV) return false; // KV 未設定時はスキップ
   const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
-  const key = `rl:${ip}`;
-  const current = parseInt(await env.KV.get(key) || '0', 10);
-  if (current >= RATE_LIMIT_MAX) return true; // 超過
-  // 初回は TTL 60s でカウンター作成、以降はインクリメント
-  await env.KV.put(key, String(current + 1), { expirationTtl: 60 });
+  const bucket = Math.floor(Date.now() / RATE_LIMIT_WINDOW_MS);
+
+  // 全 shard を並列に読んで合算（書き込みが分散しているので合算は必須）。
+  // 旧キー "rl:<ip>"（TTL 60s）も移行期間中は合算する。
+  const shardKeys = [];
+  for (let i = 0; i < RATE_LIMIT_SHARDS; i++) {
+    shardKeys.push(`rl:${ip}:${bucket}:${i}`);
+  }
+  const legacyKey = `rl:${ip}`;
+  const reads = await Promise.all([
+    ...shardKeys.map(k => env.KV.get(k)),
+    env.KV.get(legacyKey),
+  ]);
+  const total = reads.reduce((sum, v) => sum + parseInt(v || '0', 10), 0);
+
+  if (total >= RATE_LIMIT_MAX) return true;
+
+  // 書き込み shard をランダム選択 → GET→PUT のレース窓は同一 shard を選んだ場合のみ
+  // 発生する（衝突確率 1/N）。put は await しない。
+  const writeShard = Math.floor(Math.random() * RATE_LIMIT_SHARDS);
+  const writeKey = `rl:${ip}:${bucket}:${writeShard}`;
+  const shardCurrent = parseInt(reads[writeShard] || '0', 10);
+  env.KV.put(writeKey, String(shardCurrent + 1), { expirationTtl: RATE_LIMIT_TTL })
+    .catch(() => {});
+
   return false;
 }
 
