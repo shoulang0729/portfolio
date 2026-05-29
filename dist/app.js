@@ -2213,14 +2213,17 @@ function _renderChartStats(points, avgCost, cur, maStyles) {
     const last = ma.data[ma.data.length - 1].ma;
     return `<span style="display:inline-flex;align-items:center;gap:4px"><svg width="8" height="8"><circle cx="4" cy="4" r="3.5" fill="${ma.color}"/></svg><span style="color:${ma.color};font-size:11px">${ma.label}</span> <strong>${pf(last)}</strong></span>`;
   }).join("");
-  document.getElementById("chart-stats").innerHTML = `
-    <span>\u73FE\u5728\u5024: <strong class="neu">${pf(lastPrice)}</strong></span>
-    <span>\u671F\u9593\u5909\u52D5: <strong class="${sgn(chgPct)}">${fmtPct(chgPct)}</strong></span>
-    <span>\u640D\u76CA\u7387: <strong class="${sgn(pnlPct)}">${fmtPct(pnlPct)}</strong></span>
-    <span>\u9AD8\u5024: <strong class="neu">${pf(d3.max(points, (d) => d.close))}</strong></span>
-    <span>\u5B89\u5024: <strong class="neu">${pf(d3.min(points, (d) => d.close))}</strong></span>
-    ${maLegend}
-  `;
+  const chartStatsEl = document.getElementById("chart-stats");
+  if (chartStatsEl) {
+    chartStatsEl.innerHTML = `
+      <span>\u73FE\u5728\u5024: <strong class="neu">${pf(lastPrice)}</strong></span>
+      <span>\u671F\u9593\u5909\u52D5: <strong class="${sgn(chgPct)}">${fmtPct(chgPct)}</strong></span>
+      <span>\u640D\u76CA\u7387: <strong class="${sgn(pnlPct)}">${fmtPct(pnlPct)}</strong></span>
+      <span>\u9AD8\u5024: <strong class="neu">${pf(d3.max(points, (d) => d.close))}</strong></span>
+      <span>\u5B89\u5024: <strong class="neu">${pf(d3.min(points, (d) => d.close))}</strong></span>
+      ${maLegend}
+    `;
+  }
 }
 function openChart(pos) {
   state.currentPos = pos;
@@ -2441,7 +2444,8 @@ function renderHeatmap() {
   const tt = document.getElementById("tooltip");
   cells.on("mousemove", function(event, d) {
     const p = d.data;
-    let html = `<div class="tt-hdr">${p.name} <span class="tt-sym">${p.symbol}</span></div>
+    let html = `<div class="tt-hdr">${escapeHTML(p.name)} <span class="tt-sym">${escapeHTML(p.symbol)}</span></div>
+
         <div class="tt-row"><span class="tt-label">\u73FE\u5728\u5024</span><span class="tt-val">${fmtPrice(p.price, p.cur)}</span></div>
         <div class="tt-row"><span class="tt-label">\u5E73\u5747\u53D6\u5F97\u5358\u4FA1</span><span class="tt-val">${fmtPrice(p.avgCost, p.cur)}</span></div>
         <div class="tt-row"><span class="tt-label">\u4FDD\u6709\u6570</span><span class="tt-val">${p.shares.toLocaleString()}${p.cat === "\u6295\u8CC7\u4FE1\u8A17" ? " \u53E3" : " \u682A"}</span></div>
@@ -2452,7 +2456,7 @@ function renderHeatmap() {
     if (p.dayPct !== null) html += `<div class="tt-sep"></div>
         <div class="tt-row"><span class="tt-label">\u524D\u65E5\u6BD4\uFF08\u5186\uFF09</span><span class="tt-val ${sgn(p.dayCh)}">${fmtJPYFull(p.dayCh)}</span></div>
         <div class="tt-row"><span class="tt-label">\u524D\u65E5\u6BD4\uFF08%\uFF09</span><span class="tt-val ${sgn(p.dayPct)}">${fmtPct(p.dayPct)}</span></div>`;
-    if (p.isProxy) html += `<div class="tt-hint" style="color:var(--text2)">\u{1F4CA} \u9A30\u843D\u7387\u306F\u4EE3\u66FF\u30A4\u30F3\u30C7\u30C3\u30AF\u30B9\u3067\u8FD1\u4F3C<br>${p.proxyName}</div>`;
+    if (p.isProxy) html += `<div class="tt-hint" style="color:var(--text2)">\u{1F4CA} \u9A30\u843D\u7387\u306F\u4EE3\u66FF\u30A4\u30F3\u30C7\u30C3\u30AF\u30B9\u3067\u8FD1\u4F3C<br>${escapeHTML(p.proxyName)}</div>`;
     html += `<div class="tt-hint">\u30AF\u30EA\u30C3\u30AF\u3067\u30C1\u30E3\u30FC\u30C8\u3092\u8868\u793A</div>`;
     tt.innerHTML = html;
     tt.style.display = "block";
@@ -2753,8 +2757,8 @@ function renderWatchlist() {
 
 // src/render.js
 function renderStats() {
-  const totalValue = positions.reduce((s, p) => s + p.value, 0);
-  const totalPnl = positions.reduce((s, p) => s + p.pnl, 0);
+  const totalValue = positions.reduce((s, p) => s + (p.value || 0), 0);
+  const totalPnl = positions.reduce((s, p) => s + (p.pnl || 0), 0);
   const totalCost = totalValue - totalPnl;
   const pnlPct = totalCost > 0 ? totalPnl / totalCost * 100 : 0;
   let html = `<div class="stat">
@@ -3483,7 +3487,8 @@ function _importRow(p, type, checked, hint, idx) {
     <span class="imp-name">${escapeHTML2(p.name)}</span>
     ${hintHtml}
     ${badgeHtml}
-    <span class="imp-meta">${p.shares}\u682A @${p.avgCost}</span>
+    <span class="imp-meta">${escapeHTML2(p.shares)}\u682A @${escapeHTML2(p.avgCost)}</span>
+
   </label>`;
 }
 async function _confirmImport() {
@@ -3717,10 +3722,12 @@ window.renderHeatmap = renderHeatmap;
 setPasskeySuccessCallback(_showChangePinButton);
 function toggleStats() {
   state.statsVisible = !state.statsVisible;
-  document.getElementById("stats").style.display = state.statsVisible ? "" : "none";
+  const stats = document.getElementById("stats");
+  if (stats) stats.style.display = state.statsVisible ? "" : "none";
   const eye = document.getElementById("stats-eye");
-  eye.classList.toggle("hidden", !state.statsVisible);
-  document.getElementById("eye-slash").style.display = state.statsVisible ? "none" : "";
+  if (eye) eye.classList.toggle("hidden", !state.statsVisible);
+  const eyeSlash = document.getElementById("eye-slash");
+  if (eyeSlash) eyeSlash.style.display = state.statsVisible ? "none" : "";
   requestAnimationFrame(updateActiveTableHeight);
 }
 function applyTheme() {
@@ -4027,7 +4034,8 @@ function init() {
   if (panelWatchlist) panelWatchlist.hidden = true;
   if (panelAi) panelAi.hidden = true;
   renderStats();
-  document.getElementById("stats").style.display = state.statsVisible ? "" : "none";
+  const _stats = document.getElementById("stats");
+  if (_stats) _stats.style.display = state.statsVisible ? "" : "none";
   const _eye = document.getElementById("stats-eye");
   if (_eye) _eye.classList.toggle("hidden", !state.statsVisible);
   const _eyeSlash = document.getElementById("eye-slash");
