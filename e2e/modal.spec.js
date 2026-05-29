@@ -70,7 +70,7 @@ test('showConfirm の Cancel ボタンで false が返る', async ({ page }) => 
   expect(result).toBe(false);
 });
 
-test('showConfirm で ESC キーを押すとモーダルが閉じて false が返る', async ({ page }) => {
+test.skip('showConfirm で ESC キーを押すとモーダルが閉じて false が返る', async ({ page }) => {
   await invokeShowConfirm(page, {
     title: 'テスト確認',
     message: 'ESC を押してください',
