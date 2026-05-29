@@ -124,6 +124,28 @@ async function fetchSymbolHistory(symbol, range = '1y') {
 }
 
 // ══════════════════════════════════════════════
+// MARKET HOURS
+// ══════════════════════════════════════════════
+
+/**
+ * 現在が主要市場（TSE または NYSE）の取引時間内かどうかを返す
+ * TSE:  月〜金 UTC 0:00〜6:30（JST 9:00〜15:30）
+ * NYSE: 月〜金 UTC 14:30〜21:00（EST 9:30〜16:00）
+ * @returns {boolean}
+ */
+function isMarketHours() {
+  const now = new Date();
+  const day = now.getUTCDay(); // 0=Sun, 6=Sat
+  if (day === 0 || day === 6) return false; // 土日
+  const h = now.getUTCHours();
+  const m = now.getUTCMinutes();
+  const utcMin = h * 60 + m;
+  const tse  = utcMin >= 0   && utcMin < 390;  // 0:00〜6:30 UTC
+  const nyse = utcMin >= 870 && utcMin < 1260; // 14:30〜21:00 UTC
+  return tse || nyse;
+}
+
+// ══════════════════════════════════════════════
 // LIVE PRICE UPDATE
 // ══════════════════════════════════════════════
 
@@ -253,8 +275,10 @@ async function refreshPrices() {
     document.dispatchEvent(new CustomEvent('hm:prices-updated'));
     // 価格変化をフラッシュアニメーションで表示（前回価格がある場合のみ）
     flashPriceChanges(fetched);
+  } else if (!isMarketHours()) {
+    setStatus('市場時間外（前回データで表示中）', 'yellow');
   } else {
-    setStatus('取得失敗（市場時間外またはAPIアクセス制限）', 'red');
+    setStatus('価格取得に失敗しました（APIアクセス制限の可能性）', 'red');
   }
 }
 
