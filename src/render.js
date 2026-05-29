@@ -1,3 +1,4 @@
+// @ts-check
 // ══════════════════════════════════════════════════════════════
 // render.js  ―  描画オーケストレーション
 //
@@ -15,6 +16,7 @@ import { setStatus } from './ui-status.js';
 
 /**
  * Stats バー（資産総額・含み損益・期間パフォーマンス）の再描画
+ * @returns {void}
  */
 export function renderStats() {
   const totalValue = positions.reduce((s, p) => s + p.value, 0);
@@ -50,6 +52,7 @@ export function renderStats() {
 /**
  * 5y / 10y 履歴データ取得後の描画オーケストレーション
  * 各 range で fetchAllHistorical → renderStats/renderStockList/renderWatchlist/renderHeatmap を実行
+ * @returns {Promise<void>}
  */
 export async function refreshHistoricalAndRender() {
   const results = await Promise.allSettled(['5y', '10y'].map(async range => {
@@ -69,6 +72,7 @@ export async function refreshHistoricalAndRender() {
 
 /**
  * 初回データ取得完了後にスケルトンを非表示にし SVG を表示する
+ * @returns {void}
  */
 export function hideHeatmapSkeleton() {
   const sk = document.getElementById('heatmap-skeleton');
@@ -79,14 +83,15 @@ export function hideHeatmapSkeleton() {
 
 /**
  * 銘柄リストの高さをビューポートに合わせて動的設定
+ * @returns {void}
  */
 export function updateListHeight() {
   const wrap    = document.getElementById('stock-list-wrap');
   if (!wrap) return;
   const sticky  = document.querySelector('.sticky-top');
   const slCtrl  = document.querySelector('.sl-controls');
-  const stickyH = sticky ? sticky.offsetHeight : 0;
-  const ctrlH   = slCtrl ? slCtrl.offsetHeight : 0;
+  const stickyH = sticky instanceof HTMLElement ? sticky.offsetHeight : 0;
+  const ctrlH   = slCtrl instanceof HTMLElement ? slCtrl.offsetHeight : 0;
   const padBot = parseFloat(getComputedStyle(document.body).paddingBottom) || 16;
   const h = Math.max(160, window.innerHeight - stickyH - ctrlH - padBot - 4);
   wrap.style.maxHeight = `${h  }px`;
@@ -95,6 +100,7 @@ export function updateListHeight() {
 /**
  * 価格更新イベントのリスナー設定（循環依存回避）
  * data.js が 'hm:prices-updated' を発火したときに renderStats / renderHeatmap を実行
+ * @returns {void}
  */
 export function setupPriceUpdateListener() {
   document.addEventListener('hm:prices-updated', () => {
