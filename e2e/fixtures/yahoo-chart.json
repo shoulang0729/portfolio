@@ -1,0 +1,24 @@
+{
+  "chart": {
+    "result": [
+      {
+        "meta": {
+          "regularMarketPrice": 150.0,
+          "regularMarketChangePercent": 0.5,
+          "regularMarketPreviousClose": 149.25,
+          "quoteType": "EQUITY",
+          "longName": "Apple Inc.",
+          "shortName": "Apple",
+          "exchangeName": "NasdaqNGS",
+          "currency": "USD"
+        },
+        "timestamp": [1700000000, 1700086400],
+        "indicators": {
+          "quote": [{ "close": [149.25, 150.0] }],
+          "adjclose": [{ "adjclose": [149.25, 150.0] }]
+        }
+      }
+    ],
+    "error": null
+  }
+}

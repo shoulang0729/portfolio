@@ -20,3 +20,7 @@ worker/package-lock.json
 worker/.wrangler/
 node_modules/
 coverage/
+
+# Playwright
+playwright-report/
+test-results/
