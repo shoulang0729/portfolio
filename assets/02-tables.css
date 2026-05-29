@@ -346,10 +346,11 @@
   color: var(--text2);
 }
 
-/* ウォッチリスト用 sticky thead（検索ボックスの下に固定） */
+/* ウォッチリスト用 sticky thead（#watchlist-table-wrap の内部スクロール先頭に固定） */
+/* wl-search-wrap は table-wrap の外側にあるため top:0 で正しい（50px は不要） */
 .wl-table thead th {
   position: sticky;
-  top: 50px;
+  top: 0;
   z-index: 19;
   background: var(--surface3);
 }
