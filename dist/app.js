@@ -2816,7 +2816,7 @@ function switchTab(name) {
   document.querySelectorAll(".tab-btn[data-tab]").forEach((b) => {
     const isActive = b.dataset.tab === name;
     b.classList.toggle("active", isActive);
-    b.setAttribute("aria-selected", isActive);
+    b.setAttribute("aria-selected", String(isActive));
   });
   if (name === "heatmap") renderHeatmap();
   if (name === "list") {
