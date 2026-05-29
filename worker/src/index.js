@@ -155,8 +155,52 @@ async function handleForex(url, env, origin) {
   }
 }
 
+// ── Yahoo Finance crumb キャッシュ ────────────────────────────
+async function getYahooCrumb(env) {
+  // KV キャッシュ確認（50分以内なら再利用）
+  if (env.KV) {
+    try {
+      const cached = await env.KV.get('yahoo:crumb', 'json');
+      if (cached?.crumb && cached?.cookie && (Date.now() - (cached.ts || 0)) < 3000000) {
+        return cached;
+      }
+    } catch {}
+  }
+
+  // Yahoo Finance からセッションクッキーを取得
+  const ua =
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1';
+  try {
+    const cookieRes = await fetch('https://fc.yahoo.com', {
+      redirect: 'follow',
+      headers: { 'User-Agent': ua },
+    });
+    const rawCookie = cookieRes.headers.get('set-cookie') || '';
+    // set-cookie ヘッダーから最初のキー=値ペアのみ抽出
+    const cookie = rawCookie.split(';')[0].trim();
+
+    if (!cookie) return null;
+
+    // crumb を取得
+    const crumbRes = await fetch('https://query1.finance.yahoo.com/v1/test/getcrumb', {
+      headers: { 'User-Agent': ua, Cookie: cookie },
+    });
+    if (!crumbRes.ok) return null;
+    const crumb = (await crumbRes.text()).trim();
+    if (!crumb || crumb.length > 50 || crumb.startsWith('<')) return null;
+
+    const result = { crumb, cookie, ts: Date.now() };
+    if (env.KV) {
+      await env.KV.put('yahoo:crumb', JSON.stringify(result), { expirationTtl: 3000 });
+    }
+    return result;
+  } catch {
+    return null;
+  }
+}
+
 // ── Yahoo Finance プロキシ ────────────────────────────
-async function handleYahoo(url, origin) {
+async function handleYahoo(url, env, origin) {
   const target = url.searchParams.get('url');
   if (!target) return errRes('url パラメータが必要です', 400, origin);
 
@@ -178,11 +222,26 @@ async function handleYahoo(url, origin) {
   }
 
   try {
-    const res = await fetch(decoded, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; portfolio-proxy/1.0)' },
-    });
+    // crumb を取得（失敗しても fetch は続行）
+    const crumbData = await getYahooCrumb(env);
+
+    // crumb を URL に付与（既に crumb パラメータがない場合のみ）
+    let fetchUrl = decoded;
+    const headers = {
+      'User-Agent':
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+    };
+    if (crumbData) {
+      headers['Cookie'] = crumbData.cookie;
+      if (!fetchUrl.includes('crumb=')) {
+        fetchUrl += `${fetchUrl.includes('?') ? '&' : '?'}crumb=${encodeURIComponent(crumbData.crumb)}`;
+      }
+    }
+
+    const res = await fetch(fetchUrl, { headers });
+    if (!res.ok) return errRes(`Yahoo Finance エラー: ${res.status}`, res.status, origin);
     const data = await res.json();
-    return jsonRes(data, res.status, origin);
+    return jsonRes(data, 200, origin);
   } catch (e) {
     return errRes(`取得失敗: ${e.message}`, 502, origin);
   }
@@ -1042,7 +1101,7 @@ export default {
     if (path === '/yahoo' || path === '/finnhub') {
       if (await checkRateLimit(request, env)) return errRes('Too Many Requests', 429, org);
     }
-    if (path === '/yahoo')           return handleYahoo(url, org);
+    if (path === '/yahoo')           return handleYahoo(url, env, org);
     if (path === '/finnhub')         return handleFinnhub(url, env, org);
     if (path === '/forex')           return handleForex(url, env, org);
     if (path === '/ai/models')       return handleAIModels(env, org);
