@@ -1,3 +1,4 @@
+// @ts-check
 import { WORKER_URL } from './config.js';
 import { fetchWithTimeout } from './data-helpers.js';
 
