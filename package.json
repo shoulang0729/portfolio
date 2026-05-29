@@ -13,6 +13,7 @@
     "lint:fix": "eslint src/ --ext .js --fix",
     "format": "prettier --write 'src/**/*.js' 'worker/src/**/*.js'",
     "check:circular": "madge --circular src/",
+    "check:types": "tsc --noEmit",
     "test:e2e": "playwright test"
   },
   "devDependencies": {
@@ -26,6 +27,7 @@
     "http-server": "^14.1.1",
     "madge": "^8.0.0",
     "prettier": "^3.0.0",
+    "typescript": "^5.4.4",
     "vitest": "^1.0.0"
   }
 }
