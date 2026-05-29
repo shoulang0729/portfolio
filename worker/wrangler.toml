@@ -10,6 +10,6 @@ NOTION_DB_ID = "357e348f-3cc9-809b-8647-f4a87244d676"
 binding = "KV"
 id = "349321b2ffbf416e922ac94208651736"
 
-# 6時間ごとに全保有銘柄の価格を Finnhub で取得して KV にキャッシュ
+# JST 10:00(TSE開場中) / JST 17:00(TSE終了直後) / JST 0:00(NYSE開場中) / JST 7:00(NYSE終了直後)
 [triggers]
-crons = ["0 */6 * * *"]
+crons = ["0 1,8,15,22 * * *"]
