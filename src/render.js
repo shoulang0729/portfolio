@@ -93,11 +93,9 @@ export function updateListHeight() {
   const wrap    = document.getElementById('stock-list-wrap');
   if (!wrap) return;
   const sticky  = document.querySelector('.sticky-top');
-  const slCtrl  = document.querySelector('.sl-controls');
   const stickyH = sticky instanceof HTMLElement ? sticky.offsetHeight : 0;
-  const ctrlH   = slCtrl instanceof HTMLElement ? slCtrl.offsetHeight : 0;
   const padBot = parseFloat(getComputedStyle(document.body).paddingBottom) || 16;
-  const h = Math.max(160, window.innerHeight - stickyH - ctrlH - padBot - 4);
+  const h = Math.max(160, window.innerHeight - stickyH - padBot - 4);
   wrap.style.maxHeight = `${h  }px`;
 }
 
@@ -109,11 +107,9 @@ export function updateWatchlistHeight() {
   const wrap = document.getElementById('watchlist-table-wrap');
   if (!wrap) return;
   const sticky = document.querySelector('.sticky-top');
-  const search = document.getElementById('wl-search-wrap');
   const stickyH = sticky instanceof HTMLElement ? sticky.offsetHeight : 0;
-  const searchH = search instanceof HTMLElement ? search.offsetHeight : 0;
   const padBot = parseFloat(getComputedStyle(document.body).paddingBottom) || 16;
-  const h = Math.max(160, window.innerHeight - stickyH - searchH - padBot - 4);
+  const h = Math.max(160, window.innerHeight - stickyH - padBot - 4);
   wrap.style.maxHeight = `${h  }px`;
 }
 

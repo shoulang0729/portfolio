@@ -513,7 +513,7 @@ import './ptr.js';
   if (title) {
     const badge = document.createElement('span');
     badge.id = 'debug-ver';
-    badge.style.cssText = 'display:inline;font-size:9px;font-weight:400;color:var(--text2);opacity:0.6;margin-left:6px;vertical-align:middle;';
+    badge.style.cssText = 'display:inline;font-size:9px;font-weight:400;color:var(--text2);opacity:0.6;margin-left:6px;vertical-align:bottom;';
     badge.textContent = `v.${  ver}`;
     title.appendChild(badge);
   }
