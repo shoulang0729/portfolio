@@ -1,3 +1,5 @@
+// @ts-check
+
 // ══════════════════════════════════════════════════════════════
 // tabs.js  ―  タブ切替ロジック
 //
@@ -10,8 +12,12 @@ import { renderStockList } from './stock-list.js';
 import { renderWatchlist, fetchWatchlistData, _loadWatchlistFromWorker } from './watchlist.js';
 import { updateListHeight } from './render.js';
 
+/**
+ * Switch to a different tab and render its content
+ * @param {'heatmap' | 'list' | 'watchlist' | 'ai'} name - Tab name
+ * @returns {void}
+ */
 export function switchTab(name) {
-  // 'heatmap' | 'list' | 'watchlist' | 'ai'
   if (state.activeTab === name) return;
   state.activeTab = name;
   try { localStorage.setItem('hm-active-tab', name); } catch {}
@@ -26,9 +32,11 @@ export function switchTab(name) {
   if (panelAi)        panelAi.hidden        = (name !== 'ai');
 
   document.querySelectorAll('.tab-btn[data-tab]').forEach(b => {
+    // @ts-ignore b is HTMLElement with data-tab attribute
     const isActive = b.dataset.tab === name;
+    // @ts-ignore classList.toggle accepts boolean 2nd arg
     b.classList.toggle('active', isActive);
-    b.setAttribute('aria-selected', isActive);
+    b.setAttribute('aria-selected', String(isActive));
   });
 
   if (name === 'heatmap') renderHeatmap();
