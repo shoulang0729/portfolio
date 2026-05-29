@@ -33,6 +33,7 @@ AI相談タブは現在無効化中（ソースは `src/_disabled/` に保管）
 │   ├── data.js             # Finnhub/Yahoo Finance API オーケストレーション（Task 4 分割）
 │   ├── forex.js            # ★新設：Worker /forex 経由で為替レート取得（Task 5）
 │   ├── cache.js            # ★新設：メモリキャッシュ・IndexedDB 統合
+│   ├── historical-cache.js # ★新設：IndexedDB ベースの historical キャッシュ
 │   ├── color.js            # ★新設：色計算・テーマロジック
 │   ├── fmt.js              # ★新設：フォーマット関数（金額・通貨・日付）
 │   ├── config.js           # ★新設：設定定数・UI パラメータ
@@ -169,6 +170,8 @@ POST /auth/verify                   パスキー検証
 `GROK_API_KEY`, `DEEPSEEK_API_KEY`, `ANTHROPIC_API_KEY`,
 `NOTION_API_KEY`, `NOTION_DB_ID`, `ALLOWED_ORIGIN`
 
+**レート制限**: Issue#62 対応で Worker のレート制限を shard 分散方式に変更。詳細は [worker/src/rate-limit.md](./worker/src/rate-limit.md) を参照。
+
 ---
 
 ## スナップショット機能
@@ -241,6 +244,10 @@ POST /auth/verify                   パスキー検証
 
 | バージョン | 内容 |
 |---|---|
+| 20260529O | Issue#28 対応: Playwright E2E テスト導入 |
+| 20260529N | Issue#62 対応: Worker レート制限のレースコンディション緩和（shard 分散） |
+| 20260529M | Issue#29 対応: JSDoc + tsc --checkJs 型チェック基盤導入（opt-in 方式） |
+| 20260529L | Issue#35 Phase 2 対応: historicalCache を IndexedDB に並行書き込みで永続化 |
 | 20260529K | ESLint に prefer-template と no-restricted-syntax を追加 |
 | 20260529J | data.js を 300 行以下に薄化（batchWithRetry / applySplitCorrection を分離） |
 | 20260529I | feat: #36 USD建て銘柄を /forex 経由で JPY 換算 (Phase 2)、ci: dist/app.js サイズ監視、chore: coverage json-summary reporter |
