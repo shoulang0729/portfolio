@@ -1529,6 +1529,55 @@ function flashPriceChanges(fetched) {
   });
 }
 
+// src/idb.js
+function openDb(dbName, version, upgradeCb) {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(dbName, version);
+    req.onerror = () => reject(req.error);
+    req.onsuccess = () => resolve(req.result);
+    req.onupgradeneeded = (e) => {
+      const db = req.result;
+      if (upgradeCb) upgradeCb(db, e.oldVersion, e.newVersion);
+    };
+  });
+}
+function idbPut(db, storeName, key, value) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, "readwrite");
+    const store = tx.objectStore(storeName);
+    const req = store.put(value, key);
+    req.onerror = () => reject(req.error);
+    tx.oncomplete = () => resolve();
+  });
+}
+function idbClear(db, storeName) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, "readwrite");
+    const store = tx.objectStore(storeName);
+    const req = store.clear();
+    req.onerror = () => reject(req.error);
+    tx.oncomplete = () => resolve();
+  });
+}
+function idbGetAllEntries(db, storeName) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, "readonly");
+    const store = tx.objectStore(storeName);
+    const req = store.openCursor();
+    const entries = [];
+    req.onerror = () => reject(req.error);
+    req.onsuccess = () => {
+      const cursor = req.result;
+      if (cursor) {
+        entries.push({ key: cursor.key, value: cursor.value });
+        cursor.continue();
+      } else {
+        resolve(entries);
+      }
+    };
+  });
+}
+
 // src/cache.js
 var SS_CACHE_KEY = "hm-hist-cache";
 var SS_CACHE_VER = "2";
@@ -1573,6 +1622,90 @@ function clearCacheSession() {
   sessionStorage.removeItem(SS_CACHE_KEY);
 }
 loadCacheFromSession();
+
+// src/historical-cache.js
+var DB_NAME = "hm-historical";
+var DB_VERSION = 1;
+var STORE_NAME = "historical";
+var _dbPromise = null;
+function getDb() {
+  if (!_dbPromise) {
+    _dbPromise = openDb(DB_NAME, DB_VERSION, (db) => {
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME);
+      }
+    });
+  }
+  return _dbPromise;
+}
+async function setHistoricalEntry(range, symbol, entries) {
+  if (!state.historicalCache[range]) state.historicalCache[range] = {};
+  state.historicalCache[range][symbol] = entries;
+  try {
+    const db = await getDb();
+    const serialised = entries.map((e) => ({
+      date: e.date instanceof Date ? e.date.toISOString() : e.date,
+      close: e.close
+    }));
+    await idbPut(db, STORE_NAME, `${range}:${symbol}`, { entries: serialised, ts: Date.now() });
+  } catch (e) {
+    console.warn("[historical-cache] IDB write failed:", e);
+  }
+  saveCacheToSession();
+}
+async function restoreFromIDB() {
+  try {
+    const db = await getDb();
+    const all = await idbGetAllEntries(db, STORE_NAME);
+    for (const { key, value } of all) {
+      const colonIdx = key.indexOf(":");
+      if (colonIdx === -1) continue;
+      const range = key.slice(0, colonIdx);
+      const symbol = key.slice(colonIdx + 1);
+      if (!state.historicalCache[range]) state.historicalCache[range] = {};
+      state.historicalCache[range][symbol] = (value.entries || []).map((e) => ({
+        date: e.date instanceof Date ? e.date : new Date(e.date),
+        close: e.close
+      }));
+    }
+  } catch (e) {
+    console.warn("[historical-cache] restoreFromIDB failed:", e);
+  }
+}
+async function migrateFromSessionStorage() {
+  try {
+    const raw = sessionStorage.getItem("hm-hist-cache");
+    if (!raw) return;
+    const obj = JSON.parse(raw);
+    if (!obj) return;
+    const db = await getDb();
+    const existing = await idbGetAllEntries(db, STORE_NAME);
+    const existingKeys = new Set(existing.map((e) => e.key));
+    for (const range of ["1y", "5y", "10y"]) {
+      if (!obj[range]) continue;
+      for (const [sym, entries] of Object.entries(obj[range])) {
+        const key = `${range}:${sym}`;
+        if (existingKeys.has(key)) continue;
+        const serialised = entries.map((e) => ({
+          date: typeof e.date === "string" ? e.date : new Date(e.date).toISOString(),
+          close: e.close
+        }));
+        await idbPut(db, STORE_NAME, key, { entries: serialised, ts: Date.now() });
+      }
+    }
+  } catch (e) {
+    console.warn("[historical-cache] migrateFromSessionStorage failed:", e);
+  }
+}
+async function clearHistoricalIDB() {
+  try {
+    const db = await getDb();
+    await idbClear(db, STORE_NAME);
+  } catch (e) {
+    console.warn("[historical-cache] clearHistoricalIDB failed:", e);
+  }
+  state.historicalCache = { "1y": {}, "5y": {}, "10y": {} };
+}
 
 // src/data-finnhub.js
 function toFinnhubSymbol(ySymbol) {
@@ -1712,8 +1845,7 @@ async function fetchSymbolHistory(symbol, range = "1y") {
   const rawCloses = result.indicators?.quote?.[0]?.close || [];
   const closes = adjCloses.length ? adjCloses : rawCloses;
   const entries = timestamps.map((ts, i) => ({ date: new Date(ts * 1e3), close: closes[i] })).filter((p) => p.close != null && isFinite(p.close));
-  state.historicalCache[range][symbol] = applySplitCorrection(entries);
-  saveCacheToSession();
+  await setHistoricalEntry(range, symbol, applySplitCorrection(entries));
 }
 async function fetchLivePrice(symbol) {
   const fSymbol = toFinnhubSymbol(symbol);
@@ -3339,7 +3471,7 @@ async function _doSavePositions(finalPositions, pinHashOverride) {
   try {
     await savePositionsToKV(finalPositions, pinHashOverride);
     positions.splice(0, positions.length, ...finalPositions);
-    state.historicalCache = { "1y": {}, "5y": {}, "10y": {} };
+    await clearHistoricalIDB();
     clearCacheSession();
     state.lastUpdateText = null;
     _renderImportStep("done", `${finalPositions.length}\u9298\u67C4\u3092\u4FDD\u5B58\u3057\u307E\u3057\u305F`);
@@ -3869,6 +4001,8 @@ function init() {
   } catch {
   }
   (async () => {
+    await migrateFromSessionStorage();
+    await restoreFromIDB();
     const loaded = await loadPositionsFromKV();
     if (loaded) {
       renderStats();

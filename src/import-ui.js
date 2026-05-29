@@ -12,7 +12,7 @@ import { state } from './state.js';
 import { positions } from './positions.js';
 import { canonicalizeFundPosition } from './funds.js';
 import { savePositionsToKV, computeImportDiff, mergeDuplicatePositions } from './positions-store.js';
-import { clearCacheSession, refreshPrices } from './data.js';
+import { clearCacheSession, clearHistoricalIDB, refreshPrices } from './data.js';
 import { parseManexFiles, parseMoneyForwardImage } from './import-parse.js';
 import { renderStockList } from './stock-list.js';
 import { renderWatchlist } from './watchlist.js';
@@ -268,7 +268,7 @@ async function _doSavePositions(finalPositions, pinHashOverride) {
   try {
     await savePositionsToKV(finalPositions, pinHashOverride);
     positions.splice(0, positions.length, ...finalPositions);
-    state.historicalCache = { '1y': {}, '5y': {}, '10y': {} };
+    await clearHistoricalIDB(); // IDB・メモリキャッシュを両方クリア
     clearCacheSession();
     state.lastUpdateText = null;
     _renderImportStep('done', `${finalPositions.length}銘柄を保存しました`);

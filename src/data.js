@@ -11,7 +11,7 @@ import { WORKER_URL } from './config.js';
 import { fetchWithTimeout, batchWithRetry } from './data-helpers.js';
 import { fetchForexRate } from './forex.js';
 import { setStatus, flashPriceChanges } from './ui-status.js';
-import { saveCacheToSession } from './cache.js';
+import { setHistoricalEntry } from './historical-cache.js';
 // eslint-disable-next-line no-unused-vars
 import { toFinnhubSymbol, fetchFinnhubQuote, fetchFinnhubCandles } from './data-finnhub.js';
 // eslint-disable-next-line no-unused-vars
@@ -119,9 +119,8 @@ async function fetchSymbolHistory(symbol, range = '1y') {
     .map((ts, i) => ({ date: new Date(ts * 1000), close: closes[i] }))
     .filter(p => p.close != null && isFinite(p.close));
   // adjclose が超直近の分割に未対応の場合に備えてスプリット自動補正
-  state.historicalCache[range][symbol] = applySplitCorrection(entries);
-  // sessionStorage に永続化（バックグラウンドで非同期保存）
-  saveCacheToSession();
+  // IDB・sessionStorage・メモリに並行書き込み
+  await setHistoricalEntry(range, symbol, applySplitCorrection(entries));
 }
 
 // ══════════════════════════════════════════════
@@ -269,5 +268,6 @@ export { toFinnhubSymbol, fetchFinnhubQuote, fetchFinnhubCandles } from './data-
 export { fetchViaProxy, ensureYahooCrumb, applySplitCorrection } from './data-yahoo.js';
 export { setStatus, flashPriceChanges } from './ui-status.js';
 export { loadCacheFromSession, saveCacheToSession, clearCacheSession } from './cache.js';
+export { migrateFromSessionStorage, restoreFromIDB, clearHistoricalIDB } from './historical-cache.js';
 
 export { fetchAllHistorical, fetchSymbolHistory, fetchLivePrice, refreshPrices, applyPricesCache };
