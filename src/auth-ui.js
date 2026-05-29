@@ -169,6 +169,7 @@ function _buildPinScreen() {
       <div class="pin-dots" id="pin-dots">
         <span class="pin-dot"></span><span class="pin-dot"></span>
         <span class="pin-dot"></span><span class="pin-dot"></span>
+        <span class="pin-dot"></span><span class="pin-dot"></span>
       </div>
       <div class="pin-error" id="pin-error"></div>
       ${_pinKeypadHTML('authKeyPress', 'authBackspace')}
@@ -204,8 +205,8 @@ const _pc = {
   newPin:  '',
 };
 
-const _pcStepLabel = ['', '現在のPIN', '新しいPIN（4桁）', '新しいPIN（確認）'];
-const _pcStepHint  = ['', '認証のため現在のPINを入力', '新しい4桁のPINを入力', '同じPINをもう一度入力'];
+const _pcStepLabel = ['', '現在のPIN', '新しいPIN（6桁）', '新しいPIN（確認）'];
+const _pcStepHint  = ['', '認証のため現在のPINを入力', '新しい6桁のPINを入力', '同じPINをもう一度入力'];
 
 function _pcUpdateDots() {
   document.querySelectorAll('#pc-dots .pin-dot').forEach((d, i) =>
@@ -328,6 +329,7 @@ function openPinChange() {
       <div class="pc-hint" id="pc-step-hint">${_pcStepHint[1]}</div>
 
       <div class="pin-dots" id="pc-dots">
+        <span class="pin-dot"></span><span class="pin-dot"></span>
         <span class="pin-dot"></span><span class="pin-dot"></span>
         <span class="pin-dot"></span><span class="pin-dot"></span>
       </div>

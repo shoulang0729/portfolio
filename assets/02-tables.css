@@ -248,11 +248,9 @@
 
 /* ── 検索エリア ── */
 .wl-search-wrap {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  background: var(--surface);
+  background: var(--bg);
   padding: 10px 0 4px;
+  position: relative;
 }
 .wl-search-inner {
   display: flex;
@@ -276,7 +274,7 @@
   font-size: 16px;
   min-width: 0;
 }
-.wl-search-input::placeholder { color: var(--text2); }
+.wl-search-input::placeholder { color: var(--text2); opacity: 0.6; }
 
 /* ── 検索ドロップダウン ── */
 .wl-search-dropdown {

@@ -8,12 +8,12 @@
 // このファイルは "依存元" ─ 他の auth-*.js より先に読込む。
 // ══════════════════════════════════════════════════════════════
 
-// ── ハードコードされたデフォルト PIN ハッシュ（SHA-256 of "1234"）──
-const AUTH_PIN_HASH     = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
+// ── ハードコードされたデフォルト PIN ハッシュ（SHA-256 of "123456"）──
+const AUTH_PIN_HASH     = '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92';
 const AUTH_SESSION_KEY  = 'hm-auth-v1';
 const AUTH_LS_HASH_KEY  = 'hm-pin-hash';    // localStorage キー
 const AUTH_LOCKOUT_KEY  = 'hm-lockout';     // ロックアウト時刻 localStorage キー
-const AUTH_PIN_LEN      = 4;
+const AUTH_PIN_LEN      = 6;
 const AUTH_MAX_FAIL     = 5;
 const AUTH_LOCK_SEC     = 300;
 

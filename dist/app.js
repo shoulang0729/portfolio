@@ -515,11 +515,11 @@ var state = {
 };
 
 // src/auth-pin.js
-var AUTH_PIN_HASH = "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4";
+var AUTH_PIN_HASH = "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92";
 var AUTH_SESSION_KEY = "hm-auth-v1";
 var AUTH_LS_HASH_KEY = "hm-pin-hash";
 var AUTH_LOCKOUT_KEY = "hm-lockout";
-var AUTH_PIN_LEN = 4;
+var AUTH_PIN_LEN = 6;
 var AUTH_MAX_FAIL = 5;
 var AUTH_LOCK_SEC = 300;
 function _getActivePinHash() {
@@ -1023,6 +1023,7 @@ function _buildPinScreen() {
       <div class="pin-dots" id="pin-dots">
         <span class="pin-dot"></span><span class="pin-dot"></span>
         <span class="pin-dot"></span><span class="pin-dot"></span>
+        <span class="pin-dot"></span><span class="pin-dot"></span>
       </div>
       <div class="pin-error" id="pin-error"></div>
       ${_pinKeypadHTML("authKeyPress", "authBackspace")}
@@ -1051,8 +1052,8 @@ var _pc = {
   input: "",
   newPin: ""
 };
-var _pcStepLabel = ["", "\u73FE\u5728\u306EPIN", "\u65B0\u3057\u3044PIN\uFF084\u6841\uFF09", "\u65B0\u3057\u3044PIN\uFF08\u78BA\u8A8D\uFF09"];
-var _pcStepHint = ["", "\u8A8D\u8A3C\u306E\u305F\u3081\u73FE\u5728\u306EPIN\u3092\u5165\u529B", "\u65B0\u3057\u30444\u6841\u306EPIN\u3092\u5165\u529B", "\u540C\u3058PIN\u3092\u3082\u3046\u4E00\u5EA6\u5165\u529B"];
+var _pcStepLabel = ["", "\u73FE\u5728\u306EPIN", "\u65B0\u3057\u3044PIN\uFF086\u6841\uFF09", "\u65B0\u3057\u3044PIN\uFF08\u78BA\u8A8D\uFF09"];
+var _pcStepHint = ["", "\u8A8D\u8A3C\u306E\u305F\u3081\u73FE\u5728\u306EPIN\u3092\u5165\u529B", "\u65B0\u3057\u30446\u6841\u306EPIN\u3092\u5165\u529B", "\u540C\u3058PIN\u3092\u3082\u3046\u4E00\u5EA6\u5165\u529B"];
 function _pcUpdateDots() {
   document.querySelectorAll("#pc-dots .pin-dot").forEach((d, i) => d.classList.toggle("filled", i < _pc.input.length));
 }
@@ -1198,6 +1199,7 @@ function openPinChange() {
       <div class="pc-hint" id="pc-step-hint">${_pcStepHint[1]}</div>
 
       <div class="pin-dots" id="pc-dots">
+        <span class="pin-dot"></span><span class="pin-dot"></span>
         <span class="pin-dot"></span><span class="pin-dot"></span>
         <span class="pin-dot"></span><span class="pin-dot"></span>
       </div>
@@ -2814,22 +2816,18 @@ function updateListHeight() {
   const wrap = document.getElementById("stock-list-wrap");
   if (!wrap) return;
   const sticky = document.querySelector(".sticky-top");
-  const slCtrl = document.querySelector(".sl-controls");
   const stickyH = sticky instanceof HTMLElement ? sticky.offsetHeight : 0;
-  const ctrlH = slCtrl instanceof HTMLElement ? slCtrl.offsetHeight : 0;
   const padBot = parseFloat(getComputedStyle(document.body).paddingBottom) || 16;
-  const h = Math.max(160, window.innerHeight - stickyH - ctrlH - padBot - 4);
+  const h = Math.max(160, window.innerHeight - stickyH - padBot - 4);
   wrap.style.maxHeight = `${h}px`;
 }
 function updateWatchlistHeight() {
   const wrap = document.getElementById("watchlist-table-wrap");
   if (!wrap) return;
   const sticky = document.querySelector(".sticky-top");
-  const search = document.getElementById("wl-search-wrap");
   const stickyH = sticky instanceof HTMLElement ? sticky.offsetHeight : 0;
-  const searchH = search instanceof HTMLElement ? search.offsetHeight : 0;
   const padBot = parseFloat(getComputedStyle(document.body).paddingBottom) || 16;
-  const h = Math.max(160, window.innerHeight - stickyH - searchH - padBot - 4);
+  const h = Math.max(160, window.innerHeight - stickyH - padBot - 4);
   wrap.style.maxHeight = `${h}px`;
 }
 function updateActiveTableHeight() {
@@ -2867,6 +2865,10 @@ function switchTab(name) {
     b.classList.toggle("active", isActive);
     b.setAttribute("aria-selected", String(isActive));
   });
+  const slControls = document.getElementById("sl-controls");
+  const wlSearch = document.getElementById("wl-search-wrap");
+  if (slControls) slControls.hidden = name !== "list";
+  if (wlSearch) wlSearch.hidden = name !== "watchlist";
   if (name === "heatmap") renderHeatmap();
   if (name === "list") {
     renderStockList();
@@ -4101,7 +4103,7 @@ init();
   if (title) {
     const badge = document.createElement("span");
     badge.id = "debug-ver";
-    badge.style.cssText = "display:inline;font-size:9px;font-weight:400;color:var(--text2);opacity:0.6;margin-left:6px;vertical-align:middle;";
+    badge.style.cssText = "display:inline;font-size:9px;font-weight:400;color:var(--text2);opacity:0.6;margin-left:6px;vertical-align:bottom;";
     badge.textContent = `v.${ver}`;
     title.appendChild(badge);
   }

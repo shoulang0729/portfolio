@@ -39,6 +39,12 @@ export function switchTab(name) {
     b.setAttribute('aria-selected', String(isActive));
   });
 
+  // sticky-top 内のタブ別サブコントロールを切替
+  const slControls = document.getElementById('sl-controls');
+  const wlSearch   = document.getElementById('wl-search-wrap');
+  if (slControls) slControls.hidden = (name !== 'list');
+  if (wlSearch)   wlSearch.hidden   = (name !== 'watchlist');
+
   if (name === 'heatmap') renderHeatmap();
 
   if (name === 'list') {
