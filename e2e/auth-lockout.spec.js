@@ -1,4 +1,10 @@
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { test, expect } from '@playwright/test';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const _d3Content = readFileSync(join(__dirname, '../node_modules/d3/dist/d3.min.js'));
 
 /**
  * auth-lockout.spec.js  ―  PIN ロックアウト動作テスト
@@ -22,6 +28,10 @@ async function stubApisNoAuth(page) {
     // ロックアウト状態もクリア
     localStorage.removeItem('hm-lockout');
     localStorage.removeItem('hm-pin-hash');
+  });
+
+  await page.route(/cdn\.bootcdn\.net.*d3|cdnjs\.cloudflare\.com.*d3|cdn\.jsdelivr\.net.*d3/, async route => {
+    await route.fulfill({ status: 200, contentType: 'application/javascript', body: _d3Content });
   });
 
   await page.route(`**/${WORKER}/positions`, route =>
@@ -65,9 +75,9 @@ test('PIN 画面が表示される', async ({ page }) => {
 
   // PIN オーバーレイが表示される
   await expect(page.locator('#pin-overlay')).toBeVisible({ timeout: 5000 });
-  // PIN ドットが4つある
+  // PIN ドットが6つある（AUTH_PIN_LEN = 6）
   const dots = page.locator('#pin-overlay .pin-dot');
-  await expect(dots).toHaveCount(4);
+  await expect(dots).toHaveCount(6);
   // PIN キーパッドのボタンが表示される（数字キー）
   await expect(page.locator('#pin-overlay .pin-key[data-arg="1"]')).toBeVisible();
 });
@@ -78,14 +88,14 @@ test('PIN 5 回失敗でロックアウトエラーが表示される', async ({
 
   await expect(page.locator('#pin-overlay')).toBeVisible({ timeout: 5000 });
 
-  // 誤った PIN（1111）を 5 回入力（デフォルト PIN は 1234）
-  const wrongPin = '1111';
+  // 誤った PIN（111111）を 5 回入力（デフォルト PIN は 123456）
+  const wrongPin = '111111';
   for (let i = 0; i < 5; i++) {
     // キーが有効になるまで待つ（前の入力後に一時 disabled になる）
     const key1 = page.locator(`#pin-overlay .pin-key[data-arg="1"]`);
     await expect(key1).toBeEnabled({ timeout: 2000 });
     await enterPin(page, wrongPin);
-    // 4桁入力後、自動サブミット → エラー表示 → クリア（500ms 余裕）
+    // 6桁入力後、自動サブミット → エラー表示 → クリア（500ms 余裕）
     await page.waitForTimeout(500);
   }
 
@@ -104,7 +114,7 @@ test('PIN 5 回失敗後はキーパッドが無効になる', async ({ page }) 
   await expect(page.locator('#pin-overlay')).toBeVisible({ timeout: 5000 });
 
   // 誤った PIN を 5 回入力してロックアウトを発動させる
-  const wrongPin = '1111';
+  const wrongPin = '111111';
   for (let i = 0; i < 5; i++) {
     const key1 = page.locator(`#pin-overlay .pin-key[data-arg="1"]`);
     await expect(key1).toBeEnabled({ timeout: 2000 });
