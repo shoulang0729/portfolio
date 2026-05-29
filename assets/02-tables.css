@@ -247,7 +247,10 @@
 
 /* ── 検索エリア ── */
 .wl-search-wrap {
-  position: relative;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--surface);
   padding: 10px 0 4px;
 }
 .wl-search-inner {
@@ -340,6 +343,14 @@
 .wl-registered {
   background: var(--border);
   color: var(--text2);
+}
+
+/* ウォッチリスト用 sticky thead（検索ボックスの下に固定） */
+.wl-table thead th {
+  position: sticky;
+  top: 50px;
+  z-index: 19;
+  background: var(--surface3);
 }
 
 /* 銘柄リスト時価評価額バーグラフ（CSS変数経由で reflow 削減） */
