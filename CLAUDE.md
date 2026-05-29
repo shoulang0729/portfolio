@@ -32,6 +32,10 @@ AI相談タブは現在無効化中（ソースは `src/_disabled/` に保管）
 │   ├── data-yahoo.js       # ★新設：Yahoo Finance 専用関数（Task 4）
 │   ├── data.js             # Finnhub/Yahoo Finance API オーケストレーション（Task 4 分割）
 │   ├── forex.js            # ★新設：Worker /forex 経由で為替レート取得（Task 5）
+│   ├── cache.js            # ★新設：メモリキャッシュ・IndexedDB 統合
+│   ├── color.js            # ★新設：色計算・テーマロジック
+│   ├── fmt.js              # ★新設：フォーマット関数（金額・通貨・日付）
+│   ├── config.js           # ★新設：設定定数・UI パラメータ
 │   ├── heatmap.js          # D3.js ヒートマップ描画
 │   ├── chart.js            # D3.js チャート描画
 │   ├── stock-list.js       # Historical Heatmap タブ（銘柄リスト＋期間別騰落率）
@@ -39,8 +43,15 @@ AI相談タブは現在無効化中（ソースは `src/_disabled/` に保管）
 │   ├── positions-store.js  # KV保存/読込・差分計算
 │   ├── import-parse.js     # マネックスCSV/マネフォ画像パース
 │   ├── import-ui.js        # 取込モーダルUI
+│   ├── portfolio-calc.js   # ★新設：ポートフォリオ計算（含み損益・リスク等）
 │   ├── ptr.js              # ★新設：Pull-to-refresh（app.js から分離）
 │   ├── render.js           # ★新設：描画オーケストレーション（app.js から分離）
+│   ├── modal.js            # ★新設：モーダルダイアログ共通処理
+│   ├── table.js            # ★新設：テーブル行生成ヘルパー
+│   ├── ui-status.js        # ★新設：ステータスバー・スピナー表示
+│   ├── init.js             # ★新設：初期化・event listener 登録
+│   ├── tabs.js             # ★新設：タブ切替ロジック
+│   ├── menu.js             # ★新設：メニュー・更新オプション
 │   ├── idb.js             # ★新設：IndexedDB ラッパー（Phase 1, 未統合）
 │   ├── _disabled/          # 無効化中コード（再有効化可能。再開手順は CLAUDE.md 参照）
 │   │   ├── history.js          # 資産推移記録＋D3グラフ（未統合）
@@ -230,6 +241,8 @@ POST /auth/verify                   パスキー検証
 
 | バージョン | 内容 |
 |---|---|
+| 20260529K | ESLint に prefer-template と no-restricted-syntax を追加 |
+| 20260529J | data.js を 300 行以下に薄化（batchWithRetry / applySplitCorrection を分離） |
 | 20260529I | feat: #36 USD建て銘柄を /forex 経由で JPY 換算 (Phase 2)、ci: dist/app.js サイズ監視、chore: coverage json-summary reporter |
 | 20260529H | refactor: #126 data.js を Finnhub / Yahoo / orchestrator に分割 |
 | 20260529G | refactor: #124 app.js を 500 行以下に削減（menu.js 分離） |
@@ -298,6 +311,21 @@ npm run format      # Prettier 整形
 ```
 - `eslint.config.js`: ESLint v9 flat config
 - `.prettierrc`: シングルクォート・印刷幅 120
+
+### 型チェック
+```bash
+npm run check:types  # tsc --noEmit（opt-in 方式、// @ts-check 付きファイルのみ）
+```
+
+### E2E テスト
+```bash
+npm run test:e2e     # Playwright（chromium）
+```
+
+### 循環参照検出
+```bash
+npm run check:circular  # madge
+```
 
 ### utils.js の escapeHTML
 - Yahoo Finance API 等の外部値を `innerHTML` に埋め込む前に必ず `escapeHTML(s)` を通す
