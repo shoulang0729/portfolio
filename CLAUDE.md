@@ -244,10 +244,9 @@ POST /auth/verify                   パスキー検証
 
 | バージョン | 内容 |
 |---|---|
-| 20260529O | Issue#28 対応: Playwright E2E テスト導入 |
-| 20260529N | Issue#62 対応: Worker レート制限のレースコンディション緩和（shard 分散） |
-| 20260529M | Issue#29 対応: JSDoc + tsc --checkJs 型チェック基盤導入（opt-in 方式） |
-| 20260529L | Issue#35 Phase 2 対応: historicalCache を IndexedDB に並行書き込みで永続化 |
+| 20260529N | Issue#145 対応: CSP の script-src に cdn.bootcdn.net を追加（D3 第1 CDN を許可） |
+| 20260529M | Issue#146 対応: ウォッチリスト検索ボックスとテーブルヘッダを sticky 化 |
+| 20260529L | Issue#35 Phase 2 対応: historicalCache を IndexedDB に並行書き込みで永続化（Sonnet 並列実行）<br>Issue#28 対応: Playwright E2E テスト導入（auth/tabs/watchlist + heatmap/auth-lockout/modal/import 14ケース）<br>Issue#29 対応: JSDoc + tsc --checkJs 型チェック基盤導入（opt-in 方式、全 src/ ファイル展開）<br>Issue#62 対応: Worker レート制限のレースコンディション緩和（shard 分散）<br>Issue#143 完了: 全 src/ ファイルに JSDoc 注釈<br>Issue#153 chore: depcheck で未使用 devDep を検出<br>Issue#156 暫定対応: e2e/heatmap.spec.js を一時 skip（IDB ハング根本修正まで） |
 | 20260529K | ESLint に prefer-template と no-restricted-syntax を追加 |
 | 20260529J | data.js を 300 行以下に薄化（batchWithRetry / applySplitCorrection を分離） |
 | 20260529I | feat: #36 USD建て銘柄を /forex 経由で JPY 換算 (Phase 2)、ci: dist/app.js サイズ監視、chore: coverage json-summary reporter |
@@ -332,6 +331,11 @@ npm run test:e2e     # Playwright（chromium）
 ### 循環参照検出
 ```bash
 npm run check:circular  # madge
+```
+
+### 未使用依存検出
+```bash
+npm run check:deps  # depcheck（false positive は .depcheckrc.json で除外）
 ```
 
 ### utils.js の escapeHTML
