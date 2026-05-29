@@ -1,3 +1,4 @@
+// @ts-check
 // ══════════════════════════════════════════════════════════════
 // portfolio-calc.js  ―  ポートフォリオ計算ロジック
 // state.historicalCache / positions / state.colorMode に依存
@@ -6,6 +7,11 @@
 import { state } from './state.js';
 import { positions, PERIOD_MAP } from './positions.js';
 
+/**
+ * @param {string} symbol  Yahoo Finance シンボル
+ * @param {string} periodId  PERIOD_MAP のキー（例: '1d', '1m', '1y'）
+ * @returns {number|null}  期間騰落率（%）。データ不足時は null
+ */
 function getHistoricalChangePct(symbol, periodId) {
   const cfg = PERIOD_MAP[periodId];
   if (!cfg) return null;

@@ -18,6 +18,7 @@ jobs:
       - run: npm install
       - run: npm test          # vitest (pure function tests)
       - run: npm run lint      # eslint
+      - run: npm run check:types     # tsc --checkJs (opt-in via // @ts-check)
       - run: npm run check:circular  # madge (circular dependency check)
       - run: npm run build     # esbuild
       - name: Check dist size
