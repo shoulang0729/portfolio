@@ -6,6 +6,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const yahooChartFixture = JSON.parse(
   readFileSync(join(__dirname, 'fixtures/yahoo-chart.json'), 'utf8')
 );
+const _d3Content = readFileSync(join(__dirname, '../node_modules/d3/dist/d3.min.js'));
 
 /**
  * 共通 API スタブ設定
@@ -16,6 +17,15 @@ const yahooChartFixture = JSON.parse(
  */
 export async function stubApis(page) {
   const WORKER = 'portfolio-proxy.shoulang.workers.dev';
+
+  // D3 CDN → node_modules から提供（CI での不安定なCDN依存を排除）
+  await page.route(/cdn\.bootcdn\.net.*d3|cdnjs\.cloudflare\.com.*d3|cdn\.jsdelivr\.net.*d3/, async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/javascript',
+      body: _d3Content,
+    });
+  });
 
   // PIN 認証オーバーレイをスキップ:
   //   sessionStorage に認証済みフラグと AES-256 鍵を事前セットし
