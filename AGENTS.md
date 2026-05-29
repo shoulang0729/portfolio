@@ -239,7 +239,7 @@ POST /auth/verify                   パスキー検証
 
 **Codex が担当する範囲**:
 - ソースコード変更（src/ / assets/ / worker/ / tests/）
-- `git commit` まで完了させる
+- **区切りごと（ファイル単位・機能単位）に必ず `git commit` する** — トークン制限でウェイト状態になっても Claude Code (Opus) がコミット履歴から作業状態を把握して引き継げる
 - `git push` が失敗する場合はコミットまで完了させて Claude Code (Opus) に報告
 
 **Claude Code (Opus) に任せる操作**:
