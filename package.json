@@ -12,15 +12,18 @@
     "lint": "eslint src/ --ext .js",
     "lint:fix": "eslint src/ --ext .js --fix",
     "format": "prettier --write 'src/**/*.js' 'worker/src/**/*.js'",
-    "check:circular": "madge --circular src/"
+    "check:circular": "madge --circular src/",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@vitest/coverage-v8": "^1.6.1",
     "esbuild": "^0.28.0",
     "eslint": "^9.0.0",
     "eslint-plugin-import": "^2.32.0",
     "fake-indexeddb": "^6.2.5",
     "globals": "^17.6.0",
+    "http-server": "^14.1.1",
     "madge": "^8.0.0",
     "prettier": "^3.0.0",
     "vitest": "^1.0.0"
