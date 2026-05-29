@@ -481,7 +481,7 @@ body {
 /* sticky-top（タイトル＋タブバー）が画面上に居るため、ここを内部スクロールに
    することで thead の position:sticky が wrap 内 top:0 に貼り付き正しく機能する。 */
 #watchlist-table-wrap {
-  max-height: calc(100dvh - 220px);
+  max-height: calc(100dvh - 270px);
   overflow-x: auto;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
