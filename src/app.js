@@ -22,7 +22,7 @@ import { renderWatchlist, wlSort, onWatchlistSearch, removeFromWatchlist, wlSele
 import { loadPositionsFromKV } from './positions-store.js';
 import { openImportModal, closeImportModal, openManagePositionsModal, handleImportOverlayClick, handleManexFileSelect, handleMoneyForwardImageSelect, focusImportFileInput, _renderImportStep, _confirmImport, _retryWithPin } from './import-ui.js';
 import { showConfirm, showAlert } from './modal.js';
-import { renderStats, refreshHistoricalAndRender, setupPriceUpdateListener, hideHeatmapSkeleton, updateListHeight } from './render.js';
+import { renderStats, refreshHistoricalAndRender, setupPriceUpdateListener, hideHeatmapSkeleton, updateActiveTableHeight, updateWatchlistHeight } from './render.js';
 import { toggleHmMenu, closeHmMenu } from './menu.js';
 
 // ── フォールバックスクリプトから参照できるように renderHeatmap を window に登録 ──
@@ -40,8 +40,8 @@ function toggleStats() {
   const eye = document.getElementById('stats-eye');
   eye.classList.toggle('hidden', !state.statsVisible);
   document.getElementById('eye-slash').style.display = state.statsVisible ? 'none' : '';
-  // stats-outer の高さ変化に合わせてリスト高さを再計算
-  requestAnimationFrame(updateListHeight);
+  // stats-outer の高さ変化に合わせて表示中テーブルの高さを再計算
+  requestAnimationFrame(updateActiveTableHeight);
 }
 
 // ══════════════════════════════════════════════
@@ -439,7 +439,7 @@ function init() {
   setStatus('起動中...', 'yellow');
 
   // リスト高さを初期設定（DOM確定後）
-  requestAnimationFrame(updateListHeight);
+  requestAnimationFrame(updateActiveTableHeight);
 
   // 前回開いていたタブを復元（heatmap以外なら switchTab で切替）
   // AI タブは無効化中のため復元対象外
@@ -454,28 +454,45 @@ function init() {
 
   // 起動時に KV から保有銘柄を読み込んでから価格取得
   (async () => {
-    // 0. sessionStorage → IDB マイグレーション（初回のみ有効）、その後 IDB からメモリ復元
-    await migrateFromSessionStorage();
-    await restoreFromIDB();
-    // 1. KV から保有銘柄を取得（あれば positions.js の内容を上書き）
-    const loaded = await loadPositionsFromKV();
-    if (loaded) { renderStats(); renderHeatmap(); }
-    // 2. Cron キャッシュ価格を即時反映（ライブ取得前の暫定表示）
-    applyPricesCache(); // fire-and-forget
-    // 3. ライブ価格取得
-    await refreshPrices();
-    hideHeatmapSkeleton();
-    // recordTodayAsset は history.js（未統合）のため呼ばない
+    try {
+      // 0. sessionStorage → IDB マイグレーション（初回のみ有効）、その後 IDB からメモリ復元
+      await migrateFromSessionStorage();
+      await restoreFromIDB();
+      // 1. KV から保有銘柄を取得（あれば positions.js の内容を上書き）
+      const loaded = await loadPositionsFromKV();
+      if (loaded) { renderStats(); renderHeatmap(); }
+      // 2. Cron キャッシュ価格を即時反映（ライブ取得前の暫定表示）
+      applyPricesCache(); // fire-and-forget
+      // 3. ライブ価格取得
+      try {
+        await refreshPrices();
+      } catch (e) {
+        console.warn('[init] refreshPrices failed:', e);
+        setStatus('価格取得に失敗しました（前回データで表示中）', 'yellow');
+      } finally {
+        hideHeatmapSkeleton();
+        renderHeatmap();
+      }
+      // recordTodayAsset は history.js（未統合）のため呼ばない
 
-    // 1y は最優先で取得（UIの初期表示に必要）
-    await fetchAllHistorical('1y');
-    renderStats();
-    renderStockList();
-    if (state.activeTab === 'watchlist') renderWatchlist();
-    if (state.changePeriod && state.changePeriod !== '1d') renderHeatmap();
+      // 1y は最優先で取得（UIの初期表示に必要）
+      await fetchAllHistorical('1y');
+      renderStats();
+      renderStockList();
+      if (state.activeTab === 'watchlist') {
+        renderWatchlist();
+        updateWatchlistHeight();
+      }
+      if (state.changePeriod && state.changePeriod !== '1d') renderHeatmap();
 
-    // 5y / 10y は並列で取得（完了ごとに描画、片方失敗してももう片方は描画する）
-    await refreshHistoricalAndRender();
+      // 5y / 10y は並列で取得（完了ごとに描画、片方失敗してももう片方は描画する）
+      await refreshHistoricalAndRender();
+    } catch (e) {
+      console.error('[init] startup data flow failed:', e);
+      setStatus('初期化に失敗しました（保存済みデータで表示中）', 'yellow');
+      hideHeatmapSkeleton();
+      renderHeatmap();
+    }
   })();
 }
 

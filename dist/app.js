@@ -1533,8 +1533,21 @@ function flashPriceChanges(fetched) {
 function openDb(dbName, version, upgradeCb) {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(dbName, version);
-    req.onerror = () => reject(req.error);
-    req.onsuccess = () => resolve(req.result);
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      reject(new Error(`IndexedDB open timeout: ${dbName}`));
+    }, 3e3);
+    const finish = (cb) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      cb();
+    };
+    req.onerror = () => finish(() => reject(req.error || new Error(`IndexedDB open failed: ${dbName}`)));
+    req.onblocked = () => finish(() => reject(new Error(`IndexedDB open blocked: ${dbName}`)));
+    req.onsuccess = () => finish(() => resolve(req.result));
     req.onupgradeneeded = (e) => {
       const db = req.result;
       if (upgradeCb) upgradeCb(db, e.oldVersion, e.newVersion);
@@ -2342,23 +2355,34 @@ function renderHeatmap() {
   const padBot = parseFloat(getComputedStyle(document.body).paddingBottom) || 16;
   const viewH = window.innerHeight - stickyH - simBarH - footerH - padBot - 4;
   const H = Math.max(minH, viewH > 100 ? viewH : Math.round(W * aspectRatio));
-  const svg = d3.select("#heatmap").attr("width", W).attr("height", H);
+  const svg = d3.select("#heatmap").style("display", "block").attr("width", W).attr("height", H);
   svg.selectAll("*").remove();
   const GROUP_DEFS = [
-    { name: "\u7C73\u56FD\u682A\u30FBETF", cats: ["\u7C73\u56FD\u682A\u30FBETF"] },
-    { name: "\u65E5\u672C\u682A\u30FBETF\u30FB\u6295\u8CC7\u4FE1\u8A17", cats: ["\u65E5\u672C\u682A\u30FBETF", "\u6295\u8CC7\u4FE1\u8A17"] }
+    { key: "us", name: "\u7C73\u56FD\u682A\u30FBETF" },
+    { key: "jp", name: "\u65E5\u672C\u682A\u30FBETF\u30FB\u6295\u8CC7\u4FE1\u8A17" }
   ];
+  const groupKeyOf = (p) => {
+    if (p.cat === "\u7C73\u56FD\u682A\u30FBETF") return "us";
+    if (p.cat === "\u65E5\u672C\u682A\u30FBETF" || p.cat === "\u6295\u8CC7\u4FE1\u8A17") return "jp";
+    if (p.cur === "USD" && !String(p.ySymbol || "").endsWith(".T")) return "us";
+    return "jp";
+  };
   const groups = GROUP_DEFS.map((g) => ({
     name: g.name,
-    children: positions.filter((p) => g.cats.includes(p.cat)).sort((a, b) => (b.value ?? 0) - (a.value ?? 0)).map((p) => ({ ...p, size: p.value ?? 0 }))
+    children: positions.filter((p) => groupKeyOf(p) === g.key).sort((a, b) => (b.value ?? 0) - (a.value ?? 0)).map((p) => ({ ...p, size: p.value ?? 0 }))
   })).filter((g) => g.children.length > 0);
+  if (groups.length === 0) {
+    svg.append("text").attr("x", W / 2).attr("y", 32).attr("fill", cssVar("--text2")).attr("text-anchor", "middle").attr("font-size", 13).text("\u8868\u793A\u3067\u304D\u308B\u4FDD\u6709\u9298\u67C4\u304C\u3042\u308A\u307E\u305B\u3093");
+    renderStockList();
+    return;
+  }
   groups.sort(
     (a, b) => b.children.reduce((s, c) => s + (c.size ?? 0), 0) - a.children.reduce((s, c) => s + (c.size ?? 0), 0)
   );
   const hierData = { name: "root", children: groups };
   const root = d3.hierarchy(hierData).sum((d) => d.size || 0);
   d3.treemap().size([W, H]).paddingOuter(W < C.MOBILE_BREAKPOINT ? 0 : 6).paddingTop(20).paddingInner(4).tile(d3.treemapSquarify)(root);
-  root.children.forEach((catNode) => {
+  (root.children || []).forEach((catNode) => {
     svg.append("rect").attr("x", catNode.x0).attr("y", catNode.y0).attr("width", catNode.x1 - catNode.x0).attr("height", catNode.y1 - catNode.y0).attr("fill", cssVar("--cat-bg")).attr("rx", 8);
     svg.append("text").attr("class", "cat-label").attr("x", catNode.x0 + 6).attr("y", catNode.y0 + 5).text(catNode.data.name);
   });
@@ -2759,7 +2783,10 @@ async function refreshHistoricalAndRender() {
     await fetchAllHistorical(range);
     renderStats();
     renderStockList();
-    if (state.activeTab === "watchlist") renderWatchlist();
+    if (state.activeTab === "watchlist") {
+      renderWatchlist();
+      updateWatchlistHeight();
+    }
     if (state.changePeriod && state.changePeriod !== "1d") renderHeatmap();
     return range;
   }));
@@ -2789,6 +2816,24 @@ function updateListHeight() {
   const padBot = parseFloat(getComputedStyle(document.body).paddingBottom) || 16;
   const h = Math.max(160, window.innerHeight - stickyH - ctrlH - padBot - 4);
   wrap.style.maxHeight = `${h}px`;
+}
+function updateWatchlistHeight() {
+  const wrap = document.getElementById("watchlist-table-wrap");
+  if (!wrap) return;
+  const sticky = document.querySelector(".sticky-top");
+  const search = document.getElementById("wl-search-wrap");
+  const stickyH = sticky instanceof HTMLElement ? sticky.offsetHeight : 0;
+  const searchH = search instanceof HTMLElement ? search.offsetHeight : 0;
+  const padBot = parseFloat(getComputedStyle(document.body).paddingBottom) || 16;
+  const h = Math.max(160, window.innerHeight - stickyH - searchH - padBot - 4);
+  wrap.style.maxHeight = `${h}px`;
+}
+function updateActiveTableHeight() {
+  if (state.activeTab === "watchlist") {
+    updateWatchlistHeight();
+    return;
+  }
+  updateListHeight();
 }
 function setupPriceUpdateListener() {
   document.addEventListener("hm:prices-updated", () => {
@@ -2824,8 +2869,10 @@ function switchTab(name) {
     requestAnimationFrame(() => requestAnimationFrame(updateListHeight));
   }
   if (name === "watchlist") {
+    requestAnimationFrame(() => requestAnimationFrame(updateWatchlistHeight));
     _loadWatchlistFromWorker().then(() => {
       renderWatchlist();
+      updateWatchlistHeight();
       fetchWatchlistData();
     });
   }
@@ -2846,6 +2893,7 @@ function setupEventListeners(applyThemeFn) {
       renderStockList();
       applyStockBars();
       updateListHeight();
+      updateWatchlistHeight();
     });
   });
   window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
@@ -2862,6 +2910,7 @@ function setupEventListeners(applyThemeFn) {
     if (_stickyEl) {
       new ResizeObserver(() => {
         if (state.activeTab === "list") updateListHeight();
+        if (state.activeTab === "watchlist") updateWatchlistHeight();
       }).observe(_stickyEl);
     }
   }
@@ -3672,7 +3721,7 @@ function toggleStats() {
   const eye = document.getElementById("stats-eye");
   eye.classList.toggle("hidden", !state.statsVisible);
   document.getElementById("eye-slash").style.display = state.statsVisible ? "none" : "";
-  requestAnimationFrame(updateListHeight);
+  requestAnimationFrame(updateActiveTableHeight);
 }
 function applyTheme() {
   let resolved = state.themeMode;
@@ -3990,7 +4039,7 @@ function init() {
   if (_slSlash) _slSlash.style.display = state.slDetailVisible ? "none" : "";
   renderHeatmap();
   setStatus("\u8D77\u52D5\u4E2D...", "yellow");
-  requestAnimationFrame(updateListHeight);
+  requestAnimationFrame(updateActiveTableHeight);
   try {
     const lastTab = localStorage.getItem("hm-active-tab");
     if (lastTab && lastTab !== "heatmap" && ["list", "watchlist"].includes(lastTab)) {
@@ -4001,22 +4050,39 @@ function init() {
   } catch {
   }
   (async () => {
-    await migrateFromSessionStorage();
-    await restoreFromIDB();
-    const loaded = await loadPositionsFromKV();
-    if (loaded) {
+    try {
+      await migrateFromSessionStorage();
+      await restoreFromIDB();
+      const loaded = await loadPositionsFromKV();
+      if (loaded) {
+        renderStats();
+        renderHeatmap();
+      }
+      applyPricesCache();
+      try {
+        await refreshPrices();
+      } catch (e) {
+        console.warn("[init] refreshPrices failed:", e);
+        setStatus("\u4FA1\u683C\u53D6\u5F97\u306B\u5931\u6557\u3057\u307E\u3057\u305F\uFF08\u524D\u56DE\u30C7\u30FC\u30BF\u3067\u8868\u793A\u4E2D\uFF09", "yellow");
+      } finally {
+        hideHeatmapSkeleton();
+        renderHeatmap();
+      }
+      await fetchAllHistorical("1y");
       renderStats();
+      renderStockList();
+      if (state.activeTab === "watchlist") {
+        renderWatchlist();
+        updateWatchlistHeight();
+      }
+      if (state.changePeriod && state.changePeriod !== "1d") renderHeatmap();
+      await refreshHistoricalAndRender();
+    } catch (e) {
+      console.error("[init] startup data flow failed:", e);
+      setStatus("\u521D\u671F\u5316\u306B\u5931\u6557\u3057\u307E\u3057\u305F\uFF08\u4FDD\u5B58\u6E08\u307F\u30C7\u30FC\u30BF\u3067\u8868\u793A\u4E2D\uFF09", "yellow");
+      hideHeatmapSkeleton();
       renderHeatmap();
     }
-    applyPricesCache();
-    await refreshPrices();
-    hideHeatmapSkeleton();
-    await fetchAllHistorical("1y");
-    renderStats();
-    renderStockList();
-    if (state.activeTab === "watchlist") renderWatchlist();
-    if (state.changePeriod && state.changePeriod !== "1d") renderHeatmap();
-    await refreshHistoricalAndRender();
   })();
 }
 setupEventListeners(applyTheme);

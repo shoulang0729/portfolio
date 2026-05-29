@@ -16,8 +16,21 @@
 export function openDb(dbName, version, upgradeCb) {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(dbName, version);
-    req.onerror = () => reject(req.error);
-    req.onsuccess = () => resolve(req.result);
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      reject(new Error(`IndexedDB open timeout: ${dbName}`));
+    }, 3000);
+    const finish = cb => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      cb();
+    };
+    req.onerror = () => finish(() => reject(req.error || new Error(`IndexedDB open failed: ${dbName}`)));
+    req.onblocked = () => finish(() => reject(new Error(`IndexedDB open blocked: ${dbName}`)));
+    req.onsuccess = () => finish(() => resolve(req.result));
     req.onupgradeneeded = (e) => {
       const db = req.result;
       if (upgradeCb) upgradeCb(db, e.oldVersion, e.newVersion);

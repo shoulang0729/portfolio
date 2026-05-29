@@ -23,10 +23,10 @@
 .sl-table td.sl-pct-cell { width: 56px; min-width: 56px; }
 .sl-table td[style*="background"] { border-radius: 3px; }
 /* ティッカー列：幅を固定してバーグラフ左端が動かないようにする / 横スクロール時に固定 */
-.sl-table th[data-col="symbol"] { width: 150px; max-width: 150px; position: sticky; left: 0; z-index: 2; background: var(--surface3); box-shadow: 1px 0 0 var(--border2); }
+.sl-table th[data-col="symbol"] { width: 150px; max-width: 150px; position: sticky; left: 0; z-index: 4; background: var(--surface3); box-shadow: 1px 0 0 var(--border2); }
 .sl-table td[data-col="symbol"] { width: 150px; max-width: 150px; position: sticky; left: 0; z-index: 1; background: var(--surface); box-shadow: 1px 0 0 var(--border2); }
 /* ウォッチリスト：ティッカー列も固定 */
-.wl-table th[data-col="symbol"] { width: 130px; max-width: 130px; position: sticky; left: 0; z-index: 2; background: var(--surface3); box-shadow: 1px 0 0 var(--border2); }
+.wl-table th[data-col="symbol"] { width: 130px; max-width: 130px; position: sticky; left: 0; z-index: 20; background: var(--surface3); box-shadow: 1px 0 0 var(--border2); }
 .wl-table td[data-col="symbol"] { width: 130px; max-width: 130px; position: sticky; left: 0; z-index: 1; background: var(--surface); box-shadow: 1px 0 0 var(--border2); }
 .sl-sym  { font-weight: 600; font-size: 13px; }
 .sl-name { color: var(--text2); font-size: 11.5px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
