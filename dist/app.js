@@ -2784,8 +2784,8 @@ function updateListHeight() {
   if (!wrap) return;
   const sticky = document.querySelector(".sticky-top");
   const slCtrl = document.querySelector(".sl-controls");
-  const stickyH = sticky ? sticky.offsetHeight : 0;
-  const ctrlH = slCtrl ? slCtrl.offsetHeight : 0;
+  const stickyH = sticky instanceof HTMLElement ? sticky.offsetHeight : 0;
+  const ctrlH = slCtrl instanceof HTMLElement ? slCtrl.offsetHeight : 0;
   const padBot = parseFloat(getComputedStyle(document.body).paddingBottom) || 16;
   const h = Math.max(160, window.innerHeight - stickyH - ctrlH - padBot - 4);
   wrap.style.maxHeight = `${h}px`;
