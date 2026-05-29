@@ -4101,7 +4101,7 @@ init();
   if (title) {
     const badge = document.createElement("span");
     badge.id = "debug-ver";
-    badge.style.cssText = "display:block;font-size:9px;font-weight:400;color:var(--text2);opacity:0.6;margin-top:1px;line-height:1.2;";
+    badge.style.cssText = "display:inline;font-size:9px;font-weight:400;color:var(--text2);opacity:0.6;margin-left:6px;vertical-align:middle;";
     badge.textContent = `v.${ver}`;
     title.appendChild(badge);
   }
