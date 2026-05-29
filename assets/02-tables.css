@@ -215,6 +215,7 @@
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s;
   -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
 }
 .tab-btn:hover {
   color: var(--text);
