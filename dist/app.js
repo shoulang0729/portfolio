@@ -1870,6 +1870,17 @@ async function fetchSymbolHistory(symbol, range = "1y") {
   const entries = timestamps.map((ts, i) => ({ date: new Date(ts * 1e3), close: closes[i] })).filter((p) => p.close != null && isFinite(p.close));
   await setHistoricalEntry(range, symbol, applySplitCorrection(entries));
 }
+function isMarketHours() {
+  const now = /* @__PURE__ */ new Date();
+  const day = now.getUTCDay();
+  if (day === 0 || day === 6) return false;
+  const h = now.getUTCHours();
+  const m = now.getUTCMinutes();
+  const utcMin = h * 60 + m;
+  const tse = utcMin >= 0 && utcMin < 390;
+  const nyse = utcMin >= 870 && utcMin < 1260;
+  return tse || nyse;
+}
 async function fetchLivePrice(symbol) {
   const fSymbol = toFinnhubSymbol(symbol);
   if (fSymbol) {
@@ -1964,8 +1975,10 @@ async function refreshPrices() {
     setStatus(msg, "green");
     document.dispatchEvent(new CustomEvent("hm:prices-updated"));
     flashPriceChanges(fetched);
+  } else if (!isMarketHours()) {
+    setStatus("\u5E02\u5834\u6642\u9593\u5916\uFF08\u524D\u56DE\u30C7\u30FC\u30BF\u3067\u8868\u793A\u4E2D\uFF09", "yellow");
   } else {
-    setStatus("\u53D6\u5F97\u5931\u6557\uFF08\u5E02\u5834\u6642\u9593\u5916\u307E\u305F\u306FAPI\u30A2\u30AF\u30BB\u30B9\u5236\u9650\uFF09", "red");
+    setStatus("\u4FA1\u683C\u53D6\u5F97\u306B\u5931\u6557\u3057\u307E\u3057\u305F\uFF08API\u30A2\u30AF\u30BB\u30B9\u5236\u9650\u306E\u53EF\u80FD\u6027\uFF09", "red");
   }
 }
 
