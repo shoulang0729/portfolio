@@ -59,19 +59,20 @@
   position: fixed; inset: 0;
   background: var(--bg);
   z-index: 99999;
-  display: flex; align-items: center; justify-content: center;
+  display: flex; align-items: stretch; justify-content: center;
   opacity: 0;
   transition: opacity 0.38s ease;
 }
 
 .pin-card {
   display: flex; flex-direction: column; align-items: center;
-  padding: 44px 36px 40px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 28px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.18);
-  width: min(320px, 88vw);
+  justify-content: center;
+  padding: max(44px, env(safe-area-inset-top) + 24px) 36px max(40px, env(safe-area-inset-bottom) + 24px);
+  background: var(--bg);
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  width: 100%;
   gap: 0;
 }
 
