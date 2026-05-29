@@ -7,7 +7,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <!-- Content Security Policy -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://*.workers.dev https://query1.finance.yahoo.com https://query2.finance.yahoo.com https://corsproxy.io https://api.allorigins.win https://finnhub.io; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn.bootcdn.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://*.workers.dev https://query1.finance.yahoo.com https://query2.finance.yahoo.com https://corsproxy.io https://api.allorigins.win https://finnhub.io; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';">
 <!-- テーマを body 描画前に適用してフラッシュを防ぐ -->
 <script>(function(){ document.documentElement.setAttribute('data-theme', localStorage.getItem('hm-theme') || 'auto'); })();</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -23,10 +23,10 @@
 <link rel="manifest" href="assets/manifest.json">
 
 <!-- スタイルシート -->
-<link rel="stylesheet" href="assets/01-base.css?v=20260529M">
-<link rel="stylesheet" href="assets/02-tables.css?v=20260529M">
-<link rel="stylesheet" href="assets/03-misc.css?v=20260529M">
-<link rel="stylesheet" href="assets/04-auth.css?v=20260529M">
+<link rel="stylesheet" href="assets/01-base.css?v=20260529N">
+<link rel="stylesheet" href="assets/02-tables.css?v=20260529N">
+<link rel="stylesheet" href="assets/03-misc.css?v=20260529N">
+<link rel="stylesheet" href="assets/04-auth.css?v=20260529N">
 <!-- assets/05-ai-tab.css は src/_disabled/05-ai-tab.css に移動（AIタブ無効化中）-->
 <!-- 銘柄リスト列表示制御（JS が動的に書き込む） -->
 <style id="sl-col-style"></style>
@@ -300,12 +300,12 @@
 
 
 <!-- ES Module エントリーポイント（全ファイルを import する単一スクリプト） -->
-<script type="module" src="dist/app.js?v=20260529M"></script>
+<script type="module" src="dist/app.js?v=20260529N"></script>
 
 <!-- PWA Service Worker 登録 -->
 <script>
 if ('serviceWorker' in navigator) {
-navigator.serviceWorker.register('./sw.js?v=20260529M').catch(() => {});
+navigator.serviceWorker.register('./sw.js?v=20260529N').catch(() => {});
 }
 </script>
 
