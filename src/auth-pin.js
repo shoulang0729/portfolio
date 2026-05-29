@@ -1,3 +1,5 @@
+// @ts-check
+
 // ══════════════════════════════════════════════════════════════
 // auth-pin.js  ―  PIN 認証ロジック（状態・ハッシュ・ロックアウト）
 //
@@ -9,6 +11,14 @@
 // ══════════════════════════════════════════════════════════════
 
 // ── ハードコードされたデフォルト PIN ハッシュ（SHA-256 of "1234"）──
+/**
+ * @typedef {object} AuthState
+ * @property {string} input - PIN input buffer
+ * @property {number} fails - Failed login attempts
+ * @property {number | null} lockedAt - Lockout start timestamp (Unix ms)
+ * @property {CryptoKey | null} encKey - AES-GCM encryption key
+ */
+
 const AUTH_PIN_HASH     = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
 const AUTH_SESSION_KEY  = 'hm-auth-v1';
 const AUTH_LS_HASH_KEY  = 'hm-pin-hash';    // localStorage キー

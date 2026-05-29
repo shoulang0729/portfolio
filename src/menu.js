@@ -1,3 +1,5 @@
+// @ts-check
+
 export function toggleHmMenu() {
   const dropdown = document.getElementById('hm-menu-dropdown');
   const btn = document.getElementById('hm-menu-btn');
