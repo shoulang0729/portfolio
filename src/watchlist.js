@@ -308,12 +308,18 @@ function wlSort(col) {
 // RENDER
 // ══════════════════════════════════════════════
 
-/** ウォッチリスト用の期間騰落率取得（1d はライブ価格キャッシュから） */
+/**
+ * ウォッチリスト用の期間騰落率取得（1d はライブ価格キャッシュから）
+ * @param {*} item - ウォッチリストアイテム
+ * @param {string} periodId
+ * @returns {number|null}
+ */
 function wlGetPct(item, periodId) {
   if (periodId === '1d') return state.watchlistPrices[item.symbol]?.dayPct ?? null;
   return getHistoricalChangePct(item.symbol, periodId);
 }
 
+/** ウォッチリストテーブルを描画 */
 export function renderWatchlist() {
   const panel = document.getElementById('panel-watchlist');
   if (panel?.hidden) return;
