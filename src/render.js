@@ -19,8 +19,9 @@ import { setStatus } from './ui-status.js';
  * @returns {void}
  */
 export function renderStats() {
-  const totalValue = positions.reduce((s, p) => s + p.value, 0);
-  const totalPnl   = positions.reduce((s, p) => s + p.pnl,   0);
+  const totalValue = positions.reduce((s, p) => s + (p.value || 0), 0);
+  const totalPnl   = positions.reduce((s, p) => s + (p.pnl   || 0), 0);
+
   const totalCost  = totalValue - totalPnl;
   const pnlPct     = totalCost > 0 ? totalPnl / totalCost * 100 : 0;
 

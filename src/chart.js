@@ -234,14 +234,18 @@ function _renderChartStats(points, avgCost, cur, maStyles) {
         `<span style="color:${ma.color};font-size:11px">${ma.label}</span> <strong>${pf(last)}</strong></span>`;
     }).join('');
 
-  document.getElementById('chart-stats').innerHTML = `
-    <span>現在値: <strong class="neu">${pf(lastPrice)}</strong></span>
-    <span>期間変動: <strong class="${sgn(chgPct)}">${fmtPct(chgPct)}</strong></span>
-    <span>損益率: <strong class="${sgn(pnlPct)}">${fmtPct(pnlPct)}</strong></span>
-    <span>高値: <strong class="neu">${pf(d3.max(points, d => d.close))}</strong></span>
-    <span>安値: <strong class="neu">${pf(d3.min(points, d => d.close))}</strong></span>
-    ${maLegend}
-  `;
+  const chartStatsEl = document.getElementById('chart-stats');
+  if (chartStatsEl) {
+    chartStatsEl.innerHTML = `
+      <span>現在値: <strong class="neu">${pf(lastPrice)}</strong></span>
+      <span>期間変動: <strong class="${sgn(chgPct)}">${fmtPct(chgPct)}</strong></span>
+      <span>損益率: <strong class="${sgn(pnlPct)}">${fmtPct(pnlPct)}</strong></span>
+      <span>高値: <strong class="neu">${pf(d3.max(points, d => d.close))}</strong></span>
+      <span>安値: <strong class="neu">${pf(d3.min(points, d => d.close))}</strong></span>
+      ${maLegend}
+    `;
+  }
+
 }
 
 // ══════════════════════════════════════════════════════════════
