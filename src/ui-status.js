@@ -1,25 +1,43 @@
+// @ts-check
+
 // ══════════════════════════════════════════════════════════════
 // ui-status.js  ―  UI status updates & animations
 // ══════════════════════════════════════════════════════════════
 
 /**
+ * @typedef {object} Position
+ * @property {string} ySymbol - Yahoo Finance symbol
+ */
+
+/**
+ * @typedef {object} PriceChange
+ * @property {Position} pos - Position in portfolio
+ * @property {{price: number}} live - Live price data
+ */
+
+/**
  * Update status indicator (dot + text) with message and color
- * @param {string} msg
- * @param {string} color - 'red' | 'yellow' | (green default)
+ * @param {string} msg - Status message to display
+ * @param {'red' | 'yellow' | string} [color] - Status dot color ('red' | 'yellow' | default green)
+ * @returns {void}
  */
 export function setStatus(msg, color) {
   const dot = document.getElementById('status-dot');
   const txt = document.getElementById('status-text');
+  // @ts-ignore dot/txt always exist in DOM
   dot.className = `dot${  color === 'red' ? ' red' : color === 'yellow' ? ' yellow' : ''}`;
+  // @ts-ignore dot/txt always exist in DOM
   txt.textContent = msg;
 }
 
 /**
  * Flash heatmap cells when prices change
  * up → flash-up (brighter), down → flash-down (darker)
- * @param {Array<{pos, live}>} fetched
+ * @param {Array<PriceChange>} fetched - Array of price updates
+ * @returns {void}
  */
 export function flashPriceChanges(fetched) {
+  // @ts-ignore window.state injected by app.js
   const { state } = window;
   const hasPrev = Object.keys(state.prevPrices).length > 0;
   if (!hasPrev) {

@@ -1,9 +1,24 @@
+// @ts-check
+
 // ══════════════════════════════════════════════════════════════
 // modal.js  ―  自作 confirm/alert モーダル
 //
 // 依存: なし
 // ══════════════════════════════════════════════════════════════
 
+/**
+ * @typedef {object} ModalOptions
+ * @property {string} title - Modal title
+ * @property {string} message - Modal message text
+ * @property {string} [okLabel] - OK button label (default: 'OK')
+ * @property {string} [cancelLabel] - Cancel button label (default: 'キャンセル')
+ */
+
+/**
+ * Show confirmation dialog (Promise-based)
+ * @param {ModalOptions} options - Modal configuration
+ * @returns {Promise<boolean>} true if OK clicked, false if cancelled
+ */
 export async function showConfirm({ title, message, okLabel = 'OK', cancelLabel = 'キャンセル' }) {
   return new Promise((resolve) => {
     const overlay = document.createElement('div');
@@ -77,6 +92,11 @@ export async function showConfirm({ title, message, okLabel = 'OK', cancelLabel 
   });
 }
 
+/**
+ * Show alert dialog (Promise-based)
+ * @param {Omit<ModalOptions, 'cancelLabel'>} options - Modal configuration
+ * @returns {Promise<void>}
+ */
 export async function showAlert({ title, message, okLabel = 'OK' }) {
   return new Promise((resolve) => {
     const overlay = document.createElement('div');
