@@ -1,9 +1,41 @@
+// @ts-check
 // ══════════════════════════════════════════════════════════════
 // state.js  ―  定数・アプリ状態
 //
 // 依存: なし（positions.js より先でも後でもよい）
 // 読込順: positions.js → state.js → utils.js → ...
 // ══════════════════════════════════════════════════════════════
+
+/**
+ * @typedef {Object} AppState
+ * @property {'pnl'|'change'} colorMode
+ * @property {string} changePeriod  PERIODS の id
+ * @property {string} lastChangePeriod
+ * @property {{'1y': Object<string, Array<{date: Date, close: number}>>, '5y': Object<string, Array<{date: Date, close: number}>>, '10y': Object<string, Array<{date: Date, close: number}>>}} historicalCache
+ * @property {Set<string>} fetchingRanges
+ * @property {Object<string, boolean>} historicalAttempted
+ * @property {string|null} yahooCrumb
+ * @property {number} yahooCrumbExpiry
+ * @property {ReturnType<typeof setInterval>|null} autoInterval
+ * @property {ReturnType<typeof setInterval>|null} countdownTimer
+ * @property {number} countdownVal
+ * @property {number} autoSec
+ * @property {*} currentPos
+ * @property {string} currentRange
+ * @property {boolean} statsVisible
+ * @property {string} themeMode
+ * @property {string} listSortCol
+ * @property {'asc'|'desc'} listSortDir
+ * @property {boolean} slDetailVisible
+ * @property {string} activeTab
+ * @property {string|null} lastUpdateText
+ * @property {Array<*>} watchlist
+ * @property {Object<string, {price: number, dayPct: number}>} watchlistPrices
+ * @property {string} wlSortCol
+ * @property {'asc'|'desc'} wlSortDir
+ * @property {Object<string, number>} prevPrices
+ * @property {{USDJPY: number|null, ts: number}} forexRate
+ */
 
 // ── レイアウト・フォント定数 ──
 const C = Object.freeze({
@@ -43,6 +75,7 @@ const CHART_RANGES = {
 const SL_DETAIL_COLS = ['value', 'shares', 'avgCost', 'pnl', 'pnlPct'];
 
 // ── アプリ状態オブジェクト ──
+/** @type {AppState} */
 const state = {
   colorMode:        'change',   // 'pnl' | 'change'
   changePeriod:     '1d',       // period id from PERIODS
