@@ -1217,12 +1217,13 @@ function openPinChange() {
       ${_pinKeypadHTML("pcKeyPress", "pcBackspace")}
     </div>`;
   document.body.appendChild(ov);
-  ov._kbHandler = (e) => {
+  const ac = new AbortController();
+  ov._kbAbort = ac;
+  document.addEventListener("keydown", (e) => {
     if (e.key >= "0" && e.key <= "9") pcKeyPress(e.key);
     else if (e.key === "Backspace") pcBackspace();
     else if (e.key === "Escape") closePinChange();
-  };
-  document.addEventListener("keydown", ov._kbHandler);
+  }, { signal: ac.signal });
   requestAnimationFrame(() => requestAnimationFrame(() => {
     ov.style.opacity = "1";
   }));
@@ -1230,7 +1231,7 @@ function openPinChange() {
 function closePinChange() {
   const ov = document.getElementById("pc-overlay");
   if (!ov) return;
-  if (ov._kbHandler) document.removeEventListener("keydown", ov._kbHandler);
+  if (ov._kbAbort) ov._kbAbort.abort();
   ov.style.opacity = "0";
   setTimeout(() => ov.remove(), 350);
 }
@@ -1658,6 +1659,9 @@ function getDb() {
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         db.createObjectStore(STORE_NAME);
       }
+    }).catch((e) => {
+      _dbPromise = null;
+      throw e;
     });
   }
   return _dbPromise;
@@ -1679,7 +1683,10 @@ async function setHistoricalEntry(range, symbol, entries) {
 }
 async function restoreFromIDB() {
   try {
-    const db = await getDb();
+    const db = await Promise.race([
+      getDb(),
+      new Promise((_, rej) => setTimeout(() => rej(new Error("restoreFromIDB timeout")), 5e3))
+    ]);
     const all = await idbGetAllEntries(db, STORE_NAME);
     for (const { key, value } of all) {
       const colonIdx = key.indexOf(":");
@@ -1702,7 +1709,10 @@ async function migrateFromSessionStorage() {
     if (!raw) return;
     const obj = JSON.parse(raw);
     if (!obj) return;
-    const db = await getDb();
+    const db = await Promise.race([
+      getDb(),
+      new Promise((_, rej) => setTimeout(() => rej(new Error("migrateFromSessionStorage timeout")), 5e3))
+    ]);
     const existing = await idbGetAllEntries(db, STORE_NAME);
     const existingKeys = new Set(existing.map((e) => e.key));
     for (const range of ["1y", "5y", "10y"]) {
@@ -2367,10 +2377,28 @@ function renderHeatmap() {
     } else {
       console.warn("[heatmap] clientWidth=0 \u304C\u7D99\u7D9A \u2192 \u63CF\u753B\u4E2D\u6B62");
       _heatmapRetryCount = 0;
+      if (wrap && typeof IntersectionObserver !== "undefined") {
+        const obs = new IntersectionObserver((entries) => {
+          if (entries[0]?.isIntersecting) {
+            obs.disconnect();
+            renderHeatmap();
+          }
+        });
+        obs.observe(wrap);
+      }
+      if (!document.getElementById("heatmap-retry-msg")) {
+        const el = document.createElement("p");
+        el.id = "heatmap-retry-msg";
+        el.style.cssText = "text-align:center;padding:16px;color:var(--text2);font-size:13px;";
+        el.textContent = "\u30D2\u30FC\u30C8\u30DE\u30C3\u30D7\u3092\u8868\u793A\u3067\u304D\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u518D\u8AAD\u307F\u8FBC\u307F\u3057\u3066\u304F\u3060\u3055\u3044\u3002";
+        wrap.appendChild(el);
+      }
     }
     return;
   }
   _heatmapRetryCount = 0;
+  const retryMsg = document.getElementById("heatmap-retry-msg");
+  if (retryMsg) retryMsg.remove();
   const aspectRatio = W < C.MOBILE_BREAKPOINT ? C.HEATMAP_ASPECT_MOB : C.HEATMAP_ASPECT_DSK;
   const minH = W < C.MOBILE_BREAKPOINT ? C.HEATMAP_MINH_MOB : C.HEATMAP_MINH_DSK;
   const stickyEl = document.querySelector(".sticky-top");
@@ -2513,12 +2541,14 @@ function saveWatchlist() {
 var _wlKvSyncTimer = null;
 async function _syncWatchlistToWorker() {
   try {
-    await fetch(`${WORKER_URL}/watchlist`, {
+    const res = await fetch(`${WORKER_URL}/watchlist`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(state.watchlist)
     });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
   } catch {
+    setStatus("\u30A6\u30A9\u30C3\u30C1\u30EA\u30B9\u30C8\u306E\u4FDD\u5B58\u306B\u5931\u6557\u3057\u307E\u3057\u305F\uFF08\u30ED\u30FC\u30AB\u30EB\u306B\u306F\u4FDD\u5B58\u6E08\u307F\uFF09", "yellow");
   }
 }
 async function _loadWatchlistFromWorker() {
@@ -2897,12 +2927,12 @@ function switchTab(name) {
     requestAnimationFrame(() => requestAnimationFrame(updateListHeight));
   }
   if (name === "watchlist") {
-    requestAnimationFrame(() => requestAnimationFrame(updateWatchlistHeight));
-    _loadWatchlistFromWorker().then(() => {
+    (async () => {
+      await _loadWatchlistFromWorker();
       renderWatchlist();
       updateWatchlistHeight();
       fetchWatchlistData();
-    });
+    })();
   }
 }
 
@@ -2986,7 +3016,7 @@ function mergeDuplicatePositions(positions2) {
     const totalShares = sharesA + sharesB;
     const totalCost = (existing.avgCost || 0) * sharesA + (p.avgCost || 0) * sharesB;
     existing.shares = totalShares;
-    existing.avgCost = totalShares > 0 ? totalCost / totalShares : existing.avgCost || 0;
+    existing.avgCost = totalShares > 0 ? Math.round(totalCost / totalShares * 100) / 100 : existing.avgCost || 0;
     existing.value = (existing.value || 0) + (p.value || 0);
     existing.pnl = (existing.pnl || 0) + (p.pnl || 0);
     if (!existing.price && p.price) existing.price = p.price;
