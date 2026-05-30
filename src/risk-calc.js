@@ -37,6 +37,7 @@ function deriveDefault(p) {
 /**
  * @typedef {Object} DimResult
  * @property {Record<string, number>} cats  カテゴリキー → 円換算配分額
+ * @property {Record<string, Array<{symbol: string, name: string, value: number}>>} contributors  カテゴリキー → 寄与銘柄リスト
  * @property {number} total  この軸の対象評価額合計
  * @property {number} known  判明分（カテゴリ付与済み）の合計額
  * @property {number} coverage  known / total（0..1）
@@ -51,13 +52,14 @@ export function computeRiskBreakdown(posList = defaultPositions) {
   /** @type {Record<string, DimResult>} */
   const result = {};
   for (const dim of RISK_DIMENSIONS) {
-    result[dim] = { cats: {}, total: 0, known: 0, coverage: 0 };
+    result[dim] = { cats: {}, contributors: {}, total: 0, known: 0, coverage: 0 };
   }
 
   for (const p of posList) {
     const value = p.value || 0;
     if (value <= 0) continue;
     const entry = (p.symbol && CONSTITUENTS[p.symbol]) || deriveDefault(p);
+    const name = p.name || p.symbol || '';
 
     for (const dim of RISK_DIMENSIONS) {
       const map = entry[dim] || {};
@@ -67,6 +69,7 @@ export function computeRiskBreakdown(posList = defaultPositions) {
         if (!w) continue;
         const v = value * w;
         bucket.cats[cat] = (bucket.cats[cat] || 0) + v;
+        (bucket.contributors[cat] || (bucket.contributors[cat] = [])).push({ symbol: p.symbol, name, value: v });
         known += v;
       }
       // 浮動小数の桁あふれを防ぐためクランプ
@@ -74,6 +77,7 @@ export function computeRiskBreakdown(posList = defaultPositions) {
       const unknown = value - known;
       if (unknown > 1e-6) {
         bucket.cats[UNKNOWN_KEY] = (bucket.cats[UNKNOWN_KEY] || 0) + unknown;
+        (bucket.contributors[UNKNOWN_KEY] || (bucket.contributors[UNKNOWN_KEY] = [])).push({ symbol: p.symbol, name, value: unknown });
       }
       bucket.total += value;
       bucket.known += known;
@@ -105,4 +109,18 @@ export function toSlices(dimResult) {
     return b.value - a.value;
   });
   return entries;
+}
+
+/**
+ * あるカテゴリに寄与した銘柄を、カテゴリ内シェア降順で返す。
+ * @param {DimResult} dimResult
+ * @param {string} categoryKey
+ * @returns {Array<{symbol: string, name: string, value: number, pct: number}>}
+ */
+export function getContributors(dimResult, categoryKey) {
+  const list = (dimResult.contributors && dimResult.contributors[categoryKey]) || [];
+  const sum = list.reduce((s, c) => s + c.value, 0);
+  return list
+    .map(c => ({ ...c, pct: sum > 0 ? (c.value / sum) * 100 : 0 }))
+    .sort((a, b) => b.value - a.value);
 }

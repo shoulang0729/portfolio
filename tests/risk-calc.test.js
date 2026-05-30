@@ -1,7 +1,7 @@
 // Tests for look-through risk aggregation in src/risk-calc.js
 
 import { describe, it, expect } from 'vitest';
-import { computeRiskBreakdown, toSlices, RISK_DIMENSIONS, UNKNOWN_KEY } from '../src/risk-calc.js';
+import { computeRiskBreakdown, toSlices, getContributors, RISK_DIMENSIONS, UNKNOWN_KEY } from '../src/risk-calc.js';
 
 describe('computeRiskBreakdown — synthetic positions', () => {
   it('maps a curated US stock fully (AAPL)', () => {
@@ -68,6 +68,33 @@ describe('toSlices', () => {
     const slices = toSlices(dim);
     expect(slices.map(s => s.key)).toEqual(['b', 'a', UNKNOWN_KEY]);
     expect(slices[0].pct).toBeCloseTo(200 / 600 * 100, 6);
+  });
+});
+
+describe('getContributors', () => {
+  it('returns per-category contributors sorted by value desc with in-category pct', () => {
+    const posList = [
+      { symbol: 'AAPL', name: 'アップル', value: 3000, cur: 'USD' },
+      { symbol: 'MSFT', name: 'マイクロソフト', value: 1000, cur: 'USD' },
+    ];
+    const r = computeRiskBreakdown(posList);
+    const techContrib = getContributors(r.sector, 'tech');
+    expect(techContrib.map(c => c.symbol)).toEqual(['AAPL', 'MSFT']);
+    expect(techContrib[0].pct).toBeCloseTo(75, 6);
+    expect(techContrib[1].pct).toBeCloseTo(25, 6);
+    expect(techContrib[0].name).toBe('アップル');
+  });
+
+  it('returns empty array for unknown category', () => {
+    const r = computeRiskBreakdown([{ symbol: 'AAPL', value: 100, cur: 'USD' }]);
+    expect(getContributors(r.sector, 'nonexistent')).toEqual([]);
+  });
+
+  it('tracks fund contributions into the unknown bucket', () => {
+    const r = computeRiskBreakdown([{ symbol: 'ひふみ', name: 'ひふみ投信', value: 1000, cur: 'JPY' }]);
+    const unknownContrib = getContributors(r.sector, UNKNOWN_KEY);
+    expect(unknownContrib.length).toBe(1);
+    expect(unknownContrib[0].symbol).toBe('ひふみ');
   });
 });
 
