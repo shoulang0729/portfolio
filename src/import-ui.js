@@ -19,8 +19,12 @@ import { renderWatchlist } from './watchlist.js';
 import { _hashPin } from './auth-pin.js';
 
 let _importState = { source: null, parsed: [], current: [], pendingPositions: [] };
+// 取込操作の世代番号。open/close のたびに ++ し、進行中の async 処理は
+// 開始時に捕捉した世代と現在値を照合して、stale な継続を破棄する（#176）。
+let _importGen = 0;
 
 function openImportModal(source) {
+  _importGen++;
   _importState = { source, parsed: [], current: [...positions] };
   const overlay = document.getElementById('import-modal-overlay');
   const title   = document.getElementById('import-modal-title');
@@ -32,6 +36,7 @@ function openImportModal(source) {
 }
 
 function openManagePositionsModal() {
+  _importGen++;
   // 整理モーダル表示時点で投信名を canonical 化（プレビューでも正しく見える）
   const normalized = positions.map(canonicalizeFundPosition);
   _importState = { source: 'manage', parsed: normalized, current: [...positions] };
@@ -45,6 +50,7 @@ function openManagePositionsModal() {
 }
 
 function closeImportModal() {
+  _importGen++;
   const overlay = document.getElementById('import-modal-overlay');
   if (!overlay) return;
   overlay.classList.remove('open');
@@ -259,20 +265,24 @@ async function _confirmImport() {
   // 同一 symbol を1件にマージ（保有数合算・取得単価加重平均）
   finalPositions = mergeDuplicatePositions(finalPositions);
 
+  const gen = _importGen;
   _importState.pendingPositions = finalPositions;
 
   _renderImportStep('saving');
-  await _doSavePositions(finalPositions);
+  await _doSavePositions(finalPositions, undefined, gen);
 }
 
-async function _doSavePositions(finalPositions, pinHashOverride) {
+async function _doSavePositions(finalPositions, pinHashOverride, gen) {
+  // モーダルが閉じ/再オープンされた場合はモーダルへの描画のみ抑止する。
+  // 保存とグローバル再描画はデータ整合性のため常に実行する（#176）。
+  const stale = () => (gen !== undefined && gen !== _importGen);
   try {
     await savePositionsToKV(finalPositions, pinHashOverride);
     positions.splice(0, positions.length, ...finalPositions);
     await clearHistoricalIDB(); // IDB・メモリキャッシュを両方クリア
     clearCacheSession();
     state.lastUpdateText = null;
-    _renderImportStep('done', `${finalPositions.length}銘柄を保存しました`);
+    if (!stale()) _renderImportStep('done', `${finalPositions.length}銘柄を保存しました`);
     setTimeout(() => {
       document.dispatchEvent(new CustomEvent('hm:prices-updated'));
       renderStockList();
@@ -280,6 +290,7 @@ async function _doSavePositions(finalPositions, pinHashOverride) {
       refreshPrices();
     }, 300);
   } catch (e) {
+    if (stale()) return;
     if (e.message.includes('PIN認証失敗')) {
       _renderImportStep('pin-auth');
     } else if (e.name === 'AbortError' || e.message.includes('aborted')) {
@@ -291,28 +302,32 @@ async function _doSavePositions(finalPositions, pinHashOverride) {
 }
 
 async function _retryWithPin() {
+  const gen = _importGen;
   const pinInput = document.getElementById('import-pin-input');
   const pin = pinInput?.value?.trim();
   if (!pin) { if (pinInput) pinInput.focus(); return; }
 
   const pinHash = await _hashPin(pin);
+  if (gen !== _importGen) return; // モーダルが閉じ/再オープンされた
   localStorage.setItem('hm-pin-hash', pinHash);
 
   const finalPositions = _importState.pendingPositions;
   if (!finalPositions?.length) { closeImportModal(); return; }
   _renderImportStep('saving');
-  await _doSavePositions(finalPositions, pinHash);
+  await _doSavePositions(finalPositions, pinHash, gen);
 }
 
 // ── ファイル選択ハンドラ ──────────────────────────────────────────────────
 
 async function handleManexFileSelect(event) {
+  const gen = _importGen;
   // Array.from でコピーしてからクリア（FileList はクリアで空になるブラウザがある）
   const files = Array.from(event.target.files || []);
   event.target.value = '';
   if (files.length === 0) return;
   _renderImportStep('loading', 'CSVを解析中...');
   const parsed = await parseManexFiles(files);
+  if (gen !== _importGen) return; // モーダルが閉じ/再オープンされた → 破棄
   if (!parsed || parsed.length === 0) {
     _renderImportStep('error', 'CSVを解析できませんでした。マネックス証券のCSVファイルを選択してください。');
     return;
@@ -322,12 +337,14 @@ async function handleManexFileSelect(event) {
 }
 
 async function handleMoneyForwardImageSelect(event) {
+  const gen = _importGen;
   const file = event.target.files?.[0];
   event.target.value = '';
   if (!file) return;
   _renderImportStep('loading', 'AIで資産情報を読み取り中...');
   try {
     const parsed = await parseMoneyForwardImage(file);
+    if (gen !== _importGen) return; // モーダルが閉じ/再オープンされた → 破棄
     if (parsed.length === 0) {
       _renderImportStep('error', 'AIが資産情報を検出できませんでした。資産一覧が写ったスクリーンショットをお試しください。');
       return;
@@ -335,6 +352,7 @@ async function handleMoneyForwardImageSelect(event) {
     _importState.parsed = parsed;
     _renderImportStep('review');
   } catch (e) {
+    if (gen !== _importGen) return;
     console.error('[import-ui] MF image handler error:', e);
     _renderImportStep('error', e.message);
   }

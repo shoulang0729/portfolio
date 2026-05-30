@@ -215,6 +215,13 @@ body {
 }
 .csv-btn:hover { background: var(--surface2); color: var(--text); }
 
+/* Heatmap パネルを内部スクロール化し、body スクロールでヘッダーが
+   タブバー上まで動かないようにする（list/watchlist と挙動を統一・#215） */
+#panel-heatmap {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
 #heatmap-wrap { width: 100%; position: relative; margin-top: 0; }
 #heatmap { width: 100%; display: block; border-radius: 6px; }
 .cell-g { cursor: pointer; }
