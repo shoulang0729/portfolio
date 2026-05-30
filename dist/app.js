@@ -3221,6 +3221,18 @@ function getContributors(dimResult, categoryKey) {
   const sum = list.reduce((s, c) => s + c.value, 0);
   return list.map((c) => ({ ...c, pct: sum > 0 ? c.value / sum * 100 : 0 })).sort((a, b) => b.value - a.value);
 }
+function getClassificationSummary(posList = positions) {
+  let total = 0;
+  let classified = 0;
+  const unclassifiedSymbols = [];
+  for (const p of posList) {
+    if ((p.value || 0) <= 0) continue;
+    total++;
+    if (p.symbol && CONSTITUENTS[p.symbol]) classified++;
+    else unclassifiedSymbols.push(p.symbol || "");
+  }
+  return { total, classified, unclassified: total - classified, unclassifiedSymbols };
+}
 
 // src/risk-charts.js
 var TITLES = {
@@ -3328,6 +3340,12 @@ function renderRiskCharts() {
   if (typeof d3 === "undefined") return;
   const breakdown = computeRiskBreakdown();
   wrap.textContent = "";
+  const sumInfo = getClassificationSummary();
+  const summary = document.createElement("div");
+  summary.className = "risk-summary";
+  const warn = sumInfo.unclassified > 0 ? " \u26A0" : "";
+  summary.textContent = `\u5BFE\u8C61 ${sumInfo.total} \u9298\u67C4\u3000\u2503\u3000\u5206\u985E\u6E08\u307F ${sumInfo.classified}\u3000\u2503\u3000\u5206\u985E\u4E0D\u660E ${sumInfo.unclassified}${warn}`;
+  wrap.appendChild(summary);
   const grid = document.createElement("div");
   grid.className = "risk-grid";
   for (const dim of RISK_DIMENSIONS) {
