@@ -114,12 +114,32 @@ export function updateWatchlistHeight() {
 }
 
 /**
+ * Heatmap パネルの高さをビューポートに合わせて内部スクロール化する。
+ * list/watchlist と同じく内部スクロールにすることで、body 自体がスクロール
+ * せず .sticky-top（ヘッダー＋タブバー）が常に固定される（#215）。
+ * @returns {void}
+ */
+export function updateHeatmapHeight() {
+  const panel = document.getElementById('panel-heatmap');
+  if (!panel || panel.hidden) return;
+  const sticky = document.querySelector('.sticky-top');
+  const stickyH = sticky instanceof HTMLElement ? sticky.offsetHeight : 0;
+  const padBot = parseFloat(getComputedStyle(document.body).paddingBottom) || 16;
+  const h = Math.max(200, window.innerHeight - stickyH - padBot - 4);
+  panel.style.maxHeight = `${h}px`;
+}
+
+/**
  * 現在表示中のテーブル高さを再計算
  * @returns {void}
  */
 export function updateActiveTableHeight() {
   if (state.activeTab === 'watchlist') {
     updateWatchlistHeight();
+    return;
+  }
+  if (state.activeTab === 'heatmap') {
+    updateHeatmapHeight();
     return;
   }
   updateListHeight();
