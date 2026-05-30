@@ -417,9 +417,11 @@ function init() {
   // 初期タブ状態を適用（ヒートマップのみ表示、他は非表示）
   const panelList      = document.getElementById('panel-list');
   const panelWatchlist = document.getElementById('panel-watchlist');
+  const panelRisk      = document.getElementById('panel-risk');
   const panelAi        = document.getElementById('panel-ai');
   if (panelList)      panelList.hidden      = true;
   if (panelWatchlist) panelWatchlist.hidden = true;
+  if (panelRisk)      panelRisk.hidden      = true;
   if (panelAi)        panelAi.hidden        = true;
 
   renderStats();
@@ -450,7 +452,7 @@ function init() {
   // AI タブは無効化中のため復元対象外
   try {
     const lastTab = localStorage.getItem('hm-active-tab');
-    if (lastTab && lastTab !== 'heatmap' && ['list','watchlist'].includes(lastTab)) {
+    if (lastTab && lastTab !== 'heatmap' && ['list','watchlist','risk'].includes(lastTab)) {
       requestAnimationFrame(() => switchTab(lastTab));
     } else if (lastTab === 'ai') {
       localStorage.removeItem('hm-active-tab'); // 古い保存値をクリア
