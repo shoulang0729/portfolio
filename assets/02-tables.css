@@ -441,3 +441,11 @@
   font-size: 10px;
   color: var(--text3);
 }
+.risk-source {
+  margin-top: 14px;
+  font-size: 10px;
+  line-height: 1.6;
+  color: var(--text3);
+}
+.risk-legend-item { cursor: default; border-radius: 4px; }
+.risk-legend-item:hover { background: var(--surface2); }
