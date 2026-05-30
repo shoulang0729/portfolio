@@ -48,9 +48,6 @@ export function switchTab(name) {
   if (slControls) slControls.hidden = (name !== 'list');
   if (wlSearch)   wlSearch.hidden   = (name !== 'watchlist');
 
-  // 時価評価額トグル（目）は Historical Heatmap(list) タブのみ表示（#210）
-  const statsEye = document.getElementById('stats-eye');
-  if (statsEye) statsEye.style.display = (name === 'list') ? '' : 'none';
 
   if (name === 'heatmap') {
     renderHeatmap();

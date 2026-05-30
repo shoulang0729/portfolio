@@ -434,8 +434,6 @@ function init() {
   if (_eye) _eye.classList.toggle('hidden', !state.statsVisible);
   const _eyeSlash = document.getElementById('eye-slash');
   if (_eyeSlash) _eyeSlash.style.display = state.statsVisible ? 'none' : '';
-  // #210: 目トグルは Historical Heatmap(list) タブのみ表示（初期 heatmap → 非表示）
-  if (_eye) _eye.style.display = (state.activeTab === 'list') ? '' : 'none';
 
   // 銘柄リスト詳細列の初期表示状態を DOM に反映（state.slDetailVisible = false → 非表示）
   updateSlColStyle();
