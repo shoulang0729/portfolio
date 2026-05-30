@@ -10,7 +10,7 @@ import { state } from './state.js';
 import { renderHeatmap } from './heatmap.js';
 import { renderStockList } from './stock-list.js';
 import { renderWatchlist, fetchWatchlistData, _loadWatchlistFromWorker } from './watchlist.js';
-import { updateListHeight, updateWatchlistHeight } from './render.js';
+import { updateListHeight, updateWatchlistHeight, updateHeatmapHeight } from './render.js';
 import { renderRiskCharts } from './risk-charts.js';
 
 /**
@@ -48,7 +48,14 @@ export function switchTab(name) {
   if (slControls) slControls.hidden = (name !== 'list');
   if (wlSearch)   wlSearch.hidden   = (name !== 'watchlist');
 
-  if (name === 'heatmap') renderHeatmap();
+  // 時価評価額トグル（目）は Historical Heatmap(list) タブのみ表示（#210）
+  const statsEye = document.getElementById('stats-eye');
+  if (statsEye) statsEye.style.display = (name === 'list') ? '' : 'none';
+
+  if (name === 'heatmap') {
+    renderHeatmap();
+    requestAnimationFrame(() => requestAnimationFrame(updateHeatmapHeight));
+  }
 
   if (name === 'list') {
     renderStockList();
