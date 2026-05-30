@@ -45,7 +45,7 @@ function deriveDefault(p) {
 
 /**
  * ポートフォリオを look-through 分解し、軸ごとのカテゴリ別配分を集計する。
- * @param {Array<{symbol?: string, value?: number, cat?: string, cur?: string}>} [posList]
+ * @param {Array<{symbol?: string, name?: string, value?: number, cat?: string, cur?: string}>} [posList]
  * @returns {Record<string, DimResult>}
  */
 export function computeRiskBreakdown(posList = defaultPositions) {
@@ -69,7 +69,7 @@ export function computeRiskBreakdown(posList = defaultPositions) {
         if (!w) continue;
         const v = value * w;
         bucket.cats[cat] = (bucket.cats[cat] || 0) + v;
-        (bucket.contributors[cat] || (bucket.contributors[cat] = [])).push({ symbol: p.symbol, name, value: v });
+        (bucket.contributors[cat] || (bucket.contributors[cat] = [])).push({ symbol: p.symbol || '', name, value: v });
         known += v;
       }
       // 浮動小数の桁あふれを防ぐためクランプ
@@ -77,7 +77,7 @@ export function computeRiskBreakdown(posList = defaultPositions) {
       const unknown = value - known;
       if (unknown > 1e-6) {
         bucket.cats[UNKNOWN_KEY] = (bucket.cats[UNKNOWN_KEY] || 0) + unknown;
-        (bucket.contributors[UNKNOWN_KEY] || (bucket.contributors[UNKNOWN_KEY] = [])).push({ symbol: p.symbol, name, value: unknown });
+        (bucket.contributors[UNKNOWN_KEY] || (bucket.contributors[UNKNOWN_KEY] = [])).push({ symbol: p.symbol || '', name, value: unknown });
       }
       bucket.total += value;
       bucket.known += known;
