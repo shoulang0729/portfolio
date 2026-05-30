@@ -23,6 +23,9 @@ function getDb() {
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         db.createObjectStore(STORE_NAME);
       }
+    }).catch(e => {
+      _dbPromise = null;
+      throw e;
     });
   }
   return _dbPromise;
@@ -97,7 +100,10 @@ export async function getAllHistorical(range) {
  */
 export async function restoreFromIDB() {
   try {
-    const db = await getDb();
+    const db = await Promise.race([
+      getDb(),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('restoreFromIDB timeout')), 5000)),
+    ]);
     const all = await idbGetAllEntries(db, STORE_NAME);
     for (const { key, value } of all) {
       const colonIdx = key.indexOf(':');
@@ -126,7 +132,10 @@ export async function migrateFromSessionStorage() {
     const obj = JSON.parse(raw);
     if (!obj) return;
 
-    const db = await getDb();
+    const db = await Promise.race([
+      getDb(),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('migrateFromSessionStorage timeout')), 5000)),
+    ]);
     const existing = await idbGetAllEntries(db, STORE_NAME);
     const existingKeys = new Set(existing.map(e => e.key));
 

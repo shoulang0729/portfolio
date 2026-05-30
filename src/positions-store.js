@@ -65,7 +65,7 @@ function mergeDuplicatePositions(positions) {
     const totalShares = sharesA + sharesB;
     const totalCost = (existing.avgCost || 0) * sharesA + (p.avgCost || 0) * sharesB;
     existing.shares  = totalShares;
-    existing.avgCost = totalShares > 0 ? totalCost / totalShares : (existing.avgCost || 0);
+    existing.avgCost = totalShares > 0 ? Math.round((totalCost / totalShares) * 100) / 100 : (existing.avgCost || 0);
     existing.value   = (existing.value || 0) + (p.value || 0);
     existing.pnl     = (existing.pnl   || 0) + (p.pnl   || 0);
     if (!existing.price && p.price) existing.price = p.price;
