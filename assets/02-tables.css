@@ -365,3 +365,79 @@
     transparent var(--bar-end, 0)
   );
 }
+
+/* ══════════════════════════════════════════════
+   リスク断面タブ（look-through 円グラフ）
+   ══════════════════════════════════════════════ */
+#panel-risk {
+  padding: 12px 14px 24px;
+}
+.risk-head {
+  font-size: 12px;
+  color: var(--text2);
+  margin-bottom: 12px;
+  text-align: center;
+}
+.risk-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+.risk-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+}
+.risk-card-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 10px;
+}
+.risk-card-body {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.risk-donut {
+  flex: none;
+}
+.risk-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.risk-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--text);
+}
+.risk-legend-swatch {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+.risk-legend-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.risk-legend-pct {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  color: var(--text2);
+}
+.risk-coverage-note {
+  margin-top: 10px;
+  font-size: 10px;
+  color: var(--text3);
+}

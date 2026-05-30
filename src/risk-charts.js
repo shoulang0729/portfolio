@@ -1,0 +1,179 @@
+// ══════════════════════════════════════════════════════════════
+// risk-charts.js  ―  リスク断面タブの D3 ドーナツ円グラフ描画
+//
+// computeRiskBreakdown の結果を4枚のドーナツ（資産クラス / 通貨 /
+// 地域・国 / セクター）で可視化する。各グラフに凡例とカバレッジ率を表示。
+// ══════════════════════════════════════════════════════════════
+
+import { computeRiskBreakdown, toSlices, RISK_DIMENSIONS, UNKNOWN_KEY } from './risk-calc.js';
+import { fmtJPYInt, fmtPctInt } from './utils.js';
+import { cssVar } from './color.js';
+
+/** 軸ごとのタイトル */
+const TITLES = {
+  assetClass: '資産クラス',
+  currency: '通貨エクスポージャー',
+  country: '地域・国',
+  sector: 'セクター',
+};
+
+/** カテゴリキー → 表示ラベル */
+const LABELS = {
+  assetClass: { equity: '株式', bond: '債券', commodity: 'コモディティ', reit: 'REIT', cash: '現金' },
+  currency: { JPY: '円 JPY', USD: 'ドル USD', EUR: 'ユーロ EUR', other: 'その他通貨' },
+  country: { japan: '日本', us: '米国', europe: '欧州', em: '新興国', latam: '中南米', china: '中国', global: 'グローバル' },
+  sector: {
+    tech: 'テック', semis: '半導体', financials: '金融', healthcare: 'ヘルスケア',
+    consumer: '一般消費財', staples: '生活必需品', industrials: '資本財', energy: 'エネルギー',
+    materials: '素材', comm: '通信', utilities: '公益', realestate: '不動産', nonEquity: '非株式（コモ/債券）',
+  },
+};
+
+/** カテゴリ配色（Claude ウォームトーン基調の categorical パレット） */
+const PALETTE = [
+  '#cc785c', '#6a8caf', '#c2a36b', '#7fa885', '#a878a8',
+  '#d09a4e', '#5f9ea0', '#bd6b6b', '#8a9a5b', '#9d8df1',
+  '#d4a0b8', '#7ba6c9',
+];
+const UNKNOWN_COLOR = '#9ca3af';
+
+/**
+ * カテゴリキーの表示ラベルを返す。
+ * @param {string} dim
+ * @param {string} key
+ */
+function labelOf(dim, key) {
+  if (key === UNKNOWN_KEY) return 'その他/不明';
+  return LABELS[dim]?.[key] || key;
+}
+
+/**
+ * 1軸ぶんのドーナツ + 凡例 + カバレッジを描画したカード要素を生成する。
+ * @param {string} dim
+ * @param {import('./risk-calc.js').DimResult} dimResult
+ * @returns {HTMLElement}
+ */
+function buildChartCard(dim, dimResult) {
+  const slices = toSlices(dimResult);
+
+  const card = document.createElement('div');
+  card.className = 'risk-card';
+
+  const title = document.createElement('div');
+  title.className = 'risk-card-title';
+  title.textContent = TITLES[dim];
+  card.appendChild(title);
+
+  const body = document.createElement('div');
+  body.className = 'risk-card-body';
+  card.appendChild(body);
+
+  // ── ドーナツ SVG ──
+  const size = 168;
+  const radius = size / 2;
+  const svg = d3.select(body)
+    .append('svg')
+    .attr('class', 'risk-donut')
+    .attr('width', size)
+    .attr('height', size)
+    .attr('viewBox', `0 0 ${size} ${size}`)
+    .attr('role', 'img')
+    .attr('aria-label', `${TITLES[dim]}の構成円グラフ`);
+
+  const g = svg.append('g').attr('transform', `translate(${radius},${radius})`);
+
+  const pie = d3.pie().value(d => d.value).sort(null);
+  const arc = d3.arc().innerRadius(radius * 0.58).outerRadius(radius - 2);
+
+  // 色割り当て（既知カテゴリはパレット順、__unknown__ はグレー固定）
+  const colorOf = (key, i) => (key === UNKNOWN_KEY ? UNKNOWN_COLOR : PALETTE[i % PALETTE.length]);
+
+  g.selectAll('path')
+    .data(pie(slices))
+    .join('path')
+    .attr('d', arc)
+    .attr('fill', (d, i) => colorOf(d.data.key, i))
+    .attr('stroke', cssVar('--surface') || '#fff')
+    .attr('stroke-width', 1.5)
+    .append('title')
+    .text(d => `${labelOf(dim, d.data.key)}: ${fmtJPYInt(d.data.value)}（${fmtPctInt(d.data.pct)}）`);
+
+  // 中央のカバレッジ表示
+  const coverage = dimResult.coverage;
+  const center = g.append('text').attr('class', 'risk-donut-center');
+  center.append('tspan')
+    .attr('x', 0).attr('dy', '-0.1em')
+    .attr('fill', cssVar('--text') || '#000')
+    .attr('font-size', '13px').attr('font-weight', '700')
+    .attr('text-anchor', 'middle')
+    .text(`${Math.round(coverage * 100)}%`);
+  center.append('tspan')
+    .attr('x', 0).attr('dy', '1.3em')
+    .attr('fill', cssVar('--text2') || '#666')
+    .attr('font-size', '9px')
+    .attr('text-anchor', 'middle')
+    .text('判明');
+
+  // ── 凡例 ──
+  const legend = document.createElement('ul');
+  legend.className = 'risk-legend';
+  slices.forEach((s, i) => {
+    const li = document.createElement('li');
+    li.className = 'risk-legend-item';
+
+    const sw = document.createElement('span');
+    sw.className = 'risk-legend-swatch';
+    sw.style.background = colorOf(s.key, i);
+
+    const name = document.createElement('span');
+    name.className = 'risk-legend-name';
+    name.textContent = labelOf(dim, s.key);
+
+    const pct = document.createElement('span');
+    pct.className = 'risk-legend-pct';
+    pct.textContent = fmtPctInt(s.pct);
+
+    li.append(sw, name, pct);
+    legend.appendChild(li);
+  });
+  body.appendChild(legend);
+
+  // カバレッジ注記（判明率が 99% 未満のときのみ）
+  if (coverage < 0.99) {
+    const note = document.createElement('div');
+    note.className = 'risk-coverage-note';
+    note.textContent = `判明率 ${Math.round(coverage * 100)}%（残りは「その他/不明」）`;
+    card.appendChild(note);
+  }
+
+  return card;
+}
+
+/**
+ * リスク断面タブを描画する。panel が hidden のときは何もしない。
+ * @returns {void}
+ */
+export function renderRiskCharts() {
+  const panel = document.getElementById('panel-risk');
+  if (!panel || panel.hidden) return;
+  const wrap = document.getElementById('risk-charts-wrap');
+  if (!wrap) return;
+  if (typeof d3 === 'undefined') return;
+
+  const breakdown = computeRiskBreakdown();
+
+  wrap.textContent = '';
+
+  const total = breakdown.assetClass?.total || 0;
+  const head = document.createElement('div');
+  head.className = 'risk-head';
+  head.textContent = `対象評価額 ${fmtJPYInt(total)}・保有を構成銘柄まで透過して集計`;
+  wrap.appendChild(head);
+
+  const grid = document.createElement('div');
+  grid.className = 'risk-grid';
+  for (const dim of RISK_DIMENSIONS) {
+    grid.appendChild(buildChartCard(dim, breakdown[dim]));
+  }
+  wrap.appendChild(grid);
+}

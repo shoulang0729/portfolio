@@ -171,6 +171,8 @@
             data-action="switchTab" data-arg="list">Historical Heatmap</button>
     <button class="tab-btn" data-tab="watchlist" role="tab" aria-selected="false"
             data-action="switchTab" data-arg="watchlist" title="Watchlist Historical Heatmap">Watchlist</button>
+    <button class="tab-btn" data-tab="risk" role="tab" aria-selected="false"
+            data-action="switchTab" data-arg="risk" title="リスク断面（通貨・国・セクター・資産クラス）">リスク断面</button>
     <!-- AI相談タブは現在無効化中（必要になったら戻す） -->
   </div>
   <!-- タブ別サブコントロール（sticky-top 内に置くことで両タブのテーブル開始位置・高さを統一） -->
@@ -254,6 +256,11 @@
   <div class="wl-empty-msg">上の検索欄から銘柄を追加してください</div>
 </div>
 </section><!-- /panel-watchlist -->
+
+<!-- リスク断面パネル（タブ4：look-through 円グラフ） -->
+<section id="panel-risk" class="tab-panel" hidden>
+<div id="risk-charts-wrap"></div>
+</section><!-- /panel-risk -->
 
 <!-- AI相談パネルは現在無効化中（タブも非表示） -->
 <section id="panel-ai" class="tab-panel" hidden></section>
