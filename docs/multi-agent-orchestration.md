@@ -75,3 +75,28 @@
 | curated データ・定数の追加 | ライブラリ選定・依存追加の判断 |
 | CSS / マークアップの定型修正 | コンフリクト解消・アーキ変更 |
 | ドキュメントの定型更新 | リリース判断・破壊的変更 |
+
+---
+
+## この環境での実証メモ（2026-05-30）
+
+実際に Haiku サブエージェントへ委任して分かった、この環境（Claude Code + Agent tool）固有の落とし穴と対策。
+
+### サブエージェントの Bash 権限
+- **サブエージェントは許可リストにない Bash コマンドに当たると、バックグラウンドでは承認ダイアログを出せず無言で停止する**（最初の `git`/`npx` で詰む）。
+- `.claude/settings.json` の `permissions.allow` に **`git *` / `npm run*` / `npm test*` だけでなく `npx *` 系（eslint・vitest・madge・tsc・prettier）も必要**。
+- 回避のベストプラクティス: エージェントには検証を **許可済みの npm スクリプト経由**で指示する（`npm test` / `npm run lint` / `npm run check:types` / `npm run build`）。これらは `npm run*` / `npm test*` で一括許可できる。
+- **設定はサブエージェントの worktree が分岐元にする `main` にコミットしておく**こと。worktree は main の committed 状態から作られるため、未コミットの `settings.json` 変更は効かない。
+
+### 委任時の指示の精度
+- 「`dist/` は触るな」と書いても、`npm run build` 後に `git add -A` で dist を巻き込みがち。**add 対象を明示**するか build を省かせる（CI が再ビルドするので無害だが、コミットは汚れる）。
+- **`@ts-check` 付きファイルを触る場合は `npm run check:types` を完了条件に必ず含める**。JSDoc 型の更新漏れは lint/test を通っても CI（test ジョブ内の tsc）で落ちる。実際に1度これで CI が落ちた。
+
+### 実証できた役割分担（機能する形）
+- **Opus**: 仕様確定（I/F・データ構造、例: risk-calc の集計関数設計）＋レビュー＋PR/CI 監視/マージ/コンフリクト解消。
+- **Haiku**: 確定仕様の実装＋テスト追加＋自己検証（npm スクリプト）＋commit/push。
+- この分担で、Haiku が check:types/test/lint/build を自走で green にし push まで到達する委任が成立した（#217）。
+
+### このプロジェクトの非対話マージ手順（親=Opus 側）
+- レビュー（CodeRabbit）は **非ブロッキング**。ブロッキングは `test` と `e2e`。`gh pr checks <n> --watch` で待ってからマージ。
+- 同一ファイルを触る複数 Issue は**1ブランチにまとめる**（並列エージェントの衝突回避）。`index.html` の `?v=` bump は1ブランチに集約。
