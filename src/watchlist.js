@@ -9,7 +9,7 @@
 
 import { state } from './state.js';
 import { escapeHTML, makeTh, getHistoricalChangePct, fmtPrice, _tableSort, makePeriodCells, makePeriodHeaderCells } from './utils.js';
-import { fetchViaProxy, fetchLivePrice, fetchAllHistorical } from './data.js';
+import { fetchViaProxy, fetchLivePrice, fetchAllHistorical, setStatus } from './data.js';
 import { WORKER_URL } from './config.js';
 
 // ══════════════════════════════════════════════
@@ -30,12 +30,15 @@ let _wlKvSyncTimer = null;
 
 async function _syncWatchlistToWorker() {
   try {
-    await fetch(`${WORKER_URL}/watchlist`, {
+    const res = await fetch(`${WORKER_URL}/watchlist`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(state.watchlist),
     });
-  } catch { /* 失敗時はlocalStorageのデータで継続 */ }
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  } catch {
+    setStatus('ウォッチリストの保存に失敗しました（ローカルには保存済み）', 'yellow');
+  }
 }
 
 async function _loadWatchlistFromWorker() {
