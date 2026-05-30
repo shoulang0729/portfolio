@@ -3168,12 +3168,13 @@ function deriveDefault(p) {
 function computeRiskBreakdown(posList = positions) {
   const result = {};
   for (const dim of RISK_DIMENSIONS) {
-    result[dim] = { cats: {}, total: 0, known: 0, coverage: 0 };
+    result[dim] = { cats: {}, contributors: {}, total: 0, known: 0, coverage: 0 };
   }
   for (const p of posList) {
     const value = p.value || 0;
     if (value <= 0) continue;
     const entry = p.symbol && CONSTITUENTS[p.symbol] || deriveDefault(p);
+    const name = p.name || p.symbol || "";
     for (const dim of RISK_DIMENSIONS) {
       const map = entry[dim] || {};
       const bucket = result[dim];
@@ -3182,12 +3183,14 @@ function computeRiskBreakdown(posList = positions) {
         if (!w) continue;
         const v = value * w;
         bucket.cats[cat] = (bucket.cats[cat] || 0) + v;
+        (bucket.contributors[cat] || (bucket.contributors[cat] = [])).push({ symbol: p.symbol || "", name, value: v });
         known += v;
       }
       if (known > value) known = value;
       const unknown = value - known;
       if (unknown > 1e-6) {
         bucket.cats[UNKNOWN_KEY] = (bucket.cats[UNKNOWN_KEY] || 0) + unknown;
+        (bucket.contributors[UNKNOWN_KEY] || (bucket.contributors[UNKNOWN_KEY] = [])).push({ symbol: p.symbol || "", name, value: unknown });
       }
       bucket.total += value;
       bucket.known += known;
@@ -3212,6 +3215,11 @@ function toSlices(dimResult) {
     return b.value - a.value;
   });
   return entries;
+}
+function getContributors(dimResult, categoryKey) {
+  const list = dimResult.contributors && dimResult.contributors[categoryKey] || [];
+  const sum = list.reduce((s, c) => s + c.value, 0);
+  return list.map((c) => ({ ...c, pct: sum > 0 ? c.value / sum * 100 : 0 })).sort((a, b) => b.value - a.value);
 }
 
 // src/risk-charts.js
@@ -3298,6 +3306,9 @@ function buildChartCard(dim, dimResult) {
     pct.className = "risk-legend-pct";
     pct.textContent = fmtPctInt(s.pct);
     li.append(sw, name, pct);
+    li.addEventListener("mouseenter", (ev) => showLegendTip(ev, dim, s.key, dimResult));
+    li.addEventListener("mousemove", moveLegendTip);
+    li.addEventListener("mouseleave", hideLegendTip);
     legend.appendChild(li);
   });
   body.appendChild(legend);
@@ -3317,17 +3328,39 @@ function renderRiskCharts() {
   if (typeof d3 === "undefined") return;
   const breakdown = computeRiskBreakdown();
   wrap.textContent = "";
-  const total = breakdown.assetClass?.total || 0;
-  const head = document.createElement("div");
-  head.className = "risk-head";
-  head.textContent = `\u5BFE\u8C61\u8A55\u4FA1\u984D ${fmtJPYInt(total)}\u30FB\u4FDD\u6709\u3092\u69CB\u6210\u9298\u67C4\u307E\u3067\u900F\u904E\u3057\u3066\u96C6\u8A08`;
-  wrap.appendChild(head);
   const grid = document.createElement("div");
   grid.className = "risk-grid";
   for (const dim of RISK_DIMENSIONS) {
     grid.appendChild(buildChartCard(dim, breakdown[dim]));
   }
   wrap.appendChild(grid);
+  const src = document.createElement("div");
+  src.className = "risk-source";
+  src.textContent = "\u30C7\u30FC\u30BF\u30BD\u30FC\u30B9: \u4FA1\u683C = Finnhub / Yahoo Finance \u30FB \u8CC7\u7523\u30AF\u30E9\u30B9/\u901A\u8CA8/\u56FD/\u30BB\u30AF\u30BF\u30FC\u5206\u985E = \u9298\u67C4\u30DE\u30B9\u30BF\uFF08positions.js\u30FBconstituents.js\uFF09";
+  wrap.appendChild(src);
+}
+function showLegendTip(ev, dim, key, dimResult) {
+  const tip = document.getElementById("tooltip");
+  if (!tip) return;
+  const items = getContributors(dimResult, key).slice(0, 12);
+  const rows = items.map((c) => `${escapeHTML(c.name)}\u3000${fmtPctInt(c.pct)}`).join("<br>");
+  tip.innerHTML = `<div class="tt-hdr">${escapeHTML(labelOf(dim, key))}</div>${rows || "\u2015"}`;
+  tip.style.display = "block";
+  moveLegendTip(ev);
+}
+function moveLegendTip(ev) {
+  const tip = document.getElementById("tooltip");
+  if (!tip || tip.style.display !== "block") return;
+  const pad = 14;
+  const w = tip.offsetWidth || 240;
+  let left = ev.clientX + pad;
+  if (left + w > window.innerWidth - 8) left = ev.clientX - w - pad;
+  tip.style.left = `${Math.max(8, left)}px`;
+  tip.style.top = `${Math.min(ev.clientY + pad, window.innerHeight - tip.offsetHeight - 8)}px`;
+}
+function hideLegendTip() {
+  const tip = document.getElementById("tooltip");
+  if (tip) tip.style.display = "none";
 }
 
 // src/tabs.js
