@@ -110,13 +110,13 @@ async function _submitPin() {
     _shake('shake');
 
     if (_auth.fails >= AUTH_MAX_FAIL) {
-      _auth.lockedAt = Date.now();
+      _auth.lockedUntil = Date.now() + AUTH_LOCK_SEC * 1000;
       _saveLockout();
       _showError(`${AUTH_MAX_FAIL}回失敗。${_lockRemainMessage(AUTH_LOCK_SEC)}`);
       const _t = setInterval(() => {
         if (!_isLocked()) {
           clearInterval(_t);
-          _auth.fails = 0; _auth.lockedAt = null;
+          _auth.fails = 0; _auth.lockedUntil = null;
           _saveLockout();
           _setKeypadEnabled(true); _hideError();
         } else { _showError(_lockRemainMessage()); }
