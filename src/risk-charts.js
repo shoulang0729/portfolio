@@ -5,7 +5,7 @@
 // 地域・国 / セクター）で可視化する。各グラフに凡例とカバレッジ率を表示。
 // ══════════════════════════════════════════════════════════════
 
-import { computeRiskBreakdown, toSlices, RISK_DIMENSIONS, UNKNOWN_KEY, getContributors } from './risk-calc.js';
+import { computeRiskBreakdown, toSlices, RISK_DIMENSIONS, UNKNOWN_KEY, getContributors, getClassificationSummary } from './risk-calc.js';
 import { fmtJPYInt, fmtPctInt, escapeHTML } from './utils.js';
 import { cssVar } from './color.js';
 
@@ -169,6 +169,14 @@ export function renderRiskCharts() {
   const breakdown = computeRiskBreakdown();
 
   wrap.textContent = '';
+
+  // 分類状況サマリーバー（#217）
+  const sumInfo = getClassificationSummary();
+  const summary = document.createElement('div');
+  summary.className = 'risk-summary';
+  const warn = sumInfo.unclassified > 0 ? ' ⚠' : '';
+  summary.textContent = `対象 ${sumInfo.total} 銘柄　┃　分類済み ${sumInfo.classified}　┃　分類不明 ${sumInfo.unclassified}${warn}`;
+  wrap.appendChild(summary);
 
   const grid = document.createElement('div');
   grid.className = 'risk-grid';

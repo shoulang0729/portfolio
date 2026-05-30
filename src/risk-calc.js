@@ -124,3 +124,21 @@ export function getContributors(dimResult, categoryKey) {
     .map(c => ({ ...c, pct: sum > 0 ? (c.value / sum) * 100 : 0 }))
     .sort((a, b) => b.value - a.value);
 }
+
+/**
+ * 銘柄の分類状況サマリー（#217）。CONSTITUENTS にエントリがあれば分類済み。
+ * @param {Array<{symbol?: string, value?: number}>} [posList]
+ * @returns {{total: number, classified: number, unclassified: number, unclassifiedSymbols: string[]}}
+ */
+export function getClassificationSummary(posList = defaultPositions) {
+  let total = 0;
+  let classified = 0;
+  const unclassifiedSymbols = [];
+  for (const p of posList) {
+    if ((p.value || 0) <= 0) continue;
+    total++;
+    if (p.symbol && CONSTITUENTS[p.symbol]) classified++;
+    else unclassifiedSymbols.push(p.symbol || '');
+  }
+  return { total, classified, unclassified: total - classified, unclassifiedSymbols };
+}

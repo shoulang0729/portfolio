@@ -1,7 +1,7 @@
 // Tests for look-through risk aggregation in src/risk-calc.js
 
 import { describe, it, expect } from 'vitest';
-import { computeRiskBreakdown, toSlices, getContributors, RISK_DIMENSIONS, UNKNOWN_KEY } from '../src/risk-calc.js';
+import { computeRiskBreakdown, toSlices, getContributors, getClassificationSummary, RISK_DIMENSIONS, UNKNOWN_KEY } from '../src/risk-calc.js';
 
 describe('computeRiskBreakdown — synthetic positions', () => {
   it('maps a curated US stock fully (AAPL)', () => {
@@ -106,5 +106,19 @@ describe('computeRiskBreakdown — real portfolio', () => {
     expect(r.currency.cats.USD).toBeGreaterThan(0);
     // 円建て投信を透過するので、USD エクスポージャーは USD 建て保有額より大きいはず
     expect(r.currency.coverage).toBeGreaterThan(0.9);
+  });
+});
+
+describe('getClassificationSummary', () => {
+  it('counts classified vs unclassified by CONSTITUENTS membership', () => {
+    const r = getClassificationSummary([
+      { symbol: 'AAPL', value: 1000 },     // CONSTITUENTS にある
+      { symbol: 'NOPE_XYZ', value: 500 },  // 無い
+      { symbol: 'SKIP', value: 0 },        // value<=0 はスキップ
+    ]);
+    expect(r.total).toBe(2);
+    expect(r.classified).toBe(1);
+    expect(r.unclassified).toBe(1);
+    expect(r.unclassifiedSymbols).toEqual(['NOPE_XYZ']);
   });
 });
