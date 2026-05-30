@@ -34,10 +34,10 @@ function _getActivePinHash() {
 
 // ── 共有 internal state（auth-crypto / auth-passkey / auth-ui から参照） ──
 const _auth = {
-  input:    '',
-  fails:    0,
-  lockedAt: null,
-  encKey:   null,   // AES-GCM key（auth-crypto.js が _deriveEncKey でセット）
+  input:       '',
+  fails:       0,
+  lockedUntil: null,  // ロックアウト解除時刻 ms（旧 lockedAt から変更）
+  encKey:      null,  // AES-GCM key（auth-crypto.js が _deriveEncKey でセット）
 };
 
 // ── セッション確認（app.js からも参照） ──
@@ -52,8 +52,8 @@ async function _hashPin(pin) {
 }
 
 // ── ロックアウト ──
-function _isLocked()   { return _auth.lockedAt && (Date.now() - _auth.lockedAt) / 1000 < AUTH_LOCK_SEC; }
-function _lockRemain() { return Math.ceil(AUTH_LOCK_SEC - (Date.now() - _auth.lockedAt) / 1000); }
+function _isLocked()   { return _auth.lockedUntil != null && Date.now() < _auth.lockedUntil; }
+function _lockRemain() { return Math.ceil((_auth.lockedUntil - Date.now()) / 1000); }
 function _formatLockRemain(seconds) {
   const remain = Math.max(0, Math.ceil(seconds));
   if (remain >= 60) {
@@ -66,8 +66,8 @@ function _formatLockRemain(seconds) {
 
 // ロックアウト状態を localStorage に保存（リロード後も持続させる）
 function _saveLockout() {
-  if (_auth.lockedAt) {
-    localStorage.setItem(AUTH_LOCKOUT_KEY, String(_auth.lockedAt));
+  if (_auth.lockedUntil != null) {
+    localStorage.setItem(AUTH_LOCKOUT_KEY, String(_auth.lockedUntil));
   } else {
     localStorage.removeItem(AUTH_LOCKOUT_KEY);
   }
@@ -77,10 +77,10 @@ function _saveLockout() {
 (function _loadLockout() {
   const stored = localStorage.getItem(AUTH_LOCKOUT_KEY);
   if (!stored) return;
-  const ts = parseInt(stored, 10);
-  if (isNaN(ts)) { localStorage.removeItem(AUTH_LOCKOUT_KEY); return; }
-  if ((Date.now() - ts) / 1000 < AUTH_LOCK_SEC) {
-    _auth.lockedAt = ts;
+  const until = parseInt(stored, 10);
+  if (isNaN(until)) { localStorage.removeItem(AUTH_LOCKOUT_KEY); return; }
+  if (Date.now() < until) {
+    _auth.lockedUntil = until;
   } else {
     localStorage.removeItem(AUTH_LOCKOUT_KEY);
   }
