@@ -39,6 +39,10 @@
   margin-top: 14px;
   margin-bottom: 5px;
 }
+/* display:flex が [hidden] 属性を上書きしてしまうため明示的に打ち消す。
+   これがないと sl-controls 内の sl-eye（詳細列トグル）が Historical Heatmap
+   以外のタブでも表示される（#210 後半）。 */
+.sl-controls[hidden] { display: none; }
 .sl-eye-btn {
   background: none;
   border: 1px solid var(--border);
