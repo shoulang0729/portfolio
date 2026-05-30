@@ -1,11 +1,6 @@
 #!/bin/bash
 set -euo pipefail
 
-# Claude Code on the web (リモート環境) のみ実行
-if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
-  exit 0
-fi
-
 cd "$CLAUDE_PROJECT_DIR"
 
 echo "=== Session Start Hook ==="
@@ -24,7 +19,13 @@ echo "Installing npm dependencies..."
 npm install
 echo "✓ npm install OK"
 
-# 3. dist/app.js を最新ソースからビルド
+# --- 以下は web (リモート) 環境のみ ---
+if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
+  echo "=== Session Start Done (local) ==="
+  exit 0
+fi
+
+# 3. dist/app.js を最新ソースからビルド（web では node_modules が毎回リセットされるため）
 echo "Building dist/app.js..."
 npm run build
 echo "✓ build OK"
@@ -34,4 +35,4 @@ echo "Installing Playwright Chromium..."
 npx playwright install chromium 2>/dev/null && echo "✓ Playwright OK" \
   || echo "! Playwright install skipped (network restriction)"
 
-echo "=== Session Start Done ==="
+echo "=== Session Start Done (web) ==="
