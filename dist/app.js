@@ -2896,6 +2896,427 @@ function setupPriceUpdateListener() {
   });
 }
 
+// src/constituents.js
+var CONSTITUENTS = {
+  // ── 日本株・ETF ──
+  "1306": {
+    // NEXT FUNDS TOPIX連動型（日本株式の幅広い分散）
+    assetClass: { equity: 1 },
+    currency: { JPY: 1 },
+    country: { japan: 1 },
+    sector: {
+      tech: 0.14,
+      financials: 0.12,
+      industrials: 0.12,
+      consumer: 0.1,
+      comm: 0.08,
+      staples: 0.07,
+      materials: 0.07,
+      healthcare: 0.06,
+      utilities: 0.04,
+      realestate: 0.03,
+      energy: 0.01
+    }
+  },
+  "1615": {
+    // 東証銀行業ETF
+    assetClass: { equity: 1 },
+    currency: { JPY: 1 },
+    country: { japan: 1 },
+    sector: { financials: 1 }
+  },
+  "1629": {
+    // 商社・卸売ETF
+    assetClass: { equity: 1 },
+    currency: { JPY: 1 },
+    country: { japan: 1 },
+    sector: { industrials: 1 }
+  },
+  "200A": {
+    // 日経半導体ETF
+    assetClass: { equity: 1 },
+    currency: { JPY: 1 },
+    country: { japan: 1 },
+    sector: { semis: 1 }
+  },
+  "6301": {
+    // 小松製作所
+    assetClass: { equity: 1 },
+    currency: { JPY: 1 },
+    country: { japan: 1 },
+    sector: { industrials: 1 }
+  },
+  "8050": {
+    // セイコーグループ
+    assetClass: { equity: 1 },
+    currency: { JPY: 1 },
+    country: { japan: 1 },
+    sector: { consumer: 1 }
+  },
+  "9983": {
+    // ファーストリテイリング
+    assetClass: { equity: 1 },
+    currency: { JPY: 1 },
+    country: { japan: 1 },
+    sector: { consumer: 1 }
+  },
+  // ── 米国株・ETF ──
+  "AAPL": {
+    assetClass: { equity: 1 },
+    currency: { USD: 1 },
+    country: { us: 1 },
+    sector: { tech: 1 }
+  },
+  "AMZN": {
+    assetClass: { equity: 1 },
+    currency: { USD: 1 },
+    country: { us: 1 },
+    sector: { consumer: 1 }
+  },
+  "COPX": {
+    // 銅鉱山株ETF（グローバル鉱山企業）
+    assetClass: { equity: 1 },
+    currency: { USD: 0.55, other: 0.45 },
+    country: { global: 0.5, em: 0.3, us: 0.2 },
+    sector: { materials: 1 }
+  },
+  "GLDM": {
+    // 現物ゴールド
+    assetClass: { commodity: 1 },
+    currency: { USD: 1 },
+    country: { global: 1 },
+    sector: { nonEquity: 1 }
+  },
+  "GOOGL": {
+    assetClass: { equity: 1 },
+    currency: { USD: 1 },
+    country: { us: 1 },
+    sector: { tech: 1 }
+  },
+  "ILF": {
+    // iシェアーズ ラテンアメリカ40
+    assetClass: { equity: 1 },
+    currency: { other: 1 },
+    country: { latam: 1 },
+    sector: {
+      financials: 0.3,
+      materials: 0.25,
+      energy: 0.15,
+      staples: 0.15,
+      utilities: 0.07,
+      comm: 0.05
+    }
+  },
+  "JPST": {
+    // 超短期インカム（債券）
+    assetClass: { bond: 1 },
+    currency: { USD: 1 },
+    country: { us: 1 },
+    sector: { nonEquity: 1 }
+  },
+  "MSFT": {
+    assetClass: { equity: 1 },
+    currency: { USD: 1 },
+    country: { us: 1 },
+    sector: { tech: 1 }
+  },
+  "PLTR": {
+    assetClass: { equity: 1 },
+    currency: { USD: 1 },
+    country: { us: 1 },
+    sector: { tech: 1 }
+  },
+  "REMX": {
+    // レアアース・金属鉱山株ETF（中国比率高）
+    assetClass: { equity: 1 },
+    currency: { USD: 0.5, other: 0.5 },
+    country: { china: 0.4, global: 0.4, us: 0.2 },
+    sector: { materials: 1 }
+  },
+  "SHLD": {
+    // 防衛テックETF（米欧）
+    assetClass: { equity: 1 },
+    currency: { USD: 0.7, EUR: 0.3 },
+    country: { us: 0.6, europe: 0.4 },
+    sector: { industrials: 1 }
+  },
+  "SLV": {
+    // 現物シルバー
+    assetClass: { commodity: 1 },
+    currency: { USD: 1 },
+    country: { global: 1 },
+    sector: { nonEquity: 1 }
+  },
+  "SMH": {
+    // 半導体ETF（米中心・台韓含む）
+    assetClass: { equity: 1 },
+    currency: { USD: 0.8, other: 0.2 },
+    country: { us: 0.7, em: 0.2, europe: 0.1 },
+    sector: { semis: 1 }
+  },
+  "TSLA": {
+    assetClass: { equity: 1 },
+    currency: { USD: 1 },
+    country: { us: 1 },
+    sector: { consumer: 1 }
+  },
+  "XLE": {
+    // エネルギー・セレクト・セクターSPDR
+    assetClass: { equity: 1 },
+    currency: { USD: 1 },
+    country: { us: 1 },
+    sector: { energy: 1 }
+  },
+  // ── 投資信託 ──
+  "\u30AA\u30EB\u30AB\u30F3": {
+    // eMAXIS Slim 全世界株式（MSCI ACWI 連動・概算）
+    assetClass: { equity: 1 },
+    currency: { USD: 0.62, EUR: 0.1, JPY: 0.05, other: 0.23 },
+    country: { us: 0.62, japan: 0.05, europe: 0.13, em: 0.12, global: 0.08 },
+    sector: {
+      tech: 0.26,
+      financials: 0.16,
+      consumer: 0.11,
+      healthcare: 0.1,
+      industrials: 0.1,
+      comm: 0.075,
+      staples: 0.06,
+      energy: 0.04,
+      materials: 0.04,
+      utilities: 0.025,
+      realestate: 0.02
+    }
+  },
+  "\u3072\u3075\u307F": {
+    // ひふみ投信（アクティブ・日本中心）— セクターは判明分のみ
+    assetClass: { equity: 0.95, cash: 0.05 },
+    currency: { JPY: 0.95, USD: 0.05 },
+    country: { japan: 0.9, us: 0.1 },
+    // アクティブ運用のため全構成は非公開。上位の業種傾向のみ記載（残りは その他）
+    sector: {
+      tech: 0.12,
+      industrials: 0.12,
+      consumer: 0.1,
+      financials: 0.08,
+      comm: 0.06
+    }
+  },
+  "\u30DE\u30A4\u30AF\u30EDSP": {
+    // ひふみマイクロスコープpro（日本小型株・アクティブ）
+    assetClass: { equity: 0.95, cash: 0.05 },
+    currency: { JPY: 1 },
+    country: { japan: 1 },
+    sector: {
+      industrials: 0.16,
+      tech: 0.14,
+      consumer: 0.1,
+      materials: 0.08,
+      healthcare: 0.06
+    }
+  },
+  "\u3072\u3075\u307FXO": {
+    // ひふみクロスオーバーpro（国内外グロース・アクティブ）
+    assetClass: { equity: 0.95, cash: 0.05 },
+    currency: { JPY: 0.92, USD: 0.08 },
+    country: { japan: 0.88, us: 0.12 },
+    sector: {
+      tech: 0.16,
+      industrials: 0.12,
+      healthcare: 0.1,
+      consumer: 0.08,
+      comm: 0.06
+    }
+  },
+  "PIMCO-ST": {
+    // ピムコ ショート・ターム（短期債券）
+    assetClass: { bond: 1 },
+    currency: { USD: 1 },
+    country: { us: 0.6, global: 0.4 },
+    sector: { nonEquity: 1 }
+  }
+};
+
+// src/risk-calc.js
+var RISK_DIMENSIONS = ["assetClass", "currency", "country", "sector"];
+var UNKNOWN_KEY = "__unknown__";
+function deriveDefault(p) {
+  const cur = p.cur === "USD" ? "USD" : "JPY";
+  let country = null;
+  if (p.cat === "\u65E5\u672C\u682A\u30FBETF") country = "japan";
+  else if (p.cat === "\u7C73\u56FD\u682A\u30FBETF") country = "us";
+  return {
+    assetClass: { equity: 1 },
+    currency: { [cur]: 1 },
+    country: country ? { [country]: 1 } : {},
+    sector: {}
+    // 不明 → 残差として その他 に入る
+  };
+}
+function computeRiskBreakdown(posList = positions) {
+  const result = {};
+  for (const dim of RISK_DIMENSIONS) {
+    result[dim] = { cats: {}, total: 0, known: 0, coverage: 0 };
+  }
+  for (const p of posList) {
+    const value = p.value || 0;
+    if (value <= 0) continue;
+    const entry = p.symbol && CONSTITUENTS[p.symbol] || deriveDefault(p);
+    for (const dim of RISK_DIMENSIONS) {
+      const map = entry[dim] || {};
+      const bucket = result[dim];
+      let known = 0;
+      for (const [cat, w] of Object.entries(map)) {
+        if (!w) continue;
+        const v = value * w;
+        bucket.cats[cat] = (bucket.cats[cat] || 0) + v;
+        known += v;
+      }
+      if (known > value) known = value;
+      const unknown = value - known;
+      if (unknown > 1e-6) {
+        bucket.cats[UNKNOWN_KEY] = (bucket.cats[UNKNOWN_KEY] || 0) + unknown;
+      }
+      bucket.total += value;
+      bucket.known += known;
+    }
+  }
+  for (const dim of RISK_DIMENSIONS) {
+    const b = result[dim];
+    b.coverage = b.total > 0 ? b.known / b.total : 0;
+  }
+  return result;
+}
+function toSlices(dimResult) {
+  const total = dimResult.total || 0;
+  const entries = Object.entries(dimResult.cats).map(([key, value]) => ({
+    key,
+    value,
+    pct: total > 0 ? value / total * 100 : 0
+  }));
+  entries.sort((a, b) => {
+    if (a.key === UNKNOWN_KEY) return 1;
+    if (b.key === UNKNOWN_KEY) return -1;
+    return b.value - a.value;
+  });
+  return entries;
+}
+
+// src/risk-charts.js
+var TITLES = {
+  assetClass: "\u8CC7\u7523\u30AF\u30E9\u30B9",
+  currency: "\u901A\u8CA8\u30A8\u30AF\u30B9\u30DD\u30FC\u30B8\u30E3\u30FC",
+  country: "\u5730\u57DF\u30FB\u56FD",
+  sector: "\u30BB\u30AF\u30BF\u30FC"
+};
+var LABELS = {
+  assetClass: { equity: "\u682A\u5F0F", bond: "\u50B5\u5238", commodity: "\u30B3\u30E2\u30C7\u30A3\u30C6\u30A3", reit: "REIT", cash: "\u73FE\u91D1" },
+  currency: { JPY: "\u5186 JPY", USD: "\u30C9\u30EB USD", EUR: "\u30E6\u30FC\u30ED EUR", other: "\u305D\u306E\u4ED6\u901A\u8CA8" },
+  country: { japan: "\u65E5\u672C", us: "\u7C73\u56FD", europe: "\u6B27\u5DDE", em: "\u65B0\u8208\u56FD", latam: "\u4E2D\u5357\u7C73", china: "\u4E2D\u56FD", global: "\u30B0\u30ED\u30FC\u30D0\u30EB" },
+  sector: {
+    tech: "\u30C6\u30C3\u30AF",
+    semis: "\u534A\u5C0E\u4F53",
+    financials: "\u91D1\u878D",
+    healthcare: "\u30D8\u30EB\u30B9\u30B1\u30A2",
+    consumer: "\u4E00\u822C\u6D88\u8CBB\u8CA1",
+    staples: "\u751F\u6D3B\u5FC5\u9700\u54C1",
+    industrials: "\u8CC7\u672C\u8CA1",
+    energy: "\u30A8\u30CD\u30EB\u30AE\u30FC",
+    materials: "\u7D20\u6750",
+    comm: "\u901A\u4FE1",
+    utilities: "\u516C\u76CA",
+    realestate: "\u4E0D\u52D5\u7523",
+    nonEquity: "\u975E\u682A\u5F0F\uFF08\u30B3\u30E2/\u50B5\u5238\uFF09"
+  }
+};
+var PALETTE = [
+  "#cc785c",
+  "#6a8caf",
+  "#c2a36b",
+  "#7fa885",
+  "#a878a8",
+  "#d09a4e",
+  "#5f9ea0",
+  "#bd6b6b",
+  "#8a9a5b",
+  "#9d8df1",
+  "#d4a0b8",
+  "#7ba6c9"
+];
+var UNKNOWN_COLOR = "#9ca3af";
+function labelOf(dim, key) {
+  if (key === UNKNOWN_KEY) return "\u305D\u306E\u4ED6/\u4E0D\u660E";
+  return LABELS[dim]?.[key] || key;
+}
+function buildChartCard(dim, dimResult) {
+  const slices = toSlices(dimResult);
+  const card = document.createElement("div");
+  card.className = "risk-card";
+  const title = document.createElement("div");
+  title.className = "risk-card-title";
+  title.textContent = TITLES[dim];
+  card.appendChild(title);
+  const body = document.createElement("div");
+  body.className = "risk-card-body";
+  card.appendChild(body);
+  const size = 168;
+  const radius = size / 2;
+  const svg = d3.select(body).append("svg").attr("class", "risk-donut").attr("width", size).attr("height", size).attr("viewBox", `0 0 ${size} ${size}`).attr("role", "img").attr("aria-label", `${TITLES[dim]}\u306E\u69CB\u6210\u5186\u30B0\u30E9\u30D5`);
+  const g = svg.append("g").attr("transform", `translate(${radius},${radius})`);
+  const pie = d3.pie().value((d) => d.value).sort(null);
+  const arc = d3.arc().innerRadius(radius * 0.58).outerRadius(radius - 2);
+  const colorOf = (key, i) => key === UNKNOWN_KEY ? UNKNOWN_COLOR : PALETTE[i % PALETTE.length];
+  g.selectAll("path").data(pie(slices)).join("path").attr("d", arc).attr("fill", (d, i) => colorOf(d.data.key, i)).attr("stroke", cssVar("--surface") || "#fff").attr("stroke-width", 1.5).append("title").text((d) => `${labelOf(dim, d.data.key)}: ${fmtJPYInt(d.data.value)}\uFF08${fmtPctInt(d.data.pct)}\uFF09`);
+  const coverage = dimResult.coverage;
+  const center = g.append("text").attr("class", "risk-donut-center");
+  center.append("tspan").attr("x", 0).attr("dy", "-0.1em").attr("fill", cssVar("--text") || "#000").attr("font-size", "13px").attr("font-weight", "700").attr("text-anchor", "middle").text(`${Math.round(coverage * 100)}%`);
+  center.append("tspan").attr("x", 0).attr("dy", "1.3em").attr("fill", cssVar("--text2") || "#666").attr("font-size", "9px").attr("text-anchor", "middle").text("\u5224\u660E");
+  const legend = document.createElement("ul");
+  legend.className = "risk-legend";
+  slices.forEach((s, i) => {
+    const li = document.createElement("li");
+    li.className = "risk-legend-item";
+    const sw = document.createElement("span");
+    sw.className = "risk-legend-swatch";
+    sw.style.background = colorOf(s.key, i);
+    const name = document.createElement("span");
+    name.className = "risk-legend-name";
+    name.textContent = labelOf(dim, s.key);
+    const pct = document.createElement("span");
+    pct.className = "risk-legend-pct";
+    pct.textContent = fmtPctInt(s.pct);
+    li.append(sw, name, pct);
+    legend.appendChild(li);
+  });
+  body.appendChild(legend);
+  if (coverage < 0.99) {
+    const note = document.createElement("div");
+    note.className = "risk-coverage-note";
+    note.textContent = `\u5224\u660E\u7387 ${Math.round(coverage * 100)}%\uFF08\u6B8B\u308A\u306F\u300C\u305D\u306E\u4ED6/\u4E0D\u660E\u300D\uFF09`;
+    card.appendChild(note);
+  }
+  return card;
+}
+function renderRiskCharts() {
+  const panel = document.getElementById("panel-risk");
+  if (!panel || panel.hidden) return;
+  const wrap = document.getElementById("risk-charts-wrap");
+  if (!wrap) return;
+  if (typeof d3 === "undefined") return;
+  const breakdown = computeRiskBreakdown();
+  wrap.textContent = "";
+  const total = breakdown.assetClass?.total || 0;
+  const head = document.createElement("div");
+  head.className = "risk-head";
+  head.textContent = `\u5BFE\u8C61\u8A55\u4FA1\u984D ${fmtJPYInt(total)}\u30FB\u4FDD\u6709\u3092\u69CB\u6210\u9298\u67C4\u307E\u3067\u900F\u904E\u3057\u3066\u96C6\u8A08`;
+  wrap.appendChild(head);
+  const grid = document.createElement("div");
+  grid.className = "risk-grid";
+  for (const dim of RISK_DIMENSIONS) {
+    grid.appendChild(buildChartCard(dim, breakdown[dim]));
+  }
+  wrap.appendChild(grid);
+}
+
 // src/tabs.js
 function switchTab(name) {
   if (state.activeTab === name) return;
@@ -2907,10 +3328,12 @@ function switchTab(name) {
   const panelHeatmap = document.getElementById("panel-heatmap");
   const panelList = document.getElementById("panel-list");
   const panelWatchlist = document.getElementById("panel-watchlist");
+  const panelRisk = document.getElementById("panel-risk");
   const panelAi = document.getElementById("panel-ai");
   if (panelHeatmap) panelHeatmap.hidden = name !== "heatmap";
   if (panelList) panelList.hidden = name !== "list";
   if (panelWatchlist) panelWatchlist.hidden = name !== "watchlist";
+  if (panelRisk) panelRisk.hidden = name !== "risk";
   if (panelAi) panelAi.hidden = name !== "ai";
   document.querySelectorAll(".tab-btn[data-tab]").forEach((b) => {
     const isActive = b.dataset.tab === name;
@@ -2934,6 +3357,7 @@ function switchTab(name) {
       fetchWatchlistData();
     })();
   }
+  if (name === "risk") renderRiskCharts();
 }
 
 // src/init.js
@@ -4083,9 +4507,11 @@ function init() {
   document.querySelectorAll(".period-btn[data-period]").forEach((b) => b.classList.toggle("active", b.dataset.period === "1d"));
   const panelList = document.getElementById("panel-list");
   const panelWatchlist = document.getElementById("panel-watchlist");
+  const panelRisk = document.getElementById("panel-risk");
   const panelAi = document.getElementById("panel-ai");
   if (panelList) panelList.hidden = true;
   if (panelWatchlist) panelWatchlist.hidden = true;
+  if (panelRisk) panelRisk.hidden = true;
   if (panelAi) panelAi.hidden = true;
   renderStats();
   const _stats = document.getElementById("stats");
@@ -4104,7 +4530,7 @@ function init() {
   requestAnimationFrame(updateActiveTableHeight);
   try {
     const lastTab = localStorage.getItem("hm-active-tab");
-    if (lastTab && lastTab !== "heatmap" && ["list", "watchlist"].includes(lastTab)) {
+    if (lastTab && lastTab !== "heatmap" && ["list", "watchlist", "risk"].includes(lastTab)) {
       requestAnimationFrame(() => switchTab(lastTab));
     } else if (lastTab === "ai") {
       localStorage.removeItem("hm-active-tab");
