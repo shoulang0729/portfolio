@@ -3408,8 +3408,6 @@ function switchTab(name) {
   const wlSearch = document.getElementById("wl-search-wrap");
   if (slControls) slControls.hidden = name !== "list";
   if (wlSearch) wlSearch.hidden = name !== "watchlist";
-  const statsEye = document.getElementById("stats-eye");
-  if (statsEye) statsEye.style.display = name === "list" ? "" : "none";
   if (name === "heatmap") {
     renderHeatmap();
     requestAnimationFrame(() => requestAnimationFrame(updateHeatmapHeight));
@@ -4603,7 +4601,6 @@ function init() {
   if (_eye) _eye.classList.toggle("hidden", !state.statsVisible);
   const _eyeSlash = document.getElementById("eye-slash");
   if (_eyeSlash) _eyeSlash.style.display = state.statsVisible ? "none" : "";
-  if (_eye) _eye.style.display = state.activeTab === "list" ? "" : "none";
   updateSlColStyle();
   const _slEye = document.getElementById("sl-eye-btn");
   if (_slEye) _slEye.classList.toggle("hidden", !state.slDetailVisible);
