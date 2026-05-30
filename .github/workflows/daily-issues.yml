@@ -2,7 +2,7 @@ name: Daily Issues Auto-Fix
 
 on:
   schedule:
-    - cron: '0 0 * * *'   # 毎日 0:00 UTC = 9:00 JST
+    - cron: '0 21 * * *'  # 毎日 21:00 UTC（前日）= 6:00 JST
   workflow_dispatch:        # 手動実行（テスト用）
 
 permissions:
