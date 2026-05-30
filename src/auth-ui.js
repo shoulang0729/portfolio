@@ -339,12 +339,13 @@ function openPinChange() {
     </div>`;
   document.body.appendChild(ov);
 
-  ov._kbHandler = e => {
+  const ac = new AbortController();
+  ov._kbAbort = ac;
+  document.addEventListener('keydown', e => {
     if (e.key >= '0' && e.key <= '9') pcKeyPress(e.key);
     else if (e.key === 'Backspace') pcBackspace();
     else if (e.key === 'Escape') closePinChange();
-  };
-  document.addEventListener('keydown', ov._kbHandler);
+  }, { signal: ac.signal });
 
   requestAnimationFrame(() => requestAnimationFrame(() => { ov.style.opacity = '1'; }));
 }
@@ -352,7 +353,7 @@ function openPinChange() {
 function closePinChange() {
   const ov = document.getElementById('pc-overlay');
   if (!ov) return;
-  if (ov._kbHandler) document.removeEventListener('keydown', ov._kbHandler);
+  if (ov._kbAbort) ov._kbAbort.abort();
   ov.style.opacity = '0';
   setTimeout(() => ov.remove(), 350);
 }

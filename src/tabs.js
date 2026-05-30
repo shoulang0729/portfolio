@@ -53,11 +53,11 @@ export function switchTab(name) {
   }
 
   if (name === 'watchlist') {
-    requestAnimationFrame(() => requestAnimationFrame(updateWatchlistHeight));
-    _loadWatchlistFromWorker().then(() => {
+    (async () => {
+      await _loadWatchlistFromWorker();
       renderWatchlist();
       updateWatchlistHeight();
       fetchWatchlistData();
-    });
+    })();
   }
 }

@@ -32,10 +32,28 @@ function renderHeatmap() {
     } else {
       console.warn('[heatmap] clientWidth=0 が継続 → 描画中止');
       _heatmapRetryCount = 0;
+      if (wrap && typeof IntersectionObserver !== 'undefined') {
+        const obs = new IntersectionObserver(entries => {
+          if (entries[0]?.isIntersecting) {
+            obs.disconnect();
+            renderHeatmap();
+          }
+        });
+        obs.observe(wrap);
+      }
+      if (!document.getElementById('heatmap-retry-msg')) {
+        const el = document.createElement('p');
+        el.id = 'heatmap-retry-msg';
+        el.style.cssText = 'text-align:center;padding:16px;color:var(--text2);font-size:13px;';
+        el.textContent = 'ヒートマップを表示できませんでした。再読み込みしてください。';
+        wrap.appendChild(el);
+      }
     }
     return;
   }
   _heatmapRetryCount = 0;
+  const retryMsg = document.getElementById('heatmap-retry-msg');
+  if (retryMsg) retryMsg.remove();
   // モバイル（幅600px未満）は縦長比率を高く（画面を有効活用）
   const aspectRatio = W < C.MOBILE_BREAKPOINT ? C.HEATMAP_ASPECT_MOB : C.HEATMAP_ASPECT_DSK;
   const minH = W < C.MOBILE_BREAKPOINT ? C.HEATMAP_MINH_MOB : C.HEATMAP_MINH_DSK;
