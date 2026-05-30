@@ -145,8 +145,10 @@ jobs:
 
           COMMIT_MSG=$(python3 - <<'PYEOF'
           import json
+          from datetime import date
           data = json.load(open(".fix-manifest.json"))
-          lines = ["fix: daily auto-fix $(date +%Y-%m-%d)", ""]
+          today = date.today().strftime("%Y-%m-%d")
+          lines = [f"fix: daily auto-fix {today}", ""]
           for item in data["processed"]:
               lines.append(f"- #{item['number']}: {item.get('summary', item['title'])}")
           print("\n".join(lines))
