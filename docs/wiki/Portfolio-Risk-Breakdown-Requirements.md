@@ -1,8 +1,11 @@
 # ポートフォリオ・リスク断面タブ 要件定義
 
-新タブ「リスク断面」の要件定義。複数の円グラフでポートフォリオの**リスクの取り方**（通貨・国/地域・セクター・資産クラス）を可視化する。本ページは要件定義であり、実装は次フェーズ。
+新タブ「リスク断面」の要件定義。複数の円グラフでポートフォリオの**リスクの取り方**（通貨・国/地域・セクター・資産クラス）を可視化する。
 
-> ステータス: ドラフト（要件定義） / 作成: 2026-05-30
+> ステータス: **Phase A 実装済み（[PR #199](https://github.com/shoulang0729/portfolio/pull/199)・v=20260530A）／ Phase B 未実装** / 作成: 2026-05-30
+>
+> - **Phase A（実装済み）**: フロント完結。curated 分解データ + look-through 集計 + D3 ドーナツ4枚 + タブ。
+> - **Phase B（未実装）**: Worker `/etf/constituents` + Cron 週次 + 公式 CSV による ETF のライブ構成銘柄化。実装可能単位は §9 と GitHub Issue を参照。
 
 ---
 
@@ -144,13 +147,39 @@ Web スクレイピングは**非推奨**: (a) 上位10止まりで "フル" に
 
 ---
 
-## 9. 実装フェーズ概要（次フェーズの目安）
+## 9. 実装フェーズ
 
-1. **データモデル**: `constituents` テーブル + `data/constituents-overrides.json` 定義
-2. **Worker**: `/etf/constituents` ルート + Cron 週次取得 + KV キャッシュ
-3. **クライアント**: 構成銘柄キャッシュ（IDB）+ look-through 集計関数（`src/portfolio-calc.js` 拡張）
-4. **UI**: `src/risk-charts.js`（D3 pie）+ 新タブ配線
-5. **テスト**: 集計関数の単体テスト（vitest）
+### Phase A（実装済み・[PR #199](https://github.com/shoulang0729/portfolio/pull/199)）
+
+フロント完結。外部依存ゼロで即動作・テスト可能。
+
+- `src/constituents.js`: 保有銘柄の curated look-through 分解表（4軸ウェイト・summary 形式）
+- `src/risk-calc.js`: `value × ウェイト` 集計・残差は「その他/不明」・軸別カバレッジ算出（DOM 非依存）
+- `src/risk-charts.js`: D3 ドーナツ4枚 + 凡例 + 中央カバレッジ% + ホバー
+- `assets/02-tables.css` / `index.html` / `tabs.js` / `app.js`: スタイル + タブ配線
+- `tests/risk-calc.test.js`: 集計ロジック単体テスト8件
+
+### Phase B（未実装・ETF をライブ構成銘柄化）
+
+curated を実データに置換し、ETF/ファンドを公式保有データで透過する。実装可能単位
+（GitHub Issue 化済み。`enhancement` ラベル）:
+
+| # | 単位 | 概要 | 目安 |
+|---|---|---|---|
+| B1 | Worker `/etf/constituents` ルート + KV キャッシュ | `GET /etf/constituents?symbol=` で正規化済み holdings を返す。KV 鍵 `constituents:<symbol>`・`asOf` 付き | medium |
+| B2 | ETF 公式保有 CSV アダプタ | iShares/Vanguard 等の日次フル保有 CSV を取得・パースし正規化 holdings に変換（CORS は Worker 経由） | hard |
+| B3 | Yahoo `topHoldings` フォールバック | CSV 非対応銘柄向けに `quoteSummary?modules=topHoldings,fundProfile` でセクター比率+上位10+資産配分を取得 | medium |
+| B4 | 個別株の属性付与（Finnhub `/stock/profile2`） | 個別株のセクター（`finnhubIndustry`）・国を取得しキャッシュ。curated 依存を削減 | easy |
+| B5 | Cron 週次ローテーション取得 | 既存 `scheduled()` を拡張し数銘柄/実行で構成を更新。鮮度 `asOf > 7日` で再取得 | medium |
+| B6 | クライアント側 構成銘柄キャッシュ（IndexedDB） | `historical-cache.js` パターンを踏襲し `constituents:<symbol>` を IDB 永続化 | medium |
+| B7 | `risk-calc` を holdings-list 対応に拡張 | 現状の summary 形式に加え、Level 2 の holdings list からも per-dim 集計できるアダプタを追加 | medium |
+| B8 | curated を `data/constituents-overrides.json` 化 + ロード/マージ | curated を JSON 外出しし、live データと優先順位マージ（live > curated > 既定推定） | easy |
+| B9 | カバレッジ/鮮度/ソースの UI 表示強化 | `asOf` 表示・ソースバッジ（live/curated/推定）・古いデータの注意表示 | easy |
+
+> 依存関係の目安: B1 ←(B2,B3) / B7 は B2,B3 の正規化形式に依存 / B8 は B7 と統合 / B5 は B1 完了後 / B6・B9 は独立。
+> 1 Task = 1 ブランチ = 1 PR = 1 Issue。`Closes` は各 Issue の最終 PR のみ。
+
+**対応 Issue**: B1 [#200](https://github.com/shoulang0729/portfolio/issues/200) ／ B2 [#201](https://github.com/shoulang0729/portfolio/issues/201) ／ B3 [#202](https://github.com/shoulang0729/portfolio/issues/202) ／ B4 [#203](https://github.com/shoulang0729/portfolio/issues/203) ／ B5 [#204](https://github.com/shoulang0729/portfolio/issues/204) ／ B6 [#205](https://github.com/shoulang0729/portfolio/issues/205) ／ B7 [#206](https://github.com/shoulang0729/portfolio/issues/206) ／ B8 [#207](https://github.com/shoulang0729/portfolio/issues/207) ／ B9 [#208](https://github.com/shoulang0729/portfolio/issues/208)
 
 ---
 
