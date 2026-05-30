@@ -48,61 +48,128 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Configure Claude Code permissions for CI
-        run: |
-          mkdir -p .claude
-          printf '%s\n' '{"permissions":{"allow":["Bash(*)","Read","Write","Edit","MultiEdit","Glob","Grep","LS","TodoWrite"]}}' > .claude/settings.json
-          echo "=== .claude/settings.json ===" && cat .claude/settings.json
-
-      - name: Run Claude Code to fix issues and create PR
+      - name: Run Claude Code to fix issues
         uses: anthropics/claude-code-action@beta
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           mode: agent
           model: claude-sonnet-4-6
-          allowed_tools: "Bash(*),Read,Write,Edit,MultiEdit,Glob,Grep,LS,TodoWrite"
+          allowed_tools: "Read,Write,Edit,MultiEdit,Glob,Grep,LS,TodoWrite"
           direct_prompt: |
             ワークスペースの `open-issues.json` に現在の GitHub open issues が保存されています。
             このファイルを読んで以下の手順で処理してください。
 
             ## Step 1: issues を評価
-            `open-issues.json` を読む。空配列なら「No open issues today.」と出力して終了。
+            `open-issues.json` を読む。空配列なら `.fix-manifest.json` を
+            `{"processed":[],"skipped":[]}` として書いて終了。
+
             各 issue について判断する：
-            - **"Wait" ラベルが付いている** → コメントなしで静かにスキップ
-            - **実装可能** → Step 2 へ
-            - **要件が曖昧・破壊的変更・承認が必要** → 以下でスキップ理由を記録して次の issue へ:
-              ```
-              gh issue comment <number> --body "⚠️ **自動修正をスキップしました**\n\n理由: <具体的な理由>\n\n対応が必要な場合は手動で確認・承認してください。"
-              ```
+            - **"Wait" ラベルが付いている** → skipped に `{"number":<n>,"title":"<t>","reason":"Wait ラベル"}` を追加してスキップ
+            - **実装可能** → Step 2 へ（processed に追加予定）
+            - **要件が曖昧・破壊的変更・承認が必要** → skipped に `{"number":<n>,"title":"<t>","reason":"<具体的な理由>"}` を追加してスキップ
 
-            ## Step 2: 作業ブランチを作成（実装する issue が 1 件以上の場合のみ）
-            ```
-            git checkout -b auto-fix/$(date +%Y%m%d)
-            ```
-
-            ## Step 3: 各 issue を実装
-            - issue の内容を読んでコードを修正・追加する
-            - 実装できなかった issue は `gh issue comment` でスキップ理由を残す
-            - 1つの issue を修正したら `git commit -m "fix: #<issue番号> <概要>"` でコミット
-
-            ## Step 4: テストを実行
-            ```
-            npm test
-            ```
-            失敗した場合は原因を修正してから次へ進む。
-
-            ## Step 5: push して PR 作成（実装 issue が 1 件以上の場合のみ）
-            ```
-            git push -u origin auto-fix/$(date +%Y%m%d)
-            gh pr create \
-              --title "[Auto] Daily issues fix $(date +%Y-%m-%d)" \
-              --body "対応した issue の一覧と実装サマリー（Closes #N 形式）"
-            ```
-            実装した issue が 0 件の場合は PR を作成しない。
+            ## Step 2: 各 issue を実装
+            実装可能な issue を1件ずつコードを修正・追加する。
+            - 実装できなかった issue は skipped に追加する（reason に理由を記入）
+            - 実装成功したら processed に `{"number":<n>,"title":"<t>","summary":"<実装内容1行概要>"}` を追加する
 
             ## 注意事項
-            - index.html の `?v=` バージョンを上げる（現在の日付 + 連番で更新）
+            - index.html の `?v=` バージョンを上げる（YYYYMMDD + 連番、例: 20260530A）
             - sw.js の CACHE は index.html の `?v=` から動的生成されるため変更不要
             - 破壊的な変更は行わない
-            - テストが最終的にパスしていることを確認してから PR を作成する
+            - git / npm / gh コマンドは一切実行しないこと（実行しても失敗します）
+            - ファイル編集のみ行い、最後に `.fix-manifest.json` を書いて終了すること
+
+            ## Step 3: マニフェスト書き出し
+            処理結果を `.fix-manifest.json` として書き出す（JSON のみ、コードブロック不要）：
+            ```
+            {
+              "processed": [
+                {"number": 123, "title": "issue タイトル", "summary": "実装内容の概要"}
+              ],
+              "skipped": [
+                {"number": 124, "title": "issue タイトル", "reason": "スキップ理由"}
+              ]
+            }
+            ```
+
+      - name: Run tests, commit, push and create PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # マニフェストが存在するか確認
+          if [ ! -f .fix-manifest.json ]; then
+            echo "::warning::No .fix-manifest.json found — Claude Code may have failed"
+            exit 0
+          fi
+
+          echo "=== Manifest ===" && cat .fix-manifest.json
+
+          PROCESSED_COUNT=$(python3 -c 'import json; print(len(json.load(open(".fix-manifest.json"))["processed"]))')
+          SKIPPED_COUNT=$(python3 -c 'import json; print(len(json.load(open(".fix-manifest.json"))["skipped"]))')
+          echo "Processed: $PROCESSED_COUNT, Skipped: $SKIPPED_COUNT"
+
+          # スキップした issue にコメント（Wait ラベルは静かにスキップ）
+          python3 - <<'PYEOF'
+          import json, subprocess
+          data = json.load(open(".fix-manifest.json"))
+          for item in data.get("skipped", []):
+              reason = item.get("reason", "")
+              if reason == "Wait ラベル":
+                  continue
+              body = f"⚠️ **自動修正をスキップしました**\n\n理由: {reason}\n\n対応が必要な場合は手動で確認・承認してください。"
+              subprocess.run(
+                  ["gh", "issue", "comment", str(item["number"]), "--body", body],
+                  check=False
+              )
+          PYEOF
+
+          if [ "$PROCESSED_COUNT" -eq 0 ]; then
+            echo "No issues processed — skipping PR creation"
+            exit 0
+          fi
+
+          # テスト実行
+          echo "=== Running tests ==="
+          if ! npm test; then
+            echo "::error::Tests failed — aborting PR creation"
+            exit 1
+          fi
+
+          # ブランチ作成・コミット・プッシュ
+          BRANCH="auto-fix/$(date +%Y%m%d)"
+          git checkout -b "$BRANCH"
+          git add -A
+          git status --short
+
+          COMMIT_MSG=$(python3 - <<'PYEOF'
+          import json
+          data = json.load(open(".fix-manifest.json"))
+          lines = ["fix: daily auto-fix $(date +%Y-%m-%d)", ""]
+          for item in data["processed"]:
+              lines.append(f"- #{item['number']}: {item.get('summary', item['title'])}")
+          print("\n".join(lines))
+          PYEOF
+          )
+
+          git commit -m "$COMMIT_MSG"
+          git push -u origin "$BRANCH"
+
+          # PR body 生成
+          PR_BODY=$(python3 - <<'PYEOF'
+          import json
+          data = json.load(open(".fix-manifest.json"))
+          lines = ["## 対応 Issues", ""]
+          for item in data["processed"]:
+              lines.append(f"- #{item['number']}: {item['title']} — {item.get('summary', '')}")
+          lines.append("")
+          for item in data["processed"]:
+              lines.append(f"Closes #{item['number']}")
+          print("\n".join(lines))
+          PYEOF
+          )
+
+          gh pr create \
+            --title "[Auto] Daily issues fix $(date +%Y-%m-%d)" \
+            --body "$PR_BODY"
