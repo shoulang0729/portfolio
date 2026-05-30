@@ -21,7 +21,7 @@ describe('PIN lockout', () => {
     localStorage.clear();
     sessionStorage.clear();
     authPin._auth.fails = 0;
-    authPin._auth.lockedAt = null;
+    authPin._auth.lockedUntil = null;
   });
 
   it('uses a five-minute lockout', () => {
@@ -36,7 +36,7 @@ describe('PIN lockout', () => {
 
   it('keeps authentication locked during the five-minute window', () => {
     vi.spyOn(Date, 'now').mockReturnValue(1_000_000);
-    authPin._auth.lockedAt = 1_000_000 - 299_000;
+    authPin._auth.lockedUntil = 1_000_000 + 1_000; // 1 秒後に解除
 
     expect(authPin._isLocked()).toBe(true);
     expect(authPin._lockRemain()).toBe(1);
