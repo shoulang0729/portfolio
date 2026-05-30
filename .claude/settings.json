@@ -7,7 +7,12 @@
       "Bash(npm install*)",
       "Bash(npm run*)",
       "Bash(curl *)",
-      "Bash(node *)"
+      "Bash(node *)",
+      "Bash(npx eslint*)",
+      "Bash(npx vitest*)",
+      "Bash(npx madge*)",
+      "Bash(npx tsc*)",
+      "Bash(npx prettier*)"
     ]
   },
   "hooks": {
