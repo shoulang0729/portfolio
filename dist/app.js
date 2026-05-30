@@ -2882,9 +2882,22 @@ function updateWatchlistHeight() {
   const h = Math.max(160, window.innerHeight - stickyH - padBot - 4);
   wrap.style.maxHeight = `${h}px`;
 }
+function updateHeatmapHeight() {
+  const panel = document.getElementById("panel-heatmap");
+  if (!panel || panel.hidden) return;
+  const sticky = document.querySelector(".sticky-top");
+  const stickyH = sticky instanceof HTMLElement ? sticky.offsetHeight : 0;
+  const padBot = parseFloat(getComputedStyle(document.body).paddingBottom) || 16;
+  const h = Math.max(200, window.innerHeight - stickyH - padBot - 4);
+  panel.style.maxHeight = `${h}px`;
+}
 function updateActiveTableHeight() {
   if (state.activeTab === "watchlist") {
     updateWatchlistHeight();
+    return;
+  }
+  if (state.activeTab === "heatmap") {
+    updateHeatmapHeight();
     return;
   }
   updateListHeight();
@@ -3344,7 +3357,12 @@ function switchTab(name) {
   const wlSearch = document.getElementById("wl-search-wrap");
   if (slControls) slControls.hidden = name !== "list";
   if (wlSearch) wlSearch.hidden = name !== "watchlist";
-  if (name === "heatmap") renderHeatmap();
+  const statsEye = document.getElementById("stats-eye");
+  if (statsEye) statsEye.style.display = name === "list" ? "" : "none";
+  if (name === "heatmap") {
+    renderHeatmap();
+    requestAnimationFrame(() => requestAnimationFrame(updateHeatmapHeight));
+  }
   if (name === "list") {
     renderStockList();
     requestAnimationFrame(() => requestAnimationFrame(updateListHeight));
@@ -3792,7 +3810,9 @@ function _mfAssetToPosition(a) {
 
 // src/import-ui.js
 var _importState = { source: null, parsed: [], current: [], pendingPositions: [] };
+var _importGen = 0;
 function openImportModal(source) {
+  _importGen++;
   _importState = { source, parsed: [], current: [...positions] };
   const overlay = document.getElementById("import-modal-overlay");
   const title = document.getElementById("import-modal-title");
@@ -3803,6 +3823,7 @@ function openImportModal(source) {
   requestAnimationFrame(() => overlay.classList.add("open"));
 }
 function openManagePositionsModal() {
+  _importGen++;
   const normalized = positions.map(canonicalizeFundPosition);
   _importState = { source: "manage", parsed: normalized, current: [...positions] };
   const overlay = document.getElementById("import-modal-overlay");
@@ -3814,6 +3835,7 @@ function openManagePositionsModal() {
   requestAnimationFrame(() => overlay.classList.add("open"));
 }
 function closeImportModal() {
+  _importGen++;
   const overlay = document.getElementById("import-modal-overlay");
   if (!overlay) return;
   overlay.classList.remove("open");
@@ -3995,18 +4017,20 @@ async function _confirmImport() {
   }
   finalPositions = finalPositions.map(canonicalizeFundPosition);
   finalPositions = mergeDuplicatePositions(finalPositions);
+  const gen = _importGen;
   _importState.pendingPositions = finalPositions;
   _renderImportStep("saving");
-  await _doSavePositions(finalPositions);
+  await _doSavePositions(finalPositions, void 0, gen);
 }
-async function _doSavePositions(finalPositions, pinHashOverride) {
+async function _doSavePositions(finalPositions, pinHashOverride, gen) {
+  const stale = () => gen !== void 0 && gen !== _importGen;
   try {
     await savePositionsToKV(finalPositions, pinHashOverride);
     positions.splice(0, positions.length, ...finalPositions);
     await clearHistoricalIDB();
     clearCacheSession();
     state.lastUpdateText = null;
-    _renderImportStep("done", `${finalPositions.length}\u9298\u67C4\u3092\u4FDD\u5B58\u3057\u307E\u3057\u305F`);
+    if (!stale()) _renderImportStep("done", `${finalPositions.length}\u9298\u67C4\u3092\u4FDD\u5B58\u3057\u307E\u3057\u305F`);
     setTimeout(() => {
       document.dispatchEvent(new CustomEvent("hm:prices-updated"));
       renderStockList();
@@ -4014,6 +4038,7 @@ async function _doSavePositions(finalPositions, pinHashOverride) {
       refreshPrices();
     }, 300);
   } catch (e) {
+    if (stale()) return;
     if (e.message.includes("PIN\u8A8D\u8A3C\u5931\u6557")) {
       _renderImportStep("pin-auth");
     } else if (e.name === "AbortError" || e.message.includes("aborted")) {
@@ -4024,6 +4049,7 @@ async function _doSavePositions(finalPositions, pinHashOverride) {
   }
 }
 async function _retryWithPin() {
+  const gen = _importGen;
   const pinInput = document.getElementById("import-pin-input");
   const pin = pinInput?.value?.trim();
   if (!pin) {
@@ -4031,6 +4057,7 @@ async function _retryWithPin() {
     return;
   }
   const pinHash = await _hashPin(pin);
+  if (gen !== _importGen) return;
   localStorage.setItem("hm-pin-hash", pinHash);
   const finalPositions = _importState.pendingPositions;
   if (!finalPositions?.length) {
@@ -4038,14 +4065,16 @@ async function _retryWithPin() {
     return;
   }
   _renderImportStep("saving");
-  await _doSavePositions(finalPositions, pinHash);
+  await _doSavePositions(finalPositions, pinHash, gen);
 }
 async function handleManexFileSelect(event) {
+  const gen = _importGen;
   const files = Array.from(event.target.files || []);
   event.target.value = "";
   if (files.length === 0) return;
   _renderImportStep("loading", "CSV\u3092\u89E3\u6790\u4E2D...");
   const parsed = await parseManexFiles(files);
+  if (gen !== _importGen) return;
   if (!parsed || parsed.length === 0) {
     _renderImportStep("error", "CSV\u3092\u89E3\u6790\u3067\u304D\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u30DE\u30CD\u30C3\u30AF\u30B9\u8A3C\u5238\u306ECSV\u30D5\u30A1\u30A4\u30EB\u3092\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\u3002");
     return;
@@ -4054,12 +4083,14 @@ async function handleManexFileSelect(event) {
   _renderImportStep("review");
 }
 async function handleMoneyForwardImageSelect(event) {
+  const gen = _importGen;
   const file = event.target.files?.[0];
   event.target.value = "";
   if (!file) return;
   _renderImportStep("loading", "AI\u3067\u8CC7\u7523\u60C5\u5831\u3092\u8AAD\u307F\u53D6\u308A\u4E2D...");
   try {
     const parsed = await parseMoneyForwardImage(file);
+    if (gen !== _importGen) return;
     if (parsed.length === 0) {
       _renderImportStep("error", "AI\u304C\u8CC7\u7523\u60C5\u5831\u3092\u691C\u51FA\u3067\u304D\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u8CC7\u7523\u4E00\u89A7\u304C\u5199\u3063\u305F\u30B9\u30AF\u30EA\u30FC\u30F3\u30B7\u30E7\u30C3\u30C8\u3092\u304A\u8A66\u3057\u304F\u3060\u3055\u3044\u3002");
       return;
@@ -4067,6 +4098,7 @@ async function handleMoneyForwardImageSelect(event) {
     _importState.parsed = parsed;
     _renderImportStep("review");
   } catch (e) {
+    if (gen !== _importGen) return;
     console.error("[import-ui] MF image handler error:", e);
     _renderImportStep("error", e.message);
   }
@@ -4520,6 +4552,7 @@ function init() {
   if (_eye) _eye.classList.toggle("hidden", !state.statsVisible);
   const _eyeSlash = document.getElementById("eye-slash");
   if (_eyeSlash) _eyeSlash.style.display = state.statsVisible ? "none" : "";
+  if (_eye) _eye.style.display = state.activeTab === "list" ? "" : "none";
   updateSlColStyle();
   const _slEye = document.getElementById("sl-eye-btn");
   if (_slEye) _slEye.classList.toggle("hidden", !state.slDetailVisible);
