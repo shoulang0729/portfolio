@@ -536,7 +536,8 @@ function _getActivePinHash() {
 var _auth = {
   input: "",
   fails: 0,
-  lockedAt: null,
+  lockedUntil: null,
+  // ロックアウト解除時刻 ms（旧 lockedAt から変更）
   encKey: null
   // AES-GCM key（auth-crypto.js が _deriveEncKey でセット）
 };
@@ -548,10 +549,10 @@ async function _hashPin(pin) {
   return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 function _isLocked() {
-  return _auth.lockedAt && (Date.now() - _auth.lockedAt) / 1e3 < AUTH_LOCK_SEC;
+  return _auth.lockedUntil != null && Date.now() < _auth.lockedUntil;
 }
 function _lockRemain() {
-  return Math.ceil(AUTH_LOCK_SEC - (Date.now() - _auth.lockedAt) / 1e3);
+  return Math.ceil((_auth.lockedUntil - Date.now()) / 1e3);
 }
 function _formatLockRemain(seconds) {
   const remain = Math.max(0, Math.ceil(seconds));
@@ -563,8 +564,8 @@ function _formatLockRemain(seconds) {
   return `${remain}\u79D2`;
 }
 function _saveLockout() {
-  if (_auth.lockedAt) {
-    localStorage.setItem(AUTH_LOCKOUT_KEY, String(_auth.lockedAt));
+  if (_auth.lockedUntil != null) {
+    localStorage.setItem(AUTH_LOCKOUT_KEY, String(_auth.lockedUntil));
   } else {
     localStorage.removeItem(AUTH_LOCKOUT_KEY);
   }
@@ -572,13 +573,13 @@ function _saveLockout() {
 (function _loadLockout() {
   const stored = localStorage.getItem(AUTH_LOCKOUT_KEY);
   if (!stored) return;
-  const ts = parseInt(stored, 10);
-  if (isNaN(ts)) {
+  const until = parseInt(stored, 10);
+  if (isNaN(until)) {
     localStorage.removeItem(AUTH_LOCKOUT_KEY);
     return;
   }
-  if ((Date.now() - ts) / 1e3 < AUTH_LOCK_SEC) {
-    _auth.lockedAt = ts;
+  if (Date.now() < until) {
+    _auth.lockedUntil = until;
   } else {
     localStorage.removeItem(AUTH_LOCKOUT_KEY);
   }
@@ -974,14 +975,14 @@ async function _submitPin() {
     _updateDots();
     _shake("shake");
     if (_auth.fails >= AUTH_MAX_FAIL) {
-      _auth.lockedAt = Date.now();
+      _auth.lockedUntil = Date.now() + AUTH_LOCK_SEC * 1e3;
       _saveLockout();
       _showError(`${AUTH_MAX_FAIL}\u56DE\u5931\u6557\u3002${_lockRemainMessage(AUTH_LOCK_SEC)}`);
       const _t = setInterval(() => {
         if (!_isLocked()) {
           clearInterval(_t);
           _auth.fails = 0;
-          _auth.lockedAt = null;
+          _auth.lockedUntil = null;
           _saveLockout();
           _setKeypadEnabled(true);
           _hideError();
