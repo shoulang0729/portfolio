@@ -5,8 +5,8 @@
 // 地域・国 / セクター）で可視化する。各グラフに凡例とカバレッジ率を表示。
 // ══════════════════════════════════════════════════════════════
 
-import { computeRiskBreakdown, toSlices, RISK_DIMENSIONS, UNKNOWN_KEY } from './risk-calc.js';
-import { fmtJPYInt, fmtPctInt } from './utils.js';
+import { computeRiskBreakdown, toSlices, RISK_DIMENSIONS, UNKNOWN_KEY, getContributors } from './risk-calc.js';
+import { fmtJPYInt, fmtPctInt, escapeHTML } from './utils.js';
 import { cssVar } from './color.js';
 
 /** 軸ごとのタイトル */
@@ -134,6 +134,12 @@ function buildChartCard(dim, dimResult) {
     pct.textContent = fmtPctInt(s.pct);
 
     li.append(sw, name, pct);
+
+    // ホバーで該当カテゴリの寄与銘柄を表示（#212）
+    li.addEventListener('mouseenter', (ev) => showLegendTip(ev, dim, s.key, dimResult));
+    li.addEventListener('mousemove', moveLegendTip);
+    li.addEventListener('mouseleave', hideLegendTip);
+
     legend.appendChild(li);
   });
   body.appendChild(legend);
@@ -164,16 +170,44 @@ export function renderRiskCharts() {
 
   wrap.textContent = '';
 
-  const total = breakdown.assetClass?.total || 0;
-  const head = document.createElement('div');
-  head.className = 'risk-head';
-  head.textContent = `対象評価額 ${fmtJPYInt(total)}・保有を構成銘柄まで透過して集計`;
-  wrap.appendChild(head);
-
   const grid = document.createElement('div');
   grid.className = 'risk-grid';
   for (const dim of RISK_DIMENSIONS) {
     grid.appendChild(buildChartCard(dim, breakdown[dim]));
   }
   wrap.appendChild(grid);
+
+  // データソース明記（#214）
+  const src = document.createElement('div');
+  src.className = 'risk-source';
+  src.textContent = 'データソース: 価格 = Finnhub / Yahoo Finance ・ 資産クラス/通貨/国/セクター分類 = 銘柄マスタ（positions.js・constituents.js）';
+  wrap.appendChild(src);
+}
+
+// ── 凡例ホバー時の構成銘柄ツールチップ（#212）─────────────────────────
+function showLegendTip(ev, dim, key, dimResult) {
+  const tip = document.getElementById('tooltip');
+  if (!tip) return;
+  const items = getContributors(dimResult, key).slice(0, 12);
+  const rows = items.map(c => `${escapeHTML(c.name)}　${fmtPctInt(c.pct)}`).join('<br>');
+  tip.innerHTML = `<div class="tt-hdr">${escapeHTML(labelOf(dim, key))}</div>${rows || '―'}`;
+  tip.style.display = 'block';
+  moveLegendTip(ev);
+}
+
+function moveLegendTip(ev) {
+  const tip = document.getElementById('tooltip');
+  if (!tip || tip.style.display !== 'block') return;
+  // .tooltip は position:fixed のためビューポート座標を使う
+  const pad = 14;
+  const w = tip.offsetWidth || 240;
+  let left = ev.clientX + pad;
+  if (left + w > window.innerWidth - 8) left = ev.clientX - w - pad;
+  tip.style.left = `${Math.max(8, left)}px`;
+  tip.style.top = `${Math.min(ev.clientY + pad, window.innerHeight - tip.offsetHeight - 8)}px`;
+}
+
+function hideLegendTip() {
+  const tip = document.getElementById('tooltip');
+  if (tip) tip.style.display = 'none';
 }
