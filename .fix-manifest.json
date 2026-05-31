@@ -1,18 +1,20 @@
 {
   "processed": [
-    {"number": 181, "title": "enhancement: positions-store.js の加重平均計算で浮動小数点誤差が pnlPct にズレを生む", "summary": "mergeDuplicatePositions の avgCost 計算に Math.round(...* 100) / 100 を適用して小数点2位で丸め"},
-    {"number": 180, "title": "enhancement: tabs.js の Watchlist タブ切替で .then() チェーン競合によりチラツキが発生", "summary": "async IIFE に変更して _loadWatchlistFromWorker → renderWatchlist → updateWatchlistHeight の順序を await で明確化"},
-    {"number": 177, "title": "bug: data.js で batchWithRetry 後に全件失敗しても renderHeatmap が実行される", "summary": "現行コードは n > 0 の場合のみ hm:prices-updated を dispatch しており既に対応済みであることを確認"},
-    {"number": 175, "title": "bug: historical-cache.js で JSON roundtrip 後 Date が string になり instanceof 判定が壊れる", "summary": "現行コードは既に e.date instanceof Date ? e.date.toISOString() : e.date で文字列も正しく処理しており対応済みを確認"},
-    {"number": 174, "title": "bug: watchlist.js の _syncWatchlistToWorker 失敗が無音でユーザーが保存失敗に気づけない", "summary": "catch ブロックで setStatus('ウォッチリストの保存に失敗しました（ローカルには保存済み）', 'yellow') を呼ぶよう変更"},
-    {"number": 173, "title": "bug: heatmap.js のリトライ上限後にサイレント失敗し描画されないまま止まる", "summary": "リトライ上限後に IntersectionObserver で再試行フォールバックを追加し「再読み込みしてください」メッセージを表示"},
-    {"number": 168, "title": "bug: auth-ui.js のPINダイアログ開閉でイベントリスナーが蓄積しメモリリーク", "summary": "AbortController を使用して keydown リスナーを管理し、closePinChange で ac.abort() により確実に解除"},
-    {"number": 160, "title": "chore: .coderabbit.yaml に docs PR (*.md) を skip する path-filter を追加", "summary": ".coderabbit.yaml に path_filters で *.md / docs/** / CLAUDE.md / README.md / CHANGELOG.md を除外する設定を追加"},
-    {"number": 156, "title": "bug: ヒートマップ SVG が hidden のままになる根本修正（IDB ハングまたは hideHeatmapSkeleton 未呼出）", "summary": "historical-cache.js の getDb() に失敗時 _dbPromise リセットを追加、restoreFromIDB / migrateFromSessionStorage に 5 秒 timeout を追加"}
+    {"number": 222, "title": "[Risk Exposure] セクターの「非株式」をコモディティと債券に分割", "summary": "constituents.js の GLDM/SLV を sector:commodity、JPST/PIMCO-ST を sector:bond に変更。risk-charts.js の LABELS.sector に commodity/bond を追加し nonEquity を廃止。テストも更新。"},
+    {"number": 221, "title": "[Risk Exposure] 地域・国チャートの「グローバル」表記/分類を見直す", "summary": "risk-charts.js の LABELS.country.global を「グローバル」→「分散・コモディティ等」に変更（対応案①の表記改善）。"}
   ],
   "skipped": [
+    {"number": 220, "title": "[Risk Exposure] サマリーバーの「対象N銘柄」を構成銘柄数(look-through)にしたい", "reason": "Phase B（#200/#201/#202）依存の難易度高タスク。暫定案（概算保有数をハードコード）は保守コスト高のため実装しない。"},
+    {"number": 208, "title": "[リスク断面 Phase B] B9: カバレッジ/鮮度/ソースの UI 表示強化", "reason": "Wait ラベル"},
+    {"number": 207, "title": "[リスク断面 Phase B] B8: curated を data/constituents-overrides.json 化 + マージ", "reason": "Wait ラベル"},
+    {"number": 206, "title": "[リスク断面 Phase B] B7: risk-calc を holdings-list（Level 2）対応に拡張", "reason": "Wait ラベル"},
+    {"number": 205, "title": "[リスク断面 Phase B] B6: クライアント側 構成銘柄キャッシュ（IndexedDB）", "reason": "Wait ラベル"},
+    {"number": 204, "title": "[リスク断面 Phase B] B5: Cron 週次ローテーションで構成銘柄を更新", "reason": "Wait ラベル"},
+    {"number": 203, "title": "[リスク断面 Phase B] B4: 個別株の属性付与（Finnhub /stock/profile2）", "reason": "Wait ラベル"},
+    {"number": 202, "title": "[リスク断面 Phase B] B3: Yahoo topHoldings フォールバックアダプタ", "reason": "Wait ラベル"},
+    {"number": 201, "title": "[リスク断面 Phase B] B2: ETF 公式保有CSV アダプタ（iShares/Vanguard 等）", "reason": "Wait ラベル"},
+    {"number": 200, "title": "[リスク断面 Phase B] B1: Worker /etf/constituents ルート + KV キャッシュ", "reason": "Wait ラベル"},
     {"number": 193, "title": "feat: スナップショット自動保存（1日2回）＋ Claude 自動分析レポート生成", "reason": "Wait ラベル"},
-    {"number": 176, "title": "bug: import-ui.js の _importState が並行非同期操作で race condition が発生する", "reason": "Promise-based state machine への変更は破壊的リファクタリングとなり、既存の import フローへの影響が大きいため承認が必要"},
     {"number": 57, "title": "feat: AI相談タブの再有効化（src/_disabled/ から復帰）", "reason": "Wait ラベル"},
     {"number": 16, "title": "perf: Worker レート制限の KV レイテンシーを Cloudflare ダッシュボード設定に移行", "reason": "Wait ラベル"}
   ]
