@@ -15,10 +15,10 @@ describe('computeRiskBreakdown — synthetic positions', () => {
     expect(r.currency.coverage).toBe(1);
   });
 
-  it('routes a non-equity holding to the nonEquity sector bucket (GLDM gold)', () => {
+  it('routes a commodity holding to the commodity sector bucket (GLDM gold)', () => {
     const r = computeRiskBreakdown([{ symbol: 'GLDM', value: 500, cur: 'USD' }]);
     expect(r.assetClass.cats.commodity).toBe(500);
-    expect(r.sector.cats.nonEquity).toBe(500);
+    expect(r.sector.cats.commodity).toBe(500);
     expect(r.currency.cats.USD).toBe(500);
   });
 

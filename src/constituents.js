@@ -17,7 +17,7 @@
 //   country   : japan | us | europe | em | latam | china | global
 //   sector    : tech | semis | financials | healthcare | consumer | staples |
 //               industrials | energy | materials | comm | utilities |
-//               realestate | nonEquity
+//               realestate | commodity | bond
 // ══════════════════════════════════════════════════════════════
 
 /** @typedef {Record<string, number>} WeightMap */
@@ -72,7 +72,7 @@ const CONSTITUENTS = {
   },
   'GLDM': { // 現物ゴールド
     assetClass: { commodity: 1 }, currency: { USD: 1 }, country: { global: 1 },
-    sector: { nonEquity: 1 },
+    sector: { commodity: 1 },
   },
   'GOOGL': {
     assetClass: { equity: 1 }, currency: { USD: 1 }, country: { us: 1 },
@@ -85,7 +85,7 @@ const CONSTITUENTS = {
   },
   'JPST': { // 超短期インカム（債券）
     assetClass: { bond: 1 }, currency: { USD: 1 }, country: { us: 1 },
-    sector: { nonEquity: 1 },
+    sector: { bond: 1 },
   },
   'MSFT': {
     assetClass: { equity: 1 }, currency: { USD: 1 }, country: { us: 1 },
@@ -105,7 +105,7 @@ const CONSTITUENTS = {
   },
   'SLV': { // 現物シルバー
     assetClass: { commodity: 1 }, currency: { USD: 1 }, country: { global: 1 },
-    sector: { nonEquity: 1 },
+    sector: { commodity: 1 },
   },
   'SMH': { // 半導体ETF（米中心・台韓含む）
     assetClass: { equity: 1 }, currency: { USD: 0.8, other: 0.2 },
@@ -152,7 +152,7 @@ const CONSTITUENTS = {
   },
   'PIMCO-ST': { // ピムコ ショート・ターム（短期債券）
     assetClass: { bond: 1 }, currency: { USD: 1 },
-    country: { us: 0.6, global: 0.4 }, sector: { nonEquity: 1 },
+    country: { us: 0.6, global: 0.4 }, sector: { bond: 1 },
   },
 };
 
