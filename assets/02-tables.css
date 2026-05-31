@@ -455,6 +455,8 @@
   border: 1px solid var(--border);
   border-radius: 8px;
 }
+.risk-summary-seg { cursor: default; }
+.risk-summary-seg:hover { text-decoration: underline dotted; }
 .risk-source {
   margin-top: 14px;
   font-size: 10px;
