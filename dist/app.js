@@ -3103,30 +3103,61 @@ var CONSTITUENTS = {
     }
   },
   "\u3072\u3075\u307F": {
-    // ひふみ投信（アクティブ・日本中心）— セクターは判明分のみ
-    assetClass: { equity: 0.95, cash: 0.05 },
-    currency: { JPY: 0.95, USD: 0.05 },
-    country: { japan: 0.9, us: 0.1 },
-    // アクティブ運用のため全構成は非公開。上位の業種傾向のみ記載（残りは その他）
+    // ひふみ投信（レオス月次レポート 2026年4月基準・実数）
+    // 資産配分: 国内株式 98.69% / 現金等 1.31%、市場別はほぼ全て国内（プライム97.85%等）
+    assetClass: { equity: 0.987, cash: 0.013 },
+    currency: { JPY: 1 },
+    country: { japan: 1 },
+    // 東証33業種を当アプリのセクターへ集約（業種別比率より）。合計≈0.998
     sector: {
-      tech: 0.12,
-      industrials: 0.12,
-      consumer: 0.1,
-      financials: 0.08,
-      comm: 0.06
+      industrials: 0.345,
+      // 卸売14.59+機械11.69+建設4.92+その他製品2.13+陸運1.16
+      tech: 0.186,
+      // 電気機器16.36+サービス1.58+精密0.61
+      financials: 0.155,
+      // 銀行9.02+保険4.65+その他金融1.79
+      consumer: 0.092,
+      // 輸送用機器6.48+小売2.71
+      comm: 0.076,
+      // 情報・通信7.56
+      materials: 0.057,
+      // 非鉄金属4.34+化学0.72+ガラス土石0.63
+      realestate: 0.039,
+      // 不動産3.87
+      healthcare: 0.015,
+      // 医薬品1.48
+      staples: 0.012,
+      // 食料品1.15
+      utilities: 8e-3,
+      // 電気・ガス0.77
+      cash: 0.013
+      // 現金等
     }
   },
   "\u30DE\u30A4\u30AF\u30EDSP": {
-    // ひふみマイクロスコープpro（日本小型株・アクティブ）
-    assetClass: { equity: 0.95, cash: 0.05 },
+    // ひふみマイクロスコープpro（レオス月次レポート 2026年4月基準・実数）
+    // 資産配分: 国内株式 84.64% / 現金等 15.36%、日本小型株
+    assetClass: { equity: 0.846, cash: 0.154 },
     currency: { JPY: 1 },
     country: { japan: 1 },
+    // 上位10業種のみ開示のため合計≈0.873（残りは不明）
     sector: {
-      industrials: 0.16,
-      tech: 0.14,
-      consumer: 0.1,
-      materials: 0.08,
-      healthcare: 0.06
+      industrials: 0.212,
+      // 機械9.56+建設6.92+その他製品4.68
+      tech: 0.192,
+      // サービス17.05+電気機器2.19
+      comm: 0.081,
+      // 情報・通信8.09
+      consumer: 0.071,
+      // 小売7.14
+      realestate: 0.064,
+      // 不動産6.38
+      financials: 0.062,
+      // 銀行6.17
+      materials: 0.037,
+      // 化学3.74
+      cash: 0.154
+      // 現金等
     }
   },
   "\u3072\u3075\u307FXO": {
@@ -3263,7 +3294,8 @@ var MANUAL_ASSETS = [
   { symbol: "\u73FE\u91D1(USD)", name: "\u73FE\u91D1\uFF08\u7C73\u30C9\u30EB\u30FB\u5186\u63DB\u7B97\uFF09", value: 78e5, cur: "USD" }
 ];
 var MANUAL_SOURCES = [
-  "\u73FE\u91D1 = \u624B\u52D5\u5165\u529B\uFF082026/05/31\u6642\u70B9\u30FBJPY \u7D044,200\u4E07 / USD \u7D04780\u4E07\u5186\u76F8\u5F53\uFF09"
+  "\u73FE\u91D1 = \u624B\u52D5\u5165\u529B\uFF082026/05/31\u6642\u70B9\u30FBJPY \u7D044,200\u4E07 / USD \u7D04780\u4E07\u5186\u76F8\u5F53\uFF09",
+  "\u3072\u3075\u307F\u6295\u4FE1\u30FB\u3072\u3075\u307F\u30DE\u30A4\u30AF\u30ED\u30B9\u30B3\u30FC\u30D7pro \u5206\u985E = \u30EC\u30AA\u30B9\u30FB\u30AD\u30E3\u30D4\u30BF\u30EB\u30EF\u30FC\u30AF\u30B9 \u6708\u6B21\u30EC\u30DD\u30FC\u30C8\uFF082026\u5E744\u6708\u57FA\u6E96\uFF09"
 ];
 
 // src/risk-charts.js
