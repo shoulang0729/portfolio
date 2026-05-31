@@ -2998,7 +2998,7 @@ var CONSTITUENTS = {
     assetClass: { commodity: 1 },
     currency: { USD: 1 },
     country: { global: 1 },
-    sector: { nonEquity: 1 }
+    sector: { commodity: 1 }
   },
   "GOOGL": {
     assetClass: { equity: 1 },
@@ -3025,7 +3025,7 @@ var CONSTITUENTS = {
     assetClass: { bond: 1 },
     currency: { USD: 1 },
     country: { us: 1 },
-    sector: { nonEquity: 1 }
+    sector: { bond: 1 }
   },
   "MSFT": {
     assetClass: { equity: 1 },
@@ -3058,7 +3058,7 @@ var CONSTITUENTS = {
     assetClass: { commodity: 1 },
     currency: { USD: 1 },
     country: { global: 1 },
-    sector: { nonEquity: 1 }
+    sector: { commodity: 1 }
   },
   "SMH": {
     // 半導体ETF（米中心・台韓含む）
@@ -3145,7 +3145,7 @@ var CONSTITUENTS = {
     assetClass: { bond: 1 },
     currency: { USD: 1 },
     country: { us: 0.6, global: 0.4 },
-    sector: { nonEquity: 1 }
+    sector: { bond: 1 }
   }
 };
 
@@ -3244,7 +3244,7 @@ var TITLES = {
 var LABELS = {
   assetClass: { equity: "\u682A\u5F0F", bond: "\u50B5\u5238", commodity: "\u30B3\u30E2\u30C7\u30A3\u30C6\u30A3", reit: "REIT", cash: "\u73FE\u91D1" },
   currency: { JPY: "\u5186 JPY", USD: "\u30C9\u30EB USD", EUR: "\u30E6\u30FC\u30ED EUR", other: "\u305D\u306E\u4ED6\u901A\u8CA8" },
-  country: { japan: "\u65E5\u672C", us: "\u7C73\u56FD", europe: "\u6B27\u5DDE", em: "\u65B0\u8208\u56FD", latam: "\u4E2D\u5357\u7C73", china: "\u4E2D\u56FD", global: "\u30B0\u30ED\u30FC\u30D0\u30EB" },
+  country: { japan: "\u65E5\u672C", us: "\u7C73\u56FD", europe: "\u6B27\u5DDE", em: "\u65B0\u8208\u56FD", latam: "\u4E2D\u5357\u7C73", china: "\u4E2D\u56FD", global: "\u5206\u6563\u30FB\u30B3\u30E2\u30C7\u30A3\u30C6\u30A3\u7B49" },
   sector: {
     tech: "\u30C6\u30C3\u30AF",
     semis: "\u534A\u5C0E\u4F53",
@@ -3258,7 +3258,8 @@ var LABELS = {
     comm: "\u901A\u4FE1",
     utilities: "\u516C\u76CA",
     realestate: "\u4E0D\u52D5\u7523",
-    nonEquity: "\u975E\u682A\u5F0F\uFF08\u30B3\u30E2/\u50B5\u5238\uFF09"
+    commodity: "\u30B3\u30E2\u30C7\u30A3\u30C6\u30A3",
+    bond: "\u50B5\u5238\uFF08\u30BB\u30AF\u30BF\u30FC\uFF09"
   }
 };
 var PALETTE = [
