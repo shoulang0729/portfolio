@@ -510,8 +510,10 @@ var state = {
   wlSortDir: "desc",
   prevPrices: {},
   // { ySymbol: price } 前回のライブ価格（フラッシュアニメーション用）
-  forexRate: { USDJPY: null, ts: 0 }
+  forexRate: { USDJPY: null, ts: 0 },
   // { USDJPY: rate, ts: timestamp }
+  liveTopHoldings: {}
+  // symbol → { sector: {ourKey: weight}, asOf: ISO string }
 };
 
 // src/auth-pin.js
@@ -3176,7 +3178,8 @@ function computeRiskBreakdown(posList = positions) {
     const entry = p.symbol && CONSTITUENTS[p.symbol] || deriveDefault(p);
     const name = p.name || p.symbol || "";
     for (const dim of RISK_DIMENSIONS) {
-      const map = entry[dim] || {};
+      const liveSector = dim === "sector" && p.symbol ? state.liveTopHoldings[p.symbol]?.sector : void 0;
+      const map = liveSector !== void 0 ? liveSector : entry[dim] || {};
       const bucket = result[dim];
       let known = 0;
       for (const [cat, w] of Object.entries(map)) {
@@ -4179,6 +4182,74 @@ function closeHmMenu() {
   }
 }
 
+// src/data-topholdings.js
+var YAHOO_SECTOR_MAP = {
+  technology: "tech",
+  financial_services: "financials",
+  healthcare: "healthcare",
+  consumer_cyclical: "consumer",
+  consumer_defensive: "staples",
+  industrials: "industrials",
+  energy: "energy",
+  basic_materials: "materials",
+  communication_services: "comm",
+  utilities: "utilities",
+  realestate: "realestate"
+};
+var TOPHOLDINGS_ALLOWLIST = ["\u30AA\u30EB\u30AB\u30F3", "1306"];
+var STORAGE_KEY = "hm-topholdings";
+async function fetchTopHoldingsSector(ySymbol) {
+  const url = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(ySymbol)}?modules=topHoldings`;
+  try {
+    const data = await fetchViaProxy(url);
+    const weightings = data?.quoteSummary?.result?.[0]?.topHoldings?.sectorWeightings;
+    if (!Array.isArray(weightings) || weightings.length === 0) return null;
+    const result = {};
+    for (const entry of weightings) {
+      for (const [yahooKey, val] of Object.entries(entry)) {
+        const ourKey = YAHOO_SECTOR_MAP[yahooKey];
+        if (!ourKey) continue;
+        const weight = typeof val === "object" ? val.raw : Number(val);
+        if (typeof weight === "number" && weight > 0) {
+          result[ourKey] = (result[ourKey] || 0) + weight;
+        }
+      }
+    }
+    return Object.keys(result).length > 0 ? result : null;
+  } catch (e) {
+    console.warn(`[topholdings] fetchTopHoldingsSector(${ySymbol}) failed:`, e);
+    return null;
+  }
+}
+async function loadTopHoldings() {
+  try {
+    const cached = sessionStorage.getItem(STORAGE_KEY);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      Object.assign(state.liveTopHoldings, parsed);
+      return;
+    }
+  } catch {
+  }
+  for (const symbol of TOPHOLDINGS_ALLOWLIST) {
+    const pos = positions.find((p) => p.symbol === symbol);
+    if (!pos?.ySymbol) continue;
+    const sector = await fetchTopHoldingsSector(pos.ySymbol);
+    if (sector) {
+      state.liveTopHoldings[symbol] = {
+        sector,
+        asOf: (/* @__PURE__ */ new Date()).toISOString()
+      };
+    }
+  }
+  try {
+    if (Object.keys(state.liveTopHoldings).length > 0) {
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state.liveTopHoldings));
+    }
+  } catch {
+  }
+}
+
 // src/ptr.js
 if ("ontouchstart" in window) {
   let getIndicator = function() {
@@ -4628,6 +4699,9 @@ function init() {
         renderStats();
         renderHeatmap();
       }
+      loadTopHoldings().then(() => {
+        if (state.activeTab === "risk") renderRiskCharts();
+      }).catch((e) => console.warn("[topholdings] loadTopHoldings failed:", e));
       applyPricesCache();
       try {
         await refreshPrices();
