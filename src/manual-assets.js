@@ -21,6 +21,7 @@ const MANUAL_ASSETS = [
 /** データ引用元（Exposure タブのフッターに表示） */
 const MANUAL_SOURCES = [
   '現金 = 手動入力（2026/05/31時点・JPY 約4,200万 / USD 約780万円相当）',
+  'ひふみ投信・ひふみマイクロスコープpro 分類 = レオス・キャピタルワークス 月次レポート（2026年4月基準）',
 ];
 
 export { MANUAL_ASSETS, MANUAL_SOURCES };
