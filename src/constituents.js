@@ -68,7 +68,7 @@ const CONSTITUENTS = {
   },
   'COPX': { // 銅鉱山株ETF（グローバル鉱山企業）
     assetClass: { equity: 1 }, currency: { USD: 0.55, other: 0.45 },
-    country: { global: 0.5, em: 0.3, us: 0.2 }, sector: { materials: 1 },
+    country: { us: 0.25, em: 0.35, europe: 0.2, china: 0.2 }, sector: { materials: 1 }, // 銅鉱山:グローバル分散を近似配分
   },
   'GLDM': { // 現物ゴールド
     assetClass: { commodity: 1 }, currency: { USD: 1 }, country: { commodity: 1 },
@@ -97,7 +97,7 @@ const CONSTITUENTS = {
   },
   'REMX': { // レアアース・金属鉱山株ETF（中国比率高）
     assetClass: { equity: 1 }, currency: { USD: 0.5, other: 0.5 },
-    country: { china: 0.4, global: 0.4, us: 0.2 }, sector: { materials: 1 },
+    country: { china: 0.45, em: 0.3, us: 0.15, europe: 0.1 }, sector: { materials: 1 }, // レアアース:中国偏重で近似配分
   },
   'SHLD': { // 防衛テックETF（米欧）
     assetClass: { equity: 1 }, currency: { USD: 0.7, EUR: 0.3 },
@@ -124,7 +124,7 @@ const CONSTITUENTS = {
   'オルカン': { // eMAXIS Slim 全世界株式（MSCI ACWI 連動・概算）
     assetClass: { equity: 1 },
     currency: { USD: 0.62, EUR: 0.10, JPY: 0.05, other: 0.23 },
-    country: { us: 0.62, japan: 0.05, europe: 0.13, em: 0.12, global: 0.08 },
+    country: { us: 0.63, europe: 0.16, em: 0.13, japan: 0.055, china: 0.025 },
     sector: { tech: 0.26, financials: 0.16, consumer: 0.11, healthcare: 0.10,
       industrials: 0.10, comm: 0.075, staples: 0.06, energy: 0.04,
       materials: 0.04, utilities: 0.025, realestate: 0.02 },
@@ -175,7 +175,7 @@ const CONSTITUENTS = {
   },
   'PIMCO-ST': { // ピムコ ショート・ターム（短期債券）
     assetClass: { bond: 1 }, currency: { USD: 1 },
-    country: { us: 0.6, global: 0.4 }, sector: { bond: 1 },
+    country: { us: 0.7, europe: 0.2, em: 0.1 }, sector: { bond: 1 }, // 短期債:グローバル分を近似配分
   },
 
   // ── 現金（手動入力・manual-assets.js で Exposure に投入）──
@@ -186,5 +186,10 @@ const CONSTITUENTS = {
     assetClass: { cash: 1 }, currency: { USD: 1 }, country: { us: 1 }, sector: { cash: 1 },
   },
 };
+
+// ── KV（マネックス取込）の symbol 表記ゆれを既存分類にエイリアス ──
+// positions.js は 'ひふみ'/'マイクロSP'、KV 実保有は 'ひふみ投信'/'ひふみMS' のため両対応。
+CONSTITUENTS['ひふみ投信'] = CONSTITUENTS['ひふみ'];
+CONSTITUENTS['ひふみMS']  = CONSTITUENTS['マイクロSP'];
 
 export { CONSTITUENTS };
