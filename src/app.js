@@ -24,6 +24,8 @@ import { openImportModal, closeImportModal, openManagePositionsModal, handleImpo
 import { showConfirm, showAlert } from './modal.js';
 import { renderStats, refreshHistoricalAndRender, setupPriceUpdateListener, hideHeatmapSkeleton, updateActiveTableHeight, updateWatchlistHeight } from './render.js';
 import { toggleHmMenu, closeHmMenu } from './menu.js';
+import { loadTopHoldings } from './data-topholdings.js';
+import { renderRiskCharts } from './risk-charts.js';
 
 // ── フォールバックスクリプトから参照できるように renderHeatmap を window に登録 ──
 window.renderHeatmap       = renderHeatmap;
@@ -468,6 +470,10 @@ function init() {
       // 1. KV から保有銘柄を取得（あれば positions.js の内容を上書き）
       const loaded = await loadPositionsFromKV();
       if (loaded) { renderStats(); renderHeatmap(); }
+      // 1b. 分散ファンドの実セクター比率を Yahoo topHoldings から取得（fire-and-forget）
+      loadTopHoldings().then(() => {
+        if (state.activeTab === 'risk') renderRiskCharts();
+      }).catch(e => console.warn('[topholdings] loadTopHoldings failed:', e));
       // 2. Cron キャッシュ価格を即時反映（ライブ取得前の暫定表示）
       applyPricesCache(); // fire-and-forget
       // 3. ライブ価格取得

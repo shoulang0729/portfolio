@@ -35,6 +35,7 @@
  * @property {'asc'|'desc'} wlSortDir
  * @property {Object<string, number>} prevPrices
  * @property {{USDJPY: number|null, ts: number}} forexRate
+ * @property {Record<string, {sector: Record<string, number>, asOf: string}>} liveTopHoldings
  */
 
 // ── レイアウト・フォント定数 ──
@@ -106,6 +107,7 @@ const state = {
   wlSortDir:        'desc',
   prevPrices:       {},         // { ySymbol: price } 前回のライブ価格（フラッシュアニメーション用）
   forexRate:        { USDJPY: null, ts: 0 },  // { USDJPY: rate, ts: timestamp }
+  liveTopHoldings:  {},  // symbol → { sector: {ourKey: weight}, asOf: ISO string }
 };
 
 export { C, CHART_RANGES, SL_DETAIL_COLS, state };
