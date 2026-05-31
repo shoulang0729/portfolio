@@ -2999,7 +2999,7 @@ var CONSTITUENTS = {
     // 現物ゴールド
     assetClass: { commodity: 1 },
     currency: { USD: 1 },
-    country: { global: 1 },
+    country: { commodity: 1 },
     sector: { commodity: 1 }
   },
   "GOOGL": {
@@ -3059,7 +3059,7 @@ var CONSTITUENTS = {
     // 現物シルバー
     assetClass: { commodity: 1 },
     currency: { USD: 1 },
-    country: { global: 1 },
+    country: { commodity: 1 },
     sector: { commodity: 1 }
   },
   "SMH": {
@@ -3148,6 +3148,19 @@ var CONSTITUENTS = {
     currency: { USD: 1 },
     country: { us: 0.6, global: 0.4 },
     sector: { bond: 1 }
+  },
+  // ── 現金（手動入力・manual-assets.js で Exposure に投入）──
+  "\u73FE\u91D1(\u5186)": {
+    assetClass: { cash: 1 },
+    currency: { JPY: 1 },
+    country: { japan: 1 },
+    sector: { cash: 1 }
+  },
+  "\u73FE\u91D1(USD)": {
+    assetClass: { cash: 1 },
+    currency: { USD: 1 },
+    country: { us: 1 },
+    sector: { cash: 1 }
   }
 };
 
@@ -3243,6 +3256,16 @@ function getClassificationSummary(posList = positions) {
   return { total, classified, unclassified: total - classified, allSymbols, classifiedSymbols, unclassifiedSymbols };
 }
 
+// src/manual-assets.js
+var MANUAL_ASSETS = [
+  // 現金（2026/05/31 時点・手動入力）
+  { symbol: "\u73FE\u91D1(\u5186)", name: "\u73FE\u91D1\uFF08\u65E5\u672C\u5186\uFF09", value: 42e6, cur: "JPY" },
+  { symbol: "\u73FE\u91D1(USD)", name: "\u73FE\u91D1\uFF08\u7C73\u30C9\u30EB\u30FB\u5186\u63DB\u7B97\uFF09", value: 78e5, cur: "USD" }
+];
+var MANUAL_SOURCES = [
+  "\u73FE\u91D1 = \u624B\u52D5\u5165\u529B\uFF082026/05/31\u6642\u70B9\u30FBJPY \u7D044,200\u4E07 / USD \u7D04780\u4E07\u5186\u76F8\u5F53\uFF09"
+];
+
 // src/risk-charts.js
 var TITLES = {
   assetClass: "\u8CC7\u7523\u30AF\u30E9\u30B9",
@@ -3253,7 +3276,7 @@ var TITLES = {
 var LABELS = {
   assetClass: { equity: "\u682A\u5F0F", bond: "\u50B5\u5238", commodity: "\u30B3\u30E2\u30C7\u30A3\u30C6\u30A3", reit: "REIT", cash: "\u73FE\u91D1" },
   currency: { JPY: "\u5186 JPY", USD: "\u30C9\u30EB USD", EUR: "\u30E6\u30FC\u30ED EUR", other: "\u305D\u306E\u4ED6\u901A\u8CA8" },
-  country: { japan: "\u65E5\u672C", us: "\u7C73\u56FD", europe: "\u6B27\u5DDE", em: "\u65B0\u8208\u56FD", latam: "\u4E2D\u5357\u7C73", china: "\u4E2D\u56FD", global: "\u5206\u6563\u30FB\u30B3\u30E2\u30C7\u30A3\u30C6\u30A3\u7B49" },
+  country: { japan: "\u65E5\u672C", us: "\u7C73\u56FD", europe: "\u6B27\u5DDE", em: "\u65B0\u8208\u56FD", latam: "\u4E2D\u5357\u7C73", china: "\u4E2D\u56FD", global: "\u5206\u6563", commodity: "\u30B3\u30E2\u30C7\u30A3\u30C6\u30A3" },
   sector: {
     tech: "\u30C6\u30C3\u30AF",
     semis: "\u534A\u5C0E\u4F53",
@@ -3268,7 +3291,8 @@ var LABELS = {
     utilities: "\u516C\u76CA",
     realestate: "\u4E0D\u52D5\u7523",
     commodity: "\u30B3\u30E2\u30C7\u30A3\u30C6\u30A3",
-    bond: "\u50B5\u5238\uFF08\u30BB\u30AF\u30BF\u30FC\uFF09"
+    bond: "\u50B5\u5238\uFF08\u30BB\u30AF\u30BF\u30FC\uFF09",
+    cash: "\u73FE\u91D1"
   }
 };
 var PALETTE = [
@@ -3312,11 +3336,11 @@ function buildChartCard(dim, dimResult) {
   const pie = d3.pie().value((d) => d.value).sort(null);
   const arc = d3.arc().innerRadius(radius * 0.58).outerRadius(radius - 2);
   const colorOf = (key, i) => key === UNKNOWN_KEY ? UNKNOWN_COLOR : PALETTE[i % PALETTE.length];
-  g.selectAll("path").data(pie(slices)).join("path").attr("d", arc).attr("fill", (d, i) => colorOf(d.data.key, i)).attr("stroke", cssVar("--surface") || "#fff").attr("stroke-width", 1.5).append("title").text((d) => `${labelOf(dim, d.data.key)}: ${fmtJPYInt(d.data.value)}\uFF08${fmtPctInt(d.data.pct)}\uFF09`);
+  g.selectAll("path").data(pie(slices)).join("path").attr("d", arc).attr("fill", (d, i) => colorOf(d.data.key, i)).append("title").text((d) => `${labelOf(dim, d.data.key)}: ${fmtJPYInt(d.data.value)}\uFF08${fmtPctInt(d.data.pct)}\uFF09`);
   const coverage = dimResult.coverage;
   const center = g.append("text").attr("class", "risk-donut-center");
-  center.append("tspan").attr("x", 0).attr("dy", "-0.1em").attr("fill", cssVar("--text") || "#000").attr("font-size", "13px").attr("font-weight", "700").attr("text-anchor", "middle").text(`${Math.round(coverage * 100)}%`);
-  center.append("tspan").attr("x", 0).attr("dy", "1.3em").attr("fill", cssVar("--text2") || "#666").attr("font-size", "9px").attr("text-anchor", "middle").text("\u5224\u660E");
+  center.append("tspan").attr("x", 0).attr("dy", "-0.1em").attr("font-size", "13px").attr("font-weight", "700").attr("text-anchor", "middle").text(`${Math.round(coverage * 100)}%`);
+  center.append("tspan").attr("class", "risk-donut-center-sub").attr("x", 0).attr("dy", "1.3em").attr("font-size", "9px").attr("text-anchor", "middle").text("\u5224\u660E");
   const legend = document.createElement("ul");
   legend.className = "risk-legend";
   slices.forEach((s, i) => {
@@ -3352,9 +3376,10 @@ function renderRiskCharts() {
   const wrap = document.getElementById("risk-charts-wrap");
   if (!wrap) return;
   if (typeof d3 === "undefined") return;
-  const breakdown = computeRiskBreakdown();
+  const assets = [...positions, ...MANUAL_ASSETS];
+  const breakdown = computeRiskBreakdown(assets);
   wrap.textContent = "";
-  const sumInfo = getClassificationSummary();
+  const sumInfo = getClassificationSummary(assets);
   const summary = document.createElement("div");
   summary.className = "risk-summary";
   const warn = sumInfo.unclassified > 0 ? " \u26A0" : "";
@@ -3382,7 +3407,8 @@ function renderRiskCharts() {
   wrap.appendChild(grid);
   const src = document.createElement("div");
   src.className = "risk-source";
-  src.textContent = "\u30C7\u30FC\u30BF\u30BD\u30FC\u30B9: \u4FA1\u683C = Finnhub / Yahoo Finance \u30FB \u8CC7\u7523\u30AF\u30E9\u30B9/\u901A\u8CA8/\u56FD/\u30BB\u30AF\u30BF\u30FC\u5206\u985E = \u9298\u67C4\u30DE\u30B9\u30BF\uFF08positions.js\u30FBconstituents.js\uFF09";
+  const baseSrc = "\u30C7\u30FC\u30BF\u30BD\u30FC\u30B9: \u4FA1\u683C = Finnhub / Yahoo Finance \u30FB \u8CC7\u7523\u30AF\u30E9\u30B9/\u901A\u8CA8/\u56FD/\u30BB\u30AF\u30BF\u30FC\u5206\u985E = \u9298\u67C4\u30DE\u30B9\u30BF\uFF08positions.js\u30FBconstituents.js\uFF09";
+  src.textContent = [baseSrc, ...MANUAL_SOURCES].join(" \uFF0F ");
   wrap.appendChild(src);
 }
 function showLegendTip(ev, dim, key, dimResult) {
