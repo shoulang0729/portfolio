@@ -3227,21 +3227,27 @@ function getContributors(dimResult, categoryKey) {
 function getClassificationSummary(posList = positions) {
   let total = 0;
   let classified = 0;
+  const allSymbols = [];
+  const classifiedSymbols = [];
   const unclassifiedSymbols = [];
   for (const p of posList) {
     if ((p.value || 0) <= 0) continue;
     total++;
-    if (p.symbol && CONSTITUENTS[p.symbol]) classified++;
-    else unclassifiedSymbols.push(p.symbol || "");
+    const sym = p.symbol || "";
+    allSymbols.push(sym);
+    if (p.symbol && CONSTITUENTS[p.symbol]) {
+      classified++;
+      classifiedSymbols.push(sym);
+    } else unclassifiedSymbols.push(sym);
   }
-  return { total, classified, unclassified: total - classified, unclassifiedSymbols };
+  return { total, classified, unclassified: total - classified, allSymbols, classifiedSymbols, unclassifiedSymbols };
 }
 
 // src/risk-charts.js
 var TITLES = {
   assetClass: "\u8CC7\u7523\u30AF\u30E9\u30B9",
   currency: "\u901A\u8CA8\u30A8\u30AF\u30B9\u30DD\u30FC\u30B8\u30E3\u30FC",
-  country: "\u5730\u57DF\u30FB\u56FD",
+  country: "\u56FD\u30FB\u5730\u57DF",
   sector: "\u30BB\u30AF\u30BF\u30FC"
 };
 var LABELS = {
@@ -3281,8 +3287,12 @@ var PALETTE = [
 ];
 var UNKNOWN_COLOR = "#9ca3af";
 function labelOf(dim, key) {
-  if (key === UNKNOWN_KEY) return "\u305D\u306E\u4ED6/\u4E0D\u660E";
+  if (key === UNKNOWN_KEY) return "\u4E0D\u660E";
   return LABELS[dim]?.[key] || key;
+}
+function nameOfSymbol(sym) {
+  const p = positions.find((x) => x.symbol === sym);
+  return p?.name || sym;
 }
 function buildChartCard(dim, dimResult) {
   const slices = toSlices(dimResult);
@@ -3331,7 +3341,7 @@ function buildChartCard(dim, dimResult) {
   if (coverage < 0.99) {
     const note = document.createElement("div");
     note.className = "risk-coverage-note";
-    note.textContent = `\u5224\u660E\u7387 ${Math.round(coverage * 100)}%\uFF08\u6B8B\u308A\u306F\u300C\u305D\u306E\u4ED6/\u4E0D\u660E\u300D\uFF09`;
+    note.textContent = `\u5224\u660E\u7387 ${Math.round(coverage * 100)}%\uFF08\u6B8B\u308A\u306F\u300C\u4E0D\u660E\u300D\uFF09`;
     card.appendChild(note);
   }
   return card;
@@ -3348,7 +3358,21 @@ function renderRiskCharts() {
   const summary = document.createElement("div");
   summary.className = "risk-summary";
   const warn = sumInfo.unclassified > 0 ? " \u26A0" : "";
-  summary.textContent = `\u5BFE\u8C61 ${sumInfo.total} \u9298\u67C4\u3000\u2503\u3000\u5206\u985E\u6E08\u307F ${sumInfo.classified}\u3000\u2503\u3000\u5206\u985E\u4E0D\u660E ${sumInfo.unclassified}${warn}`;
+  const segs = [
+    { label: `\u5BFE\u8C61 ${sumInfo.total} \u9298\u67C4`, syms: sumInfo.allSymbols },
+    { label: `\u5206\u985E\u6E08\u307F ${sumInfo.classified}`, syms: sumInfo.classifiedSymbols },
+    { label: `\u5206\u985E\u4E0D\u660E ${sumInfo.unclassified}${warn}`, syms: sumInfo.unclassifiedSymbols }
+  ];
+  segs.forEach((seg, i) => {
+    if (i) summary.appendChild(document.createTextNode("\u3000\u2503\u3000"));
+    const span = document.createElement("span");
+    span.className = "risk-summary-seg";
+    span.textContent = seg.label;
+    span.addEventListener("mouseenter", (ev) => showSymbolTip(ev, seg.label, seg.syms));
+    span.addEventListener("mousemove", moveLegendTip);
+    span.addEventListener("mouseleave", hideLegendTip);
+    summary.appendChild(span);
+  });
   wrap.appendChild(summary);
   const grid = document.createElement("div");
   grid.className = "risk-grid";
@@ -3383,6 +3407,14 @@ function moveLegendTip(ev) {
 function hideLegendTip() {
   const tip = document.getElementById("tooltip");
   if (tip) tip.style.display = "none";
+}
+function showSymbolTip(ev, title, symbols) {
+  const tip = document.getElementById("tooltip");
+  if (!tip) return;
+  const rows = symbols && symbols.length ? symbols.map((s) => escapeHTML(nameOfSymbol(s))).join("<br>") : "\uFF08\u306A\u3057\uFF09";
+  tip.innerHTML = `<div class="tt-hdr">${escapeHTML(title)}</div>${rows}`;
+  tip.style.display = "block";
+  moveLegendTip(ev);
 }
 
 // src/tabs.js
