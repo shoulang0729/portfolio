@@ -80,7 +80,7 @@ const CONSTITUENTS = {
   },
   'ILF': { // iシェアーズ ラテンアメリカ40
     assetClass: { equity: 1 }, currency: { other: 1 }, country: { latam: 1 },
-    sector: { financials: 0.30, materials: 0.25, energy: 0.15, staples: 0.15,
+    sector: { financials: 0.33, materials: 0.25, energy: 0.15, staples: 0.15,
       utilities: 0.07, comm: 0.05 },
   },
   'JPST': { // 超短期インカム（債券）
@@ -166,12 +166,20 @@ const CONSTITUENTS = {
       cash: 0.154,        // 現金等
     },
   },
-  'ひふみXO': { // ひふみクロスオーバーpro（国内外グロース・アクティブ）
-    assetClass: { equity: 0.95, cash: 0.05 },
-    currency: { JPY: 0.92, USD: 0.08 },
-    country: { japan: 0.88, us: 0.12 },
-    sector: { tech: 0.16, industrials: 0.12, healthcare: 0.10, consumer: 0.08,
-      comm: 0.06 },
+  'ひふみXO': { // ひふみクロスオーバーpro（レオス月次レポート 2026年4月基準・実数）
+    // 国内株式(上場)94.41% + 未上場3.03% / 現金2.56%、海外なし
+    assetClass: { equity: 0.974, cash: 0.026 },
+    currency: { JPY: 1 },
+    country: { japan: 1 },
+    // 上位10業種のみ開示のため合計≈0.78（残り≈0.22は未上場株・非開示業種＝不明）
+    sector: {
+      industrials: 0.244, // 機械10.50+卸売10.47+建設3.42
+      tech: 0.186,        // 電気機器13.04+サービス5.53
+      consumer: 0.135,    // 小売9.23+輸送用機器4.22
+      comm: 0.100,        // 情報・通信10.03
+      financials: 0.089,  // 銀行5.87+保険3.03
+      cash: 0.026,        // 現金等
+    },
   },
   'PIMCO-ST': { // ピムコ ショート・ターム（短期債券）
     assetClass: { bond: 1 }, currency: { USD: 1 },
