@@ -8,12 +8,13 @@
 import { computeRiskBreakdown, toSlices, RISK_DIMENSIONS, UNKNOWN_KEY, getContributors, getClassificationSummary } from './risk-calc.js';
 import { fmtJPYInt, fmtPctInt, escapeHTML } from './utils.js';
 import { cssVar } from './color.js';
+import { positions } from './positions.js';
 
 /** 軸ごとのタイトル */
 const TITLES = {
   assetClass: '資産クラス',
   currency: '通貨エクスポージャー',
-  country: '地域・国',
+  country: '国・地域',
   sector: 'セクター',
 };
 
@@ -44,8 +45,14 @@ const UNKNOWN_COLOR = '#9ca3af';
  * @param {string} key
  */
 function labelOf(dim, key) {
-  if (key === UNKNOWN_KEY) return 'その他/不明';
+  if (key === UNKNOWN_KEY) return '不明';
   return LABELS[dim]?.[key] || key;
+}
+
+/** symbol → 銘柄名（ツールチップ表示用） */
+function nameOfSymbol(sym) {
+  const p = positions.find(x => x.symbol === sym);
+  return p?.name || sym;
 }
 
 /**
@@ -149,7 +156,7 @@ function buildChartCard(dim, dimResult) {
   if (coverage < 0.99) {
     const note = document.createElement('div');
     note.className = 'risk-coverage-note';
-    note.textContent = `判明率 ${Math.round(coverage * 100)}%（残りは「その他/不明」）`;
+    note.textContent = `判明率 ${Math.round(coverage * 100)}%（残りは「不明」）`;
     card.appendChild(note);
   }
 
@@ -171,12 +178,26 @@ export function renderRiskCharts() {
 
   wrap.textContent = '';
 
-  // 分類状況サマリーバー（#217）
+  // 分類状況サマリーバー（#217）。各セグメントをホバーで内訳（銘柄一覧）表示。
   const sumInfo = getClassificationSummary();
   const summary = document.createElement('div');
   summary.className = 'risk-summary';
   const warn = sumInfo.unclassified > 0 ? ' ⚠' : '';
-  summary.textContent = `対象 ${sumInfo.total} 銘柄　┃　分類済み ${sumInfo.classified}　┃　分類不明 ${sumInfo.unclassified}${warn}`;
+  const segs = [
+    { label: `対象 ${sumInfo.total} 銘柄`, syms: sumInfo.allSymbols },
+    { label: `分類済み ${sumInfo.classified}`, syms: sumInfo.classifiedSymbols },
+    { label: `分類不明 ${sumInfo.unclassified}${warn}`, syms: sumInfo.unclassifiedSymbols },
+  ];
+  segs.forEach((seg, i) => {
+    if (i) summary.appendChild(document.createTextNode('　┃　'));
+    const span = document.createElement('span');
+    span.className = 'risk-summary-seg';
+    span.textContent = seg.label;
+    span.addEventListener('mouseenter', (ev) => showSymbolTip(ev, seg.label, seg.syms));
+    span.addEventListener('mousemove', moveLegendTip);
+    span.addEventListener('mouseleave', hideLegendTip);
+    summary.appendChild(span);
+  });
   wrap.appendChild(summary);
 
   const grid = document.createElement('div');
@@ -219,4 +240,16 @@ function moveLegendTip(ev) {
 function hideLegendTip() {
   const tip = document.getElementById('tooltip');
   if (tip) tip.style.display = 'none';
+}
+
+// ── サマリーバーのセグメントホバー時の銘柄内訳ツールチップ（#217）────────
+function showSymbolTip(ev, title, symbols) {
+  const tip = document.getElementById('tooltip');
+  if (!tip) return;
+  const rows = (symbols && symbols.length)
+    ? symbols.map(s => escapeHTML(nameOfSymbol(s))).join('<br>')
+    : '（なし）';
+  tip.innerHTML = `<div class="tt-hdr">${escapeHTML(title)}</div>${rows}`;
+  tip.style.display = 'block';
+  moveLegendTip(ev);
 }

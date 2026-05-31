@@ -121,6 +121,8 @@ describe('getClassificationSummary', () => {
     expect(r.classified).toBe(1);
     expect(r.unclassified).toBe(1);
     expect(r.unclassifiedSymbols).toEqual(['NOPE_XYZ']);
+    expect(r.classifiedSymbols).toEqual(['AAPL']);
+    expect(r.allSymbols).toEqual(['AAPL', 'NOPE_XYZ']);
   });
 });
 
