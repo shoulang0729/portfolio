@@ -129,19 +129,42 @@ const CONSTITUENTS = {
       industrials: 0.10, comm: 0.075, staples: 0.06, energy: 0.04,
       materials: 0.04, utilities: 0.025, realestate: 0.02 },
   },
-  'ひふみ': { // ひふみ投信（アクティブ・日本中心）— セクターは判明分のみ
-    assetClass: { equity: 0.95, cash: 0.05 },
-    currency: { JPY: 0.95, USD: 0.05 },
-    country: { japan: 0.90, us: 0.10 },
-    // アクティブ運用のため全構成は非公開。上位の業種傾向のみ記載（残りは その他）
-    sector: { tech: 0.12, industrials: 0.12, consumer: 0.10, financials: 0.08,
-      comm: 0.06 },
+  'ひふみ': { // ひふみ投信（レオス月次レポート 2026年4月基準・実数）
+    // 資産配分: 国内株式 98.69% / 現金等 1.31%、市場別はほぼ全て国内（プライム97.85%等）
+    assetClass: { equity: 0.987, cash: 0.013 },
+    currency: { JPY: 1 },
+    country: { japan: 1 },
+    // 東証33業種を当アプリのセクターへ集約（業種別比率より）。合計≈0.998
+    sector: {
+      industrials: 0.345, // 卸売14.59+機械11.69+建設4.92+その他製品2.13+陸運1.16
+      tech: 0.186,        // 電気機器16.36+サービス1.58+精密0.61
+      financials: 0.155,  // 銀行9.02+保険4.65+その他金融1.79
+      consumer: 0.092,    // 輸送用機器6.48+小売2.71
+      comm: 0.076,        // 情報・通信7.56
+      materials: 0.057,   // 非鉄金属4.34+化学0.72+ガラス土石0.63
+      realestate: 0.039,  // 不動産3.87
+      healthcare: 0.015,  // 医薬品1.48
+      staples: 0.012,     // 食料品1.15
+      utilities: 0.008,   // 電気・ガス0.77
+      cash: 0.013,        // 現金等
+    },
   },
-  'マイクロSP': { // ひふみマイクロスコープpro（日本小型株・アクティブ）
-    assetClass: { equity: 0.95, cash: 0.05 },
-    currency: { JPY: 1 }, country: { japan: 1 },
-    sector: { industrials: 0.16, tech: 0.14, consumer: 0.10, materials: 0.08,
-      healthcare: 0.06 },
+  'マイクロSP': { // ひふみマイクロスコープpro（レオス月次レポート 2026年4月基準・実数）
+    // 資産配分: 国内株式 84.64% / 現金等 15.36%、日本小型株
+    assetClass: { equity: 0.846, cash: 0.154 },
+    currency: { JPY: 1 },
+    country: { japan: 1 },
+    // 上位10業種のみ開示のため合計≈0.873（残りは不明）
+    sector: {
+      industrials: 0.212, // 機械9.56+建設6.92+その他製品4.68
+      tech: 0.192,        // サービス17.05+電気機器2.19
+      comm: 0.081,        // 情報・通信8.09
+      consumer: 0.071,    // 小売7.14
+      realestate: 0.064,  // 不動産6.38
+      financials: 0.062,  // 銀行6.17
+      materials: 0.037,   // 化学3.74
+      cash: 0.154,        // 現金等
+    },
   },
   'ひふみXO': { // ひふみクロスオーバーpro（国内外グロース・アクティブ）
     assetClass: { equity: 0.95, cash: 0.05 },
