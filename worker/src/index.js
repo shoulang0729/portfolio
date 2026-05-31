@@ -168,17 +168,37 @@ async function getYahooCrumb(env) {
   }
 
   // Yahoo Finance からセッションクッキーを取得
+  // 注: 旧 fc.yahoo.com は 2026 時点で HTTP 404 となり crumb 取得が壊れていた（#228）。
+  //     finance.yahoo.com からセッション cookie を取得する方式に変更。
   const ua =
-    'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1';
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+  // cookie 取得元の候補（順に試し、最初に取れたものを使う）
+  const COOKIE_SOURCES = [
+    'https://finance.yahoo.com/',
+    'https://query2.finance.yahoo.com/v1/test/getcrumb',
+  ];
   try {
-    const cookieRes = await fetch('https://fc.yahoo.com', {
-      redirect: 'follow',
-      headers: { 'User-Agent': ua },
-    });
-    const rawCookie = cookieRes.headers.get('set-cookie') || '';
-    // set-cookie ヘッダーから最初のキー=値ペアのみ抽出
-    const cookie = rawCookie.split(';')[0].trim();
-
+    let cookie = '';
+    for (const src of COOKIE_SOURCES) {
+      try {
+        const cookieRes = await fetch(src, {
+          redirect: 'follow',
+          headers: { 'User-Agent': ua, Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' },
+        });
+        // 複数の Set-Cookie を全て収集（getSetCookie 優先、無ければ単一 set-cookie）
+        const rawList =
+          typeof cookieRes.headers.getSetCookie === 'function'
+            ? cookieRes.headers.getSetCookie()
+            : cookieRes.headers.get('set-cookie')
+              ? [cookieRes.headers.get('set-cookie')]
+              : [];
+        const pairs = rawList.map(c => c.split(';')[0].trim()).filter(Boolean);
+        if (pairs.length) {
+          cookie = pairs.join('; ');
+          break;
+        }
+      } catch { /* 次の候補へ */ }
+    }
     if (!cookie) return null;
 
     // crumb を取得
