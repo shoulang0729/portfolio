@@ -27,7 +27,7 @@ const LABELS = {
     tech: 'テック', semis: '半導体', financials: '金融', healthcare: 'ヘルスケア',
     consumer: '一般消費財', staples: '生活必需品', industrials: '資本財', energy: 'エネルギー',
     materials: '素材', comm: '通信', utilities: '公益', realestate: '不動産',
-    commodity: 'コモディティ', bond: '債券（セクター）', cash: '現金',
+    commodity: 'コモディティ', bond: '債券', cash: '現金',
   },
 };
 
