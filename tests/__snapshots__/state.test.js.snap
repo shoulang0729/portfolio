@@ -26,6 +26,7 @@ exports[`state.js > state (initial values) > state matches snapshot 1`] = `
   "lastUpdateText": null,
   "listSortCol": "1d",
   "listSortDir": "desc",
+  "liveTopHoldings": {},
   "prevPrices": {},
   "slDetailVisible": false,
   "statsVisible": false,
