@@ -3015,7 +3015,7 @@ var CONSTITUENTS = {
     currency: { other: 1 },
     country: { latam: 1 },
     sector: {
-      financials: 0.3,
+      financials: 0.33,
       materials: 0.25,
       energy: 0.15,
       staples: 0.15,
@@ -3163,16 +3163,25 @@ var CONSTITUENTS = {
     }
   },
   "\u3072\u3075\u307FXO": {
-    // ひふみクロスオーバーpro（国内外グロース・アクティブ）
-    assetClass: { equity: 0.95, cash: 0.05 },
-    currency: { JPY: 0.92, USD: 0.08 },
-    country: { japan: 0.88, us: 0.12 },
+    // ひふみクロスオーバーpro（レオス月次レポート 2026年4月基準・実数）
+    // 国内株式(上場)94.41% + 未上場3.03% / 現金2.56%、海外なし
+    assetClass: { equity: 0.974, cash: 0.026 },
+    currency: { JPY: 1 },
+    country: { japan: 1 },
+    // 上位10業種のみ開示のため合計≈0.78（残り≈0.22は未上場株・非開示業種＝不明）
     sector: {
-      tech: 0.16,
-      industrials: 0.12,
-      healthcare: 0.1,
-      consumer: 0.08,
-      comm: 0.06
+      industrials: 0.244,
+      // 機械10.50+卸売10.47+建設3.42
+      tech: 0.186,
+      // 電気機器13.04+サービス5.53
+      consumer: 0.135,
+      // 小売9.23+輸送用機器4.22
+      comm: 0.1,
+      // 情報・通信10.03
+      financials: 0.089,
+      // 銀行5.87+保険3.03
+      cash: 0.026
+      // 現金等
     }
   },
   "PIMCO-ST": {
@@ -3299,7 +3308,7 @@ var MANUAL_ASSETS = [
   { symbol: "\u73FE\u91D1(USD)", name: "\u73FE\u91D1\uFF08\u7C73\u30C9\u30EB\u30FB\u5186\u63DB\u7B97\uFF09", value: 78e5, cur: "USD" }
 ];
 var MANUAL_SOURCES = [
-  "\u73FE\u91D1 = \u624B\u52D5\u5165\u529B\uFF082026/05/31\u6642\u70B9\u30FBJPY \u7D044,200\u4E07 / USD \u7D04780\u4E07\u5186\u76F8\u5F53\uFF09",
+  "\u73FE\u91D1 = \u624B\u52D5\u5165\u529B\uFF082026/05/31\uFF09",
   "\u3072\u3075\u307F\u6295\u4FE1\u30FB\u3072\u3075\u307F\u30DE\u30A4\u30AF\u30ED\u30B9\u30B3\u30FC\u30D7pro \u5206\u985E = \u30EC\u30AA\u30B9\u30FB\u30AD\u30E3\u30D4\u30BF\u30EB\u30EF\u30FC\u30AF\u30B9 \u6708\u6B21\u30EC\u30DD\u30FC\u30C8\uFF082026\u5E744\u6708\u57FA\u6E96\uFF09"
 ];
 
