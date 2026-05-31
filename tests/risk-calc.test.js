@@ -16,11 +16,21 @@ describe('computeRiskBreakdown — synthetic positions', () => {
     expect(r.currency.coverage).toBe(1);
   });
 
-  it('routes a commodity holding to the commodity sector bucket (GLDM gold)', () => {
+  it('routes a commodity holding to the commodity sector/country bucket (GLDM gold)', () => {
     const r = computeRiskBreakdown([{ symbol: 'GLDM', value: 500, cur: 'USD' }]);
     expect(r.assetClass.cats.commodity).toBe(500);
     expect(r.sector.cats.commodity).toBe(500);
+    expect(r.country.cats.commodity).toBe(500); // 国・地域でも「コモディティ」スライス
     expect(r.currency.cats.USD).toBe(500);
+  });
+
+  it('classifies manual cash entries (現金(円))', () => {
+    const r = computeRiskBreakdown([{ symbol: '現金(円)', value: 1000, cur: 'JPY' }]);
+    expect(r.assetClass.cats.cash).toBe(1000);
+    expect(r.currency.cats.JPY).toBe(1000);
+    expect(r.country.cats.japan).toBe(1000);
+    expect(r.sector.cats.cash).toBe(1000);
+    expect(r.sector.coverage).toBe(1);
   });
 
   it('accumulates the unknown remainder for partially-known funds (ひふみ sector)', () => {

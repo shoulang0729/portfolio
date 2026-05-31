@@ -7,8 +7,8 @@
 
 import { computeRiskBreakdown, toSlices, RISK_DIMENSIONS, UNKNOWN_KEY, getContributors, getClassificationSummary } from './risk-calc.js';
 import { fmtJPYInt, fmtPctInt, escapeHTML } from './utils.js';
-import { cssVar } from './color.js';
 import { positions } from './positions.js';
+import { MANUAL_ASSETS, MANUAL_SOURCES } from './manual-assets.js';
 
 /** 軸ごとのタイトル */
 const TITLES = {
@@ -22,12 +22,12 @@ const TITLES = {
 const LABELS = {
   assetClass: { equity: '株式', bond: '債券', commodity: 'コモディティ', reit: 'REIT', cash: '現金' },
   currency: { JPY: '円 JPY', USD: 'ドル USD', EUR: 'ユーロ EUR', other: 'その他通貨' },
-  country: { japan: '日本', us: '米国', europe: '欧州', em: '新興国', latam: '中南米', china: '中国', global: '分散・コモディティ等' },
+  country: { japan: '日本', us: '米国', europe: '欧州', em: '新興国', latam: '中南米', china: '中国', global: '分散', commodity: 'コモディティ' },
   sector: {
     tech: 'テック', semis: '半導体', financials: '金融', healthcare: 'ヘルスケア',
     consumer: '一般消費財', staples: '生活必需品', industrials: '資本財', energy: 'エネルギー',
     materials: '素材', comm: '通信', utilities: '公益', realestate: '不動産',
-    commodity: 'コモディティ', bond: '債券（セクター）',
+    commodity: 'コモディティ', bond: '債券（セクター）', cash: '現金',
   },
 };
 
@@ -96,28 +96,27 @@ function buildChartCard(dim, dimResult) {
   // 色割り当て（既知カテゴリはパレット順、__unknown__ はグレー固定）
   const colorOf = (key, i) => (key === UNKNOWN_KEY ? UNKNOWN_COLOR : PALETTE[i % PALETTE.length]);
 
+  // 塗り分け色は固定パレット（テーマ非依存）。境界線(stroke)・中央文字色は
+  // テーマ追従させるため CSS 側（var(--surface)/var(--text)）で指定する（ダークモード対応）。
   g.selectAll('path')
     .data(pie(slices))
     .join('path')
     .attr('d', arc)
     .attr('fill', (d, i) => colorOf(d.data.key, i))
-    .attr('stroke', cssVar('--surface') || '#fff')
-    .attr('stroke-width', 1.5)
     .append('title')
     .text(d => `${labelOf(dim, d.data.key)}: ${fmtJPYInt(d.data.value)}（${fmtPctInt(d.data.pct)}）`);
 
-  // 中央のカバレッジ表示
+  // 中央のカバレッジ表示（色は CSS の .risk-donut-center / -sub = var(--text)/--text2）
   const coverage = dimResult.coverage;
   const center = g.append('text').attr('class', 'risk-donut-center');
   center.append('tspan')
     .attr('x', 0).attr('dy', '-0.1em')
-    .attr('fill', cssVar('--text') || '#000')
     .attr('font-size', '13px').attr('font-weight', '700')
     .attr('text-anchor', 'middle')
     .text(`${Math.round(coverage * 100)}%`);
   center.append('tspan')
+    .attr('class', 'risk-donut-center-sub')
     .attr('x', 0).attr('dy', '1.3em')
-    .attr('fill', cssVar('--text2') || '#666')
     .attr('font-size', '9px')
     .attr('text-anchor', 'middle')
     .text('判明');
@@ -174,12 +173,14 @@ export function renderRiskCharts() {
   if (!wrap) return;
   if (typeof d3 === 'undefined') return;
 
-  const breakdown = computeRiskBreakdown();
+  // 証券（positions）＋手動入力資産（現金など manual-assets.js）を合算して look-through。
+  const assets = [...positions, ...MANUAL_ASSETS];
+  const breakdown = computeRiskBreakdown(assets);
 
   wrap.textContent = '';
 
   // 分類状況サマリーバー（#217）。各セグメントをホバーで内訳（銘柄一覧）表示。
-  const sumInfo = getClassificationSummary();
+  const sumInfo = getClassificationSummary(assets);
   const summary = document.createElement('div');
   summary.className = 'risk-summary';
   const warn = sumInfo.unclassified > 0 ? ' ⚠' : '';
@@ -207,10 +208,11 @@ export function renderRiskCharts() {
   }
   wrap.appendChild(grid);
 
-  // データソース明記（#214）
+  // データソース明記（#214）＋ 手動入力データの引用元（現金・ひふみ等）
   const src = document.createElement('div');
   src.className = 'risk-source';
-  src.textContent = 'データソース: 価格 = Finnhub / Yahoo Finance ・ 資産クラス/通貨/国/セクター分類 = 銘柄マスタ（positions.js・constituents.js）';
+  const baseSrc = 'データソース: 価格 = Finnhub / Yahoo Finance ・ 資産クラス/通貨/国/セクター分類 = 銘柄マスタ（positions.js・constituents.js）';
+  src.textContent = [baseSrc, ...MANUAL_SOURCES].join(' ／ ');
   wrap.appendChild(src);
 }
 

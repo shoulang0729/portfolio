@@ -407,6 +407,10 @@
 .risk-donut {
   flex: none;
 }
+/* 境界線・中央文字色はテーマ変数で指定し、ダーク/ライト切替に追従させる */
+.risk-donut path { stroke: var(--surface); stroke-width: 1.5; }
+.risk-donut-center { fill: var(--text); }
+.risk-donut-center-sub { fill: var(--text2); }
 .risk-legend {
   list-style: none;
   margin: 0;

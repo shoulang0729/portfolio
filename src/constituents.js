@@ -14,10 +14,10 @@
 // カテゴリキー（表示ラベルは risk-charts.js の LABELS で定義）:
 //   assetClass: equity | bond | commodity | reit | cash
 //   currency  : JPY | USD | EUR | other
-//   country   : japan | us | europe | em | latam | china | global
+//   country   : japan | us | europe | em | latam | china | global | commodity
 //   sector    : tech | semis | financials | healthcare | consumer | staples |
 //               industrials | energy | materials | comm | utilities |
-//               realestate | commodity | bond
+//               realestate | commodity | bond | cash
 // ══════════════════════════════════════════════════════════════
 
 /** @typedef {Record<string, number>} WeightMap */
@@ -71,7 +71,7 @@ const CONSTITUENTS = {
     country: { global: 0.5, em: 0.3, us: 0.2 }, sector: { materials: 1 },
   },
   'GLDM': { // 現物ゴールド
-    assetClass: { commodity: 1 }, currency: { USD: 1 }, country: { global: 1 },
+    assetClass: { commodity: 1 }, currency: { USD: 1 }, country: { commodity: 1 },
     sector: { commodity: 1 },
   },
   'GOOGL': {
@@ -104,7 +104,7 @@ const CONSTITUENTS = {
     country: { us: 0.6, europe: 0.4 }, sector: { industrials: 1 },
   },
   'SLV': { // 現物シルバー
-    assetClass: { commodity: 1 }, currency: { USD: 1 }, country: { global: 1 },
+    assetClass: { commodity: 1 }, currency: { USD: 1 }, country: { commodity: 1 },
     sector: { commodity: 1 },
   },
   'SMH': { // 半導体ETF（米中心・台韓含む）
@@ -153,6 +153,14 @@ const CONSTITUENTS = {
   'PIMCO-ST': { // ピムコ ショート・ターム（短期債券）
     assetClass: { bond: 1 }, currency: { USD: 1 },
     country: { us: 0.6, global: 0.4 }, sector: { bond: 1 },
+  },
+
+  // ── 現金（手動入力・manual-assets.js で Exposure に投入）──
+  '現金(円)': {
+    assetClass: { cash: 1 }, currency: { JPY: 1 }, country: { japan: 1 }, sector: { cash: 1 },
+  },
+  '現金(USD)': {
+    assetClass: { cash: 1 }, currency: { USD: 1 }, country: { us: 1 }, sector: { cash: 1 },
   },
 };
 
