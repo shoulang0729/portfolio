@@ -1,7 +1,8 @@
 // Tests for look-through risk aggregation in src/risk-calc.js
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { computeRiskBreakdown, toSlices, getContributors, getClassificationSummary, RISK_DIMENSIONS, UNKNOWN_KEY } from '../src/risk-calc.js';
+import { state } from '../src/state.js';
 
 describe('computeRiskBreakdown — synthetic positions', () => {
   it('maps a curated US stock fully (AAPL)', () => {
@@ -120,5 +121,59 @@ describe('getClassificationSummary', () => {
     expect(r.classified).toBe(1);
     expect(r.unclassified).toBe(1);
     expect(r.unclassifiedSymbols).toEqual(['NOPE_XYZ']);
+  });
+});
+
+describe('computeRiskBreakdown — liveTopHoldings override', () => {
+  afterEach(() => {
+    state.liveTopHoldings = {};
+  });
+
+  it('uses live sector data from liveTopHoldings when available', () => {
+    // オルカン の sector を live データで上書き
+    state.liveTopHoldings['オルカン'] = {
+      sector: { tech: 0.30, financials: 0.20, healthcare: 0.10, industrials: 0.10,
+        consumer: 0.10, comm: 0.08, staples: 0.05, energy: 0.04, materials: 0.03 },
+      asOf: '2026-05-31T00:00:00.000Z',
+    };
+
+    const r = computeRiskBreakdown([{ symbol: 'オルカン', value: 10000, cur: 'JPY' }]);
+
+    // live データの tech 比率（0.30）が反映されること
+    expect(r.sector.cats.tech).toBeCloseTo(3000, 4);
+    expect(r.sector.cats.financials).toBeCloseTo(2000, 4);
+
+    // assetClass / currency / country は curated entry から従来どおり取得されること
+    expect(r.assetClass.cats.equity).toBeCloseTo(10000, 4);
+    expect(r.currency.cats.USD).toBeGreaterThan(0);
+    expect(r.country.cats.us).toBeGreaterThan(0);
+  });
+
+  it('falls back to curated sector when liveTopHoldings is empty', () => {
+    // liveTopHoldings は空（afterEach でリセット済み）
+    const r = computeRiskBreakdown([{ symbol: 'オルカン', value: 10000, cur: 'JPY' }]);
+
+    // curated の tech 比率 (0.26) が使われること
+    expect(r.sector.cats.tech).toBeCloseTo(2600, 4);
+  });
+
+  it('does not affect non-allowlist symbols (AAPL sector stays in tech)', () => {
+    // AAPL に live data をセットしても sector はそのまま（今回の ALLOWLIST 対象外だが
+    // liveTopHoldings に入れた場合は上書きされる — 動作確認）
+    state.liveTopHoldings['AAPL'] = {
+      sector: { financials: 1 },
+      asOf: '2026-05-31T00:00:00.000Z',
+    };
+    const r = computeRiskBreakdown([{ symbol: 'AAPL', value: 1000, cur: 'USD' }]);
+
+    // liveTopHoldings に値があれば上書きされる（allowlist 制限は loadTopHoldings 側）
+    expect(r.sector.cats.financials).toBeCloseTo(1000, 4);
+    expect(r.sector.cats.tech).toBeUndefined();
+  });
+
+  it('liveTopHoldings reset in afterEach does not bleed between tests', () => {
+    // state.liveTopHoldings は空 → curated data が使われる
+    const r = computeRiskBreakdown([{ symbol: 'オルカン', value: 10000, cur: 'JPY' }]);
+    expect(r.sector.cats.tech).toBeCloseTo(2600, 4);
   });
 });

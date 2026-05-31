@@ -9,6 +9,7 @@
 
 import { positions as defaultPositions } from './positions.js';
 import { CONSTITUENTS } from './constituents.js';
+import { state } from './state.js';
 
 /** 集計対象の4軸 */
 export const RISK_DIMENSIONS = ['assetClass', 'currency', 'country', 'sector'];
@@ -62,7 +63,11 @@ export function computeRiskBreakdown(posList = defaultPositions) {
     const name = p.name || p.symbol || '';
 
     for (const dim of RISK_DIMENSIONS) {
-      const map = entry[dim] || {};
+      // sector 次元のみ: liveTopHoldings に実データがあればそちらを優先する（entry は破壊しない）
+      const liveSector = (dim === 'sector' && p.symbol)
+        ? state.liveTopHoldings[p.symbol]?.sector
+        : undefined;
+      const map = liveSector !== undefined ? liveSector : (entry[dim] || {});
       const bucket = result[dim];
       let known = 0;
       for (const [cat, w] of Object.entries(map)) {
