@@ -82,10 +82,10 @@ async function fetchTickerInfo(symbol) {
   // chart API（価格）と quoteSummary（正式商品名）を並列取得
   const [chartData, qsData] = await Promise.all([
     fetchViaProxy(
-      `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=2d`, 7000
+      `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=2d`, 7000, _searchAbortCtrl.signal
     ),
     fetchViaProxy(
-      `https://query2.finance.yahoo.com/v11/finance/quoteSummary/${symbol}?modules=price`, 6000
+      `https://query2.finance.yahoo.com/v11/finance/quoteSummary/${symbol}?modules=price`, 6000, _searchAbortCtrl.signal
     ),
   ]);
 
@@ -148,6 +148,7 @@ function wlTypeBadge(quoteType) {
 
 // ── 検索 ──
 let _wlSearchTimer = null;
+let _searchAbortCtrl = null;
 
 function onWatchlistSearch(eventOrQuery) {
   // data-action ディスパッチャ経由（input イベント）、または文字列引数の両方を受ける
@@ -165,6 +166,10 @@ function onWatchlistSearch(eventOrQuery) {
 async function searchTicker(q) {
   const dropdown = document.getElementById('wl-search-dropdown');
   const input    = q.trim().toUpperCase();
+
+  // 前のリクエストをキャンセル → 新しいリクエスト用に AbortController を生成
+  _searchAbortCtrl?.abort();
+  _searchAbortCtrl = new AbortController();
 
   // 入力から試すシンボル一覧を生成
   const candidates = new Set([input]);
@@ -188,19 +193,26 @@ async function searchTicker(q) {
   }
 
   // 全候補を並列取得（チャートAPIなので必ず動作する）
-  const results = await Promise.all(
-    [...candidates].map(async sym => {
-      const info = await fetchTickerInfo(sym);
-      return info ? { symbol: sym, ...info } : null;
-    })
-  );
+  let results;
+  try {
+    results = await Promise.all(
+      [...candidates].map(async sym => {
+        const info = await fetchTickerInfo(sym);
+        return info ? { symbol: sym, ...info } : null;
+      })
+    );
+  } catch (e) {
+    // AbortError の場合は何もしない（新しい検索がキャンセルした）
+    if (e.name === 'AbortError') return;
+    throw e;
+  }
   // 重複シンボルを除去して返す
   const seen = new Set();
   const found = results.filter(r => r && !seen.has(r.symbol) && seen.add(r.symbol));
 
   if (found.length === 0) {
     dropdown.innerHTML = `<div class="wl-search-msg">
-      「${input}」は見つかりませんでした
+      「${escapeHTML(input)}」は見つかりませんでした
       <br><small style="opacity:0.65;font-size:11px">米国: VWO / AAPL &nbsp;|&nbsp; 日本: 7203.T &nbsp;|&nbsp; 香港: 0700.HK</small>
     </div>`;
     return;
