@@ -4396,7 +4396,16 @@ async function loadTopHoldings() {
 
 // src/ptr.js
 if ("ontouchstart" in window) {
-  let getIndicator = function() {
+  let touchInScrollable = function(el) {
+    while (el && el !== document.body) {
+      if (el.scrollHeight > el.clientHeight + 2) {
+        const oy = window.getComputedStyle(el).overflowY;
+        if (oy === "auto" || oy === "scroll") return true;
+      }
+      el = el.parentElement;
+    }
+    return false;
+  }, getIndicator = function() {
     if (indicator) return indicator;
     indicator = document.createElement("div");
     indicator.id = "ptr-indicator";
@@ -4451,7 +4460,7 @@ if ("ontouchstart" in window) {
   let arrow = null;
   const atTop = () => (window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0) <= 0;
   document.addEventListener("touchstart", (e) => {
-    pulling = atTop();
+    pulling = atTop() && !touchInScrollable(e.target);
     startY = e.touches[0].clientY;
   }, { passive: true });
   document.addEventListener("touchmove", (e) => {
