@@ -275,10 +275,10 @@ async function refreshPrices() {
         p.pnlPct = costTotal > 0 ? (p.pnl / costTotal) * 100 : 0;
       } else {
         // USD建て: avgCost は USD のため JPY 換算が不明。
-        // 代わりに「value - pnl（JPY 取得原価）」を基準に損益を再計算する
+        // 新しい USD価格と現在の為替レートから JPY評価額を再計算する
         const costJPY = (p.value != null && p.pnl != null) ? p.value - p.pnl : 0;
-        const ratio = oldPrice > 0 ? live.price / oldPrice : 1;
-        p.value  = Math.round(p.value * ratio);
+        const fxRate = state.forexRate.USDJPY || 1;
+        p.value  = Math.round(live.price * p.shares * fxRate);
         p.pnl    = p.value - costJPY;
         p.pnlPct = costJPY > 0 ? (p.pnl / costJPY) * 100 : 0;
       }
