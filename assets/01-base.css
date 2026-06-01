@@ -247,7 +247,7 @@ body {
   font-size: 13px;
   pointer-events: none;
   z-index: 9000;
-  min-width: 230px;
+  min-width: 280px;
   box-shadow: var(--shadow);
   display: none;
 }
@@ -263,6 +263,46 @@ body {
 .tt-val { font-weight: 600; text-align: right; }
 .tt-sep { border-top: 1px solid var(--border2); margin: 6px 0; }
 .tt-hint { font-size: 11px; color: var(--text2); margin-top: 8px; text-align: center; }
+/* Exposure 内訳ツールチップ行 */
+.tt-risk-row {
+  display: grid;
+  grid-template-columns: 38px 1fr 60px 34px;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 0;
+}
+.tt-risk-ticker {
+  font-weight: 700;
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tt-risk-name {
+  font-size: 10.5px;
+  color: var(--text2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.tt-risk-bar-wrap {
+  height: 4px;
+  background: var(--border2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.tt-risk-bar {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+}
+.tt-risk-pct {
+  font-weight: 700;
+  font-size: 11px;
+  text-align: right;
+  white-space: nowrap;
+}
 
 .footer {
   display: flex;
