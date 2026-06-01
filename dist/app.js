@@ -2402,6 +2402,10 @@ function renderChart(points, interval = "1d", dateFmt = "%m/%d") {
 var _heatmapRetryCount = 0;
 var HEATMAP_MAX_RETRY = 30;
 function renderHeatmap() {
+  if (typeof d3 === "undefined") {
+    console.warn("[heatmap] D3 not loaded");
+    return;
+  }
   const panel = document.getElementById("panel-heatmap");
   if (panel?.hidden) return;
   const wrap = document.getElementById("heatmap-wrap");
