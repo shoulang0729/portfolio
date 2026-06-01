@@ -1843,11 +1843,13 @@ async function applyPricesCache() {
           p.pnl = p.value - cost;
           p.pnlPct = cost > 0 ? p.pnl / cost * 100 : 0;
         } else {
-          const costJPY = p.value != null && p.pnl != null ? p.value - p.pnl : 0;
-          const ratio = oldPrice > 0 ? c.price / oldPrice : 1;
-          p.value = Math.round(p.value * ratio);
-          p.pnl = p.value - costJPY;
-          p.pnlPct = costJPY > 0 ? p.pnl / costJPY * 100 : 0;
+          if (p.value > 0) {
+            const costJPY = p.value != null && p.pnl != null ? p.value - p.pnl : 0;
+            const ratio = oldPrice > 0 ? c.price / oldPrice : 1;
+            p.value = Math.round(p.value * ratio);
+            p.pnl = p.value - costJPY;
+            p.pnlPct = costJPY > 0 ? p.pnl / costJPY * 100 : 0;
+          }
         }
       }
       applied++;
@@ -2000,11 +2002,15 @@ async function refreshPrices() {
         p.pnl = p.value - costTotal;
         p.pnlPct = costTotal > 0 ? p.pnl / costTotal * 100 : 0;
       } else {
+        const storedFxRate = state.forexRate.USDJPY;
+        const estimatedFxRate = !storedFxRate && p.value > 0 && p.price > 0 && p.shares > 0 ? p.value / (p.price * p.shares) : 0;
+        const fxRate = storedFxRate || estimatedFxRate;
         const costJPY = p.value != null && p.pnl != null ? p.value - p.pnl : 0;
-        const fxRate = state.forexRate.USDJPY || 1;
-        p.value = Math.round(live.price * p.shares * fxRate);
-        p.pnl = p.value - costJPY;
-        p.pnlPct = costJPY > 0 ? p.pnl / costJPY * 100 : 0;
+        if (fxRate > 0) {
+          p.value = Math.round(live.price * p.shares * fxRate);
+          p.pnl = p.value - costJPY;
+          p.pnlPct = costJPY > 0 ? p.pnl / costJPY * 100 : 0;
+        }
       }
       p.dayPct = live.dayPct ?? null;
       updateCache(p.ySymbol, live.price);
