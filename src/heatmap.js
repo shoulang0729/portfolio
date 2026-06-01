@@ -19,6 +19,10 @@ let _heatmapRetryCount = 0;
 const HEATMAP_MAX_RETRY = 30;
 
 function renderHeatmap() {
+  if (typeof d3 === 'undefined') {
+    console.warn('[heatmap] D3 not loaded');
+    return;
+  }
   // ヒートマップタブが非表示なら描画スキップ
   const panel = document.getElementById('panel-heatmap');
   if (panel?.hidden) return;
