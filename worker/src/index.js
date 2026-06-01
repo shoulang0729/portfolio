@@ -924,8 +924,8 @@ async function handleNotionSave(request, env, origin) {
 // ── 保有銘柄（KV・非公開）────────────────────────────────────
 // GET: 許可オリジンからのみ取得可能
 // PUT: 許可オリジンかつ X-Pin-Hash ヘッダーによる PIN 認証が必要
-// SHA-256("1234") — フロントの src/auth-pin.js:AUTH_PIN_HASH と同期させる
-const DEFAULT_PIN_HASH = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
+// SHA-256("123456") — フロントの src/auth-pin.js:AUTH_PIN_HASH と同期させる
+const DEFAULT_PIN_HASH = '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92';
 
 async function handlePositions(request, env, origin, ctx) {
   if (!env.KV) return errRes('KV 未設定', 500, origin);
