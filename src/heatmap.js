@@ -213,7 +213,7 @@ function renderHeatmap() {
         <div class="tt-row"><span class="tt-label">時価評価額</span><span class="tt-val">${fmtJPY(p.value)}</span></div>
         <div class="tt-row"><span class="tt-label">含み損益（円）</span><span class="tt-val ${sgn(p.pnl)}">${fmtJPYFull(p.pnl)}</span></div>
         <div class="tt-row"><span class="tt-label">損益率</span><span class="tt-val ${sgn(p.pnlPct)}">${fmtPct(p.pnlPct)}</span></div>`;
-      if (p.dayPct !== null) html += `<div class="tt-sep"></div>
+      if (p.dayPct !== null && p.dayCh != null) html += `<div class="tt-sep"></div>
         <div class="tt-row"><span class="tt-label">前日比（円）</span><span class="tt-val ${sgn(p.dayCh)}">${fmtJPYFull(p.dayCh)}</span></div>
         <div class="tt-row"><span class="tt-label">前日比（%）</span><span class="tt-val ${sgn(p.dayPct)}">${fmtPct(p.dayPct)}</span></div>`;
       if (p.isProxy) html += `<div class="tt-hint" style="color:var(--text2)">📊 騰落率は代替インデックスで近似<br>${escapeHTML(p.proxyName)}</div>`;
