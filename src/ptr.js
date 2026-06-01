@@ -12,6 +12,21 @@ if ('ontouchstart' in window) {
   const atTop = () =>
     (window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0) <= 0;
 
+  // タッチ開始位置が内側スクロールコンテナ（overflow-y:auto/scroll で実際に溢れている要素）の
+  // 中にある場合は PTR を発動させない。
+  // #stock-list-wrap と #watchlist-table-wrap は maxHeight+overflow-y:auto で内側スクロールに
+  // なっているため window.pageYOffset は常に 0 だが、その中でのスクロールはPTRと無関係。
+  function touchInScrollable(el) {
+    while (el && el !== document.body) {
+      if (el.scrollHeight > el.clientHeight + 2) {
+        const oy = window.getComputedStyle(el).overflowY;
+        if (oy === 'auto' || oy === 'scroll') return true;
+      }
+      el = el.parentElement;
+    }
+    return false;
+  }
+
   function getIndicator() {
     if (indicator) return indicator;
     indicator = document.createElement('div');
@@ -58,7 +73,7 @@ if ('ontouchstart' in window) {
   }
 
   document.addEventListener('touchstart', e => {
-    pulling = atTop();
+    pulling = atTop() && !touchInScrollable(e.target);
     startY  = e.touches[0].clientY;
   }, { passive: true });
 
