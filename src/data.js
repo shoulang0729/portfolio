@@ -149,26 +149,38 @@ function isMarketHours() {
 // LIVE PRICE UPDATE
 // ══════════════════════════════════════════════
 
+/** エラー種別の日本語ラベル */
+const ERR_LABELS = {
+  rateLimit:    'レート制限429',
+  serverError:  'サーバーエラー',
+  timeout:      'タイムアウト',
+  networkError: '通信エラー',
+  noData:       'データなし',
+};
+
 /**
  * 1銘柄のライブ価格・当日騰落率を取得する
  * Finnhub を優先し、失敗時は Yahoo Finance にフォールバック
+ * @returns {Promise<{price: number, dayPct: number|null}|{_err: string}>}
  */
 async function fetchLivePrice(symbol) {
   // ── Finnhub を優先試行 ──
+  let finnhubErr = null;
   const fSymbol = toFinnhubSymbol(symbol);
   if (fSymbol) {
     const fh = await fetchFinnhubQuote(fSymbol);
-    if (fh) return fh;
+    if (fh && !fh._err) return fh;
+    finnhubErr = fh?._err || 'networkError';
   }
 
   // ── フォールバック: Yahoo Finance ──
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=2d&_=${Date.now()}`;
   const data = await fetchViaProxy(url);
   const result = data?.chart?.result?.[0];
-  if (!result) return null;
+  if (!result) return { _err: finnhubErr || 'noData' };
 
   const price = result.meta?.regularMarketPrice ?? null;
-  if (price == null) return null;
+  if (price == null) return { _err: finnhubErr || 'noData' };
 
   // Yahoo Finance が事前計算した騰落率を最優先（サイト表示値と一致する）
   const preCalcPct = result.meta?.regularMarketChangePercent ?? null;
@@ -202,11 +214,12 @@ async function refreshPrices() {
   }
 
   // batchWithRetry でバッチ取得＋自動リトライ
+  // timeout / serverError は一時障害なのでリトライ、rateLimit / noData / networkError はしない
   const fetched = await batchWithRetry(
     targets,
     async p => ({ pos: p, live: await fetchLivePrice(p.ySymbol) }),
     {
-      isFailed: r => !r.live,
+      isFailed: r => !r.live || r.live._err === 'timeout' || r.live._err === 'serverError',
       onProgress: (done, total) => setStatus(`ライブ価格を取得中（${done}/${total}）...`, 'yellow'),
     }
   );
@@ -226,9 +239,18 @@ async function refreshPrices() {
     }
   };
 
+  // エラー種別ごとに集計
+  const errCounts = {};
+  fetched.forEach(({ live }) => {
+    if (!live || live._err) {
+      const key = live?._err || 'networkError';
+      errCounts[key] = (errCounts[key] || 0) + 1;
+    }
+  });
+
   let n = 0;
   fetched.forEach(({ pos: p, live }) => {
-    if (!live) return;
+    if (!live || live._err) return;
 
     // Sanity check: live価格が記録値と10倍以上乖離する場合は Finnhub 誤データとみなす
     // isProxy 銘柄はスキップ（p.price は基準価額、live.price はプロキシ価格で単位が異なる）
@@ -269,11 +291,17 @@ async function refreshPrices() {
   const total = targets.length;
   const failedCount = total - n;
 
+  /** errCounts を "レート制限429×5・タイムアウト×3" 形式に変換 */
+  const fmtErrDetail = () =>
+    Object.entries(errCounts)
+      .map(([k, c]) => `${ERR_LABELS[k] || k}×${c}`)
+      .join('・');
+
   if (n > 0) {
     const now = new Date();
     const ts2 = now.toLocaleTimeString('ja-JP', { hour:'2-digit', minute:'2-digit' });
     const msg = failedCount > 0
-      ? `ライブ価格: ${n}/${total}銘柄 更新（${failedCount}銘柄 取得失敗） ${ts2}`
+      ? `ライブ価格: ${n}/${total}銘柄 更新（${fmtErrDetail()}） ${ts2}`
       : `${n}銘柄 最終更新: ${ts2}`;
     state.lastUpdateText = msg;  // 履歴データ取得後に復元できるよう保存
     setStatus(msg, failedCount > 0 ? 'yellow' : 'green');
@@ -283,7 +311,7 @@ async function refreshPrices() {
   } else if (!isMarketHours()) {
     setStatus('市場時間外（前回データで表示中）', 'yellow');
   } else {
-    setStatus(`ライブ価格取得失敗: 0/${total}銘柄（APIアクセス制限の可能性）`, 'red');
+    setStatus(`ライブ価格取得失敗: 0/${total}銘柄（${fmtErrDetail()}）`, 'red');
   }
 }
 
