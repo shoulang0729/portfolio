@@ -1522,22 +1522,21 @@ function setStatus(msg, color) {
   txt.textContent = msg;
 }
 function flashPriceChanges(fetched) {
-  const { state: state2 } = window;
-  const hasPrev = Object.keys(state2.prevPrices).length > 0;
+  const hasPrev = Object.keys(state.prevPrices).length > 0;
   if (!hasPrev) {
     fetched.forEach(({ pos: p, live }) => {
-      if (live?.price && p.ySymbol) state2.prevPrices[p.ySymbol] = live.price;
+      if (live?.price && p.ySymbol) state.prevPrices[p.ySymbol] = live.price;
     });
     return;
   }
   const changes = [];
   fetched.forEach(({ pos: p, live }) => {
     if (!live?.price || !p.ySymbol) return;
-    const prev = state2.prevPrices[p.ySymbol];
+    const prev = state.prevPrices[p.ySymbol];
     if (prev != null && prev !== live.price) {
       changes.push({ ySymbol: p.ySymbol, direction: live.price > prev ? "up" : "down" });
     }
-    state2.prevPrices[p.ySymbol] = live.price;
+    state.prevPrices[p.ySymbol] = live.price;
   });
   if (changes.length === 0) return;
   requestAnimationFrame(() => {

@@ -4,6 +4,8 @@
 // ui-status.js  ―  UI status updates & animations
 // ══════════════════════════════════════════════════════════════
 
+import { state } from './state.js';
+
 /**
  * @typedef {object} Position
  * @property {string} ySymbol - Yahoo Finance symbol
@@ -37,8 +39,6 @@ export function setStatus(msg, color) {
  * @returns {void}
  */
 export function flashPriceChanges(fetched) {
-  // @ts-ignore window.state injected by app.js
-  const { state } = window;
   const hasPrev = Object.keys(state.prevPrices).length > 0;
   if (!hasPrev) {
     // First fetch: record prices without animation
