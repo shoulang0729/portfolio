@@ -314,7 +314,7 @@ body {
 }
 .legend { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text2); }
 .legend-bar { height: 9px; width: 160px; border-radius: 3px; background: linear-gradient(to right, #1B5E20, #A5D6A7, #E8E8ED, #EF9A9A, #C62828); }
-.status-line { font-size: 11px; color: var(--text2); display: flex; align-items: center; gap: 5px; }
+.status-line { font-size: 11px; color: var(--text2); display: flex; align-items: center; gap: 5px; cursor: pointer; }
 .dot { width: 6px; height: 6px; border-radius: 50%; background: #34C759; display: inline-block; }
 .dot.red { background: #FF3B30; }
 .dot.yellow { background: #FF9F0A; }
