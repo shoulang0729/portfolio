@@ -3017,10 +3017,11 @@ var CONSTITUENTS = {
     sector: { tech: 1 }
   },
   "AMZN": {
+    // AWS(クラウド)が利益の6割: tech/consumer 混在
     assetClass: { equity: 1 },
     currency: { USD: 1 },
     country: { us: 1 },
-    sector: { consumer: 1 }
+    sector: { tech: 0.3, consumer: 0.7 }
   },
   "COPX": {
     // 銅鉱山株ETF（グローバル鉱山企業）
@@ -3038,10 +3039,11 @@ var CONSTITUENTS = {
     sector: { commodity: 1 }
   },
   "GOOGL": {
+    // GICS: 通信サービス。検索・広告=comm、Google Cloud=tech
     assetClass: { equity: 1 },
     currency: { USD: 1 },
     country: { us: 1 },
-    sector: { tech: 1 }
+    sector: { comm: 0.8, tech: 0.2 }
   },
   "ILF": {
     // iシェアーズ ラテンアメリカ40
@@ -3358,7 +3360,7 @@ var LABELS = {
   currency: { JPY: "\u5186 JPY", USD: "\u30C9\u30EB USD", EUR: "\u30E6\u30FC\u30ED EUR", other: "\u305D\u306E\u4ED6\u901A\u8CA8" },
   country: { japan: "\u65E5\u672C", us: "\u7C73\u56FD", europe: "\u6B27\u5DDE", em: "\u65B0\u8208\u56FD", latam: "\u4E2D\u5357\u7C73", china: "\u4E2D\u56FD", global: "\u5206\u6563", commodity: "\u30B3\u30E2\u30C7\u30A3\u30C6\u30A3" },
   sector: {
-    tech: "\u30C6\u30C3\u30AF",
+    tech: "\u30BD\u30D5\u30C8\u30A6\u30A7\u30A2/IT",
     semis: "\u534A\u5C0E\u4F53",
     financials: "\u91D1\u878D",
     healthcare: "\u30D8\u30EB\u30B9\u30B1\u30A2",
