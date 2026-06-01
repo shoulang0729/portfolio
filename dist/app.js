@@ -1191,6 +1191,7 @@ async function _pcSubmit() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ oldHash: prevHash, newHash })
     }).catch(() => {
+      console.warn("[auth] PIN hash sync to Worker failed \u2014 local PIN changed but server sync pending");
     });
     _pcSuccess();
   }
@@ -4248,7 +4249,6 @@ async function _retryWithPin() {
   }
   const pinHash = await _hashPin(pin);
   if (gen !== _importGen) return;
-  localStorage.setItem("hm-pin-hash", pinHash);
   const finalPositions = _importState.pendingPositions;
   if (!finalPositions?.length) {
     closeImportModal();
@@ -4256,6 +4256,7 @@ async function _retryWithPin() {
   }
   _renderImportStep("saving");
   await _doSavePositions(finalPositions, pinHash, gen);
+  if (gen === _importGen) localStorage.setItem("hm-pin-hash", pinHash);
 }
 async function handleManexFileSelect(event) {
   const gen = _importGen;
