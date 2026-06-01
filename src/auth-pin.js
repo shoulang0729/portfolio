@@ -1,7 +1,7 @@
 // ══════════════════════════════════════════════════════════════
 // auth-pin.js  ―  PIN 認証ロジック（状態・ハッシュ・ロックアウト）
 //
-// ■ デフォルト PIN: 1234  / リセット: localStorage.removeItem('hm-pin-hash')
+// ■ デフォルト PIN: 123456  / リセット: localStorage.removeItem('hm-pin-hash')
 // UI（キーパッド・ダイアログ）は src/auth-ui.js に分離。
 // 暗号化（AES-GCM 鍵導出）は src/auth-crypto.js に分離。
 //

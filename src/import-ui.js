@@ -309,12 +309,13 @@ async function _retryWithPin() {
 
   const pinHash = await _hashPin(pin);
   if (gen !== _importGen) return; // モーダルが閉じ/再オープンされた
-  localStorage.setItem('hm-pin-hash', pinHash);
 
   const finalPositions = _importState.pendingPositions;
   if (!finalPositions?.length) { closeImportModal(); return; }
   _renderImportStep('saving');
   await _doSavePositions(finalPositions, pinHash, gen);
+  // 保存成功後にのみ PIN ハッシュをローカルに記録（誤入力で上書きしないため）
+  if (gen === _importGen) localStorage.setItem('hm-pin-hash', pinHash);
 }
 
 // ── ファイル選択ハンドラ ──────────────────────────────────────────────────
