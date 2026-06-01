@@ -502,7 +502,14 @@ var state = {
   lastUpdateText: null,
   // refreshPrices 成功時のステータス文字列（履歴取得後に復元用）
   // ウォッチリスト
-  watchlist: JSON.parse(localStorage.getItem("hm-watchlist") || "[]"),
+  watchlist: (() => {
+    try {
+      return JSON.parse(localStorage.getItem("hm-watchlist") || "[]");
+    } catch {
+      localStorage.removeItem("hm-watchlist");
+      return [];
+    }
+  })(),
   watchlistPrices: {},
   // symbol → { price, dayPct }
   wlSortCol: "1d",
@@ -684,6 +691,8 @@ async function showConfirm({ title, message, okLabel = "OK", cancelLabel = "\u30
     overlay.appendChild(modal);
     const cleanup = () => {
       overlay.classList.remove("open");
+      document.removeEventListener("keydown", handleEsc);
+      overlay.removeEventListener("click", handleOverlay);
       overlay.addEventListener("transitionend", () => overlay.remove(), { once: true });
     };
     const handleEsc = (e) => {
@@ -700,7 +709,7 @@ async function showConfirm({ title, message, okLabel = "OK", cancelLabel = "\u30
     };
     document.body.appendChild(overlay);
     requestAnimationFrame(() => overlay.classList.add("open"));
-    document.addEventListener("keydown", handleEsc, { once: true });
+    document.addEventListener("keydown", handleEsc);
     overlay.addEventListener("click", handleOverlay);
     okBtn.focus();
   });
@@ -748,6 +757,8 @@ async function showAlert({ title, message, okLabel = "OK" }) {
     overlay.appendChild(modal);
     const cleanup = () => {
       overlay.classList.remove("open");
+      document.removeEventListener("keydown", handleEsc);
+      overlay.removeEventListener("click", handleOverlay);
       overlay.addEventListener("transitionend", () => overlay.remove(), { once: true });
     };
     const handleEsc = (e) => {
@@ -764,7 +775,7 @@ async function showAlert({ title, message, okLabel = "OK" }) {
     };
     document.body.appendChild(overlay);
     requestAnimationFrame(() => overlay.classList.add("open"));
-    document.addEventListener("keydown", handleEsc, { once: true });
+    document.addEventListener("keydown", handleEsc);
     overlay.addEventListener("click", handleOverlay);
     okBtn.focus();
   });
@@ -1989,8 +2000,8 @@ async function refreshPrices() {
         p.pnlPct = costTotal > 0 ? p.pnl / costTotal * 100 : 0;
       } else {
         const costJPY = p.value != null && p.pnl != null ? p.value - p.pnl : 0;
-        const ratio = oldPrice > 0 ? live.price / oldPrice : 1;
-        p.value = Math.round(p.value * ratio);
+        const fxRate = state.forexRate.USDJPY || 1;
+        p.value = Math.round(live.price * p.shares * fxRate);
         p.pnl = p.value - costJPY;
         p.pnlPct = costJPY > 0 ? p.pnl / costJPY * 100 : 0;
       }
@@ -2103,7 +2114,7 @@ function renderStockList() {
     const barPct = p.value && maxValue > 0 ? p.value / maxValue : 0;
     const periodCells = makePeriodCells((periodId) => getPctForPeriod(p, periodId));
     return `<tr data-bar="${barPct.toFixed(4)}">
-      <td data-col="symbol" class="sl-sym">${p.symbol}<span class="sl-inline-name">${p.name}</span></td>
+      <td data-col="symbol" class="sl-sym">${escapeHTML(p.symbol)}<span class="sl-inline-name">${escapeHTML(p.name)}</span></td>
       <td data-col="market"><span class="wl-type-badge">${slMarketLabel(p)}</span></td>
       <td data-col="value">${valStr}</td>
       <td data-col="shares">${sharesStr}</td>
@@ -2285,8 +2296,8 @@ function _renderChartStats(points, avgCost, cur, maStyles) {
 }
 function openChart(pos) {
   state.currentPos = pos;
-  const proxyNote = pos.isProxy ? ` <span class="modal-sym" style="color:#e3b341">\u203B ${pos.proxyName}</span>` : ` <span class="modal-sym">${pos.symbol}</span>`;
-  document.getElementById("modal-title").innerHTML = pos.name + proxyNote;
+  const proxyNote = pos.isProxy ? ` <span class="modal-sym" style="color:#e3b341">\u203B ${pos.proxyName}</span>` : ` <span class="modal-sym">${escapeHTML(pos.symbol)}</span>`;
+  document.getElementById("modal-title").innerHTML = escapeHTML(pos.name) + proxyNote;
   updateRangeBtns();
   document.getElementById("modal-overlay").style.display = "flex";
   document.body.style.overflow = "hidden";
@@ -2529,7 +2540,7 @@ function renderHeatmap() {
         <div class="tt-row"><span class="tt-label">\u6642\u4FA1\u8A55\u4FA1\u984D</span><span class="tt-val">${fmtJPY(p.value)}</span></div>
         <div class="tt-row"><span class="tt-label">\u542B\u307F\u640D\u76CA\uFF08\u5186\uFF09</span><span class="tt-val ${sgn(p.pnl)}">${fmtJPYFull(p.pnl)}</span></div>
         <div class="tt-row"><span class="tt-label">\u640D\u76CA\u7387</span><span class="tt-val ${sgn(p.pnlPct)}">${fmtPct(p.pnlPct)}</span></div>`;
-    if (p.dayPct !== null) html += `<div class="tt-sep"></div>
+    if (p.dayPct !== null && p.dayCh != null) html += `<div class="tt-sep"></div>
         <div class="tt-row"><span class="tt-label">\u524D\u65E5\u6BD4\uFF08\u5186\uFF09</span><span class="tt-val ${sgn(p.dayCh)}">${fmtJPYFull(p.dayCh)}</span></div>
         <div class="tt-row"><span class="tt-label">\u524D\u65E5\u6BD4\uFF08%\uFF09</span><span class="tt-val ${sgn(p.dayPct)}">${fmtPct(p.dayPct)}</span></div>`;
     if (p.isProxy) html += `<div class="tt-hint" style="color:var(--text2)">\u{1F4CA} \u9A30\u843D\u7387\u306F\u4EE3\u66FF\u30A4\u30F3\u30C7\u30C3\u30AF\u30B9\u3067\u8FD1\u4F3C<br>${escapeHTML(p.proxyName)}</div>`;
@@ -2694,7 +2705,7 @@ async function searchTicker(q) {
   const found = results.filter((r) => r && !seen.has(r.symbol) && seen.add(r.symbol));
   if (found.length === 0) {
     dropdown.innerHTML = `<div class="wl-search-msg">
-      \u300C${input}\u300D\u306F\u898B\u3064\u304B\u308A\u307E\u305B\u3093\u3067\u3057\u305F
+      \u300C${escapeHTML(input)}\u300D\u306F\u898B\u3064\u304B\u308A\u307E\u305B\u3093\u3067\u3057\u305F
       <br><small style="opacity:0.65;font-size:11px">\u7C73\u56FD: VWO / AAPL &nbsp;|&nbsp; \u65E5\u672C: 7203.T &nbsp;|&nbsp; \u9999\u6E2F: 0700.HK</small>
     </div>`;
     return;
@@ -3982,7 +3993,7 @@ function _mfAssetToPosition(a) {
     dayPct: null,
     dayCh: null,
     cur: cat === "\u7C73\u56FD\u682A\u30FBETF" ? "USD" : "JPY",
-    ySymbol: isFund ? proxy.ySymbol : isJP ? `${sym}.T` : sym,
+    ySymbol: isFund ? proxy.ySymbol : isJP ? `${sym.replace(/\.T$/i, "")}.T` : sym,
     ...isFund ? { isProxy: true, proxyName: proxy.proxyName } : {}
   };
 }
@@ -4856,7 +4867,9 @@ function init() {
   })();
 }
 setupEventListeners(applyTheme);
-init();
+if (typeof window.d3 !== "undefined") {
+  init();
+}
 (function() {
   const ver = (import.meta.url.match(/[?&]v=([^&]+)/) || [, "?"])[1];
   const title = document.querySelector(".title");
