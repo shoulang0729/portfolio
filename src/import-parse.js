@@ -223,7 +223,7 @@ function _mfAssetToPosition(a) {
     shares, price, avgCost, value, pnl, pnlPct,
     dayPct: null, dayCh: null,
     cur: cat === '米国株・ETF' ? 'USD' : 'JPY',
-    ySymbol: isFund ? proxy.ySymbol : (isJP ? `${sym}.T` : sym),
+    ySymbol: isFund ? proxy.ySymbol : (isJP ? `${sym.replace(/\.T$/i, '')}.T` : sym),
     ...(isFund ? { isProxy: true, proxyName: proxy.proxyName } : {}),
   };
 }

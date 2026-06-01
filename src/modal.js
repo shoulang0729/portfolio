@@ -73,6 +73,8 @@ export async function showConfirm({ title, message, okLabel = 'OK', cancelLabel 
 
     const cleanup = () => {
       overlay.classList.remove('open');
+      document.removeEventListener('keydown', handleEsc);
+      overlay.removeEventListener('click', handleOverlay);
       overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
     };
 
@@ -85,7 +87,7 @@ export async function showConfirm({ title, message, okLabel = 'OK', cancelLabel 
 
     document.body.appendChild(overlay);
     requestAnimationFrame(() => overlay.classList.add('open'));
-    document.addEventListener('keydown', handleEsc, { once: true });
+    document.addEventListener('keydown', handleEsc);
     overlay.addEventListener('click', handleOverlay);
 
     okBtn.focus();
@@ -145,6 +147,8 @@ export async function showAlert({ title, message, okLabel = 'OK' }) {
 
     const cleanup = () => {
       overlay.classList.remove('open');
+      document.removeEventListener('keydown', handleEsc);
+      overlay.removeEventListener('click', handleOverlay);
       overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
     };
 
@@ -157,7 +161,7 @@ export async function showAlert({ title, message, okLabel = 'OK' }) {
 
     document.body.appendChild(overlay);
     requestAnimationFrame(() => overlay.classList.add('open'));
-    document.addEventListener('keydown', handleEsc, { once: true });
+    document.addEventListener('keydown', handleEsc);
     overlay.addEventListener('click', handleOverlay);
 
     okBtn.focus();
