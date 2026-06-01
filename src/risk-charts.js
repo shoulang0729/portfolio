@@ -221,7 +221,16 @@ function showLegendTip(ev, dim, key, dimResult) {
   const tip = document.getElementById('tooltip');
   if (!tip) return;
   const items = getContributors(dimResult, key).slice(0, 12);
-  const rows = items.map(c => `${escapeHTML(c.name)}　${fmtPctInt(c.pct)}`).join('<br>');
+  const maxPct = items.length ? Math.max(...items.map(c => c.pct)) : 1;
+  const rows = items.map(c => {
+    const barW = maxPct > 0 ? (c.pct / maxPct * 100).toFixed(1) : 0;
+    return '<div class="tt-risk-row">'
+      + '<span class="tt-risk-ticker">' + escapeHTML(c.symbol || '—') + '</span>'
+      + '<span class="tt-risk-name">' + escapeHTML(c.name) + '</span>'
+      + '<div class="tt-risk-bar-wrap"><div class="tt-risk-bar" style="width:' + barW + '%"></div></div>'
+      + '<span class="tt-risk-pct">' + fmtPctInt(c.pct) + '</span>'
+      + '</div>';
+  }).join('');
   tip.innerHTML = `<div class="tt-hdr">${escapeHTML(labelOf(dim, key))}</div>${rows || '―'}`;
   tip.style.display = 'block';
   moveLegendTip(ev);
