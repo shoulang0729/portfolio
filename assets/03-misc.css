@@ -73,6 +73,7 @@
   border-radius: 0;
   box-shadow: none;
   width: 100%;
+  max-width: 380px;  /* タブレット以上でキーパッドが巨大化するのを防ぐ */
   gap: 0;
 }
 
