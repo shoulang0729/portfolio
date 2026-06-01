@@ -4512,6 +4512,15 @@ if ("ontouchstart" in window) {
 
 // src/app.js
 window.renderHeatmap = renderHeatmap;
+async function refreshNow() {
+  try {
+    await refreshPrices();
+  } catch (e) {
+    console.warn("[refreshNow]", e);
+    setStatus("\u30E9\u30A4\u30D6\u4FA1\u683C\u53D6\u5F97\u30A8\u30E9\u30FC\uFF08\u524D\u56DE\u30C7\u30FC\u30BF\u3067\u8868\u793A\u4E2D\uFF09", "yellow");
+  }
+}
+window.refreshNow = refreshNow;
 setPasskeySuccessCallback(_showChangePinButton);
 function toggleStats() {
   state.statsVisible = !state.statsVisible;

@@ -30,6 +30,17 @@ import { renderRiskCharts } from './risk-charts.js';
 // ── フォールバックスクリプトから参照できるように renderHeatmap を window に登録 ──
 window.renderHeatmap       = renderHeatmap;
 
+// ── ステータスバー クリック更新 ──
+async function refreshNow() {
+  try {
+    await refreshPrices();
+  } catch (e) {
+    console.warn('[refreshNow]', e);
+    setStatus('ライブ価格取得エラー（前回データで表示中）', 'yellow');
+  }
+}
+window.refreshNow = refreshNow;
+
 // ── auth-passkey の成功コールバックを接続 ──
 setPasskeySuccessCallback(_showChangePinButton);
 
