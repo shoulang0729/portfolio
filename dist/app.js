@@ -1754,12 +1754,15 @@ async function fetchFinnhubQuote(fSymbol) {
   const url = `${WORKER_URL}/finnhub?path=/quote&symbol=${encodeURIComponent(fSymbol)}`;
   try {
     const res = await fetchWithTimeout(url, 7e3);
-    if (!res.ok) return null;
+    if (res.status === 429) return { _err: "rateLimit" };
+    if (res.status >= 500) return { _err: "serverError" };
+    if (!res.ok) return { _err: "noData" };
     const d = await res.json();
-    if (!d || !d.c) return null;
+    if (!d || !d.c) return { _err: "noData" };
     return { price: d.c, dayPct: d.dp ?? null };
-  } catch {
-    return null;
+  } catch (e) {
+    if (e?.name === "AbortError") return { _err: "timeout" };
+    return { _err: "networkError" };
   }
 }
 
@@ -1894,18 +1897,27 @@ function isMarketHours() {
   const nyse = utcMin >= 870 && utcMin < 1260;
   return tse || nyse;
 }
+var ERR_LABELS = {
+  rateLimit: "\u30EC\u30FC\u30C8\u5236\u9650429",
+  serverError: "\u30B5\u30FC\u30D0\u30FC\u30A8\u30E9\u30FC",
+  timeout: "\u30BF\u30A4\u30E0\u30A2\u30A6\u30C8",
+  networkError: "\u901A\u4FE1\u30A8\u30E9\u30FC",
+  noData: "\u30C7\u30FC\u30BF\u306A\u3057"
+};
 async function fetchLivePrice(symbol) {
+  let finnhubErr = null;
   const fSymbol = toFinnhubSymbol(symbol);
   if (fSymbol) {
     const fh = await fetchFinnhubQuote(fSymbol);
-    if (fh) return fh;
+    if (fh && !fh._err) return fh;
+    finnhubErr = fh?._err || "networkError";
   }
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=2d&_=${Date.now()}`;
   const data = await fetchViaProxy(url);
   const result = data?.chart?.result?.[0];
-  if (!result) return null;
+  if (!result) return { _err: finnhubErr || "noData" };
   const price = result.meta?.regularMarketPrice ?? null;
-  if (price == null) return null;
+  if (price == null) return { _err: finnhubErr || "noData" };
   const preCalcPct = result.meta?.regularMarketChangePercent ?? null;
   const prevClose = result.meta?.regularMarketPreviousClose ?? result.meta?.chartPreviousClose ?? result.meta?.previousClose ?? null;
   const dayPct = preCalcPct !== null ? preCalcPct : prevClose ? (price - prevClose) / prevClose * 100 : null;
@@ -1933,7 +1945,7 @@ async function refreshPrices() {
     targets,
     async (p) => ({ pos: p, live: await fetchLivePrice(p.ySymbol) }),
     {
-      isFailed: (r) => !r.live,
+      isFailed: (r) => !r.live || r.live._err === "timeout" || r.live._err === "serverError",
       onProgress: (done, total2) => setStatus(`\u30E9\u30A4\u30D6\u4FA1\u683C\u3092\u53D6\u5F97\u4E2D\uFF08${done}/${total2}\uFF09...`, "yellow")
     }
   );
@@ -1950,9 +1962,16 @@ async function refreshPrices() {
       arr[arr.length - 1].close = price;
     }
   };
+  const errCounts = {};
+  fetched.forEach(({ live }) => {
+    if (!live || live._err) {
+      const key = live?._err || "networkError";
+      errCounts[key] = (errCounts[key] || 0) + 1;
+    }
+  });
   let n = 0;
   fetched.forEach(({ pos: p, live }) => {
-    if (!live) return;
+    if (!live || live._err) return;
     if (!p.isProxy && p.price > 0 && (live.price / p.price < 0.1 || live.price / p.price > 10)) {
       console.warn(`[refreshPrices] \u7570\u5E38\u4FA1\u683C\u30B9\u30AD\u30C3\u30D7: ${p.symbol} live=${live.price} stored=${p.price}`);
       return;
@@ -1982,10 +2001,11 @@ async function refreshPrices() {
   });
   const total = targets.length;
   const failedCount = total - n;
+  const fmtErrDetail = () => Object.entries(errCounts).map(([k, c]) => `${ERR_LABELS[k] || k}\xD7${c}`).join("\u30FB");
   if (n > 0) {
     const now = /* @__PURE__ */ new Date();
     const ts2 = now.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
-    const msg = failedCount > 0 ? `\u30E9\u30A4\u30D6\u4FA1\u683C: ${n}/${total}\u9298\u67C4 \u66F4\u65B0\uFF08${failedCount}\u9298\u67C4 \u53D6\u5F97\u5931\u6557\uFF09 ${ts2}` : `${n}\u9298\u67C4 \u6700\u7D42\u66F4\u65B0: ${ts2}`;
+    const msg = failedCount > 0 ? `\u30E9\u30A4\u30D6\u4FA1\u683C: ${n}/${total}\u9298\u67C4 \u66F4\u65B0\uFF08${fmtErrDetail()}\uFF09 ${ts2}` : `${n}\u9298\u67C4 \u6700\u7D42\u66F4\u65B0: ${ts2}`;
     state.lastUpdateText = msg;
     setStatus(msg, failedCount > 0 ? "yellow" : "green");
     document.dispatchEvent(new CustomEvent("hm:prices-updated"));
@@ -1993,7 +2013,7 @@ async function refreshPrices() {
   } else if (!isMarketHours()) {
     setStatus("\u5E02\u5834\u6642\u9593\u5916\uFF08\u524D\u56DE\u30C7\u30FC\u30BF\u3067\u8868\u793A\u4E2D\uFF09", "yellow");
   } else {
-    setStatus(`\u30E9\u30A4\u30D6\u4FA1\u683C\u53D6\u5F97\u5931\u6557: 0/${total}\u9298\u67C4\uFF08API\u30A2\u30AF\u30BB\u30B9\u5236\u9650\u306E\u53EF\u80FD\u6027\uFF09`, "red");
+    setStatus(`\u30E9\u30A4\u30D6\u4FA1\u683C\u53D6\u5F97\u5931\u6557: 0/${total}\u9298\u67C4\uFF08${fmtErrDetail()}\uFF09`, "red");
   }
 }
 
