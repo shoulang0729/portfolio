@@ -6,7 +6,7 @@
 // ══════════════════════════════════════════════════════════════
 
 import { state, CHART_RANGES } from './state.js';
-import { cssVar, fmtPct, sgn } from './utils.js';
+import { cssVar, escapeHTML, fmtPct, sgn } from './utils.js';
 import { fetchViaProxy } from './data.js';
 
 // ══════════════════════════════════════════════════════════════
@@ -260,8 +260,8 @@ function openChart(pos) {
   state.currentPos = pos;
   const proxyNote = pos.isProxy
     ? ` <span class="modal-sym" style="color:#e3b341">※ ${  pos.proxyName  }</span>`
-    : ` <span class="modal-sym">${  pos.symbol  }</span>`;
-  document.getElementById('modal-title').innerHTML = pos.name + proxyNote;
+    : ` <span class="modal-sym">${escapeHTML(pos.symbol)}</span>`;
+  document.getElementById('modal-title').innerHTML = escapeHTML(pos.name) + proxyNote;
   updateRangeBtns();
   document.getElementById('modal-overlay').style.display = 'flex';
   document.body.style.overflow = 'hidden';

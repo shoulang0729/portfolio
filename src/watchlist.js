@@ -200,7 +200,7 @@ async function searchTicker(q) {
 
   if (found.length === 0) {
     dropdown.innerHTML = `<div class="wl-search-msg">
-      「${input}」は見つかりませんでした
+      「${escapeHTML(input)}」は見つかりませんでした
       <br><small style="opacity:0.65;font-size:11px">米国: VWO / AAPL &nbsp;|&nbsp; 日本: 7203.T &nbsp;|&nbsp; 香港: 0700.HK</small>
     </div>`;
     return;

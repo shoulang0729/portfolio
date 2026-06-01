@@ -9,7 +9,7 @@
 
 import { state, SL_DETAIL_COLS } from './state.js';
 import { positions, PERIOD_IDS } from './positions.js';
-import { makeTh, getColor, getCellTextColor, getHistoricalChangePct, fmtJPYInt, fmtPctInt, fmtPrice, fmtShares, _tableSort, makePeriodCells, makePeriodHeaderCells } from './utils.js';
+import { escapeHTML, makeTh, getColor, getCellTextColor, getHistoricalChangePct, fmtJPYInt, fmtPctInt, fmtPrice, fmtShares, _tableSort, makePeriodCells, makePeriodHeaderCells } from './utils.js';
 
 // ══════════════════════════════════════════════
 // STOCK LIST
@@ -117,7 +117,7 @@ function renderStockList() {
 
     // 列順：ティッカー(+銘柄名) / 市場 / 時価評価額 / 保有数 / 取得単価 / 現在値 / 騰落率×10 / 含み損益 / 損益率
     return `<tr data-bar="${barPct.toFixed(4)}">
-      <td data-col="symbol" class="sl-sym">${p.symbol}<span class="sl-inline-name">${p.name}</span></td>
+      <td data-col="symbol" class="sl-sym">${escapeHTML(p.symbol)}<span class="sl-inline-name">${escapeHTML(p.name)}</span></td>
       <td data-col="market"><span class="wl-type-badge">${slMarketLabel(p)}</span></td>
       <td data-col="value">${valStr}</td>
       <td data-col="shares">${sharesStr}</td>
