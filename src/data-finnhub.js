@@ -14,17 +14,22 @@ export function toFinnhubSymbol(ySymbol) {
 
 /**
  * Finnhub Quote API でライブ価格・当日騰落率を取得（Worker経由）
- * @returns {Promise<{price, dayPct}|null>}
+ * @returns {Promise<{price: number, dayPct: number|null}|{_err: string}>}
  */
 export async function fetchFinnhubQuote(fSymbol) {
   const url = `${WORKER_URL}/finnhub?path=/quote&symbol=${encodeURIComponent(fSymbol)}`;
   try {
     const res = await fetchWithTimeout(url, 7000);
-    if (!res.ok) return null;
+    if (res.status === 429) return { _err: 'rateLimit' };
+    if (res.status >= 500) return { _err: 'serverError' };
+    if (!res.ok) return { _err: 'noData' };
     const d = await res.json();
-    if (!d || !d.c) return null;
+    if (!d || !d.c) return { _err: 'noData' };
     return { price: d.c, dayPct: d.dp ?? null };
-  } catch { return null; }
+  } catch (e) {
+    if (e?.name === 'AbortError') return { _err: 'timeout' };
+    return { _err: 'networkError' };
+  }
 }
 
 /**
