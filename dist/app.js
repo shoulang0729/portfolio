@@ -1934,7 +1934,7 @@ async function refreshPrices() {
     async (p) => ({ pos: p, live: await fetchLivePrice(p.ySymbol) }),
     {
       isFailed: (r) => !r.live,
-      onProgress: (done, total) => setStatus(`\u30E9\u30A4\u30D6\u4FA1\u683C\u3092\u53D6\u5F97\u4E2D\uFF08${done}/${total}\uFF09...`, "yellow")
+      onProgress: (done, total2) => setStatus(`\u30E9\u30A4\u30D6\u4FA1\u683C\u3092\u53D6\u5F97\u4E2D\uFF08${done}/${total2}\uFF09...`, "yellow")
     }
   );
   const updateCache = (sym, price) => {
@@ -1980,18 +1980,20 @@ async function refreshPrices() {
     }
     n++;
   });
+  const total = targets.length;
+  const failedCount = total - n;
   if (n > 0) {
     const now = /* @__PURE__ */ new Date();
     const ts2 = now.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
-    const msg = `${n}\u9298\u67C4 \u6700\u7D42\u66F4\u65B0: ${ts2}`;
+    const msg = failedCount > 0 ? `\u30E9\u30A4\u30D6\u4FA1\u683C: ${n}/${total}\u9298\u67C4 \u66F4\u65B0\uFF08${failedCount}\u9298\u67C4 \u53D6\u5F97\u5931\u6557\uFF09 ${ts2}` : `${n}\u9298\u67C4 \u6700\u7D42\u66F4\u65B0: ${ts2}`;
     state.lastUpdateText = msg;
-    setStatus(msg, "green");
+    setStatus(msg, failedCount > 0 ? "yellow" : "green");
     document.dispatchEvent(new CustomEvent("hm:prices-updated"));
     flashPriceChanges(fetched);
   } else if (!isMarketHours()) {
     setStatus("\u5E02\u5834\u6642\u9593\u5916\uFF08\u524D\u56DE\u30C7\u30FC\u30BF\u3067\u8868\u793A\u4E2D\uFF09", "yellow");
   } else {
-    setStatus("\u4FA1\u683C\u53D6\u5F97\u306B\u5931\u6557\u3057\u307E\u3057\u305F\uFF08API\u30A2\u30AF\u30BB\u30B9\u5236\u9650\u306E\u53EF\u80FD\u6027\uFF09", "red");
+    setStatus(`\u30E9\u30A4\u30D6\u4FA1\u683C\u53D6\u5F97\u5931\u6557: 0/${total}\u9298\u67C4\uFF08API\u30A2\u30AF\u30BB\u30B9\u5236\u9650\u306E\u53EF\u80FD\u6027\uFF09`, "red");
   }
 }
 
@@ -3314,8 +3316,8 @@ var MANUAL_SOURCES = [
 
 // src/risk-charts.js
 var TITLES = {
-  assetClass: "\u8CC7\u7523\u30AF\u30E9\u30B9",
-  currency: "\u901A\u8CA8\u30A8\u30AF\u30B9\u30DD\u30FC\u30B8\u30E3\u30FC",
+  assetClass: "\u30A2\u30BB\u30C3\u30C8\u30AF\u30E9\u30B9",
+  currency: "\u901A\u8CA8",
   country: "\u56FD\u30FB\u5730\u57DF",
   sector: "\u30BB\u30AF\u30BF\u30FC"
 };
@@ -3453,7 +3455,7 @@ function renderRiskCharts() {
   wrap.appendChild(grid);
   const src = document.createElement("div");
   src.className = "risk-source";
-  const baseSrc = "\u30C7\u30FC\u30BF\u30BD\u30FC\u30B9: \u4FA1\u683C = Finnhub / Yahoo Finance \u30FB \u8CC7\u7523\u30AF\u30E9\u30B9/\u901A\u8CA8/\u56FD/\u30BB\u30AF\u30BF\u30FC\u5206\u985E = \u9298\u67C4\u30DE\u30B9\u30BF\uFF08positions.js\u30FBconstituents.js\uFF09";
+  const baseSrc = "\u30C7\u30FC\u30BF\u30BD\u30FC\u30B9: \u4FA1\u683C = Finnhub / Yahoo Finance \u30FB \u30A2\u30BB\u30C3\u30C8\u30AF\u30E9\u30B9/\u901A\u8CA8/\u56FD/\u30BB\u30AF\u30BF\u30FC\u5206\u985E = \u9298\u67C4\u30DE\u30B9\u30BF\uFF08positions.js\u30FBconstituents.js\uFF09";
   src.textContent = [baseSrc, ...MANUAL_SOURCES].join(" \uFF0F ");
   wrap.appendChild(src);
 }
@@ -4811,7 +4813,7 @@ function init() {
         await refreshPrices();
       } catch (e) {
         console.warn("[init] refreshPrices failed:", e);
-        setStatus("\u4FA1\u683C\u53D6\u5F97\u306B\u5931\u6557\u3057\u307E\u3057\u305F\uFF08\u524D\u56DE\u30C7\u30FC\u30BF\u3067\u8868\u793A\u4E2D\uFF09", "yellow");
+        setStatus("\u30E9\u30A4\u30D6\u4FA1\u683C\u53D6\u5F97\u30A8\u30E9\u30FC\uFF08\u524D\u56DE\u30C7\u30FC\u30BF\u3067\u8868\u793A\u4E2D\uFF09", "yellow");
       } finally {
         hideHeatmapSkeleton();
         renderHeatmap();

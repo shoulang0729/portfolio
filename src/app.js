@@ -481,7 +481,7 @@ function init() {
         await refreshPrices();
       } catch (e) {
         console.warn('[init] refreshPrices failed:', e);
-        setStatus('価格取得に失敗しました（前回データで表示中）', 'yellow');
+        setStatus('ライブ価格取得エラー（前回データで表示中）', 'yellow');
       } finally {
         hideHeatmapSkeleton();
         renderHeatmap();

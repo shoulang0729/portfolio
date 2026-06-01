@@ -1,7 +1,7 @@
 // ══════════════════════════════════════════════════════════════
 // risk-charts.js  ―  リスク断面タブの D3 ドーナツ円グラフ描画
 //
-// computeRiskBreakdown の結果を4枚のドーナツ（資産クラス / 通貨 /
+// computeRiskBreakdown の結果を4枚のドーナツ（アセットクラス / 通貨 /
 // 地域・国 / セクター）で可視化する。各グラフに凡例とカバレッジ率を表示。
 // ══════════════════════════════════════════════════════════════
 
@@ -12,8 +12,8 @@ import { MANUAL_ASSETS, MANUAL_SOURCES } from './manual-assets.js';
 
 /** 軸ごとのタイトル */
 const TITLES = {
-  assetClass: '資産クラス',
-  currency: '通貨エクスポージャー',
+  assetClass: 'アセットクラス',
+  currency: '通貨',
   country: '国・地域',
   sector: 'セクター',
 };
@@ -211,7 +211,7 @@ export function renderRiskCharts() {
   // データソース明記（#214）＋ 手動入力データの引用元（現金・ひふみ等）
   const src = document.createElement('div');
   src.className = 'risk-source';
-  const baseSrc = 'データソース: 価格 = Finnhub / Yahoo Finance ・ 資産クラス/通貨/国/セクター分類 = 銘柄マスタ（positions.js・constituents.js）';
+  const baseSrc = 'データソース: 価格 = Finnhub / Yahoo Finance ・ アセットクラス/通貨/国/セクター分類 = 銘柄マスタ（positions.js・constituents.js）';
   src.textContent = [baseSrc, ...MANUAL_SOURCES].join(' ／ ');
   wrap.appendChild(src);
 }

@@ -266,19 +266,24 @@ async function refreshPrices() {
     n++;
   });
 
+  const total = targets.length;
+  const failedCount = total - n;
+
   if (n > 0) {
     const now = new Date();
     const ts2 = now.toLocaleTimeString('ja-JP', { hour:'2-digit', minute:'2-digit' });
-    const msg = `${n}銘柄 最終更新: ${ts2}`;
+    const msg = failedCount > 0
+      ? `ライブ価格: ${n}/${total}銘柄 更新（${failedCount}銘柄 取得失敗） ${ts2}`
+      : `${n}銘柄 最終更新: ${ts2}`;
     state.lastUpdateText = msg;  // 履歴データ取得後に復元できるよう保存
-    setStatus(msg, 'green');
+    setStatus(msg, failedCount > 0 ? 'yellow' : 'green');
     document.dispatchEvent(new CustomEvent('hm:prices-updated'));
     // 価格変化をフラッシュアニメーションで表示（前回価格がある場合のみ）
     flashPriceChanges(fetched);
   } else if (!isMarketHours()) {
     setStatus('市場時間外（前回データで表示中）', 'yellow');
   } else {
-    setStatus('価格取得に失敗しました（APIアクセス制限の可能性）', 'red');
+    setStatus(`ライブ価格取得失敗: 0/${total}銘柄（APIアクセス制限の可能性）`, 'red');
   }
 }
 
