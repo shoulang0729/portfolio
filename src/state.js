@@ -101,7 +101,14 @@ const state = {
   activeTab:        'heatmap',  // 'heatmap' | 'list' | 'watchlist'
   lastUpdateText:   null,       // refreshPrices 成功時のステータス文字列（履歴取得後に復元用）
   // ウォッチリスト
-  watchlist:        JSON.parse(localStorage.getItem('hm-watchlist') || '[]'),
+  watchlist:        (() => {
+    try {
+      return JSON.parse(localStorage.getItem('hm-watchlist') || '[]');
+    } catch {
+      localStorage.removeItem('hm-watchlist');
+      return [];
+    }
+  })(),
   watchlistPrices:  {},         // symbol → { price, dayPct }
   wlSortCol:        '1d',       // ウォッチリストのデフォルトソート列
   wlSortDir:        'desc',

@@ -510,7 +510,9 @@ function init() {
 }
 
 setupEventListeners(applyTheme);
-init();
+if (typeof window.d3 !== 'undefined') {
+  init();
+}
 
 import './ptr.js';
 
