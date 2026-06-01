@@ -24,19 +24,20 @@
 
 <!-- スタイルシート -->
 
-<link rel="stylesheet" href="assets/01-base.css?v=20260601G">
-<link rel="stylesheet" href="assets/02-tables.css?v=20260601G">
-<link rel="stylesheet" href="assets/03-misc.css?v=20260601G">
-<link rel="stylesheet" href="assets/04-auth.css?v=20260601G">
+<link rel="stylesheet" href="assets/01-base.css?v=20260601H">
+<link rel="stylesheet" href="assets/02-tables.css?v=20260601H">
+<link rel="stylesheet" href="assets/03-misc.css?v=20260601H">
+<link rel="stylesheet" href="assets/04-auth.css?v=20260601H">
 
 <!-- assets/05-ai-tab.css は src/_disabled/05-ai-tab.css に移動（AIタブ無効化中）-->
 <!-- 銘柄リスト列表示制御（JS が動的に書き込む） -->
 <style id="sl-col-style"></style>
 
-<!-- D3.js v7（CDN フォールバック x3） -->
-<script src="https://cdn.bootcdn.net/ajax/libs/d3/7.8.5/d3.min.js" crossorigin="anonymous"></script>
-<script>if(!window.d3){document.write('<scr'+'ipt src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js" crossorigin="anonymous"><\/scr'+'ipt>');}</script>
+<!-- D3.js v7（CDN フォールバック x3: cloudflare → jsdelivr → bootcdn） -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js" crossorigin="anonymous"></script>
 <script>if(!window.d3){document.write('<scr'+'ipt src="https://cdn.jsdelivr.net/npm/d3@7.8.5/dist/d3.min.js" crossorigin="anonymous"><\/scr'+'ipt>');}</script>
+<script>if(!window.d3){document.write('<scr'+'ipt src="https://cdn.bootcdn.net/ajax/libs/d3/7.8.5/d3.min.js" crossorigin="anonymous"><\/scr'+'ipt>');}</script>
+<script>window.addEventListener('load',function(){if(!window.d3){var el=document.getElementById('d3-load-error');if(el)el.style.display='block';}});</script>
 
 </head>
 <body>
@@ -168,9 +169,11 @@
     <button class="tab-btn active" data-tab="heatmap" role="tab" aria-selected="true"
             data-action="switchTab" data-arg="heatmap">Heatmap</button>
     <button class="tab-btn" data-tab="list" role="tab" aria-selected="false"
-            data-action="switchTab" data-arg="list">Historical Heatmap</button>
+            data-action="switchTab" data-arg="list" title="Historical Heatmap">Historical</button>
     <button class="tab-btn" data-tab="watchlist" role="tab" aria-selected="false"
             data-action="switchTab" data-arg="watchlist" title="Watchlist Historical Heatmap">Watchlist</button>
+    <button class="tab-btn" data-tab="risk" role="tab" aria-selected="false"
+            data-action="switchTab" data-arg="risk" title="Exposure（通貨・国・セクター・資産クラス）">Exposure</button>
     <!-- AI相談タブは現在無効化中（必要になったら戻す） -->
   </div>
   <!-- タブ別サブコントロール（sticky-top 内に置くことで両タブのテーブル開始位置・高さを統一） -->
@@ -255,6 +258,11 @@
 </div>
 </section><!-- /panel-watchlist -->
 
+<!-- リスク断面パネル（タブ4：look-through 円グラフ） -->
+<section id="panel-risk" class="tab-panel" hidden>
+<div id="risk-charts-wrap"></div>
+</section><!-- /panel-risk -->
+
 <!-- AI相談パネルは現在無効化中（タブも非表示） -->
 <section id="panel-ai" class="tab-panel" hidden></section>
 
@@ -304,14 +312,14 @@
 
 <!-- ES Module エントリーポイント（全ファイルを import する単一スクリプト） -->
 
-<script type="module" src="dist/app.js?v=20260601G"></script>
+<script type="module" src="dist/app.js?v=20260601H"></script>
 
 
 <!-- PWA Service Worker 登録 -->
 <script>
 if ('serviceWorker' in navigator) {
 
-navigator.serviceWorker.register('./sw.js?v=20260601G').catch(() => {});
+navigator.serviceWorker.register('./sw.js?v=20260601H').catch(() => {});
 
 }
 </script>
