@@ -119,6 +119,12 @@ const CONSTITUENTS = {
     assetClass: { equity: 1 }, currency: { USD: 1 }, country: { us: 1 },
     sector: { energy: 1 },
   },
+  'URA': { // グローバルX ウラニウムETF: ウラン採掘株中心＋現物ウラン(Sprott)・原子力関連
+    assetClass: { equity: 0.92, commodity: 0.08 },
+    currency: { USD: 0.50, other: 0.50 },
+    country: { us: 0.30, em: 0.10, global: 0.52, commodity: 0.08 },
+    sector: { energy: 0.80, industrials: 0.07, materials: 0.05, commodity: 0.08 },
+  },
 
   // ── 投資信託 ──
   'オルカン': { // eMAXIS Slim 全世界株式（MSCI ACWI 連動・概算）
