@@ -392,6 +392,8 @@
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 14px;
+  display: flex;
+  flex-direction: column;
 }
 .risk-card-title {
   font-size: 13px;
@@ -402,7 +404,9 @@
 .risk-card-body {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 14px;
+  flex: 1;
 }
 .risk-donut {
   flex: none;
