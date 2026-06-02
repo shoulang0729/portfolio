@@ -456,6 +456,11 @@ body {
   display: flex; align-items: center; justify-content: center;
   z-index: 10000;
   backdrop-filter: blur(3px);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.modal-overlay.open {
+  opacity: 1;
 }
 .modal {
   background: var(--surface);
