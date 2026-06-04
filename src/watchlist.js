@@ -148,6 +148,7 @@ function wlTypeBadge(quoteType) {
 
 // ── 検索 ──
 let _wlSearchTimer = null;
+let _wlSearchSeq = 0;
 
 function onWatchlistSearch(eventOrQuery) {
   // data-action ディスパッチャ経由（input イベント）、または文字列引数の両方を受ける
@@ -159,10 +160,10 @@ function onWatchlistSearch(eventOrQuery) {
   if (!q.trim()) { dropdown.hidden = true; return; }
   dropdown.innerHTML = '<div class="wl-search-msg">確認中…</div>';
   dropdown.hidden = false;
-  _wlSearchTimer = setTimeout(() => searchTicker(q), 500);
+  _wlSearchTimer = setTimeout(() => searchTicker(q, ++_wlSearchSeq), 500);
 }
 
-async function searchTicker(q) {
+async function searchTicker(q, seq) {
   const dropdown = document.getElementById('wl-search-dropdown');
   const input    = q.trim().toUpperCase();
 
@@ -194,6 +195,8 @@ async function searchTicker(q) {
       return info ? { symbol: sym, ...info } : null;
     })
   );
+  if (seq !== _wlSearchSeq) return;
+
   // 重複シンボルを除去して返す
   const seen = new Set();
   const found = results.filter(r => r && !seen.has(r.symbol) && seen.add(r.symbol));
@@ -372,13 +375,16 @@ export function renderWatchlist() {
     // → dataCol が自動で渡るため "…/-" の loading 判定も同一になる
     const periodCells = makePeriodCells(periodId => wlGetPct(item, periodId));
 
+    const eSym  = escapeHTML(item.symbol);
+    const eName = escapeHTML(item.name || '');
+    const eExch = escapeHTML(item.exchange || '');
     return `<tr>
-      <td data-col="symbol" class="sl-sym">${item.symbol}<span class="sl-inline-name">${item.name}</span></td>
-      <td class="wl-market-cell"><span class="wl-type-badge">${item.exchange}</span></td>
+      <td data-col="symbol" class="sl-sym">${eSym}<span class="sl-inline-name">${eName}</span></td>
+      <td class="wl-market-cell"><span class="wl-type-badge">${eExch}</span></td>
       <td class="wl-price-cell">${priceStr}</td>
       ${periodCells}
       <td class="wl-del-cell">
-        <button class="wl-del-btn" data-action="removeFromWatchlist" data-arg="${item.symbol.replace(/"/g, '&quot;')}" title="ウォッチリストから削除">×</button>
+        <button class="wl-del-btn" data-action="removeFromWatchlist" data-arg="${eSym}" title="ウォッチリストから削除">×</button>
       </td>
     </tr>`;
   }).join('');
