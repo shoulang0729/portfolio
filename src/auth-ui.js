@@ -292,15 +292,20 @@ async function _pcSubmit() {
     }
     const prevHash = _getActivePinHash();
     const newHash = await _hashPin(_pc.newPin);
+    try {
+      const res = await fetch(`${WORKER_URL}/auth/pin-hash`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ oldHash: prevHash, newHash }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    } catch (err) {
+      console.warn('[auth] PIN hash sync to Worker failed', err);
+      _pcShowError('サーバー同期に失敗しました。ネットワークを確認してください。');
+      document.querySelectorAll('#pc-overlay .pin-key').forEach(b => { b.disabled = false; });
+      return;
+    }
     localStorage.setItem(AUTH_LS_HASH_KEY, newHash);
-    // Worker の KV にも新ハッシュを同期（失敗時は警告を表示するが変更は有効のまま）
-    fetch(`${WORKER_URL}/auth/pin-hash`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ oldHash: prevHash, newHash }),
-    }).catch(() => {
-      console.warn('[auth] PIN hash sync to Worker failed — local PIN changed but server sync pending');
-    });
     _pcSuccess();
   }
 }
