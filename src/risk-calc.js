@@ -36,6 +36,49 @@ function deriveDefault(p) {
 }
 
 /**
+ * @typedef {Object} NormalizedHolding
+ * @property {string} [ticker]
+ * @property {string} [name]
+ * @property {number} weight  0..1（Σ ≒ coverage）
+ * @property {string} [currency]   通貨カテゴリキー（JPY / USD / ...）
+ * @property {string} [country]    地域・国カテゴリキー（japan / us / ...）
+ * @property {string} [sector]     セクターカテゴリキー（tech / financials / ...）
+ * @property {string} [assetClass] 資産クラスカテゴリキー（equity / bond / ...）
+ */
+
+/**
+ * 正規化 holdings リスト（Level 2・ライブ構成銘柄）を、curated と同じ
+ * summary 形式 Breakdown（軸 → カテゴリ別ウェイトマップ）に畳み込む。
+ *
+ * 各 holding の weight を、その holding が持つ各軸の属性カテゴリへ加算する。
+ * 属性が欠落している軸はスキップされ、その分はウェイト合計 < 1 として残り、
+ * computeRiskBreakdown 側で「その他/不明」残差に回る（正直なカバレッジ表示）。
+ *
+ * 出力は computeRiskBreakdown の entry としてそのまま渡せる（live は holdings、
+ * curated は summary、という両対応の入口になる・#206）。
+ *
+ * @param {Array<NormalizedHolding>} holdings
+ * @returns {Record<string, Record<string, number>>}  軸 → {カテゴリ: ウェイト合計}
+ */
+export function holdingsToBreakdown(holdings) {
+  /** @type {Record<string, Record<string, number>>} */
+  const dims = {};
+  for (const dim of RISK_DIMENSIONS) dims[dim] = {};
+  if (!Array.isArray(holdings)) return dims;
+
+  for (const h of holdings) {
+    const w = h?.weight;
+    if (!(typeof w === 'number') || !(w > 0)) continue;
+    for (const dim of RISK_DIMENSIONS) {
+      const cat = h[dim];
+      if (cat == null || cat === '') continue; // 不明属性 → カバレッジ未満の残差に回す
+      dims[dim][cat] = (dims[dim][cat] || 0) + w;
+    }
+  }
+  return dims;
+}
+
+/**
  * @typedef {Object} DimResult
  * @property {Record<string, number>} cats  カテゴリキー → 円換算配分額
  * @property {Record<string, Array<{symbol: string, name: string, value: number}>>} contributors  カテゴリキー → 寄与銘柄リスト

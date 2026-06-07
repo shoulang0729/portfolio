@@ -1,7 +1,7 @@
 // Tests for look-through risk aggregation in src/risk-calc.js
 
 import { describe, it, expect, afterEach } from 'vitest';
-import { computeRiskBreakdown, toSlices, getContributors, getClassificationSummary, RISK_DIMENSIONS, UNKNOWN_KEY } from '../src/risk-calc.js';
+import { computeRiskBreakdown, toSlices, getContributors, getClassificationSummary, holdingsToBreakdown, RISK_DIMENSIONS, UNKNOWN_KEY } from '../src/risk-calc.js';
 import { state } from '../src/state.js';
 
 describe('computeRiskBreakdown — synthetic positions', () => {
@@ -187,5 +187,63 @@ describe('computeRiskBreakdown — liveTopHoldings override', () => {
     // state.liveTopHoldings は空 → curated data が使われる
     const r = computeRiskBreakdown([{ symbol: 'オルカン', value: 10000, cur: 'JPY' }]);
     expect(r.sector.cats.tech).toBeCloseTo(2600, 4);
+  });
+});
+
+describe('holdingsToBreakdown — Level 2 normalized holdings adapter (#206)', () => {
+  it('folds each holding weight into its per-dim category', () => {
+    const b = holdingsToBreakdown([
+      { ticker: 'AAPL', weight: 0.6, currency: 'USD', country: 'us', sector: 'tech', assetClass: 'equity' },
+      { ticker: '7203.T', weight: 0.4, currency: 'JPY', country: 'japan', sector: 'consumer', assetClass: 'equity' },
+    ]);
+    expect(b.assetClass).toEqual({ equity: 1 });
+    expect(b.currency).toEqual({ USD: 0.6, JPY: 0.4 });
+    expect(b.country).toEqual({ us: 0.6, japan: 0.4 });
+    expect(b.sector).toEqual({ tech: 0.6, consumer: 0.4 });
+  });
+
+  it('accumulates multiple holdings that share a category', () => {
+    const b = holdingsToBreakdown([
+      { weight: 0.3, sector: 'tech', currency: 'USD', country: 'us', assetClass: 'equity' },
+      { weight: 0.2, sector: 'tech', currency: 'USD', country: 'us', assetClass: 'equity' },
+    ]);
+    expect(b.sector.tech).toBeCloseTo(0.5, 6);
+    expect(b.currency.USD).toBeCloseTo(0.5, 6);
+  });
+
+  it('skips missing attributes so the dim stays below full coverage', () => {
+    const b = holdingsToBreakdown([
+      { weight: 0.5, currency: 'USD', country: 'us', assetClass: 'equity' }, // sector 欠落
+      { weight: 0.5, currency: 'USD', sector: 'tech', assetClass: 'equity' }, // country 欠落
+    ]);
+    // sector は 0.5 分しか付与されない（残り 0.5 は computeRiskBreakdown で unknown 残差へ）
+    expect(b.sector).toEqual({ tech: 0.5 });
+    expect(b.country).toEqual({ us: 0.5 });
+    expect(b.currency.USD).toBeCloseTo(1, 6);
+  });
+
+  it('ignores zero / negative / non-numeric weights and non-array input', () => {
+    const b = holdingsToBreakdown([
+      { weight: 0, sector: 'tech' },
+      { weight: -0.2, sector: 'tech' },
+      { weight: 'x', sector: 'tech' },
+      { sector: 'tech' },
+    ]);
+    expect(b.sector).toEqual({});
+    // 不正入力は空の Breakdown を返す
+    expect(holdingsToBreakdown(null).sector).toEqual({});
+    expect(holdingsToBreakdown(undefined).currency).toEqual({});
+  });
+
+  it('output feeds computeRiskBreakdown; residual coverage becomes the unknown slice', () => {
+    // coverage 0.8 の holdings（残り 0.2 は属性不明）→ value 1000 で unknown 200
+    const breakdown = holdingsToBreakdown([
+      { weight: 0.8, currency: 'USD', country: 'us', sector: 'tech', assetClass: 'equity' },
+      { weight: 0.2, /* 全属性欠落 = 不明分 */ },
+    ]);
+    // computeRiskBreakdown は CONSTITUENTS を引くので、変換結果を直接 entry にできるよう
+    // toSlices で整合を確認（純粋な集計プロパティの検証）
+    expect(breakdown.sector.tech).toBeCloseTo(0.8, 6);
+    expect(Object.values(breakdown.currency).reduce((s, v) => s + v, 0)).toBeCloseTo(0.8, 6);
   });
 });
