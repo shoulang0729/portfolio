@@ -4655,6 +4655,170 @@ async function loadTopHoldings() {
   }
 }
 
+// src/data-stock-profile.js
+var FINNHUB_INDUSTRY_MAP = {
+  "technology": "tech",
+  "software": "tech",
+  "internet": "tech",
+  "it services": "tech",
+  "semiconductors": "semis",
+  "banking": "financials",
+  "financial services": "financials",
+  "insurance": "financials",
+  "diversified financials": "financials",
+  "healthcare": "healthcare",
+  "health care": "healthcare",
+  "pharmaceuticals": "healthcare",
+  "biotechnology": "healthcare",
+  "retail": "consumer",
+  "automobiles": "consumer",
+  "auto components": "consumer",
+  "hotels restaurants & leisure": "consumer",
+  "textiles apparel & luxury goods": "consumer",
+  "consumer products": "consumer",
+  "leisure products": "consumer",
+  "food products": "staples",
+  "beverages": "staples",
+  "tobacco": "staples",
+  "household products": "staples",
+  "industrial conglomerates": "industrials",
+  "machinery": "industrials",
+  "aerospace & defense": "industrials",
+  "logistics & transportation": "industrials",
+  "electrical equipment": "industrials",
+  "building": "industrials",
+  "commercial services & supplies": "industrials",
+  "trading companies & distributors": "industrials",
+  "airlines": "industrials",
+  "energy": "energy",
+  "oil & gas": "energy",
+  "chemicals": "materials",
+  "metals & mining": "materials",
+  "basic materials": "materials",
+  "construction materials": "materials",
+  "paper & forest": "materials",
+  "media": "comm",
+  "telecommunication": "comm",
+  "communications": "comm",
+  "entertainment": "comm",
+  "utilities": "utilities",
+  "real estate": "realestate"
+};
+var FINNHUB_COUNTRY_MAP = {
+  US: "us",
+  JP: "japan",
+  CN: "china",
+  HK: "china",
+  BR: "latam",
+  MX: "latam",
+  AR: "latam",
+  CL: "latam",
+  CO: "latam",
+  PE: "latam",
+  GB: "europe",
+  DE: "europe",
+  FR: "europe",
+  CH: "europe",
+  NL: "europe",
+  IT: "europe",
+  ES: "europe",
+  SE: "europe",
+  NO: "europe",
+  DK: "europe",
+  FI: "europe",
+  BE: "europe",
+  AT: "europe",
+  IE: "europe",
+  PT: "europe",
+  IN: "em",
+  ID: "em",
+  TH: "em",
+  TR: "em",
+  ZA: "em",
+  KR: "em",
+  TW: "em",
+  MY: "em",
+  PH: "em",
+  VN: "em",
+  PL: "em",
+  SA: "em",
+  AE: "em"
+};
+var STORAGE_KEY2 = "hm-stock-profiles";
+function mapFinnhubIndustry(industry) {
+  if (!industry) return null;
+  const key = industry.trim().toLowerCase();
+  if (FINNHUB_INDUSTRY_MAP[key]) return FINNHUB_INDUSTRY_MAP[key];
+  for (const [k, v] of Object.entries(FINNHUB_INDUSTRY_MAP)) {
+    if (key.includes(k)) return v;
+  }
+  return null;
+}
+function mapFinnhubCountry(country) {
+  if (!country) return null;
+  return FINNHUB_COUNTRY_MAP[country.trim().toUpperCase()] || null;
+}
+function buildStockConstituent(profile, symbol, cur) {
+  const sector = mapFinnhubIndustry(profile?.finnhubIndustry);
+  const country = mapFinnhubCountry(profile?.country);
+  if (!sector && !country) return null;
+  const holding = {
+    ticker: symbol,
+    name: symbol,
+    weight: 1,
+    currency: cur === "USD" ? "USD" : cur === "JPY" ? "JPY" : cur || "",
+    assetClass: "equity"
+  };
+  if (sector) holding.sector = sector;
+  if (country) holding.country = country;
+  return { holdings: [holding], asOf: (/* @__PURE__ */ new Date()).toISOString(), source: "finnhub" };
+}
+async function fetchStockProfile(ySymbol) {
+  const fSym = toFinnhubSymbol(ySymbol);
+  const url = `${WORKER_URL}/finnhub?path=/stock/profile2&symbol=${encodeURIComponent(fSym)}`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data || !data.finnhubIndustry && !data.country) return null;
+    return data;
+  } catch (e) {
+    console.warn(`[stock-profile] fetchStockProfile(${ySymbol}) failed:`, e);
+    return null;
+  }
+}
+async function loadStockProfiles(posList = positions) {
+  try {
+    const cached = sessionStorage.getItem(STORAGE_KEY2);
+    if (cached) {
+      Object.assign(state.liveConstituents, JSON.parse(cached));
+      return;
+    }
+  } catch {
+  }
+  const fetched = {};
+  for (const p of posList) {
+    const symbol = p.symbol;
+    if (!symbol || !p.ySymbol) continue;
+    if (p.isProxy) continue;
+    if (symbol.includes("\u73FE\u91D1")) continue;
+    if (CONSTITUENTS[symbol]) continue;
+    const profile = await fetchStockProfile(p.ySymbol);
+    if (!profile) continue;
+    const entry = buildStockConstituent(profile, symbol, p.cur);
+    if (entry) {
+      state.liveConstituents[symbol] = entry;
+      fetched[symbol] = entry;
+    }
+  }
+  try {
+    if (Object.keys(fetched).length > 0) {
+      sessionStorage.setItem(STORAGE_KEY2, JSON.stringify(state.liveConstituents));
+    }
+  } catch {
+  }
+}
+
 // src/ptr.js
 if ("ontouchstart" in window) {
   let touchInScrollable = function(el) {
@@ -5125,6 +5289,9 @@ function init() {
       loadTopHoldings().then(() => {
         if (state.activeTab === "risk") renderRiskCharts();
       }).catch((e) => console.warn("[topholdings] loadTopHoldings failed:", e));
+      loadStockProfiles().then(() => {
+        if (state.activeTab === "risk") renderRiskCharts();
+      }).catch((e) => console.warn("[stock-profile] loadStockProfiles failed:", e));
       applyPricesCache();
       try {
         await refreshPrices();
