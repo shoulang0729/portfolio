@@ -198,3 +198,68 @@ export function getClassificationSummary(posList = defaultPositions) {
   }
   return { total, classified, unclassified: total - classified, allSymbols, classifiedSymbols, unclassifiedSymbols };
 }
+
+/**
+ * @typedef {Object} DimSource
+ * @property {number} live       value 加重の live ソース割合（0..1）
+ * @property {number} curated    value 加重の curated 割合（0..1）
+ * @property {number} estimated  value 加重の既定推定割合（0..1）
+ * @property {string|null} oldestAsOf  live 寄与のうち最も古い asOf（ISO・無ければ null）
+ */
+
+/**
+ * 軸ごとのデータソース構成（live / curated / 推定）と live の最古鮮度を value 加重で集計する（#208）。
+ * computeRiskBreakdown の entry 解決と同じ優先順位をミラーする:
+ *   sector: liveTopHoldings > liveConstituents > curated > 既定推定
+ *   other : liveConstituents > curated > 既定推定
+ * @param {Array<{symbol?: string, value?: number}>} [posList]
+ * @returns {Record<string, DimSource>}
+ */
+export function getSourceSummary(posList = defaultPositions) {
+  /** @type {Record<string, {live: number, curated: number, estimated: number, total: number, oldestAsOf: string|null}>} */
+  const acc = {};
+  for (const dim of RISK_DIMENSIONS) acc[dim] = { live: 0, curated: 0, estimated: 0, total: 0, oldestAsOf: null };
+
+  for (const p of posList) {
+    const value = p.value || 0;
+    if (value <= 0) continue;
+    const sym = p.symbol;
+    const liveConst = sym ? state.liveConstituents[sym] : null;
+    const hasLiveConst = !!(liveConst && Array.isArray(liveConst.holdings) && liveConst.holdings.length);
+    const hasCurated = !!(sym && CONSTITUENTS[sym]);
+
+    for (const dim of RISK_DIMENSIONS) {
+      const b = acc[dim];
+      b.total += value;
+      // sector 軸のみ liveTopHoldings の上書きを最優先
+      const topHold = (dim === 'sector' && sym) ? state.liveTopHoldings[sym] : null;
+      if (topHold) {
+        b.live += value;
+        b.oldestAsOf = _olderAsOf(b.oldestAsOf, topHold.asOf);
+      } else if (hasLiveConst) {
+        b.live += value;
+        b.oldestAsOf = _olderAsOf(b.oldestAsOf, liveConst.asOf);
+      } else if (hasCurated) {
+        b.curated += value;
+      } else {
+        b.estimated += value;
+      }
+    }
+  }
+
+  /** @type {Record<string, DimSource>} */
+  const out = {};
+  for (const dim of RISK_DIMENSIONS) {
+    const b = acc[dim];
+    const t = b.total || 1;
+    out[dim] = { live: b.live / t, curated: b.curated / t, estimated: b.estimated / t, oldestAsOf: b.oldestAsOf };
+  }
+  return out;
+}
+
+/** 2 つの ISO 日付のうち古い方を返す（無効/欠落は無視）。 */
+function _olderAsOf(a, b) {
+  if (!b) return a;
+  if (!a) return b;
+  return Date.parse(b) < Date.parse(a) ? b : a;
+}
