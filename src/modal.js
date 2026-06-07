@@ -75,7 +75,12 @@ export async function showConfirm({ title, message, okLabel = 'OK', cancelLabel 
       overlay.classList.remove('open');
       document.removeEventListener('keydown', handleEsc);
       overlay.removeEventListener('click', handleOverlay);
-      overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
+      // .modal-overlay には CSS transition が無く transitionend が発火しないため、
+      // setTimeout フォールバックで確実に除去する（#274）。
+      let removed = false;
+      const doRemove = () => { if (!removed) { removed = true; overlay.remove(); } };
+      overlay.addEventListener('transitionend', doRemove, { once: true });
+      setTimeout(doRemove, 300);
     };
 
     const handleEsc = (e) => {
@@ -149,7 +154,12 @@ export async function showAlert({ title, message, okLabel = 'OK' }) {
       overlay.classList.remove('open');
       document.removeEventListener('keydown', handleEsc);
       overlay.removeEventListener('click', handleOverlay);
-      overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
+      // .modal-overlay には CSS transition が無く transitionend が発火しないため、
+      // setTimeout フォールバックで確実に除去する（#274）。
+      let removed = false;
+      const doRemove = () => { if (!removed) { removed = true; overlay.remove(); } };
+      overlay.addEventListener('transitionend', doRemove, { once: true });
+      setTimeout(doRemove, 300);
     };
 
     const handleEsc = (e) => {
