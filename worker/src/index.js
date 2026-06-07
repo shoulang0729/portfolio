@@ -927,6 +927,16 @@ async function handleNotionSave(request, env, origin) {
 // SHA-256("123456") — フロントの src/auth-pin.js:AUTH_PIN_HASH と同期させる
 const DEFAULT_PIN_HASH = '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92';
 
+// X-Pin-Hash ヘッダーを KV の保存ハッシュと照合する。
+// OK なら null、NG なら errRes を返す（呼び出し側でそのまま return する）。
+async function verifyPinHash(request, env, origin) {
+  const pinHash = request.headers.get('X-Pin-Hash');
+  if (!pinHash) return errRes('認証が必要です（X-Pin-Hash）', 401, origin);
+  const storedHash = await env.KV.get('auth:pin-hash') || DEFAULT_PIN_HASH;
+  if (pinHash !== storedHash) return errRes('PIN認証失敗', 401, origin);
+  return null;
+}
+
 async function handlePositions(request, env, origin, ctx) {
   if (!env.KV) return errRes('KV 未設定', 500, origin);
 
@@ -936,10 +946,8 @@ async function handlePositions(request, env, origin, ctx) {
   }
 
   if (request.method === 'PUT') {
-    const pinHash = request.headers.get('X-Pin-Hash');
-    if (!pinHash) return errRes('認証が必要です（X-Pin-Hash）', 401, origin);
-    const storedHash = await env.KV.get('auth:pin-hash') || DEFAULT_PIN_HASH;
-    if (pinHash !== storedHash) return errRes('PIN認証失敗', 401, origin);
+    const authErr = await verifyPinHash(request, env, origin);
+    if (authErr) return authErr;
 
     let body;
     try { body = await request.json(); } catch { return errRes('JSON 不正', 400, origin); }
@@ -1059,8 +1067,11 @@ async function handleAuthChallenge(env, origin) {
 }
 
 // 登録（公開鍵を KV に保存）
+// セキュリティ: 未認証者がパスキーを登録できないよう PIN 認証を必須にする（#239）
 async function handleAuthRegister(request, env, origin) {
   if (!env.KV) return errRes('KV 未設定', 500, origin);
+  const authErr = await verifyPinHash(request, env, origin);
+  if (authErr) return authErr;
   let body;
   try { body = await request.json(); } catch { return errRes('JSON 不正', 400, origin); }
   const { id, publicKey, clientDataJSON } = body;
