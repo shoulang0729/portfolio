@@ -820,7 +820,8 @@ async function registerPasskey() {
     const publicKey = response.getPublicKey ? new Uint8Array(response.getPublicKey()) : new Uint8Array(0);
     const regRes = await fetch(`${WORKER_URL}/auth/register`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      // PIN 認証ヘッダーを付与（Worker 側で検証。未認証者の登録を防ぐ #239）
+      headers: { "Content-Type": "application/json", "X-Pin-Hash": _getActivePinHash() },
       body: JSON.stringify({
         id: credential.id,
         publicKey: _u8ToB64url(publicKey),
