@@ -9,6 +9,7 @@
 //   POST /ai/grok                       Grok プロキシ
 //   POST /ai/deepseek                   DeepSeek プロキシ
 //   POST /ai/claude                     Claude (Anthropic) プロキシ
+//   GET  /etf/constituents?symbol=<sym> ETF 構成銘柄（look-through・KV キャッシュ）
 //   GET  /watchlist                     ウォッチリスト取得（KV）
 //   PUT  /watchlist                     ウォッチリスト保存（KV）
 //   GET  /positions                     保有銘柄取得（KV・非公開）
@@ -26,6 +27,13 @@
 //   NOTION_API_KEY, NOTION_DB_ID, ALLOWED_ORIGIN
 //   KV: Cloudflare KV namespace binding
 // Cron: 0 */6 * * *  — 6時間ごとに全保有銘柄の価格を取得してキャッシュ
+
+import {
+  CONSTITUENTS_KV_PREFIX,
+  CONSTITUENTS_TTL,
+  buildConstituentsResponse,
+  fetchEtfConstituents,
+} from './etf-constituents.js';
 
 const FINNHUB_BASE = 'https://finnhub.io/api/v1';
 
@@ -1048,6 +1056,39 @@ async function handleAuthPinHash(request, env, origin) {
   return jsonRes({ ok: true }, 200, origin);
 }
 
+// ── ETF 構成銘柄（look-through・KV キャッシュ）─────────────────
+// GET /etf/constituents?symbol=<sym>
+// 1. KV `constituents:<symbol>` を返す / 2. 無ければアダプタ取得 → 正規化 → KV 保存
+async function handleEtfConstituents(url, env, origin, ctx) {
+  if (!env.KV) return errRes('KV 未設定', 500, origin);
+  const symbol = (url.searchParams.get('symbol') || '').trim();
+  if (!symbol) return errRes('symbol が必要です', 400, origin);
+
+  // 1. KV キャッシュ
+  const cached = await env.KV.get(CONSTITUENTS_KV_PREFIX + symbol, 'json');
+  if (cached) return jsonRes(cached, 200, origin);
+
+  // 2. 取得アダプタ（B2 公式CSV / B3 Yahoo）— 失敗は 404 として扱う
+  let raw = null;
+  try {
+    raw = await fetchEtfConstituents(symbol, env);
+  } catch (e) {
+    console.warn('[etf/constituents]', symbol, e);
+  }
+  if (!raw || !Array.isArray(raw.holdings) || raw.holdings.length === 0) {
+    return errRes('構成銘柄が見つかりません', 404, origin);
+  }
+
+  // 3. 正規化して KV に保存（書き込みはレスポンスをブロックしない）
+  const normalized = buildConstituentsResponse(raw);
+  if (ctx && typeof ctx.waitUntil === 'function') {
+    ctx.waitUntil(
+      env.KV.put(CONSTITUENTS_KV_PREFIX + symbol, JSON.stringify(normalized), { expirationTtl: CONSTITUENTS_TTL })
+    );
+  }
+  return jsonRes(normalized, 200, origin);
+}
+
 // ── 価格キャッシュ（Cron が書き込み、フロントが読む）──────────
 async function handlePricesCache(env, origin) {
   if (!env.KV) return errRes('KV 未設定', 500, origin);
@@ -1129,12 +1170,13 @@ export default {
 
     const path = url.pathname;
     if (path === '/')                return new Response('portfolio-proxy OK', { status: 200 });
-    if (path === '/yahoo' || path === '/finnhub') {
+    if (path === '/yahoo' || path === '/finnhub' || path === '/etf/constituents') {
       if (await checkRateLimit(request, env)) return errRes('Too Many Requests', 429, org);
     }
     if (path === '/yahoo')           return handleYahoo(url, env, org);
     if (path === '/finnhub')         return handleFinnhub(url, env, org);
     if (path === '/forex')           return handleForex(url, env, org);
+    if (path === '/etf/constituents') return handleEtfConstituents(url, env, org, ctx);
     if (path === '/ai/models')       return handleAIModels(env, org);
     if (path === '/ai/context')      return handleAIContext(request, env, org);
     if (path.startsWith('/ai/'))     return handleAI(request, path, env, org);
