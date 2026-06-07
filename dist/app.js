@@ -4655,6 +4655,58 @@ async function loadTopHoldings() {
   }
 }
 
+// src/constituents-cache.js
+var DB_NAME2 = "hm-constituents";
+var DB_VERSION2 = 1;
+var STORE_NAME2 = "constituents";
+var STALE_DAYS = 7;
+var _dbPromise2 = null;
+function getDb2() {
+  if (!_dbPromise2) {
+    _dbPromise2 = openDb(DB_NAME2, DB_VERSION2, (db) => {
+      if (!db.objectStoreNames.contains(STORE_NAME2)) {
+        db.createObjectStore(STORE_NAME2);
+      }
+    }).catch((e) => {
+      _dbPromise2 = null;
+      throw e;
+    });
+  }
+  return _dbPromise2;
+}
+function isStale(asOf, days = STALE_DAYS) {
+  if (!asOf) return true;
+  const t = Date.parse(asOf);
+  if (Number.isNaN(t)) return true;
+  return Date.now() - t > days * 24 * 60 * 60 * 1e3;
+}
+async function restoreConstituentsFromIDB() {
+  try {
+    const db = await getDb2();
+    const all = await idbGetAllEntries(db, STORE_NAME2);
+    let n = 0;
+    for (const { key, value } of all) {
+      if (!value || !Array.isArray(value.holdings)) continue;
+      const symbol = String(key);
+      if (state.liveConstituents[symbol]) continue;
+      state.liveConstituents[symbol] = value;
+      n++;
+    }
+    return n;
+  } catch (e) {
+    console.warn("[constituents-cache] restore failed:", e);
+    return 0;
+  }
+}
+async function setConstituentEntry(symbol, entry) {
+  try {
+    const db = await getDb2();
+    await idbPut(db, STORE_NAME2, symbol, entry);
+  } catch (e) {
+    console.warn(`[constituents-cache] set(${symbol}) failed:`, e);
+  }
+}
+
 // src/data-stock-profile.js
 var FINNHUB_INDUSTRY_MAP = {
   "technology": "tech",
@@ -4744,7 +4796,6 @@ var FINNHUB_COUNTRY_MAP = {
   SA: "em",
   AE: "em"
 };
-var STORAGE_KEY2 = "hm-stock-profiles";
 function mapFinnhubIndustry(industry) {
   if (!industry) return null;
   const key = industry.trim().toLowerCase();
@@ -4788,34 +4839,21 @@ async function fetchStockProfile(ySymbol) {
   }
 }
 async function loadStockProfiles(posList = positions) {
-  try {
-    const cached = sessionStorage.getItem(STORAGE_KEY2);
-    if (cached) {
-      Object.assign(state.liveConstituents, JSON.parse(cached));
-      return;
-    }
-  } catch {
-  }
-  const fetched = {};
   for (const p of posList) {
     const symbol = p.symbol;
     if (!symbol || !p.ySymbol) continue;
     if (p.isProxy) continue;
     if (symbol.includes("\u73FE\u91D1")) continue;
     if (CONSTITUENTS[symbol]) continue;
+    const existing = state.liveConstituents[symbol];
+    if (existing && !isStale(existing.asOf)) continue;
     const profile = await fetchStockProfile(p.ySymbol);
     if (!profile) continue;
     const entry = buildStockConstituent(profile, symbol, p.cur);
     if (entry) {
       state.liveConstituents[symbol] = entry;
-      fetched[symbol] = entry;
+      setConstituentEntry(symbol, entry);
     }
-  }
-  try {
-    if (Object.keys(fetched).length > 0) {
-      sessionStorage.setItem(STORAGE_KEY2, JSON.stringify(state.liveConstituents));
-    }
-  } catch {
   }
 }
 
@@ -5289,7 +5327,9 @@ function init() {
       loadTopHoldings().then(() => {
         if (state.activeTab === "risk") renderRiskCharts();
       }).catch((e) => console.warn("[topholdings] loadTopHoldings failed:", e));
-      loadStockProfiles().then(() => {
+      restoreConstituentsFromIDB().then(() => {
+        if (state.activeTab === "risk") renderRiskCharts();
+      }).then(() => loadStockProfiles()).then(() => {
         if (state.activeTab === "risk") renderRiskCharts();
       }).catch((e) => console.warn("[stock-profile] loadStockProfiles failed:", e));
       applyPricesCache();
