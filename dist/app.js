@@ -3597,6 +3597,46 @@ function getClassificationSummary(posList = positions) {
   }
   return { total, classified, unclassified: total - classified, allSymbols, classifiedSymbols, unclassifiedSymbols };
 }
+function getSourceSummary(posList = positions) {
+  const acc = {};
+  for (const dim of RISK_DIMENSIONS) acc[dim] = { live: 0, curated: 0, estimated: 0, total: 0, oldestAsOf: null };
+  for (const p of posList) {
+    const value = p.value || 0;
+    if (value <= 0) continue;
+    const sym = p.symbol;
+    const liveConst = sym ? state.liveConstituents[sym] : null;
+    const hasLiveConst = !!(liveConst && Array.isArray(liveConst.holdings) && liveConst.holdings.length);
+    const hasCurated = !!(sym && CONSTITUENTS[sym]);
+    for (const dim of RISK_DIMENSIONS) {
+      const b = acc[dim];
+      b.total += value;
+      const topHold = dim === "sector" && sym ? state.liveTopHoldings[sym] : null;
+      if (topHold) {
+        b.live += value;
+        b.oldestAsOf = _olderAsOf(b.oldestAsOf, topHold.asOf);
+      } else if (hasLiveConst) {
+        b.live += value;
+        b.oldestAsOf = _olderAsOf(b.oldestAsOf, liveConst.asOf);
+      } else if (hasCurated) {
+        b.curated += value;
+      } else {
+        b.estimated += value;
+      }
+    }
+  }
+  const out = {};
+  for (const dim of RISK_DIMENSIONS) {
+    const b = acc[dim];
+    const t = b.total || 1;
+    out[dim] = { live: b.live / t, curated: b.curated / t, estimated: b.estimated / t, oldestAsOf: b.oldestAsOf };
+  }
+  return out;
+}
+function _olderAsOf(a, b) {
+  if (!b) return a;
+  if (!a) return b;
+  return Date.parse(b) < Date.parse(a) ? b : a;
+}
 
 // src/manual-assets.js
 var MANUAL_ASSETS = [
@@ -3661,7 +3701,41 @@ function nameOfSymbol(sym) {
   const p = positions.find((x) => x.symbol === sym);
   return p?.name || sym;
 }
-function buildChartCard(dim, dimResult) {
+var STALE_WARN_DAYS = 14;
+function fmtAsOf(asOf) {
+  if (!asOf) return "";
+  const t = Date.parse(asOf);
+  if (Number.isNaN(t)) return "";
+  return new Date(t).toISOString().slice(0, 10);
+}
+function buildSourceBadge(dimSource) {
+  const badge = document.createElement("div");
+  badge.className = "risk-source-badge";
+  const pct = (x) => Math.round(x * 100);
+  const parts = [
+    ["live", "\u30E9\u30A4\u30D6", dimSource.live],
+    ["curated", "\u767B\u9332", dimSource.curated],
+    ["est", "\u63A8\u5B9A", dimSource.estimated]
+  ];
+  for (const [cls, label, frac] of parts) {
+    if (frac < 5e-3) continue;
+    const pill = document.createElement("span");
+    pill.className = `risk-src-pill risk-src-${cls}`;
+    pill.textContent = `${label} ${pct(frac)}%`;
+    badge.appendChild(pill);
+  }
+  const asOfStr = fmtAsOf(dimSource.oldestAsOf);
+  if (asOfStr) {
+    const stale = Date.now() - Date.parse(dimSource.oldestAsOf) > STALE_WARN_DAYS * 864e5;
+    const meta = document.createElement("span");
+    meta.className = `risk-src-asof${stale ? " risk-src-stale" : ""}`;
+    meta.textContent = stale ? `\u26A0 ${asOfStr} \u66F4\u65B0\uFF08\u53E4\u3044\uFF09` : `${asOfStr} \u66F4\u65B0`;
+    if (stale) meta.title = `\u30E9\u30A4\u30D6\u30C7\u30FC\u30BF\u304C ${STALE_WARN_DAYS} \u65E5\u4EE5\u4E0A\u66F4\u65B0\u3055\u308C\u3066\u3044\u307E\u305B\u3093`;
+    badge.appendChild(meta);
+  }
+  return badge;
+}
+function buildChartCard(dim, dimResult, dimSource) {
   const slices = toSlices(dimResult);
   const card = document.createElement("div");
   card.className = "risk-card";
@@ -3669,6 +3743,7 @@ function buildChartCard(dim, dimResult) {
   title.className = "risk-card-title";
   title.textContent = TITLES[dim];
   card.appendChild(title);
+  if (dimSource) card.appendChild(buildSourceBadge(dimSource));
   const body = document.createElement("div");
   body.className = "risk-card-body";
   card.appendChild(body);
@@ -3721,6 +3796,7 @@ function renderRiskCharts() {
   if (typeof d3 === "undefined") return;
   const assets = [...positions, ...MANUAL_ASSETS];
   const breakdown = computeRiskBreakdown(assets);
+  const sourceSummary = getSourceSummary(assets);
   wrap.textContent = "";
   const sumInfo = getClassificationSummary(assets);
   const summary = document.createElement("div");
@@ -3745,7 +3821,7 @@ function renderRiskCharts() {
   const grid = document.createElement("div");
   grid.className = "risk-grid";
   for (const dim of RISK_DIMENSIONS) {
-    grid.appendChild(buildChartCard(dim, breakdown[dim]));
+    grid.appendChild(buildChartCard(dim, breakdown[dim], sourceSummary[dim]));
   }
   wrap.appendChild(grid);
   const src = document.createElement("div");

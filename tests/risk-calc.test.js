@@ -1,7 +1,7 @@
 // Tests for look-through risk aggregation in src/risk-calc.js
 
 import { describe, it, expect, afterEach } from 'vitest';
-import { computeRiskBreakdown, toSlices, getContributors, getClassificationSummary, holdingsToBreakdown, RISK_DIMENSIONS, UNKNOWN_KEY } from '../src/risk-calc.js';
+import { computeRiskBreakdown, toSlices, getContributors, getClassificationSummary, getSourceSummary, holdingsToBreakdown, RISK_DIMENSIONS, UNKNOWN_KEY } from '../src/risk-calc.js';
 import { state } from '../src/state.js';
 
 describe('computeRiskBreakdown — synthetic positions', () => {
@@ -228,6 +228,55 @@ describe('computeRiskBreakdown — live constituents merge priority (#207)', () 
     expect(r.sector.cats.tech).toBeCloseTo(600, 4);
     expect(r.sector.cats[UNKNOWN_KEY]).toBeCloseTo(400, 4);
     expect(r.sector.coverage).toBeCloseTo(0.6, 4);
+  });
+});
+
+describe('getSourceSummary — per-dim source mix + freshness (#208)', () => {
+  afterEach(() => {
+    state.liveConstituents = {};
+    state.liveTopHoldings = {};
+  });
+
+  it('classifies curated vs estimated by value weight', () => {
+    const s = getSourceSummary([
+      { symbol: 'AAPL', value: 3000, cur: 'USD' },      // curated
+      { symbol: 'NOPE_XYZ', value: 1000, cur: 'USD' },  // 推定（curated 無し）
+    ]);
+    // currency 軸: curated 3000/4000 = 0.75, estimated 0.25
+    expect(s.currency.curated).toBeCloseTo(0.75, 4);
+    expect(s.currency.estimated).toBeCloseTo(0.25, 4);
+    expect(s.currency.live).toBe(0);
+    expect(s.currency.oldestAsOf).toBeNull();
+  });
+
+  it('counts live constituents as live across all dims with asOf', () => {
+    state.liveConstituents['NOPE_XYZ'] = {
+      asOf: '2026-06-01T00:00:00.000Z', source: 'finnhub',
+      holdings: [{ weight: 1, currency: 'USD', country: 'us', sector: 'tech', assetClass: 'equity' }],
+    };
+    const s = getSourceSummary([{ symbol: 'NOPE_XYZ', value: 1000, cur: 'USD' }]);
+    expect(s.sector.live).toBeCloseTo(1, 4);
+    expect(s.currency.live).toBeCloseTo(1, 4);
+    expect(s.sector.oldestAsOf).toBe('2026-06-01T00:00:00.000Z');
+  });
+
+  it('liveTopHoldings makes only the sector axis live (other axes stay curated)', () => {
+    state.liveTopHoldings['オルカン'] = { sector: { tech: 1 }, asOf: '2026-05-20T00:00:00.000Z' };
+    const s = getSourceSummary([{ symbol: 'オルカン', value: 5000, cur: 'JPY' }]);
+    expect(s.sector.live).toBeCloseTo(1, 4);   // sector は live
+    expect(s.currency.live).toBe(0);            // 他軸は curated
+    expect(s.currency.curated).toBeCloseTo(1, 4);
+    expect(s.sector.oldestAsOf).toBe('2026-05-20T00:00:00.000Z');
+  });
+
+  it('tracks the oldest asOf among live contributors', () => {
+    state.liveConstituents['A'] = { asOf: '2026-06-05T00:00:00.000Z', source: 'finnhub', holdings: [{ weight: 1, sector: 'tech' }] };
+    state.liveConstituents['B'] = { asOf: '2026-05-01T00:00:00.000Z', source: 'finnhub', holdings: [{ weight: 1, sector: 'financials' }] };
+    const s = getSourceSummary([
+      { symbol: 'A', value: 1000, cur: 'USD' },
+      { symbol: 'B', value: 1000, cur: 'USD' },
+    ]);
+    expect(s.sector.oldestAsOf).toBe('2026-05-01T00:00:00.000Z');
   });
 });
 

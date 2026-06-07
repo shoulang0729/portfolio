@@ -5,7 +5,7 @@
 // 地域・国 / セクター）で可視化する。各グラフに凡例とカバレッジ率を表示。
 // ══════════════════════════════════════════════════════════════
 
-import { computeRiskBreakdown, toSlices, RISK_DIMENSIONS, UNKNOWN_KEY, getContributors, getClassificationSummary } from './risk-calc.js';
+import { computeRiskBreakdown, toSlices, RISK_DIMENSIONS, UNKNOWN_KEY, getContributors, getClassificationSummary, getSourceSummary } from './risk-calc.js';
 import { fmtJPYInt, fmtPctInt, escapeHTML } from './utils.js';
 import { positions } from './positions.js';
 import { MANUAL_ASSETS, MANUAL_SOURCES } from './manual-assets.js';
@@ -55,13 +55,63 @@ function nameOfSymbol(sym) {
   return p?.name || sym;
 }
 
+/** 鮮度警告のしきい値（日）。oldestAsOf がこれより古いと注意表示（#208） */
+const STALE_WARN_DAYS = 14;
+
+/** ISO 日付を YYYY-MM-DD に整形（無効なら空） */
+function fmtAsOf(asOf) {
+  if (!asOf) return '';
+  const t = Date.parse(asOf);
+  if (Number.isNaN(t)) return '';
+  return new Date(t).toISOString().slice(0, 10);
+}
+
+/**
+ * 軸のソース構成バッジ（live/curated/推定 の value 加重% + asOf + 鮮度警告）を生成。
+ * 全量 curated/推定 で live が無い場合も、内訳を簡潔に示す。
+ * @param {import('./risk-calc.js').DimSource} dimSource
+ * @returns {HTMLElement}
+ */
+function buildSourceBadge(dimSource) {
+  const badge = document.createElement('div');
+  badge.className = 'risk-source-badge';
+
+  const pct = x => Math.round(x * 100);
+  /** @type {Array<[string,string,number]>} */
+  const parts = [
+    ['live', 'ライブ', dimSource.live],
+    ['curated', '登録', dimSource.curated],
+    ['est', '推定', dimSource.estimated],
+  ];
+  for (const [cls, label, frac] of parts) {
+    if (frac < 0.005) continue; // 0% は省略
+    const pill = document.createElement('span');
+    pill.className = `risk-src-pill risk-src-${cls}`;
+    pill.textContent = `${label} ${pct(frac)}%`;
+    badge.appendChild(pill);
+  }
+
+  // live がある場合は最古 asOf を表示し、古ければ警告
+  const asOfStr = fmtAsOf(dimSource.oldestAsOf);
+  if (asOfStr) {
+    const stale = (Date.now() - Date.parse(dimSource.oldestAsOf)) > STALE_WARN_DAYS * 86400000;
+    const meta = document.createElement('span');
+    meta.className = `risk-src-asof${stale ? ' risk-src-stale' : ''}`;
+    meta.textContent = stale ? `⚠ ${asOfStr} 更新（古い）` : `${asOfStr} 更新`;
+    if (stale) meta.title = `ライブデータが ${STALE_WARN_DAYS} 日以上更新されていません`;
+    badge.appendChild(meta);
+  }
+  return badge;
+}
+
 /**
  * 1軸ぶんのドーナツ + 凡例 + カバレッジを描画したカード要素を生成する。
  * @param {string} dim
  * @param {import('./risk-calc.js').DimResult} dimResult
+ * @param {import('./risk-calc.js').DimSource} [dimSource]
  * @returns {HTMLElement}
  */
-function buildChartCard(dim, dimResult) {
+function buildChartCard(dim, dimResult, dimSource) {
   const slices = toSlices(dimResult);
 
   const card = document.createElement('div');
@@ -71,6 +121,9 @@ function buildChartCard(dim, dimResult) {
   title.className = 'risk-card-title';
   title.textContent = TITLES[dim];
   card.appendChild(title);
+
+  // ソース構成バッジ（ライブ/登録/推定 + asOf + 鮮度警告・#208）
+  if (dimSource) card.appendChild(buildSourceBadge(dimSource));
 
   const body = document.createElement('div');
   body.className = 'risk-card-body';
@@ -176,6 +229,7 @@ export function renderRiskCharts() {
   // 証券（positions）＋手動入力資産（現金など manual-assets.js）を合算して look-through。
   const assets = [...positions, ...MANUAL_ASSETS];
   const breakdown = computeRiskBreakdown(assets);
+  const sourceSummary = getSourceSummary(assets);
 
   wrap.textContent = '';
 
@@ -204,7 +258,7 @@ export function renderRiskCharts() {
   const grid = document.createElement('div');
   grid.className = 'risk-grid';
   for (const dim of RISK_DIMENSIONS) {
-    grid.appendChild(buildChartCard(dim, breakdown[dim]));
+    grid.appendChild(buildChartCard(dim, breakdown[dim], sourceSummary[dim]));
   }
   wrap.appendChild(grid);
 
