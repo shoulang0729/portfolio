@@ -26,6 +26,7 @@ import { renderStats, refreshHistoricalAndRender, setupPriceUpdateListener, hide
 import { toggleHmMenu, closeHmMenu } from './menu.js';
 import { loadTopHoldings } from './data-topholdings.js';
 import { loadStockProfiles } from './data-stock-profile.js';
+import { restoreConstituentsFromIDB } from './constituents-cache.js';
 import { renderRiskCharts } from './risk-charts.js';
 
 // ── フォールバックスクリプトから参照できるように renderHeatmap を window に登録 ──
@@ -487,9 +488,12 @@ function init() {
         if (state.activeTab === 'risk') renderRiskCharts();
       }).catch(e => console.warn('[topholdings] loadTopHoldings failed:', e));
       // 1c. curated 未登録の個別株を Finnhub profile2 で属性付与（fire-and-forget・#203）
-      loadStockProfiles().then(() => {
-        if (state.activeTab === 'risk') renderRiskCharts();
-      }).catch(e => console.warn('[stock-profile] loadStockProfiles failed:', e));
+      //     先に IDB 永続キャッシュからメモリへ先読み復元してから、失効分のみ取得（#205）
+      restoreConstituentsFromIDB()
+        .then(() => { if (state.activeTab === 'risk') renderRiskCharts(); })
+        .then(() => loadStockProfiles())
+        .then(() => { if (state.activeTab === 'risk') renderRiskCharts(); })
+        .catch(e => console.warn('[stock-profile] loadStockProfiles failed:', e));
       // 2. Cron キャッシュ価格を即時反映（ライブ取得前の暫定表示）
       applyPricesCache(); // fire-and-forget
       // 3. ライブ価格取得

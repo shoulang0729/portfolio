@@ -22,6 +22,7 @@ import { toFinnhubSymbol } from './data-finnhub.js';
 import { positions } from './positions.js';
 import { CONSTITUENTS } from './constituents.js';
 import { state } from './state.js';
+import { setConstituentEntry, isStale } from './constituents-cache.js';
 
 /**
  * Finnhub `finnhubIndustry` → アプリ内セクターキー マッピング。
@@ -94,8 +95,6 @@ const FINNHUB_COUNTRY_MAP = {
   MY: 'em', PH: 'em', VN: 'em', PL: 'em', SA: 'em', AE: 'em',
 };
 
-/** sessionStorage キャッシュキー */
-const STORAGE_KEY = 'hm-stock-profiles';
 
 /**
  * Finnhub の業種文字列をアプリ内セクターキーに変換する。
@@ -170,22 +169,15 @@ export async function fetchStockProfile(ySymbol) {
 
 /**
  * 対象個別株（proxy/現金/ curated 済みを除く）について profile2 を取得し、
- * state.liveConstituents に投入する。sessionStorage でセッション内キャッシュ。
+ * state.liveConstituents に投入する。
+ *
+ * 起動時に restoreConstituentsFromIDB() で復元済みのエントリは、鮮度が新しければ
+ * 再取得をスキップする（IDB 永続キャッシュ・#205）。新規/失効分のみ取得し、
+ * メモリと IDB の両方へ書き込む。
  * @param {Array<{symbol?: string, ySymbol?: string, cur?: string, isProxy?: boolean}>} [posList]
  * @returns {Promise<void>}
  */
 export async function loadStockProfiles(posList = positions) {
-  // sessionStorage 復元（起動直後の二重取得を防ぐ）
-  try {
-    const cached = sessionStorage.getItem(STORAGE_KEY);
-    if (cached) {
-      Object.assign(state.liveConstituents, JSON.parse(cached));
-      return;
-    }
-  } catch { /* sessionStorage 失敗は無視 */ }
-
-  /** @type {Record<string, object>} */
-  const fetched = {};
   for (const p of posList) {
     const symbol = p.symbol;
     if (!symbol || !p.ySymbol) continue;
@@ -193,18 +185,16 @@ export async function loadStockProfiles(posList = positions) {
     if (symbol.includes('現金')) continue;          // 現金は対象外
     if (CONSTITUENTS[symbol]) continue;            // curated 済みは上書きしない
 
+    // IDB 復元済みかつ鮮度が新しいものは再取得しない
+    const existing = state.liveConstituents[symbol];
+    if (existing && !isStale(existing.asOf)) continue;
+
     const profile = await fetchStockProfile(p.ySymbol);
     if (!profile) continue;
     const entry = buildStockConstituent(profile, symbol, p.cur);
     if (entry) {
       state.liveConstituents[symbol] = entry;
-      fetched[symbol] = entry;
+      setConstituentEntry(symbol, entry); // IDB へ並行書き込み（fire-and-forget）
     }
   }
-
-  try {
-    if (Object.keys(fetched).length > 0) {
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state.liveConstituents));
-    }
-  } catch { /* quota オーバーは無視 */ }
 }
