@@ -399,7 +399,35 @@
   font-size: 13px;
   font-weight: 700;
   color: var(--text);
+  margin-bottom: 6px;
+}
+.risk-source-badge {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
   margin-bottom: 10px;
+}
+.risk-src-pill {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 10px;
+  border: 1px solid var(--border2);
+  color: var(--text2);
+  background: var(--surface2);
+}
+.risk-src-live {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.risk-src-asof {
+  font-size: 10px;
+  color: var(--text3);
+}
+.risk-src-stale {
+  color: var(--accent);
+  font-weight: 600;
 }
 .risk-card-body {
   display: flex;
