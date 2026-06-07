@@ -25,6 +25,7 @@ import { showConfirm, showAlert } from './modal.js';
 import { renderStats, refreshHistoricalAndRender, setupPriceUpdateListener, hideHeatmapSkeleton, updateActiveTableHeight, updateWatchlistHeight } from './render.js';
 import { toggleHmMenu, closeHmMenu } from './menu.js';
 import { loadTopHoldings } from './data-topholdings.js';
+import { loadStockProfiles } from './data-stock-profile.js';
 import { renderRiskCharts } from './risk-charts.js';
 
 // ── フォールバックスクリプトから参照できるように renderHeatmap を window に登録 ──
@@ -485,6 +486,10 @@ function init() {
       loadTopHoldings().then(() => {
         if (state.activeTab === 'risk') renderRiskCharts();
       }).catch(e => console.warn('[topholdings] loadTopHoldings failed:', e));
+      // 1c. curated 未登録の個別株を Finnhub profile2 で属性付与（fire-and-forget・#203）
+      loadStockProfiles().then(() => {
+        if (state.activeTab === 'risk') renderRiskCharts();
+      }).catch(e => console.warn('[stock-profile] loadStockProfiles failed:', e));
       // 2. Cron キャッシュ価格を即時反映（ライブ取得前の暫定表示）
       applyPricesCache(); // fire-and-forget
       // 3. ライブ価格取得
