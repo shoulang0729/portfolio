@@ -1,0 +1,504 @@
+{
+  "1306": {
+    "assetClass": {
+      "equity": 1
+    },
+    "currency": {
+      "JPY": 1
+    },
+    "country": {
+      "japan": 1
+    },
+    "sector": {
+      "tech": 0.14,
+      "financials": 0.12,
+      "industrials": 0.12,
+      "consumer": 0.1,
+      "comm": 0.08,
+      "staples": 0.07,
+      "materials": 0.07,
+      "healthcare": 0.06,
+      "utilities": 0.04,
+      "realestate": 0.03,
+      "energy": 0.01
+    }
+  },
+  "1615": {
+    "assetClass": {
+      "equity": 1
+    },
+    "currency": {
+      "JPY": 1
+    },
+    "country": {
+      "japan": 1
+    },
+    "sector": {
+      "financials": 1
+    }
+  },
+  "1629": {
+    "assetClass": {
+      "equity": 1
+    },
+    "currency": {
+      "JPY": 1
+    },
+    "country": {
+      "japan": 1
+    },
+    "sector": {
+      "industrials": 1
+    }
+  },
+  "6301": {
+    "assetClass": {
+      "equity": 1
+    },
+    "currency": {
+      "JPY": 1
+    },
+    "country": {
+      "japan": 1
+    },
+    "sector": {
+      "industrials": 1
+    }
+  },
+  "8050": {
+    "assetClass": {
+      "equity": 1
+    },
+    "currency": {
+      "JPY": 1
+    },
+    "country": {
+      "japan": 1
+    },
+    "sector": {
+      "consumer": 1
+    }
+  },
+  "9983": {
+    "assetClass": {
+      "equity": 1
+    },
+    "currency": {
+      "JPY": 1
+    },
+    "country": {
+      "japan": 1
+    },
+    "sector": {
+      "consumer": 1
+    }
+  },
+  "200A": {
+    "assetClass": {
+      "equity": 1
+    },
+    "currency": {
+      "JPY": 1
+    },
+    "country": {
+      "japan": 1
+    },
+    "sector": {
+      "semis": 1
+    }
+  },
+  "AAPL": {
+    "assetClass": {
+      "equity": 1
+    },
+    "currency": {
+      "USD": 1
+    },
+    "country": {
+      "us": 1
+    },
+    "sector": {
+      "tech": 1
+    }
+  },
+  "AMZN": {
+    "assetClass": {
+      "equity": 1
+    },
+    "currency": {
+      "USD": 1
+    },
+    "country": {
+      "us": 1
+    },
+    "sector": {
+      "tech": 0.3,
+      "consumer": 0.7
+    }
+  },
+  "COPX": {
+    "assetClass": {
+      "equity": 1
+    },
+    "currency": {
+      "USD": 0.55,
+      "other": 0.45
+    },
+    "country": {
+      "us": 0.25,
+      "em": 0.35,
+      "europe": 0.2,
+      "china": 0.2
+    },
+    "sector": {
+      "materials": 1
+    }
+  },
+  "GLDM": {
+    "assetClass": {
+      "commodity": 1
+    },
+    "currency": {
+      "USD": 1
+    },
+    "country": {
+      "commodity": 1
+    },
+    "sector": {
+      "commodity": 1
+    }
+  },
+  "GOOGL": {
+    "assetClass": {
+      "equity": 1
+    },
+    "currency": {
+      "USD": 1
+    },
+    "country": {
+      "us": 1
+    },
+    "sector": {
+      "comm": 0.8,
+      "tech": 0.2
+    }
+  },
+  "ILF": {
+    "assetClass": {
+      "equity": 1
+    },
+    "currency": {
+      "other": 1
+    },
+    "country": {
+      "latam": 1
+    },
+    "sector": {
+      "financials": 0.33,
+      "materials": 0.25,
+      "energy": 0.15,
+      "staples": 0.15,
+      "utilities": 0.07,
+      "comm": 0.05
+    }
+  },
+  "JPST": {
+    "assetClass": {
+      "bond": 1
+    },
+    "currency": {
+      "USD": 1
+    },
+    "country": {
+      "us": 1
+    },
+    "sector": {
+      "bond": 1
+    }
+  },
+  "MSFT": {
+    "assetClass": {
+      "equity": 1
+    },
+    "currency": {
+      "USD": 1
+    },
+    "country": {
+      "us": 1
+    },
+    "sector": {
+      "tech": 1
+    }
+  },
+  "PLTR": {
+    "assetClass": {
+      "equity": 1
+    },
+    "currency": {
+      "USD": 1
+    },
+    "country": {
+      "us": 1
+    },
+    "sector": {
+      "tech": 1
+    }
+  },
+  "REMX": {
+    "assetClass": {
+      "equity": 1
+    },
+    "currency": {
+      "USD": 0.5,
+      "other": 0.5
+    },
+    "country": {
+      "china": 0.45,
+      "em": 0.3,
+      "us": 0.15,
+      "europe": 0.1
+    },
+    "sector": {
+      "materials": 1
+    }
+  },
+  "SHLD": {
+    "assetClass": {
+      "equity": 1
+    },
+    "currency": {
+      "USD": 0.7,
+      "EUR": 0.3
+    },
+    "country": {
+      "us": 0.6,
+      "europe": 0.4
+    },
+    "sector": {
+      "industrials": 1
+    }
+  },
+  "SLV": {
+    "assetClass": {
+      "commodity": 1
+    },
+    "currency": {
+      "USD": 1
+    },
+    "country": {
+      "commodity": 1
+    },
+    "sector": {
+      "commodity": 1
+    }
+  },
+  "SMH": {
+    "assetClass": {
+      "equity": 1
+    },
+    "currency": {
+      "USD": 0.8,
+      "other": 0.2
+    },
+    "country": {
+      "us": 0.7,
+      "em": 0.2,
+      "europe": 0.1
+    },
+    "sector": {
+      "semis": 1
+    }
+  },
+  "TSLA": {
+    "assetClass": {
+      "equity": 1
+    },
+    "currency": {
+      "USD": 1
+    },
+    "country": {
+      "us": 1
+    },
+    "sector": {
+      "consumer": 1
+    }
+  },
+  "XLE": {
+    "assetClass": {
+      "equity": 1
+    },
+    "currency": {
+      "USD": 1
+    },
+    "country": {
+      "us": 1
+    },
+    "sector": {
+      "energy": 1
+    }
+  },
+  "URA": {
+    "assetClass": {
+      "equity": 0.92,
+      "commodity": 0.08
+    },
+    "currency": {
+      "USD": 0.5,
+      "other": 0.5
+    },
+    "country": {
+      "us": 0.3,
+      "em": 0.1,
+      "global": 0.52,
+      "commodity": 0.08
+    },
+    "sector": {
+      "energy": 0.8,
+      "industrials": 0.07,
+      "materials": 0.05,
+      "commodity": 0.08
+    }
+  },
+  "オルカン": {
+    "assetClass": {
+      "equity": 1
+    },
+    "currency": {
+      "USD": 0.62,
+      "EUR": 0.1,
+      "JPY": 0.05,
+      "other": 0.23
+    },
+    "country": {
+      "us": 0.63,
+      "europe": 0.16,
+      "em": 0.13,
+      "japan": 0.055,
+      "china": 0.025
+    },
+    "sector": {
+      "tech": 0.26,
+      "financials": 0.16,
+      "consumer": 0.11,
+      "healthcare": 0.1,
+      "industrials": 0.1,
+      "comm": 0.075,
+      "staples": 0.06,
+      "energy": 0.04,
+      "materials": 0.04,
+      "utilities": 0.025,
+      "realestate": 0.02
+    }
+  },
+  "ひふみ": {
+    "assetClass": {
+      "equity": 0.987,
+      "cash": 0.013
+    },
+    "currency": {
+      "JPY": 1
+    },
+    "country": {
+      "japan": 1
+    },
+    "sector": {
+      "industrials": 0.345,
+      "tech": 0.186,
+      "financials": 0.155,
+      "consumer": 0.092,
+      "comm": 0.076,
+      "materials": 0.057,
+      "realestate": 0.039,
+      "healthcare": 0.015,
+      "staples": 0.012,
+      "utilities": 0.008,
+      "cash": 0.013
+    }
+  },
+  "マイクロSP": {
+    "assetClass": {
+      "equity": 0.846,
+      "cash": 0.154
+    },
+    "currency": {
+      "JPY": 1
+    },
+    "country": {
+      "japan": 1
+    },
+    "sector": {
+      "industrials": 0.212,
+      "tech": 0.192,
+      "comm": 0.081,
+      "consumer": 0.071,
+      "realestate": 0.064,
+      "financials": 0.062,
+      "materials": 0.037,
+      "cash": 0.154
+    }
+  },
+  "ひふみXO": {
+    "assetClass": {
+      "equity": 0.974,
+      "cash": 0.026
+    },
+    "currency": {
+      "JPY": 1
+    },
+    "country": {
+      "japan": 1
+    },
+    "sector": {
+      "industrials": 0.244,
+      "tech": 0.186,
+      "consumer": 0.135,
+      "comm": 0.1,
+      "financials": 0.089,
+      "cash": 0.026
+    }
+  },
+  "PIMCO-ST": {
+    "assetClass": {
+      "bond": 1
+    },
+    "currency": {
+      "USD": 1
+    },
+    "country": {
+      "us": 0.7,
+      "europe": 0.2,
+      "em": 0.1
+    },
+    "sector": {
+      "bond": 1
+    }
+  },
+  "現金(円)": {
+    "assetClass": {
+      "cash": 1
+    },
+    "currency": {
+      "JPY": 1
+    },
+    "country": {
+      "japan": 1
+    },
+    "sector": {
+      "cash": 1
+    }
+  },
+  "現金(USD)": {
+    "assetClass": {
+      "cash": 1
+    },
+    "currency": {
+      "USD": 1
+    },
+    "country": {
+      "us": 1
+    },
+    "sector": {
+      "cash": 1
+    }
+  }
+}

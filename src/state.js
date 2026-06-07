@@ -36,6 +36,7 @@
  * @property {Object<string, number>} prevPrices
  * @property {{USDJPY: number|null, ts: number}} forexRate
  * @property {Record<string, {sector: Record<string, number>, asOf: string}>} liveTopHoldings
+ * @property {Record<string, {holdings: Array<{ticker?: string, name?: string, weight: number, currency?: string, country?: string, sector?: string, assetClass?: string}>, asOf?: string, source?: string}>} liveConstituents
  */
 
 // ── レイアウト・フォント定数 ──
@@ -115,6 +116,7 @@ const state = {
   prevPrices:       {},         // { ySymbol: price } 前回のライブ価格（フラッシュアニメーション用）
   forexRate:        { USDJPY: null, ts: 0 },  // { USDJPY: rate, ts: timestamp }
   liveTopHoldings:  {},  // symbol → { sector: {ourKey: weight}, asOf: ISO string }
+  liveConstituents: {},  // symbol → { holdings: [{ticker,name,weight,currency,country,sector,assetClass}], asOf, source }（#207 live look-through）
 };
 
 export { C, CHART_RANGES, SL_DETAIL_COLS, state };
