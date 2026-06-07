@@ -148,6 +148,7 @@ function wlTypeBadge(quoteType) {
 
 // ── 検索 ──
 let _wlSearchTimer = null;
+let _wlSearchSeq = 0;
 
 function onWatchlistSearch(eventOrQuery) {
   // data-action ディスパッチャ経由（input イベント）、または文字列引数の両方を受ける
@@ -165,6 +166,8 @@ function onWatchlistSearch(eventOrQuery) {
 async function searchTicker(q) {
   const dropdown = document.getElementById('wl-search-dropdown');
   const input    = q.trim().toUpperCase();
+  // race condition 対策: このリクエストの世代を記録。await 後に最新でなければ破棄する（#246）
+  const seq = ++_wlSearchSeq;
 
   // 入力から試すシンボル一覧を生成
   const candidates = new Set([input]);
@@ -194,6 +197,8 @@ async function searchTicker(q) {
       return info ? { symbol: sym, ...info } : null;
     })
   );
+  // await 完了時に、より新しい検索が始まっていたらこの結果は破棄（#246）
+  if (seq !== _wlSearchSeq) return;
   // 重複シンボルを除去して返す
   const seen = new Set();
   const found = results.filter(r => r && !seen.has(r.symbol) && seen.add(r.symbol));
@@ -372,13 +377,16 @@ export function renderWatchlist() {
     // → dataCol が自動で渡るため "…/-" の loading 判定も同一になる
     const periodCells = makePeriodCells(periodId => wlGetPct(item, periodId));
 
+    const symEsc  = escapeHTML(item.symbol);
+    const nameEsc = escapeHTML(item.name || '');
+    const exEsc   = escapeHTML(item.exchange || '');
     return `<tr>
-      <td data-col="symbol" class="sl-sym">${item.symbol}<span class="sl-inline-name">${item.name}</span></td>
-      <td class="wl-market-cell"><span class="wl-type-badge">${item.exchange}</span></td>
+      <td data-col="symbol" class="sl-sym">${symEsc}<span class="sl-inline-name">${nameEsc}</span></td>
+      <td class="wl-market-cell"><span class="wl-type-badge">${exEsc}</span></td>
       <td class="wl-price-cell">${priceStr}</td>
       ${periodCells}
       <td class="wl-del-cell">
-        <button class="wl-del-btn" data-action="removeFromWatchlist" data-arg="${item.symbol.replace(/"/g, '&quot;')}" title="ウォッチリストから削除">×</button>
+        <button class="wl-del-btn" data-action="removeFromWatchlist" data-arg="${escapeHTML(item.symbol)}" title="ウォッチリストから削除">×</button>
       </td>
     </tr>`;
   }).join('');

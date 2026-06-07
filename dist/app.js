@@ -2677,6 +2677,7 @@ function wlTypeBadge(quoteType) {
   return "\u682A";
 }
 var _wlSearchTimer = null;
+var _wlSearchSeq = 0;
 function onWatchlistSearch(eventOrQuery) {
   const q = typeof eventOrQuery === "string" ? eventOrQuery : eventOrQuery?.target?.value ?? "";
   clearTimeout(_wlSearchTimer);
@@ -2692,6 +2693,7 @@ function onWatchlistSearch(eventOrQuery) {
 async function searchTicker(q) {
   const dropdown = document.getElementById("wl-search-dropdown");
   const input = q.trim().toUpperCase();
+  const seq = ++_wlSearchSeq;
   const candidates = /* @__PURE__ */ new Set([input]);
   if (/^\d{4,5}$/.test(input)) {
     candidates.add(`${input}.T`);
@@ -2711,6 +2713,7 @@ async function searchTicker(q) {
       return info ? { symbol: sym, ...info } : null;
     })
   );
+  if (seq !== _wlSearchSeq) return;
   const seen = /* @__PURE__ */ new Set();
   const found = results.filter((r) => r && !seen.has(r.symbol) && seen.add(r.symbol));
   if (found.length === 0) {
@@ -2832,13 +2835,16 @@ function renderWatchlist() {
     const price = live?.price;
     const priceStr = price != null ? fmtPrice(price, item.cur) : "\u2013";
     const periodCells = makePeriodCells((periodId) => wlGetPct(item, periodId));
+    const symEsc = escapeHTML(item.symbol);
+    const nameEsc = escapeHTML(item.name || "");
+    const exEsc = escapeHTML(item.exchange || "");
     return `<tr>
-      <td data-col="symbol" class="sl-sym">${item.symbol}<span class="sl-inline-name">${item.name}</span></td>
-      <td class="wl-market-cell"><span class="wl-type-badge">${item.exchange}</span></td>
+      <td data-col="symbol" class="sl-sym">${symEsc}<span class="sl-inline-name">${nameEsc}</span></td>
+      <td class="wl-market-cell"><span class="wl-type-badge">${exEsc}</span></td>
       <td class="wl-price-cell">${priceStr}</td>
       ${periodCells}
       <td class="wl-del-cell">
-        <button class="wl-del-btn" data-action="removeFromWatchlist" data-arg="${item.symbol.replace(/"/g, "&quot;")}" title="\u30A6\u30A9\u30C3\u30C1\u30EA\u30B9\u30C8\u304B\u3089\u524A\u9664">\xD7</button>
+        <button class="wl-del-btn" data-action="removeFromWatchlist" data-arg="${escapeHTML(item.symbol)}" title="\u30A6\u30A9\u30C3\u30C1\u30EA\u30B9\u30C8\u304B\u3089\u524A\u9664">\xD7</button>
       </td>
     </tr>`;
   }).join("");
