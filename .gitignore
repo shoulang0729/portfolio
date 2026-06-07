@@ -24,3 +24,6 @@ coverage/
 # Playwright
 playwright-report/
 test-results/
+
+# Claude Code worktrees
+.claude/worktrees/
