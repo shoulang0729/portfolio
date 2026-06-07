@@ -102,7 +102,11 @@ export function computeRiskBreakdown(posList = defaultPositions) {
   for (const p of posList) {
     const value = p.value || 0;
     if (value <= 0) continue;
-    const entry = (p.symbol && CONSTITUENTS[p.symbol]) || deriveDefault(p);
+    // データソースの優先順位: live（holdings）> curated（CONSTITUENTS）> 既定推定（#207）
+    const live = p.symbol ? state.liveConstituents[p.symbol] : null;
+    const entry = (live && Array.isArray(live.holdings) && live.holdings.length)
+      ? holdingsToBreakdown(live.holdings)
+      : ((p.symbol && CONSTITUENTS[p.symbol]) || deriveDefault(p));
     const name = p.name || p.symbol || '';
 
     for (const dim of RISK_DIMENSIONS) {

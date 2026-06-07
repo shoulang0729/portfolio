@@ -190,6 +190,47 @@ describe('computeRiskBreakdown — liveTopHoldings override', () => {
   });
 });
 
+describe('computeRiskBreakdown — live constituents merge priority (#207)', () => {
+  afterEach(() => {
+    state.liveConstituents = {};
+  });
+
+  it('prefers live holdings over curated when present (live > curated)', () => {
+    // オルカン に live holdings をセット → curated を無視してこちらで集計される
+    state.liveConstituents['オルカン'] = {
+      asOf: '2026-06-01T00:00:00.000Z',
+      source: 'ishares',
+      holdings: [
+        { ticker: 'AAA', weight: 0.7, currency: 'USD', country: 'us', sector: 'tech', assetClass: 'equity' },
+        { ticker: 'BBB', weight: 0.3, currency: 'EUR', country: 'europe', sector: 'financials', assetClass: 'equity' },
+      ],
+    };
+    const r = computeRiskBreakdown([{ symbol: 'オルカン', value: 10000, cur: 'JPY' }]);
+    expect(r.currency.cats.USD).toBeCloseTo(7000, 4);
+    expect(r.currency.cats.EUR).toBeCloseTo(3000, 4);
+    expect(r.sector.cats.tech).toBeCloseTo(7000, 4);
+    expect(r.country.cats.europe).toBeCloseTo(3000, 4);
+  });
+
+  it('falls back to curated when live holdings are empty/absent', () => {
+    state.liveConstituents['オルカン'] = { asOf: 'x', source: 'ishares', holdings: [] };
+    const r = computeRiskBreakdown([{ symbol: 'オルカン', value: 10000, cur: 'JPY' }]);
+    // 空 holdings は採用されず curated の tech 比率 (0.26) が使われる
+    expect(r.sector.cats.tech).toBeCloseTo(2600, 4);
+  });
+
+  it('live partial coverage produces an unknown remainder', () => {
+    state.liveConstituents['AAPL'] = {
+      asOf: 'x', source: 'ishares',
+      holdings: [{ ticker: 'AAA', weight: 0.6, currency: 'USD', country: 'us', sector: 'tech', assetClass: 'equity' }],
+    };
+    const r = computeRiskBreakdown([{ symbol: 'AAPL', value: 1000, cur: 'USD' }]);
+    expect(r.sector.cats.tech).toBeCloseTo(600, 4);
+    expect(r.sector.cats[UNKNOWN_KEY]).toBeCloseTo(400, 4);
+    expect(r.sector.coverage).toBeCloseTo(0.6, 4);
+  });
+});
+
 describe('holdingsToBreakdown — Level 2 normalized holdings adapter (#206)', () => {
   it('folds each holding weight into its per-dim category', () => {
     const b = holdingsToBreakdown([
