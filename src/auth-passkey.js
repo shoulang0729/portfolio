@@ -7,7 +7,7 @@
 //       auth-ui.js (_showChangePinButton) ← コールバックで解消
 // ══════════════════════════════════════════════════════════════
 
-import { _auth, AUTH_SESSION_KEY } from './auth-pin.js';
+import { _auth, AUTH_SESSION_KEY, _getActivePinHash } from './auth-pin.js';
 import { _AUTH_ENC_SS } from './auth-crypto.js';
 import { WORKER_URL } from './config.js';
 import { showAlert } from './modal.js';
@@ -55,7 +55,8 @@ export async function registerPasskey() {
 
     const regRes = await fetch(`${WORKER_URL}/auth/register`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      // PIN 認証ヘッダーを付与（Worker 側で検証。未認証者の登録を防ぐ #239）
+      headers: { 'Content-Type': 'application/json', 'X-Pin-Hash': _getActivePinHash() },
       body: JSON.stringify({
         id: credential.id,
         publicKey: _u8ToB64url(publicKey),
