@@ -8,6 +8,7 @@ import { WORKER_URL } from './config.js';
 import { fetchWithTimeout } from './data.js';
 import { positions } from './positions.js';
 import { AUTH_PIN_HASH as DEFAULT_PIN_HASH } from './auth-pin.js';
+import { validatePosition } from './schema.js';
 
 async function loadPositionsFromKV() {
   try {
@@ -15,7 +16,15 @@ async function loadPositionsFromKV() {
     if (!res.ok) return false;
     const kvPositions = await res.json();
     if (!Array.isArray(kvPositions) || kvPositions.length === 0) return false;
-    positions.splice(0, positions.length, ...kvPositions);
+    const validated = [];
+    for (const pos of kvPositions) {
+      try {
+        validated.push(validatePosition(pos));
+      } catch (e) {
+        console.warn('[positions-store] validation failed for position:', pos?.symbol, e.message);
+      }
+    }
+    positions.splice(0, positions.length, ...validated);
     return true;
   } catch (e) {
     console.warn('[positions-store] KV positions 読込失敗:', e);

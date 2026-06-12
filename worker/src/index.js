@@ -350,6 +350,17 @@ async function handlePortfolioSnapshot(request, env, origin, ctx) {
 
   if (!snapshot) return errRes('スナップショット生成失敗', 500, origin);
 
+  if (!snapshot.asOf || typeof snapshot.asOf !== 'string') return errRes('Snapshot.asOf は必須です', 400, origin);
+  if (!snapshot.source || typeof snapshot.source !== 'string') return errRes('Snapshot.source は必須です', 400, origin);
+  if (!snapshot.summary || typeof snapshot.summary !== 'object') return errRes('Snapshot.summary は必須です', 400, origin);
+  if (typeof snapshot.summary.totalValue !== 'number' || !isFinite(snapshot.summary.totalValue)) return errRes('Snapshot.summary.totalValue は有限数値が必要です', 400, origin);
+  if (typeof snapshot.summary.totalPnl !== 'number' || !isFinite(snapshot.summary.totalPnl)) return errRes('Snapshot.summary.totalPnl は有限数値が必要です', 400, origin);
+  if (typeof snapshot.summary.positionCount !== 'number' || !Number.isInteger(snapshot.summary.positionCount) || snapshot.summary.positionCount < 0) return errRes('Snapshot.summary.positionCount は非負整数が必要です', 400, origin);
+  if (typeof snapshot.summary.watchlistCount !== 'number' || !Number.isInteger(snapshot.summary.watchlistCount) || snapshot.summary.watchlistCount < 0) return errRes('Snapshot.summary.watchlistCount は非負整数が必要です', 400, origin);
+  if (typeof snapshot.summary.currencyBase !== 'string' || !snapshot.summary.currencyBase.trim()) return errRes('Snapshot.summary.currencyBase は必須です', 400, origin);
+  if (!Array.isArray(snapshot.positions)) return errRes('Snapshot.positions は配列が必要です', 400, origin);
+  if (!Array.isArray(snapshot.watchlist)) return errRes('Snapshot.watchlist は配列が必要です', 400, origin);
+
   // GitHub push を waitUntil で保護
   const push = _pushSnapshotToGithub(snapshot, env).catch(e => console.warn('[snapshot push]', e));
   if (ctx?.waitUntil) ctx.waitUntil(push);
@@ -872,6 +883,18 @@ async function handleWatchlist(request, env, origin) {
   if (request.method === 'PUT') {
     let body;
     try { body = await request.json(); } catch { return errRes('JSON 不正', 400, origin); }
+    if (!Array.isArray(body)) return errRes('Array が必要です', 400, origin);
+
+    for (let i = 0; i < body.length; i++) {
+      const item = body[i];
+      if (!item || typeof item !== 'object') return errRes(`watchlist[${i}]: object が必要です`, 400, origin);
+      if (typeof item.symbol !== 'string' || !item.symbol.trim()) return errRes(`watchlist[${i}].symbol は必須です`, 400, origin);
+      if (typeof item.name !== 'string' || !item.name.trim()) return errRes(`watchlist[${i}].name は必須です`, 400, origin);
+      if (typeof item.exchange !== 'string' || !item.exchange.trim()) return errRes(`watchlist[${i}].exchange は必須です`, 400, origin);
+      if (typeof item.type !== 'string' || !item.type.trim()) return errRes(`watchlist[${i}].type は必須です`, 400, origin);
+      if (typeof item.cur !== 'string' || !item.cur.trim()) return errRes(`watchlist[${i}].cur は必須です`, 400, origin);
+    }
+
     await env.KV.put(key, JSON.stringify(body));
     return jsonRes({ ok: true }, 200, origin);
   }
@@ -960,6 +983,23 @@ async function handlePositions(request, env, origin, ctx) {
     let body;
     try { body = await request.json(); } catch { return errRes('JSON 不正', 400, origin); }
     if (!Array.isArray(body)) return errRes('Array が必要です', 400, origin);
+
+    for (let i = 0; i < body.length; i++) {
+      const pos = body[i];
+      if (!pos || typeof pos !== 'object') return errRes(`positions[${i}]: object が必要です`, 400, origin);
+      if (typeof pos.symbol !== 'string' || !pos.symbol.trim()) return errRes(`positions[${i}].symbol は必須です`, 400, origin);
+      if (typeof pos.name !== 'string' || !pos.name.trim()) return errRes(`positions[${i}].name は必須です`, 400, origin);
+      if (typeof pos.cat !== 'string' || !pos.cat.trim()) return errRes(`positions[${i}].cat は必須です`, 400, origin);
+      if (typeof pos.shares !== 'number' || !isFinite(pos.shares)) return errRes(`positions[${i}].shares は有限数値が必要です`, 400, origin);
+      if (typeof pos.price !== 'number' || !isFinite(pos.price)) return errRes(`positions[${i}].price は有限数値が必要です`, 400, origin);
+      if (typeof pos.avgCost !== 'number' || !isFinite(pos.avgCost)) return errRes(`positions[${i}].avgCost は有限数値が必要です`, 400, origin);
+      if (typeof pos.value !== 'number' || !isFinite(pos.value)) return errRes(`positions[${i}].value は有限数値が必要です`, 400, origin);
+      if (typeof pos.pnl !== 'number' || !isFinite(pos.pnl)) return errRes(`positions[${i}].pnl は有限数値が必要です`, 400, origin);
+      if (typeof pos.pnlPct !== 'number' || !isFinite(pos.pnlPct)) return errRes(`positions[${i}].pnlPct は有限数値が必要です`, 400, origin);
+      if (typeof pos.cur !== 'string' || !pos.cur.trim()) return errRes(`positions[${i}].cur は必須です`, 400, origin);
+      if (typeof pos.ySymbol !== 'string' || !pos.ySymbol.trim()) return errRes(`positions[${i}].ySymbol は必須です`, 400, origin);
+    }
+
     await env.KV.put('positions', JSON.stringify(body));
 
     // GitHub にもミラー（response 返却後も処理を継続させるため waitUntil で包む）

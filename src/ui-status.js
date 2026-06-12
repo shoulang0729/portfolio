@@ -76,3 +76,44 @@ export function flashPriceChanges(fetched) {
     });
   });
 }
+
+/**
+ * Format relative time: "2m ago", "1h ago", etc.
+ * @param {number} ts - Timestamp in milliseconds
+ * @returns {string} Relative time string
+ */
+function formatRelativeTime(ts) {
+  if (!ts) return '';
+  const now = Date.now();
+  const diff = Math.floor((now - ts) / 1000); // seconds
+  if (diff < 60) return `${diff}s ago`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
+}
+
+/**
+ * Render provider health indicator
+ * Shows status of Finnhub and Yahoo Finance providers
+ * @returns {void}
+ */
+export function renderProviderHealth() {
+  const el = document.getElementById('provider-health');
+  if (!el) return;
+
+  const { finnhub, yahoo } = state.providerHealth;
+  const parts = [];
+
+  // Finnhub status
+  const fhStatus = finnhub.ok ? '✓' : `✗(${finnhub.errCount})`;
+  const fhTime = finnhub.ok && finnhub.lastOk ? ` ${formatRelativeTime(finnhub.lastOk)}` : '';
+  parts.push(`Finnhub ${fhStatus}${fhTime}`);
+
+  // Yahoo status
+  const yhStatus = yahoo.ok ? '✓' : `✗(${yahoo.errCount})`;
+  const yhTime = yahoo.ok && yahoo.lastOk ? ` ${formatRelativeTime(yahoo.lastOk)}` : '';
+  parts.push(`Yahoo ${yhStatus}${yhTime}`);
+
+  el.textContent = parts.join(' | ');
+  el.className = `provider-health ${finnhub.ok && yahoo.ok ? 'health-ok' : 'health-warn'}`;
+}

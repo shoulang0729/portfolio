@@ -1,3 +1,4 @@
+import { state } from './state.js';
 import { WORKER_URL } from './config.js';
 import { fetchWithTimeout } from './data-helpers.js';
 
@@ -20,14 +21,45 @@ export async function fetchFinnhubQuote(fSymbol) {
   const url = `${WORKER_URL}/finnhub?path=/quote&symbol=${encodeURIComponent(fSymbol)}`;
   try {
     const res = await fetchWithTimeout(url, 7000);
-    if (res.status === 429) return { _err: 'rateLimit' };
-    if (res.status >= 500) return { _err: 'serverError' };
-    if (!res.ok) return { _err: 'noData' };
+    if (res.status === 429) {
+      state.providerHealth.finnhub.ok = false;
+      state.providerHealth.finnhub.errCount++;
+      state.providerHealth.finnhub.lastErr = Date.now();
+      return { _err: 'rateLimit' };
+    }
+    if (res.status >= 500) {
+      state.providerHealth.finnhub.ok = false;
+      state.providerHealth.finnhub.errCount++;
+      state.providerHealth.finnhub.lastErr = Date.now();
+      return { _err: 'serverError' };
+    }
+    if (!res.ok) {
+      state.providerHealth.finnhub.ok = false;
+      state.providerHealth.finnhub.errCount++;
+      state.providerHealth.finnhub.lastErr = Date.now();
+      return { _err: 'noData' };
+    }
     const d = await res.json();
-    if (!d || !d.c) return { _err: 'noData' };
+    if (!d || !d.c) {
+      state.providerHealth.finnhub.ok = false;
+      state.providerHealth.finnhub.errCount++;
+      state.providerHealth.finnhub.lastErr = Date.now();
+      return { _err: 'noData' };
+    }
+    state.providerHealth.finnhub.ok = true;
+    state.providerHealth.finnhub.lastOk = Date.now();
+    state.providerHealth.finnhub.errCount = 0;
     return { price: d.c, dayPct: d.dp ?? null };
   } catch (e) {
-    if (e?.name === 'AbortError') return { _err: 'timeout' };
+    if (e?.name === 'AbortError') {
+      state.providerHealth.finnhub.ok = false;
+      state.providerHealth.finnhub.errCount++;
+      state.providerHealth.finnhub.lastErr = Date.now();
+      return { _err: 'timeout' };
+    }
+    state.providerHealth.finnhub.ok = false;
+    state.providerHealth.finnhub.errCount++;
+    state.providerHealth.finnhub.lastErr = Date.now();
     return { _err: 'networkError' };
   }
 }
