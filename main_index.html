@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<!-- キャッシュ禁止：常に最新ファイルを読み込む -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<!-- テーマを body 描画前に適用してフラッシュを防ぐ -->
+<script>(function(){ document.documentElement.setAttribute('data-theme', localStorage.getItem('hm-theme') || 'auto'); })();</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f172a">
+<title>Portfolio Manager</title>
+<!-- アイコン: SVG内部のメディアクエリでダーク/ライト自動切替 -->
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<!-- Apple PWA ホーム画面アイコン -->
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<!-- PWA マニフェスト -->
+<link rel="manifest" href="assets/manifest.json">
+
+<!-- スタイルシート -->
+<link rel="stylesheet" href="assets/01-base.css?v=20260528D">
+<link rel="stylesheet" href="assets/02-tables.css?v=20260528D">
+<link rel="stylesheet" href="assets/03-misc.css?v=20260528D">
+<link rel="stylesheet" href="assets/04-auth.css?v=20260528D">
+<!-- assets/05-ai-tab.css は src/_disabled/05-ai-tab.css に移動（AIタブ無効化中）-->
+<!-- 銘柄リスト列表示制御（JS が動的に書き込む） -->
+<style id="sl-col-style"></style>
+
+<!-- D3.js v7（CDN フォールバック x3） -->
+<script src="https://cdn.bootcdn.net/ajax/libs/d3/7.8.5/d3.min.js" crossorigin="anonymous"></script>
+<script>if(!window.d3){document.write('<scr'+'ipt src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js" crossorigin="anonymous"><\/scr'+'ipt>');}</script>
+<script>if(!window.d3){document.write('<scr'+'ipt src="https://cdn.jsdelivr.net/npm/d3@7.8.5/dist/d3.min.js" crossorigin="anonymous"><\/scr'+'ipt>');}</script>
+
+</head>
+<body>
+
+<div id="d3-load-error" style="display:none">
+  <h2>⚠️ グラフライブラリの読み込みに失敗</h2>
+  <p>D3.js の読み込みに失敗しました。<br>インターネット接続を確認するか、<strong>Safari ブラウザで直接開いてください</strong>。</p>
+  <p>Files アプリで開いている場合は、<br>共有ボタン → <code>「Safari で開く」</code> を選択してください。</p>
+</div>
+
+<div class="sticky-top">
+<div class="header">
+  <div>
+    <div class="title">Portfolio Manager</div>
+  </div>
+  <div class="controls">
+    <span class="countdown" id="countdown"></span>
+    <div id="hm-menu-wrap">
+      <button id="hm-menu-btn" data-action="toggleHmMenu" title="メニュー" aria-expanded="false" aria-haspopup="true">
+        <span class="hm-bar">☰</span><span class="hm-x">✕</span>
+      </button>
+      <div id="hm-menu-dropdown" role="menu">
+        <!-- 自動更新 -->
+        <div class="hm-refresh-row">
+          <span class="hm-refresh-label">
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M7 2V0.5L4.5 3 7 5.5V4a4 4 0 1 1-3.46 6L2.1 11A6 6 0 1 0 7 2z" fill="currentColor"/>
+            </svg>
+            自動更新
+          </span>
+          <div class="hm-refresh-btns" id="hm-refresh-btns">
+            <button class="hm-refresh-btn active" data-val="0"    data-action="handleRefreshSelect" data-arg="0">OFF</button>
+            <button class="hm-refresh-btn"        data-val="300"  data-action="handleRefreshSelect" data-arg="300">5分</button>
+            <button class="hm-refresh-btn"        data-val="600"  data-action="handleRefreshSelect" data-arg="600">10分</button>
+            <button class="hm-refresh-btn"        data-val="1800" data-action="handleRefreshSelect" data-arg="1800">30分</button>
+            <button class="hm-refresh-btn"        data-val="3600" data-action="handleRefreshSelect" data-arg="3600">60分</button>
+          </div>
+        </div>
+        <div class="hm-menu-divider"></div>
+        <button class="hm-menu-item" id="theme-btn" data-action="cycleTheme" title="ライト/ダーク/自動">
+          <span class="hm-icon" id="theme-icon">☀</span>テーマ切替
+        </button>
+        <button class="hm-menu-item" id="pin-change-btn" data-action="openPinChange|closeHmMenu" title="PINを変更" style="display:none">
+          <span class="hm-icon">
+            <svg width="13" height="16" viewBox="0 0 13 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="1" y="7" width="11" height="9" rx="2.5" stroke="currentColor" stroke-width="1.6" fill="none"/>
+              <path d="M3.5 7V5a3 3 0 0 1 6 0v2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+              <circle cx="6.5" cy="11.5" r="1.3" fill="currentColor"/>
+            </svg>
+          </span>PIN変更
+        </button>
+        <button class="hm-menu-item" id="passkey-register-btn" data-action="registerPasskey|closeHmMenu" title="パスキーを登録（指紋/顔認証）" style="display:none">
+          <span class="hm-icon">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="5" cy="5" r="3.3" stroke="currentColor" stroke-width="1.4"/>
+              <path d="M7.3 7.3L12.5 12.5M10.5 10.5V12M12 12H10.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>パスキー登録
+        </button>
+        <div class="hm-menu-divider"></div>
+        <button class="hm-menu-item" id="import-manex-btn" data-action="openImportModal|closeHmMenu" data-arg="manex" title="マネックス証券 CSV を取込（国内株・米国株・投資信託）" style="display:none">
+          <span class="hm-icon">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="2" y="1" width="10" height="12" rx="1.5" stroke="currentColor" stroke-width="1.4" fill="none"/>
+              <line x1="4.5" y1="5" x2="9.5" y2="5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+              <line x1="4.5" y1="7.5" x2="9.5" y2="7.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+              <line x1="4.5" y1="10" x2="7.5" y2="10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+            </svg>
+          </span>マネックス取込
+        </button>
+        <button class="hm-menu-item" id="import-mf-btn" data-action="openImportModal|closeHmMenu" data-arg="moneyforward" title="マネーフォワード スクショを取込" style="display:none">
+          <span class="hm-icon">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="1" y="2.5" width="12" height="9" rx="1.5" stroke="currentColor" stroke-width="1.4" fill="none"/>
+              <circle cx="7" cy="7" r="2.2" stroke="currentColor" stroke-width="1.2"/>
+              <line x1="3" y1="0.5" x2="5" y2="2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+              <line x1="11" y1="0.5" x2="9" y2="2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+            </svg>
+          </span>マネフォ取込
+        </button>
+        <button class="hm-menu-item" id="manage-positions-btn" data-action="openManagePositionsModal|closeHmMenu" title="保有銘柄の削除・整理" style="display:none">
+          <span class="hm-icon">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <line x1="2" y1="4" x2="12" y2="4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+              <line x1="2" y1="7" x2="12" y2="7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+              <line x1="2" y1="10" x2="8" y2="10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+              <line x1="10.5" y1="9" x2="12.5" y2="11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+              <line x1="12.5" y1="9" x2="10.5" y2="11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+            </svg>
+          </span>銘柄を整理
+        </button>
+        <button class="hm-menu-item" id="snapshot-btn" data-action="triggerPortfolioSnapshot|closeHmMenu" title="ポートフォリオの完全スナップショットをGitHubに保存（他AIから参照可）" style="display:none">
+          <span class="hm-icon">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="2" y="3" width="10" height="9" rx="1.5" stroke="currentColor" stroke-width="1.4" fill="none"/>
+              <circle cx="7" cy="7.5" r="2.2" stroke="currentColor" stroke-width="1.4"/>
+              <path d="M5 3l1-1.2h2L9 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" fill="none"/>
+            </svg>
+          </span>スナップショット保存
+        </button>
+        <div class="hm-menu-divider"></div>
+        <a class="hm-menu-item" href="https://github.com/shoulang0729/portfolio/blob/main/docs/SPEC.md" target="_blank" rel="noopener">
+          <span class="hm-icon">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="1" y="1" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.4" fill="none"/>
+              <line x1="3.5" y1="4.5" x2="10.5" y2="4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+              <line x1="3.5" y1="7"   x2="10.5" y2="7"   stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+              <line x1="3.5" y1="9.5" x2="7.5"  y2="9.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+            </svg>
+          </span>マニュアル
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="stats-outer">
+  <button class="eye-btn" id="stats-eye" data-action="toggleStats" title="統計の表示／非表示">
+    <svg width="18" height="14" viewBox="0 0 18 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M9 1C5 1 1.5 4 1 7c.5 3 3.5 6 8 6s7.5-3 8-6c-.5-3-4-6-8-6z" stroke="currentColor" stroke-width="1.5" fill="none"/>
+      <circle cx="9" cy="7" r="2.5" stroke="currentColor" stroke-width="1.5" fill="none"/>
+      <line id="eye-slash" x1="2" y1="2" x2="16" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="display:none"/>
+    </svg>
+  </button>
+  <div class="stats" id="stats"></div>
+</div>
+  <!-- タブバー -->
+  <div id="tab-bar" class="tab-bar" role="tablist">
+    <button class="tab-btn active" data-tab="heatmap" role="tab"
+            data-action="switchTab" data-arg="heatmap">Heatmap</button>
+    <button class="tab-btn" data-tab="list" role="tab"
+            data-action="switchTab" data-arg="list">Historical Heatmap</button>
+    <button class="tab-btn" data-tab="watchlist" role="tab"
+            data-action="switchTab" data-arg="watchlist">Watchlist Historical Heatmap</button>
+    <!-- AI相談タブは現在無効化中（必要になったら戻す） -->
+  </div>
+</div><!-- /sticky-top -->
+
+<!-- ヒートマップパネル（タブ1） -->
+<section id="panel-heatmap" class="tab-panel">
+
+<!-- シミュレーションバー -->
+<div class="sim-bar">
+  <div class="ctrl-group">
+    <div class="period-switch" id="period-switch">
+      <button class="period-btn active" data-period="1d"  data-action="setChangePeriod" data-arg="1d">1d</button>
+      <button class="period-btn"        data-period="1w"  data-action="setChangePeriod" data-arg="1w">1w</button>
+      <button class="period-btn"        data-period="1m"  data-action="setChangePeriod" data-arg="1m">1m</button>
+      <button class="period-btn"        data-period="3m"  data-action="setChangePeriod" data-arg="3m">3m</button>
+      <button class="period-btn"        data-period="6m"  data-action="setChangePeriod" data-arg="6m">6m</button>
+      <button class="period-btn"        data-period="9m"  data-action="setChangePeriod" data-arg="9m">9m</button>
+      <button class="period-btn"        data-period="1y"  data-action="setChangePeriod" data-arg="1y">1y</button>
+      <button class="period-btn"        data-period="3y"  data-action="setChangePeriod" data-arg="3y">3y</button>
+      <button class="period-btn"        data-period="5y"  data-action="setChangePeriod" data-arg="5y">5y</button>
+      <button class="period-btn"        data-period="10y" data-action="setChangePeriod" data-arg="10y">10y</button>
+    </div>
+  </div>
+  <button class="pnl-btn" id="btn-pnl" data-action="setColorModePnl">含み損益率</button>
+</div>
+
+<!-- ヒートマップ -->
+<div id="heatmap-wrap">
+  <!-- 初回ロード中スケルトン（refreshPrices 完了後に JS で非表示） -->
+  <div id="heatmap-skeleton" class="heatmap-skeleton" aria-hidden="true">
+    <div class="skeleton-shimmer"></div>
+  </div>
+  <svg id="heatmap" style="display:none"></svg>
+</div>
+
+<!-- 下落▼〜▲上昇 凡例 -->
+<div class="footer">
+  <div class="legend">
+    <span>▼ 下落</span>
+    <div class="legend-bar"></div>
+    <span>上昇 ▲</span>
+  </div>
+  <div class="status-line" id="status-line">
+    <span class="dot yellow" id="status-dot"></span>
+    <span id="status-text" aria-live="polite" aria-atomic="true">CSVデータを表示中</span>
+  </div>
+</div>
+</section><!-- /panel-heatmap -->
+
+<!-- 銘柄リストパネル（タブ2） -->
+<section id="panel-list" class="tab-panel">
+<div class="sl-controls">
+  <button class="sl-eye-btn" id="sl-eye-btn" data-action="slToggleDetail" title="詳細列の表示／非表示">
+    <svg width="18" height="14" viewBox="0 0 18 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M9 1C5 1 1.5 4 1 7c.5 3 3.5 6 8 6s7.5-3 8-6c-.5-3-4-6-8-6z" stroke="currentColor" stroke-width="1.5" fill="none"/>
+      <circle cx="9" cy="7" r="2.5" stroke="currentColor" stroke-width="1.5" fill="none"/>
+      <line id="sl-eye-slash" x1="2" y1="2" x2="16" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="display:none"/>
+    </svg>
+  </button>
+</div>
+<div id="stock-list-wrap"></div>
+</section><!-- /panel-list -->
+
+<!-- ウォッチリストパネル（タブ3） -->
+<section id="panel-watchlist" class="tab-panel">
+<div id="wl-search-wrap" class="wl-search-wrap">
+  <div class="wl-search-inner">
+    <svg class="wl-search-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.5"/>
+      <line x1="10.5" y1="10.5" x2="14" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+    <input type="text" id="wl-search-input" class="wl-search-input"
+           placeholder="例: AAPL / 7203.T / 0700.HK"
+           data-event="input" data-action="onWatchlistSearch"
+           autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+  </div>
+  <div id="wl-search-dropdown" class="wl-search-dropdown" hidden></div>
+</div>
+<div id="watchlist-table-wrap">
+  <div class="wl-empty-msg">上の検索欄から銘柄を追加してください</div>
+</div>
+</section><!-- /panel-watchlist -->
+
+<!-- AI相談パネルは現在無効化中（タブも非表示） -->
+<section id="panel-ai" class="tab-panel" hidden></section>
+
+<div class="tooltip" id="tooltip"></div>
+
+<!-- 隠しファイル入力（body直下に置かないと display:none の親要素内で .click() が効かない） -->
+<input type="file" id="import-manex-input" accept=".csv" multiple style="display:none" data-event="change" data-action="handleManexFileSelect">
+<input type="file" id="import-mf-input" accept="image/*" style="display:none" data-event="change" data-action="handleMoneyForwardImageSelect">
+
+<!-- ── Import Modal ── -->
+<div class="modal-overlay" id="import-modal-overlay" style="display:none" data-action="handleImportOverlayClick">
+  <div class="modal import-modal" id="import-modal">
+    <div class="modal-header">
+      <div class="modal-title" id="import-modal-title">資産取込</div>
+      <span class="modal-close" data-action="closeImportModal">✕</span>
+    </div>
+    <div id="import-modal-body"></div>
+  </div>
+</div>
+
+<!-- ── Chart Modal ── -->
+<div class="modal-overlay" id="modal-overlay" style="display:none" data-action="handleOverlayClick">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">チャート</div>
+      <span class="modal-close" data-action="closeModal">✕</span>
+    </div>
+    <div class="range-btns" id="range-btns">
+      <button class="range-btn"        data-range="1d"  data-action="setRange" data-arg="1d">1d</button>
+      <button class="range-btn"        data-range="1w"  data-action="setRange" data-arg="1w">1w</button>
+      <button class="range-btn"        data-range="1m"  data-action="setRange" data-arg="1m">1m</button>
+      <button class="range-btn active" data-range="3m"  data-action="setRange" data-arg="3m">3m</button>
+      <button class="range-btn"        data-range="6m"  data-action="setRange" data-arg="6m">6m</button>
+      <button class="range-btn"        data-range="9m"  data-action="setRange" data-arg="9m">9m</button>
+      <button class="range-btn"        data-range="1y"  data-action="setRange" data-arg="1y">1y</button>
+      <button class="range-btn"        data-range="3y"  data-action="setRange" data-arg="3y">3y</button>
+      <button class="range-btn"        data-range="5y"  data-action="setRange" data-arg="5y">5y</button>
+      <button class="range-btn"        data-range="10y" data-action="setRange" data-arg="10y">10y</button>
+    </div>
+    <div id="chart-message" class="chart-loading">読み込み中...</div>
+    <svg id="chart-svg"></svg>
+    <div class="chart-stats" id="chart-stats"></div>
+  </div>
+</div>
+
+
+
+<!-- ES Module エントリーポイント（全ファイルを import する単一スクリプト） -->
+<script type="module" src="dist/app.js?v=20260528D"></script>
+
+<!-- PWA Service Worker 登録 -->
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js?v=20260528D').catch(() => {});
+}
+</script>
+
+<!-- フォールバック JS：旧版 portfolio.js でもヒートマップが描画されるよう保証 -->
+<script>
+(function () {
+  var tries = 0;
+  var MAX = 30;
+
+  function getW() {
+    var wrap = document.getElementById('heatmap-wrap');
+    if (!wrap) return 0;
+    return wrap.clientWidth || wrap.getBoundingClientRect().width || 0;
+  }
+
+  function retryHeatmap() {
+    tries++;
+    var svg = document.getElementById('heatmap');
+    if (!svg) { if (tries < MAX) setTimeout(retryHeatmap, 100); return; }
+    if (svg.children.length > 0) return; // 描画済み
+    var W = getW();
+    if (W > 0 && typeof renderHeatmap === 'function') {
+      renderHeatmap();
+      return;
+    }
+    if (tries < MAX) { setTimeout(retryHeatmap, 100); return; }
+    // 最終手段：W=0 のまま強制実行
+    if (typeof renderHeatmap === 'function') renderHeatmap();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () {
+      setTimeout(retryHeatmap, 50);
+      setTimeout(retryHeatmap, 500);
+    });
+  } else {
+    setTimeout(retryHeatmap, 0);
+    setTimeout(retryHeatmap, 300);
+  }
+
+  // 画面回転・リサイズ時にも再試行
+  window.addEventListener('resize', function () {
+    var svg = document.getElementById('heatmap');
+    if (svg && svg.children.length === 0) { tries = 0; retryHeatmap(); }
+  });
+}());
+</script>
+
+</body>
+</html>
