@@ -11,6 +11,7 @@ import { state } from './state.js';
 import { escapeHTML, makeTh, getHistoricalChangePct, fmtPrice, _tableSort, makePeriodCells, makePeriodHeaderCells } from './utils.js';
 import { fetchViaProxy, fetchLivePrice, fetchAllHistorical, setStatus } from './data.js';
 import { WORKER_URL } from './config.js';
+import { validateWatchlistItem } from './schema.js';
 
 // ══════════════════════════════════════════════
 // STORAGE
@@ -60,6 +61,12 @@ async function _loadWatchlistFromWorker() {
 }
 
 function addToWatchlist(item) {
+  try {
+    validateWatchlistItem(item);
+  } catch (e) {
+    console.warn('[watchlist] validation failed for item:', item?.symbol, e.message);
+    return;
+  }
   if (state.watchlist.some(w => w.symbol === item.symbol)) return;
   state.watchlist.push(item);
   saveWatchlist();

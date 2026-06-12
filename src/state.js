@@ -7,6 +7,14 @@
 // ══════════════════════════════════════════════════════════════
 
 /**
+ * @typedef {Object} ProviderHealth
+ * @property {boolean} ok
+ * @property {number|null} lastOk
+ * @property {number} errCount
+ * @property {number|null} lastErr
+ */
+
+/**
  * @typedef {Object} AppState
  * @property {'pnl'|'change'} colorMode
  * @property {string} changePeriod  PERIODS の id
@@ -37,6 +45,7 @@
  * @property {{USDJPY: number|null, ts: number}} forexRate
  * @property {Record<string, {sector: Record<string, number>, asOf: string}>} liveTopHoldings
  * @property {Record<string, {holdings: Array<{ticker?: string, name?: string, weight: number, currency?: string, country?: string, sector?: string, assetClass?: string}>, asOf?: string, source?: string}>} liveConstituents
+ * @property {Record<'finnhub'|'yahoo', ProviderHealth>} providerHealth
  */
 
 // ── レイアウト・フォント定数 ──
@@ -117,6 +126,10 @@ const state = {
   forexRate:        { USDJPY: null, ts: 0 },  // { USDJPY: rate, ts: timestamp }
   liveTopHoldings:  {},  // symbol → { sector: {ourKey: weight}, asOf: ISO string }
   liveConstituents: {},  // symbol → { holdings: [{ticker,name,weight,currency,country,sector,assetClass}], asOf, source }（#207 live look-through）
+  providerHealth: {
+    finnhub: { ok: true, lastOk: null, errCount: 0, lastErr: null },
+    yahoo:   { ok: true, lastOk: null, errCount: 0, lastErr: null },
+  },
 };
 
 export { C, CHART_RANGES, SL_DETAIL_COLS, state };

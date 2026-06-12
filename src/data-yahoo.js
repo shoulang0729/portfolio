@@ -7,9 +7,10 @@ import { fetchWithTimeout } from './data-helpers.js';
  * query1 直接 → query2 直接 → corsproxy.io → allorigins の順に試行
  * @param {string} url - Yahoo Finance API URL（query1.finance.yahoo.com）
  * @param {number} [timeoutMs=7000] 1試行あたりのタイムアウトミリ秒
+ * @param {boolean} [trackHealth=false] - Provider health を更新するか
  * @returns {Promise<Object|null>} パースされた JSON、失敗時は null
  */
-export async function fetchViaProxy(url, timeoutMs = 7000) {
+export async function fetchViaProxy(url, timeoutMs = 7000, trackHealth = false) {
   const q2url = url.replace('query1.finance.yahoo.com', 'query2.finance.yahoo.com');
   const attempts = [
     // Worker 経由（最優先：CORS 確実・APIキー不要）
@@ -26,8 +27,19 @@ export async function fetchViaProxy(url, timeoutMs = 7000) {
       if (!res.ok) continue;
       const raw = await res.json();
       // allorigins wraps content in { contents: "..." }
-      return raw?.contents ? JSON.parse(raw.contents) : raw;
+      const result = raw?.contents ? JSON.parse(raw.contents) : raw;
+      if (trackHealth) {
+        state.providerHealth.yahoo.ok = true;
+        state.providerHealth.yahoo.lastOk = Date.now();
+        state.providerHealth.yahoo.errCount = 0;
+      }
+      return result;
     } catch { /* try next */ }
+  }
+  if (trackHealth) {
+    state.providerHealth.yahoo.ok = false;
+    state.providerHealth.yahoo.errCount++;
+    state.providerHealth.yahoo.lastErr = Date.now();
   }
   return null;
 }

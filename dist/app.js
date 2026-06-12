@@ -521,8 +521,12 @@ var state = {
   // { USDJPY: rate, ts: timestamp }
   liveTopHoldings: {},
   // symbol → { sector: {ourKey: weight}, asOf: ISO string }
-  liveConstituents: {}
+  liveConstituents: {},
   // symbol → { holdings: [{ticker,name,weight,currency,country,sector,assetClass}], asOf, source }（#207 live look-through）
+  providerHealth: {
+    finnhub: { ok: true, lastOk: null, errCount: 0, lastErr: null },
+    yahoo: { ok: true, lastOk: null, errCount: 0, lastErr: null }
+  }
 };
 
 // src/auth-pin.js
@@ -1580,6 +1584,29 @@ function flashPriceChanges(fetched) {
     });
   });
 }
+function formatRelativeTime(ts) {
+  if (!ts) return "";
+  const now = Date.now();
+  const diff = Math.floor((now - ts) / 1e3);
+  if (diff < 60) return `${diff}s ago`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
+}
+function renderProviderHealth() {
+  const el = document.getElementById("provider-health");
+  if (!el) return;
+  const { finnhub, yahoo } = state.providerHealth;
+  const parts = [];
+  const fhStatus = finnhub.ok ? "\u2713" : `\u2717(${finnhub.errCount})`;
+  const fhTime = finnhub.ok && finnhub.lastOk ? ` ${formatRelativeTime(finnhub.lastOk)}` : "";
+  parts.push(`Finnhub ${fhStatus}${fhTime}`);
+  const yhStatus = yahoo.ok ? "\u2713" : `\u2717(${yahoo.errCount})`;
+  const yhTime = yahoo.ok && yahoo.lastOk ? ` ${formatRelativeTime(yahoo.lastOk)}` : "";
+  parts.push(`Yahoo ${yhStatus}${yhTime}`);
+  el.textContent = parts.join(" | ");
+  el.className = `provider-health ${finnhub.ok && yahoo.ok ? "health-ok" : "health-warn"}`;
+}
 
 // src/idb.js
 function openDb(dbName, version, upgradeCb) {
@@ -1792,20 +1819,51 @@ async function fetchFinnhubQuote(fSymbol) {
   const url = `${WORKER_URL}/finnhub?path=/quote&symbol=${encodeURIComponent(fSymbol)}`;
   try {
     const res = await fetchWithTimeout(url, 7e3);
-    if (res.status === 429) return { _err: "rateLimit" };
-    if (res.status >= 500) return { _err: "serverError" };
-    if (!res.ok) return { _err: "noData" };
+    if (res.status === 429) {
+      state.providerHealth.finnhub.ok = false;
+      state.providerHealth.finnhub.errCount++;
+      state.providerHealth.finnhub.lastErr = Date.now();
+      return { _err: "rateLimit" };
+    }
+    if (res.status >= 500) {
+      state.providerHealth.finnhub.ok = false;
+      state.providerHealth.finnhub.errCount++;
+      state.providerHealth.finnhub.lastErr = Date.now();
+      return { _err: "serverError" };
+    }
+    if (!res.ok) {
+      state.providerHealth.finnhub.ok = false;
+      state.providerHealth.finnhub.errCount++;
+      state.providerHealth.finnhub.lastErr = Date.now();
+      return { _err: "noData" };
+    }
     const d = await res.json();
-    if (!d || !d.c) return { _err: "noData" };
+    if (!d || !d.c) {
+      state.providerHealth.finnhub.ok = false;
+      state.providerHealth.finnhub.errCount++;
+      state.providerHealth.finnhub.lastErr = Date.now();
+      return { _err: "noData" };
+    }
+    state.providerHealth.finnhub.ok = true;
+    state.providerHealth.finnhub.lastOk = Date.now();
+    state.providerHealth.finnhub.errCount = 0;
     return { price: d.c, dayPct: d.dp ?? null };
   } catch (e) {
-    if (e?.name === "AbortError") return { _err: "timeout" };
+    if (e?.name === "AbortError") {
+      state.providerHealth.finnhub.ok = false;
+      state.providerHealth.finnhub.errCount++;
+      state.providerHealth.finnhub.lastErr = Date.now();
+      return { _err: "timeout" };
+    }
+    state.providerHealth.finnhub.ok = false;
+    state.providerHealth.finnhub.errCount++;
+    state.providerHealth.finnhub.lastErr = Date.now();
     return { _err: "networkError" };
   }
 }
 
 // src/data-yahoo.js
-async function fetchViaProxy(url, timeoutMs = 7e3) {
+async function fetchViaProxy(url, timeoutMs = 7e3, trackHealth = false) {
   const q2url = url.replace("query1.finance.yahoo.com", "query2.finance.yahoo.com");
   const attempts = [
     // Worker 経由（最優先：CORS 確実・APIキー不要）
@@ -1821,9 +1879,20 @@ async function fetchViaProxy(url, timeoutMs = 7e3) {
       const res = await fetchWithTimeout(u, timeoutMs, opts);
       if (!res.ok) continue;
       const raw = await res.json();
-      return raw?.contents ? JSON.parse(raw.contents) : raw;
+      const result = raw?.contents ? JSON.parse(raw.contents) : raw;
+      if (trackHealth) {
+        state.providerHealth.yahoo.ok = true;
+        state.providerHealth.yahoo.lastOk = Date.now();
+        state.providerHealth.yahoo.errCount = 0;
+      }
+      return result;
     } catch {
     }
+  }
+  if (trackHealth) {
+    state.providerHealth.yahoo.ok = false;
+    state.providerHealth.yahoo.errCount++;
+    state.providerHealth.yahoo.lastErr = Date.now();
   }
   return null;
 }
@@ -1915,7 +1984,7 @@ async function fetchSymbolHistory(symbol, range = "1y") {
   if (!state.historicalCache[range]) state.historicalCache[range] = {};
   if (state.historicalCache[range][symbol]) return;
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=${range}`;
-  const data = await fetchViaProxy(url);
+  const data = await fetchViaProxy(url, 7e3, false);
   if (!data) return;
   const result = data?.chart?.result?.[0];
   if (!result) return;
@@ -1953,9 +2022,16 @@ async function fetchLivePrice(symbol) {
     finnhubErr = fh?._err || "networkError";
   }
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=2d&_=${Date.now()}`;
-  const data = await fetchViaProxy(url);
+  const data = await fetchViaProxy(url, 7e3, true);
   const result = data?.chart?.result?.[0];
-  if (!result) return { _err: finnhubErr || "noData" };
+  if (!result) {
+    if (!finnhubErr) {
+      state.providerHealth.yahoo.ok = false;
+      state.providerHealth.yahoo.errCount++;
+      state.providerHealth.yahoo.lastErr = Date.now();
+    }
+    return { _err: finnhubErr || "noData" };
+  }
   const price = result.meta?.regularMarketPrice ?? null;
   if (price == null) return { _err: finnhubErr || "noData" };
   const preCalcPct = result.meta?.regularMarketChangePercent ?? null;
@@ -2020,7 +2096,6 @@ async function refreshPrices() {
       p.dayPct = live.dayPct ?? null;
       updateCache(p.ySymbol, live.price);
     } else {
-      const oldPrice = p.price;
       p.price = live.price;
       if (p.cur === "JPY") {
         p.value = Math.round(live.price * p.shares);
@@ -2054,10 +2129,13 @@ async function refreshPrices() {
     setStatus(msg, failedCount > 0 ? "yellow" : "green");
     document.dispatchEvent(new CustomEvent("hm:prices-updated"));
     flashPriceChanges(fetched);
+    renderProviderHealth();
   } else if (!isMarketHours()) {
     setStatus("\u5E02\u5834\u6642\u9593\u5916\uFF08\u524D\u56DE\u30C7\u30FC\u30BF\u3067\u8868\u793A\u4E2D\uFF09", "yellow");
+    renderProviderHealth();
   } else {
     setStatus(`\u30E9\u30A4\u30D6\u4FA1\u683C\u53D6\u5F97\u5931\u6557: 0/${total}\u9298\u67C4\uFF08${fmtErrDetail()}\uFF09`, "red");
+    renderProviderHealth();
   }
 }
 
@@ -2600,6 +2678,84 @@ function positionTooltip(event, el) {
   el.style.top = `${ty + h > window.innerHeight - 10 ? event.clientY - h - 10 : ty}px`;
 }
 
+// src/schema.js
+function validatePosition(obj) {
+  if (!obj || typeof obj !== "object") {
+    throw new Error("Position must be an object");
+  }
+  if (typeof obj.symbol !== "string" || !obj.symbol.trim()) {
+    throw new Error("Position.symbol is required (non-empty string)");
+  }
+  if (typeof obj.name !== "string" || !obj.name.trim()) {
+    throw new Error("Position.name is required (non-empty string)");
+  }
+  if (typeof obj.cat !== "string" || !obj.cat.trim()) {
+    throw new Error("Position.cat is required (non-empty string)");
+  }
+  if (typeof obj.shares !== "number" || !isFinite(obj.shares)) {
+    throw new Error("Position.shares must be a finite number");
+  }
+  if (typeof obj.price !== "number" || !isFinite(obj.price)) {
+    throw new Error("Position.price must be a finite number");
+  }
+  if (typeof obj.avgCost !== "number" || !isFinite(obj.avgCost)) {
+    throw new Error("Position.avgCost must be a finite number");
+  }
+  if (typeof obj.value !== "number" || !isFinite(obj.value)) {
+    throw new Error("Position.value must be a finite number");
+  }
+  if (typeof obj.pnl !== "number" || !isFinite(obj.pnl)) {
+    throw new Error("Position.pnl must be a finite number");
+  }
+  if (typeof obj.pnlPct !== "number" || !isFinite(obj.pnlPct)) {
+    throw new Error("Position.pnlPct must be a finite number");
+  }
+  if (typeof obj.cur !== "string" || !obj.cur.trim()) {
+    throw new Error("Position.cur is required (non-empty string)");
+  }
+  if (typeof obj.ySymbol !== "string" || !obj.ySymbol.trim()) {
+    throw new Error("Position.ySymbol is required (non-empty string)");
+  }
+  if (obj.dayPct !== null && obj.dayPct !== void 0) {
+    if (typeof obj.dayPct !== "number" || !isFinite(obj.dayPct)) {
+      throw new Error("Position.dayPct must be null or a finite number");
+    }
+  }
+  if (obj.dayCh !== null && obj.dayCh !== void 0) {
+    if (typeof obj.dayCh !== "number" || !isFinite(obj.dayCh)) {
+      throw new Error("Position.dayCh must be null or a finite number");
+    }
+  }
+  if (obj.isProxy !== void 0 && typeof obj.isProxy !== "boolean") {
+    throw new Error("Position.isProxy must be a boolean or undefined");
+  }
+  if (obj.proxyName !== void 0 && (typeof obj.proxyName !== "string" && obj.proxyName !== null)) {
+    throw new Error("Position.proxyName must be a string, null, or undefined");
+  }
+  return obj;
+}
+function validateWatchlistItem(obj) {
+  if (!obj || typeof obj !== "object") {
+    throw new Error("Watchlist item must be an object");
+  }
+  if (typeof obj.symbol !== "string" || !obj.symbol.trim()) {
+    throw new Error("Watchlist item.symbol is required (non-empty string)");
+  }
+  if (typeof obj.name !== "string" || !obj.name.trim()) {
+    throw new Error("Watchlist item.name is required (non-empty string)");
+  }
+  if (typeof obj.exchange !== "string" || !obj.exchange.trim()) {
+    throw new Error("Watchlist item.exchange is required (non-empty string)");
+  }
+  if (typeof obj.type !== "string" || !obj.type.trim()) {
+    throw new Error("Watchlist item.type is required (non-empty string)");
+  }
+  if (typeof obj.cur !== "string" || !obj.cur.trim()) {
+    throw new Error("Watchlist item.cur is required (non-empty string)");
+  }
+  return obj;
+}
+
 // src/watchlist.js
 function saveWatchlist() {
   try {
@@ -2642,6 +2798,12 @@ async function _loadWatchlistFromWorker() {
   }
 }
 function addToWatchlist(item) {
+  try {
+    validateWatchlistItem(item);
+  } catch (e) {
+    console.warn("[watchlist] validation failed for item:", item?.symbol, e.message);
+    return;
+  }
   if (state.watchlist.some((w) => w.symbol === item.symbol)) return;
   state.watchlist.push(item);
   saveWatchlist();
@@ -3845,7 +4007,7 @@ function showLegendTip(ev, dim, key, dimResult) {
   const maxPct = items.length ? Math.max(...items.map((c) => c.pct)) : 1;
   const rows = items.map((c) => {
     const barW = maxPct > 0 ? (c.pct / maxPct * 100).toFixed(1) : 0;
-    return '<div class="tt-risk-row"><span class="tt-risk-ticker">' + escapeHTML(c.symbol || "\u2014") + '</span><span class="tt-risk-name">' + escapeHTML(c.name) + '</span><div class="tt-risk-bar-wrap"><div class="tt-risk-bar" style="width:' + barW + '%"></div></div><span class="tt-risk-pct">' + fmtPctInt(c.pct) + "</span></div>";
+    return `<div class="tt-risk-row"><span class="tt-risk-ticker">${escapeHTML(c.symbol || "\u2014")}</span><span class="tt-risk-name">${escapeHTML(c.name)}</span><div class="tt-risk-bar-wrap"><div class="tt-risk-bar" style="width:${barW}%"></div></div><span class="tt-risk-pct">${fmtPctInt(c.pct)}</span></div>`;
   }).join("");
   tip.innerHTML = `<div class="tt-hdr">${escapeHTML(labelOf(dim, key))}</div>${rows || "\u2015"}`;
   tip.style.display = "block";
@@ -3965,7 +4127,15 @@ async function loadPositionsFromKV() {
     if (!res.ok) return false;
     const kvPositions = await res.json();
     if (!Array.isArray(kvPositions) || kvPositions.length === 0) return false;
-    positions.splice(0, positions.length, ...kvPositions);
+    const validated = [];
+    for (const pos of kvPositions) {
+      try {
+        validated.push(validatePosition(pos));
+      } catch (e) {
+        console.warn("[positions-store] validation failed for position:", pos?.symbol, e.message);
+      }
+    }
+    positions.splice(0, positions.length, ...validated);
     return true;
   } catch (e) {
     console.warn("[positions-store] KV positions \u8AAD\u8FBC\u5931\u6557:", e);

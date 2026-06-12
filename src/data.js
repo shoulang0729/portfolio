@@ -10,7 +10,7 @@ import { positions } from './positions.js';
 import { WORKER_URL } from './config.js';
 import { fetchWithTimeout, batchWithRetry } from './data-helpers.js';
 import { fetchForexRate } from './forex.js';
-import { setStatus, flashPriceChanges } from './ui-status.js';
+import { setStatus, flashPriceChanges, renderProviderHealth } from './ui-status.js';
 import { setHistoricalEntry } from './historical-cache.js';
 // eslint-disable-next-line no-unused-vars
 import { toFinnhubSymbol, fetchFinnhubQuote, fetchFinnhubCandles } from './data-finnhub.js';
@@ -110,7 +110,7 @@ async function fetchSymbolHistory(symbol, range = '1y') {
   // Finnhub はスプリット未調整データを返す場合があり、
   // 株式分割後の銘柄で -100% 等の異常表示が発生するため除外
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=${range}`;
-  const data = await fetchViaProxy(url);
+  const data = await fetchViaProxy(url, 7000, false);
   if (!data) return;
   const result = data?.chart?.result?.[0];
   if (!result) return;
@@ -179,9 +179,16 @@ async function fetchLivePrice(symbol) {
 
   // ── フォールバック: Yahoo Finance ──
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=2d&_=${Date.now()}`;
-  const data = await fetchViaProxy(url);
+  const data = await fetchViaProxy(url, 7000, true);
   const result = data?.chart?.result?.[0];
-  if (!result) return { _err: finnhubErr || 'noData' };
+  if (!result) {
+    if (!finnhubErr) {
+      state.providerHealth.yahoo.ok = false;
+      state.providerHealth.yahoo.errCount++;
+      state.providerHealth.yahoo.lastErr = Date.now();
+    }
+    return { _err: finnhubErr || 'noData' };
+  }
 
   const price = result.meta?.regularMarketPrice ?? null;
   if (price == null) return { _err: finnhubErr || 'noData' };
@@ -269,7 +276,6 @@ async function refreshPrices() {
       updateCache(p.ySymbol, live.price);
     } else {
       // 通常銘柄: 価格・評価額・損益をリアルタイム更新
-      const oldPrice = p.price;
       p.price = live.price;
       if (p.cur === 'JPY') {
         // 円建て: 価格×株数で評価額を直接計算
@@ -320,10 +326,14 @@ async function refreshPrices() {
     document.dispatchEvent(new CustomEvent('hm:prices-updated'));
     // 価格変化をフラッシュアニメーションで表示（前回価格がある場合のみ）
     flashPriceChanges(fetched);
+    // Provider health を表示
+    renderProviderHealth();
   } else if (!isMarketHours()) {
     setStatus('市場時間外（前回データで表示中）', 'yellow');
+    renderProviderHealth();
   } else {
     setStatus(`ライブ価格取得失敗: 0/${total}銘柄（${fmtErrDetail()}）`, 'red');
+    renderProviderHealth();
   }
 }
 
