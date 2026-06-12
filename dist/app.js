@@ -1204,14 +1204,22 @@ async function _pcSubmit() {
     }
     const prevHash = _getActivePinHash();
     const newHash = await _hashPin(_pc.newPin);
+    try {
+      const res = await fetch(`${WORKER_URL}/auth/pin-hash`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ oldHash: prevHash, newHash })
+      });
+      if (!res.ok) throw new Error(`server ${res.status}`);
+    } catch (e) {
+      console.warn("[auth] PIN hash sync to Worker failed:", e);
+      _pcShowError("\u30B5\u30FC\u30D0\u30FC\u540C\u671F\u306B\u5931\u6557\u3057\u307E\u3057\u305F\u3002\u518D\u5EA6\u304A\u8A66\u3057\u304F\u3060\u3055\u3044\u3002");
+      document.querySelectorAll("#pc-overlay .pin-key").forEach((b) => {
+        b.disabled = false;
+      });
+      return;
+    }
     localStorage.setItem(AUTH_LS_HASH_KEY, newHash);
-    fetch(`${WORKER_URL}/auth/pin-hash`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ oldHash: prevHash, newHash })
-    }).catch(() => {
-      console.warn("[auth] PIN hash sync to Worker failed \u2014 local PIN changed but server sync pending");
-    });
     _pcSuccess();
   }
 }
