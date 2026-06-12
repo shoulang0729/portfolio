@@ -21,11 +21,27 @@ https://shoulang0729.github.io/portfolio/
 
 ## 開発
 
+### セットアップ
+
 ```bash
 npm install
-npm test        # vitest
-npm run lint    # eslint
-npm run build   # esbuild → dist/app.js
+npx playwright install --with-deps chromium  # E2E テスト用（初回必須）
+```
+
+### 利用可能なコマンド
+
+```bash
+npm test               # vitest で単体テスト実行
+npm run lint          # ESLint でコード検査
+npm run lint:fix      # ESLint で自動修正
+npm run format        # Prettier でコード整形
+npm run build         # esbuild でバンドル → dist/app.js
+npm run build:watch   # watch モード
+npm run test:e2e      # Playwright で E2E テスト実行
+npm run test:e2e:setup # Playwright ブラウザをインストール
+npm run check:types   # TypeScript で型チェック
+npm run check:circular # 循環参照を検出
+npm run check:deps    # 未使用依存を検出
 ```
 
 ## ドキュメント

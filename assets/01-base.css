@@ -318,6 +318,9 @@ body {
 .dot { width: 6px; height: 6px; border-radius: 50%; background: #34C759; display: inline-block; }
 .dot.red { background: #FF3B30; }
 .dot.yellow { background: #FF9F0A; }
+.provider-health { font-size: 10px; color: var(--text3); white-space: nowrap; flex-shrink: 0; }
+.provider-health.health-ok { color: var(--text3); }
+.provider-health.health-warn { color: #FF9F0A; }
 
 .ctrl-label { font-size: 12px; color: var(--text2); white-space: nowrap; flex-shrink: 0; }
 .ctrl-group { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }

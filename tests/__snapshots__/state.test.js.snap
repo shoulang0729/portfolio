@@ -29,6 +29,20 @@ exports[`state.js > state (initial values) > state matches snapshot 1`] = `
   "liveConstituents": {},
   "liveTopHoldings": {},
   "prevPrices": {},
+  "providerHealth": {
+    "finnhub": {
+      "errCount": 0,
+      "lastErr": null,
+      "lastOk": null,
+      "ok": true,
+    },
+    "yahoo": {
+      "errCount": 0,
+      "lastErr": null,
+      "lastOk": null,
+      "ok": true,
+    },
+  },
   "slDetailVisible": false,
   "statsVisible": false,
   "themeMode": "auto",
