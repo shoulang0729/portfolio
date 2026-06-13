@@ -10,12 +10,15 @@ import { renderHeatmap } from './heatmap.js';
 import { renderStockList, applyStockBars } from './stock-list.js';
 import { loadChart } from './chart.js';
 import { updateListHeight, updateWatchlistHeight } from './render.js';
+import { setupSwipeNav } from './swipe.js';
 
 export function setupEventListeners(applyThemeFn) {
   if (typeof d3 === 'undefined') {
     document.getElementById('d3-load-error').style.display = 'flex';
     return;
   }
+
+  setupSwipeNav();
 
   let _resizeRaf = null;
   window.addEventListener('resize', () => {
