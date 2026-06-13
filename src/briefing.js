@@ -66,7 +66,9 @@ export function renderBriefing(force = false) {
         ? past.map(p => `<a class="bf-past-item" href="${p.path}" target="_blank" rel="noopener"><span class="bf-past-name">${_esc(p.title)}</span><span class="bf-past-date">${_esc(p.date)}</span></a>`).join('')
         : '<div class="bf-none">過去号はまだありません</div>';
 
-      panel.innerHTML = `<div class="bf-wrap"><div class="bf-toolbar"><span class="bf-cur">${_esc(latest.title)}</span><span class="bf-actions"><a class="bf-ondemand" href="${TG_ONDEMAND_URL}" target="_blank" rel="noopener">💬 今すぐ生成</a></span></div><iframe class="bf-frame" src="${latest.path}?_=${Date.now()}" title="${_esc(latest.title)}" loading="lazy"></iframe><div class="bf-past"><div class="bf-past-head">過去の Briefing</div>${pastHtml}</div></div>`;
+      // 生成アイコン: ミニマルな4点スパークル（line/currentColor）
+      const sparkle = '<svg class="bf-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.5z"/></svg>';
+      panel.innerHTML = `<div class="bf-wrap"><div class="bf-toolbar"><span class="bf-actions"><a class="bf-ondemand" href="${TG_ONDEMAND_URL}" target="_blank" rel="noopener">${sparkle}今すぐ生成</a></span></div><iframe class="bf-frame" src="${latest.path}?_=${Date.now()}" title="${_esc(latest.title)}" loading="lazy"></iframe><div class="bf-past"><div class="bf-past-head">過去の Briefing</div>${pastHtml}</div></div>`;
 
       // 同一オリジンなので iframe を中身の高さにフィットさせ、テーマを伝搬
       _frame = /** @type {HTMLIFrameElement|null} */ (panel.querySelector('.bf-frame'));
