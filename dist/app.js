@@ -4225,12 +4225,104 @@ function switchTab(name) {
   if (name === "briefing") renderBriefing();
 }
 
+// src/swipe.js
+var DIST_THRESHOLD = 60;
+var RATIO = 1.6;
+var TIME_LIMIT = 600;
+var EDGE_IGNORE = 20;
+function tabOrder() {
+  return (
+    /** @type {string[]} */
+    [...document.querySelectorAll(".tab-btn[data-tab]")].map((b) => (
+      /** @type {HTMLElement} */
+      b.dataset.tab
+    )).filter(Boolean)
+  );
+}
+function overlayOpen() {
+  if (document.getElementById("pin-overlay")) return true;
+  for (const ov of document.querySelectorAll(".modal-overlay")) {
+    if (getComputedStyle(
+      /** @type {HTMLElement} */
+      ov
+    ).display !== "none") return true;
+  }
+  return false;
+}
+function inHScrollable(target, dx) {
+  let el = (
+    /** @type {HTMLElement|null} */
+    target
+  );
+  while (el && el !== document.body) {
+    if (el.scrollWidth > el.clientWidth + 2) {
+      const ox = getComputedStyle(el).overflowX;
+      if (ox === "auto" || ox === "scroll") {
+        const max = el.scrollWidth - el.clientWidth;
+        if (dx < 0 && el.scrollLeft < max - 1) return true;
+        if (dx > 0 && el.scrollLeft > 1) return true;
+      }
+    }
+    el = el.parentElement;
+  }
+  return false;
+}
+function setupSwipeNav() {
+  if (!("ontouchstart" in window)) return;
+  let startX = 0;
+  let startY = 0;
+  let startT = 0;
+  let startTarget = (
+    /** @type {EventTarget|null} */
+    null
+  );
+  let tracking = false;
+  document.addEventListener("touchstart", (e) => {
+    if (e.touches.length !== 1) {
+      tracking = false;
+      return;
+    }
+    const t = e.touches[0];
+    if (t.clientX <= EDGE_IGNORE || t.clientX >= window.innerWidth - EDGE_IGNORE) {
+      tracking = false;
+      return;
+    }
+    startX = t.clientX;
+    startY = t.clientY;
+    startT = Date.now();
+    startTarget = e.target;
+    tracking = true;
+  }, { passive: true });
+  document.addEventListener("touchend", (e) => {
+    if (!tracking) return;
+    tracking = false;
+    if (overlayOpen()) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - startX;
+    const dy = t.clientY - startY;
+    if (Date.now() - startT > TIME_LIMIT) return;
+    if (Math.abs(dx) < DIST_THRESHOLD) return;
+    if (Math.abs(dx) < Math.abs(dy) * RATIO) return;
+    if (inHScrollable(startTarget, dx)) return;
+    const order = tabOrder();
+    const cur = order.indexOf(state.activeTab);
+    if (cur === -1) return;
+    const next = dx < 0 ? cur + 1 : cur - 1;
+    if (next < 0 || next >= order.length) return;
+    switchTab(
+      /** @type {any} */
+      order[next]
+    );
+  }, { passive: true });
+}
+
 // src/init.js
 function setupEventListeners(applyThemeFn) {
   if (typeof d3 === "undefined") {
     document.getElementById("d3-load-error").style.display = "flex";
     return;
   }
+  setupSwipeNav();
   let _resizeRaf = null;
   window.addEventListener("resize", () => {
     if (_resizeRaf) cancelAnimationFrame(_resizeRaf);
