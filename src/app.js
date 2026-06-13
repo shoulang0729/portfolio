@@ -16,6 +16,7 @@ import { WORKER_URL } from './config.js';
 import { renderHeatmap } from './heatmap.js';
 import { loadChart, setRange, closeModal, handleOverlayClick } from './chart.js';
 import { switchTab } from './tabs.js';
+import { reloadBriefing } from './briefing.js';
 import { setupEventListeners } from './init.js';
 import { renderStockList, slSort, slToggleDetail, updateSlColStyle } from './stock-list.js';
 import { renderWatchlist, wlSort, onWatchlistSearch, removeFromWatchlist, wlSelectItem } from './watchlist.js';
@@ -363,6 +364,8 @@ const ACTION_MAP = {
   toggleStats, cycleTheme, toggleHmMenu, closeHmMenu,
   setChangePeriod, setColorModePnl, handleRefreshSelect,
   switchTab, triggerPortfolioSnapshot,
+  // briefing.js
+  reloadBriefing,
   // auth-ui.js
   authKeyPress, authBackspace, pcKeyPress, pcBackspace,
   openPinChange, closePinChange,
@@ -433,10 +436,12 @@ function init() {
   const panelList      = document.getElementById('panel-list');
   const panelWatchlist = document.getElementById('panel-watchlist');
   const panelRisk      = document.getElementById('panel-risk');
+  const panelBriefing  = document.getElementById('panel-briefing');
   const panelAi        = document.getElementById('panel-ai');
   if (panelList)      panelList.hidden      = true;
   if (panelWatchlist) panelWatchlist.hidden = true;
   if (panelRisk)      panelRisk.hidden      = true;
+  if (panelBriefing)  panelBriefing.hidden  = true;
   if (panelAi)        panelAi.hidden        = true;
 
   renderStats();
@@ -467,7 +472,7 @@ function init() {
   // AI タブは無効化中のため復元対象外
   try {
     const lastTab = localStorage.getItem('hm-active-tab');
-    if (lastTab && lastTab !== 'heatmap' && ['list','watchlist','risk'].includes(lastTab)) {
+    if (lastTab && lastTab !== 'heatmap' && ['list','watchlist','risk','briefing'].includes(lastTab)) {
       requestAnimationFrame(() => switchTab(lastTab));
     } else if (lastTab === 'ai') {
       localStorage.removeItem('hm-active-tab'); // 古い保存値をクリア

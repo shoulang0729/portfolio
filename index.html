@@ -24,10 +24,10 @@
 
 <!-- スタイルシート -->
 
-<link rel="stylesheet" href="assets/01-base.css?v=20260601U">
-<link rel="stylesheet" href="assets/02-tables.css?v=20260601U">
-<link rel="stylesheet" href="assets/03-misc.css?v=20260601U">
-<link rel="stylesheet" href="assets/04-auth.css?v=20260601U">
+<link rel="stylesheet" href="assets/01-base.css?v=20260613A">
+<link rel="stylesheet" href="assets/02-tables.css?v=20260613A">
+<link rel="stylesheet" href="assets/03-misc.css?v=20260613A">
+<link rel="stylesheet" href="assets/04-auth.css?v=20260613A">
 
 <!-- assets/05-ai-tab.css は src/_disabled/05-ai-tab.css に移動（AIタブ無効化中）-->
 <!-- 銘柄リスト列表示制御（JS が動的に書き込む） -->
@@ -174,6 +174,8 @@
             data-action="switchTab" data-arg="watchlist" title="Watchlist Historical Heatmap">Watchlist</button>
     <button class="tab-btn" data-tab="risk" role="tab" aria-selected="false"
             data-action="switchTab" data-arg="risk" title="Exposure（通貨・国・セクター・資産クラス）">Exposure</button>
+    <button class="tab-btn" data-tab="briefing" role="tab" aria-selected="false"
+            data-action="switchTab" data-arg="briefing" title="週次 Briefing（相場観・保有・アクション）">Briefing</button>
     <!-- AI相談タブは現在無効化中（必要になったら戻す） -->
   </div>
   <!-- タブ別サブコントロール（sticky-top 内に置くことで両タブのテーブル開始位置・高さを統一） -->
@@ -264,6 +266,9 @@
 <div id="risk-charts-wrap"></div>
 </section><!-- /panel-risk -->
 
+<!-- 週次 Briefing パネル（タブ5：MulmoClaude生成のモバイルHTMLをiframe表示） -->
+<section id="panel-briefing" class="tab-panel" hidden></section>
+
 <!-- AI相談パネルは現在無効化中（タブも非表示） -->
 <section id="panel-ai" class="tab-panel" hidden></section>
 
@@ -313,14 +318,14 @@
 
 <!-- ES Module エントリーポイント（全ファイルを import する単一スクリプト） -->
 
-<script type="module" src="dist/app.js?v=20260601U"></script>
+<script type="module" src="dist/app.js?v=20260613A"></script>
 
 
 <!-- PWA Service Worker 登録 -->
 <script>
 if ('serviceWorker' in navigator) {
 
-navigator.serviceWorker.register('./sw.js?v=20260601U').catch(() => {});
+navigator.serviceWorker.register('./sw.js?v=20260613A').catch(() => {});
 
 }
 </script>
