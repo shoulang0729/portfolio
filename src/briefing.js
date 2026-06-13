@@ -66,7 +66,7 @@ export function renderBriefing(force = false) {
         ? past.map(p => `<a class="bf-past-item" href="${p.path}" target="_blank" rel="noopener"><span class="bf-past-name">${_esc(p.title)}</span><span class="bf-past-date">${_esc(p.date)}</span></a>`).join('')
         : '<div class="bf-none">過去号はまだありません</div>';
 
-      panel.innerHTML = `<div class="bf-wrap"><div class="bf-toolbar"><span class="bf-cur">${_esc(latest.title)}</span><span class="bf-actions"><a class="bf-ondemand" href="${TG_ONDEMAND_URL}" target="_blank" rel="noopener">💬 今すぐ生成</a><button class="bf-reload" data-action="reloadBriefing" title="再読み込み">↻</button></span></div><iframe class="bf-frame" src="${latest.path}?_=${Date.now()}" title="${_esc(latest.title)}" loading="lazy"></iframe><div class="bf-past"><div class="bf-past-head">過去の Briefing</div>${pastHtml}</div></div>`;
+      panel.innerHTML = `<div class="bf-wrap"><div class="bf-toolbar"><span class="bf-cur">${_esc(latest.title)}</span><span class="bf-actions"><a class="bf-ondemand" href="${TG_ONDEMAND_URL}" target="_blank" rel="noopener">💬 今すぐ生成</a></span></div><iframe class="bf-frame" src="${latest.path}?_=${Date.now()}" title="${_esc(latest.title)}" loading="lazy"></iframe><div class="bf-past"><div class="bf-past-head">過去の Briefing</div>${pastHtml}</div></div>`;
 
       // 同一オリジンなので iframe を中身の高さにフィットさせ、テーマを伝搬
       _frame = /** @type {HTMLIFrameElement|null} */ (panel.querySelector('.bf-frame'));
