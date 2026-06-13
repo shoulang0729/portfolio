@@ -17,6 +17,7 @@ import { renderHeatmap } from './heatmap.js';
 import { loadChart, setRange, closeModal, handleOverlayClick } from './chart.js';
 import { switchTab } from './tabs.js';
 import { reloadBriefing } from './briefing.js';
+import { loadMfHoldings } from './networth.js';
 import { setupEventListeners } from './init.js';
 import { renderStockList, slSort, slToggleDetail, updateSlColStyle } from './stock-list.js';
 import { renderWatchlist, wlSort, onWatchlistSearch, removeFromWatchlist, wlSelectItem } from './watchlist.js';
@@ -445,6 +446,9 @@ function init() {
   if (panelAi)        panelAi.hidden        = true;
 
   renderStats();
+
+  // Money Forward 実値（mf-holdings）を読み込み、資産総額・キャッシュ比率に反映（非同期・失敗時はライブ証券にフォールバック）
+  loadMfHoldings().then(() => renderStats()).catch(() => {});
 
   // stats の初期表示状態を DOM に反映（state.statsVisible = false → 非表示）
   const _stats = document.getElementById('stats');

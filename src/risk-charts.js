@@ -9,6 +9,7 @@ import { computeRiskBreakdown, toSlices, RISK_DIMENSIONS, UNKNOWN_KEY, getContri
 import { fmtJPYInt, fmtPctInt, escapeHTML } from './utils.js';
 import { positions } from './positions.js';
 import { MANUAL_ASSETS, MANUAL_SOURCES } from './manual-assets.js';
+import { getMfManualAssets, getMfSources } from './networth.js';
 
 /** 軸ごとのタイトル */
 const TITLES = {
@@ -226,8 +227,10 @@ export function renderRiskCharts() {
   if (!wrap) return;
   if (typeof d3 === 'undefined') return;
 
-  // 証券（positions）＋手動入力資産（現金など manual-assets.js）を合算して look-through。
-  const assets = [...positions, ...MANUAL_ASSETS];
+  // 証券（positions・ライブ）＋非証券（現金・暗号資産）を合算して look-through。
+  // 非証券は Money Forward 実値（mf-holdings）を優先。未ロード時のみ manual-assets.js にフォールバック。
+  const manualAssets = getMfManualAssets() || MANUAL_ASSETS;
+  const assets = [...positions, ...manualAssets];
   const breakdown = computeRiskBreakdown(assets);
   const sourceSummary = getSourceSummary(assets);
 
@@ -266,7 +269,10 @@ export function renderRiskCharts() {
   const src = document.createElement('div');
   src.className = 'risk-source';
   const baseSrc = 'データソース: 価格 = Finnhub / Yahoo Finance ・ アセットクラス/通貨/国/セクター分類 = 銘柄マスタ（positions.js・constituents.js）';
-  src.textContent = [baseSrc, ...MANUAL_SOURCES].join(' ／ ');
+  const mfSrc = getMfSources();
+  // 現金ソース: mf-holdings ロード時はそちら、未ロード時は manual-assets の現金行。ひふみ分類注記は常に残す。
+  const srcLines = mfSrc ? [baseSrc, ...mfSrc, MANUAL_SOURCES[1]] : [baseSrc, ...MANUAL_SOURCES];
+  src.textContent = srcLines.filter(Boolean).join(' ／ ');
   wrap.appendChild(src);
 }
 
