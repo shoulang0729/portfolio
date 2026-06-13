@@ -3,52 +3,67 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>週次 Briefing — 2026/06/13</title>
+<title>Briefing — 2026/06/13</title>
 <style>
+  /* 既定=ライト。標準は端末設定(prefers)に追従。アプリ埋め込み時は親が html[data-theme] を注入して上書き */
   :root{
     --bg:#f7f2ee;--surface:#ffffff;--surface2:#f0e9e3;--surface3:#e8ddd7;
     --border:#d4c8c0;--text:#1c1714;--text2:#78695f;--accent:#cc785c;
-    --up:#1a8f57;--down:#c8472f;
+    --up:#1a8f57;--down:#c8472f;--stance:#b9822e;
   }
   @media (prefers-color-scheme:dark){
     :root{
       --bg:#1c1917;--surface:#27211e;--surface2:#322b28;--surface3:#2e2722;
       --border:#48403b;--text:#f5f0ec;--text2:#b3a79e;--accent:#e08a6a;
-      --up:#4cd08a;--down:#ff6b5d;
+      --up:#4cd08a;--down:#ff6b5d;--stance:#e6b566;
     }
+  }
+  /* 親アプリのテーマ切替を data-theme で明示注入（prefers より優先） */
+  html[data-theme="light"]{
+    --bg:#f7f2ee;--surface:#ffffff;--surface2:#f0e9e3;--surface3:#e8ddd7;
+    --border:#d4c8c0;--text:#1c1714;--text2:#78695f;--accent:#cc785c;
+    --up:#1a8f57;--down:#c8472f;--stance:#b9822e;
+  }
+  html[data-theme="dark"]{
+    --bg:#1c1917;--surface:#27211e;--surface2:#322b28;--surface3:#2e2722;
+    --border:#48403b;--text:#f5f0ec;--text2:#b3a79e;--accent:#e08a6a;
+    --up:#4cd08a;--down:#ff6b5d;--stance:#e6b566;
   }
   *{box-sizing:border-box;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent;}
   body{margin:0;background:var(--bg);color:var(--text);
     font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
-    line-height:1.62;font-size:16.5px;padding-bottom:32px;}
-  .wrap{max-width:560px;margin:0 auto;padding:0 15px;}
-  header{padding:18px 15px 10px;}
-  .badge{display:inline-block;font-size:10.5px;letter-spacing:.06em;color:#fff;
+    line-height:1.6;font-size:16px;padding-bottom:30px;}
+  .wrap{max-width:560px;margin:0 auto;padding:0 14px;}
+  header{padding:16px 14px 8px;}
+  .badge{display:inline-block;font-size:10.5px;letter-spacing:.05em;color:#fff;
     background:var(--accent);padding:3px 8px;border-radius:6px;font-weight:800;}
-  h1{font-size:21px;margin:8px 0 2px;font-weight:800;letter-spacing:.02em;}
+  h1{font-size:22px;margin:8px 0 2px;font-weight:800;letter-spacing:.03em;}
   .date{color:var(--text2);font-size:12.5px;}
-  .stance{font-weight:800;color:#b9822e;}
-  @media (prefers-color-scheme:dark){.stance{color:#e6b566;}}
+  .stance{font-weight:800;color:var(--stance);}
   .nav{display:flex;gap:6px;overflow-x:auto;padding:10px 0 2px;-webkit-overflow-scrolling:touch;}
   .nav a{flex:0 0 auto;font-size:12px;color:var(--text2);text-decoration:none;
     background:var(--surface2);border:1px solid var(--border);padding:5px 10px;border-radius:999px;}
-  section{margin-top:16px;scroll-margin-top:8px;}
+  section{margin-top:15px;scroll-margin-top:8px;}
   .sec-title{font-size:12.5px;color:var(--text2);letter-spacing:.04em;margin:0 0 7px 2px;font-weight:800;}
   .sec-title b{color:var(--accent);}
   .card{background:var(--surface);border:1px solid var(--border);border-radius:15px;
     padding:15px;margin-bottom:9px;box-shadow:0 2px 10px rgba(0,0,0,0.04);}
-  .total{font-size:30px;font-weight:800;letter-spacing:-.01em;}
-  .total small{font-size:13.5px;color:var(--text2);font-weight:600;display:block;margin-top:2px;}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:12px;}
-  .kpi{background:var(--surface2);border-radius:11px;padding:9px 11px;}
-  .kpi .k{font-size:11.5px;color:var(--text2);} .kpi .v{font-size:17px;font-weight:800;margin-top:1px;}
+  .total{font-size:29px;font-weight:800;letter-spacing:-.01em;}
+  .total small{font-size:13px;color:var(--text2);font-weight:600;display:block;margin-top:2px;}
+  .grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-top:12px;}
+  .grid.two{grid-template-columns:1fr 1fr;}
+  .kpi{background:var(--surface2);border-radius:11px;padding:9px 10px;}
+  .kpi .k{font-size:11px;color:var(--text2);} .kpi .v{font-size:16px;font-weight:800;margin-top:1px;}
   .up{color:var(--up);}.down{color:var(--down);}
-  table.mkt{width:100%;border-collapse:collapse;font-size:14.5px;}
-  table.mkt td{padding:7px 0;border-bottom:1px solid var(--border);}
+  table.mkt{width:100%;border-collapse:collapse;font-size:13.5px;}
+  table.mkt th{font-size:11px;color:var(--text2);font-weight:700;text-align:right;padding:4px 0 6px;border-bottom:1px solid var(--border);}
+  table.mkt th:first-child{text-align:left;}
+  table.mkt td{padding:7px 0;border-bottom:1px solid var(--border);text-align:right;font-weight:700;}
+  table.mkt td:first-child{text-align:left;font-weight:600;}
   table.mkt tr:last-child td{border-bottom:none;}
-  table.mkt td:nth-child(2),table.mkt td:nth-child(3){text-align:right;font-weight:700;}
   .ment{border-left:3px solid var(--accent);padding:2px 0 2px 11px;margin:11px 0;}
-  .ment .who{font-weight:800;font-size:14.5px;color:var(--accent);}
+  .ment .who{font-weight:800;font-size:14px;color:var(--accent);}
+  .ment .claim{font-size:14.5px;}
   .flag{display:flex;justify-content:space-between;gap:8px;padding:9px 0;border-bottom:1px solid var(--border);}
   .flag:last-child{border-bottom:none;}
   .lab{font-size:12px;padding:1px 8px;border-radius:6px;font-weight:800;align-self:flex-start;white-space:nowrap;}
@@ -57,23 +72,23 @@
   .lab.mid{background:rgba(204,120,92,0.18);color:var(--accent);}
   .act{display:flex;gap:9px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);}
   .act:last-child{border-bottom:none;} .dot{flex:0 0 auto;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-top:9px;}
-  .talk{background:var(--surface2);border-left:3px solid var(--accent);border-radius:0 10px 10px 0;
+  .insight{background:var(--surface2);border-left:3px solid var(--accent);border-radius:0 10px 10px 0;
     padding:10px 13px;margin-top:9px;font-size:14px;color:var(--text);}
-  .talk b{color:var(--accent);}
+  .insight .ilabel{font-weight:800;color:var(--accent);}
   .ev{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);}
   .ev:last-child{border-bottom:none;} .ev .d{font-weight:800;color:var(--accent);font-size:13px;flex:0 0 52px;}
   .tk{color:var(--text2);font-size:11.5px;}
-  .foot{color:var(--text2);font-size:11.5px;text-align:center;margin-top:22px;line-height:1.6;}
+  .foot{color:var(--text2);font-size:11.5px;text-align:center;margin-top:20px;line-height:1.6;}
 </style>
 </head>
 <body>
 <header>
   <span class="badge">プレビュー / 数値はサンプル</span>
-  <h1>週次 Briefing</h1>
+  <h1>Briefing</h1>
   <div class="date">2026/06/13（金）週次 · スタンス <span class="stance">⚠ 黄信号（様子見）</span></div>
   <div class="nav">
-    <a href="#s1">資産</a><a href="#s2">地合</a><a href="#s3">メンター</a>
-    <a href="#s4">保有</a><a href="#s5">割高割安</a><a href="#s6">アクション</a><a href="#s7">来週</a>
+    <a href="#s1">資産</a><a href="#s2">マクロ</a><a href="#s3">メンター</a>
+    <a href="#s4">ヘルスチェック</a><a href="#s5">PER</a><a href="#s6">トリガー</a><a href="#s7">来週</a>
   </div>
 </header>
 <div class="wrap">
@@ -84,65 +99,75 @@
       <div class="total">¥493,346,753 <small>総資産（MF取込・4口座）</small></div>
       <div class="grid">
         <div class="kpi"><div class="k">前週比</div><div class="v up">+3.73%</div></div>
-        <div class="kpi"><div class="k">月次</div><div class="v up">+7.22%</div></div>
+        <div class="kpi"><div class="k">前月比</div><div class="v up">+7.22%</div></div>
+        <div class="kpi"><div class="k">前年比</div><div class="v up">+75.9%</div></div>
+      </div>
+      <div class="grid two" style="margin-top:7px">
         <div class="kpi"><div class="k">キャッシュ比率</div><div class="v" style="color:var(--accent)">14%</div></div>
         <div class="kpi"><div class="k">目標</div><div class="v">8–12%</div></div>
       </div>
-      <div class="talk"><b>壁打ち：</b>キャッシュが目標上限超え。黄信号局面では悪くないが、押し目の買い余力＝<b>約¥10M</b>の使い道を決めておきたい。</div>
+      <div class="insight"><span class="ilabel">💡 インサイト：</span>キャッシュが目標上限超え。黄信号局面では悪くないが、押し目の買い余力＝<b>約¥10M</b>の使い道を決めておきたい。</div>
     </div>
   </section>
 
   <section id="s2">
-    <div class="sec-title"><b>2</b> 今週の地合（マクロ）</div>
+    <div class="sec-title"><b>2</b> マクロ</div>
     <div class="card">
       <table class="mkt">
-        <tr><td>日経平均</td><td>—</td><td class="up">+0.9%</td></tr>
-        <tr><td>TOPIX</td><td>—</td><td class="up">+0.7%</td></tr>
-        <tr><td>S&amp;P500</td><td>—</td><td class="up">+1.2%</td></tr>
-        <tr><td>Nasdaq100</td><td>—</td><td class="up">+1.6%</td></tr>
-        <tr><td>米10年債</td><td>4.48%</td><td class="down">+6bp</td></tr>
-        <tr><td>ドル円</td><td>152.8</td><td>円安</td></tr>
-        <tr><td>VIX</td><td>15.2</td><td>低位</td></tr>
+        <thead><tr><th>指標</th><th>1週</th><th>1か月</th><th>3か月</th></tr></thead>
+        <tbody>
+          <tr><td>日経平均</td><td class="up">+0.9%</td><td class="up">+2.1%</td><td class="up">+6.4%</td></tr>
+          <tr><td>TOPIX</td><td class="up">+0.7%</td><td class="up">+1.8%</td><td class="up">+5.2%</td></tr>
+          <tr><td>ダウ平均</td><td class="up">+0.8%</td><td class="up">+1.4%</td><td class="up">+4.1%</td></tr>
+          <tr><td>S&amp;P500</td><td class="up">+1.2%</td><td class="up">+2.6%</td><td class="up">+7.3%</td></tr>
+          <tr><td>Nasdaq100</td><td class="up">+1.6%</td><td class="up">+3.4%</td><td class="up">+9.1%</td></tr>
+          <tr><td>ハンセン指数</td><td class="down">-0.4%</td><td class="up">+1.1%</td><td class="down">-2.3%</td></tr>
+          <tr><td>米10年債</td><td class="down">+6bp</td><td class="up">-4bp</td><td class="up">-12bp</td></tr>
+          <tr><td>ドル円</td><td>152.8</td><td class="down">円安</td><td class="down">円安</td></tr>
+          <tr><td>VIX</td><td>15.2</td><td>低位</td><td>低位</td></tr>
+        </tbody>
       </table>
-      <div class="talk"><b>壁打ち：</b>じっちゃま予想（S&amp;P年末7,000／ドル円153／10年債4.50%）と整合。数値は強気だが本人は6/6に<b>黄信号</b>。地合いは良いが高所であることを忘れない。</div>
+      <div class="insight"><span class="ilabel">💡 インサイト：</span>米株の3か月モメンタムが強い一方、ハンセンは弱含み——保有のアジア比率は薄めで整合。じっちゃま予想（S&amp;P年末7,000）と方向一致だが、本人は6/6に<b>黄信号</b>。高所であることは忘れない。</div>
     </div>
   </section>
 
   <section id="s3">
-    <div class="sec-title"><b>3</b> メンターの視点</div>
+    <div class="sec-title"><b>3</b> メンターの主な主張</div>
     <div class="card">
       <div class="ment"><div class="who">じっちゃま（広瀬隆雄）</div>
-        AIデータセンター投資がGDPを+1%押し上げ→EPS+23%の強気維持。一方「設備投資ブームは必ず暴落で終わる（鉄道1873/自動車1929/AI2026）」と高所警戒。</div>
+        <div class="claim">AIデータセンター投資がGDPを+1%押し上げ→EPS+23%で強気。ただし「設備投資ブームは必ず暴落で終わる」と6/6に黄信号へ。高所警戒。</div></div>
       <div class="ment"><div class="who">中島聡</div>
-        AIの本命ボトルネックは「電力・配線不足」。半導体の先の送電・冷却・SMRが次の主役。VST/CEG/GEV/VRT系を継続注視。</div>
-      <div class="ment"><div class="who">ゆな先生・藤沢数希</div>
-        <span style="color:var(--down)">※note取り込みパイプライン整備後に自動反映（現在準備中）。</span></div>
-      <div class="talk"><b>壁打ち：</b>じっちゃま・中島は「AI強気だが電力テーマへ重心シフト＋高所警戒」で収束。保有のAIデータセンター電力エクスポージャーは薄め——検討余地あり。</div>
+        <div class="claim">AIの本命ボトルネックは「電力・配線不足」。半導体の先の送電・冷却・SMRが次の主役。VST/CEG/GEV/VRT系を注視。</div></div>
+      <div class="ment"><div class="who">ゆな先生</div>
+        <div class="claim">個別銘柄＋日本株＋実体験寄り（フィールドワーク投資）。直近PFはAlphabet最大ポジ、アシックス10倍の原体験。AI半導体・宇宙も追う。</div></div>
+      <div class="ment"><div class="who">藤沢数希</div>
+        <div class="claim"><span style="color:var(--down)">※note取り込みパイプライン整備後に自動反映（現在準備中）。</span></div></div>
+      <div class="insight"><span class="ilabel">💡 インサイト：</span>じっちゃま・中島は「AI強気だが電力テーマへ重心シフト＋高所警戒」で収束。ゆな先生は個別・日本株目線で補完。保有のAIデータセンター電力エクスポージャーは薄め——検討余地あり。</div>
     </div>
   </section>
 
   <section id="s4">
-    <div class="sec-title"><b>4</b> 保有ヘルスチェック</div>
+    <div class="sec-title"><b>4</b> ヘルスチェック</div>
     <div class="card">
       <div class="flag"><div><b>テーマ集中：AI/半導体</b><div class="tk">GOOGL・MSFT・PLTR・SMH 等</div></div><span class="lab hi">高 38%</span></div>
       <div class="flag"><div><b>単一口座集中：マネックス証券</b><div class="tk">取込資産の大半</div></div><span class="lab mid">中</span></div>
       <div class="flag"><div><b>今週の変動大</b><div class="tk">URA / 銀行ETF 1615</div></div><span class="lab ok">監視</span></div>
-      <div class="talk"><b>壁打ち：</b>AI/半導体の集中が高め。電力テーマ(VST/CEG等)は分散にもなる二鳥。単一テーマ急反落リスクは常に意識。</div>
+      <div class="insight"><span class="ilabel">💡 インサイト：</span>AI/半導体の集中が高め。電力テーマ(VST/CEG等)は分散にもなる二鳥。単一テーマ急反落リスクは常に意識。</div>
     </div>
   </section>
 
   <section id="s5">
-    <div class="sec-title"><b>5</b> 割高割安ウォッチ（PER歴史分析）</div>
+    <div class="sec-title"><b>5</b> PERアナリシス</div>
     <div class="card">
       <div class="flag"><div><b>AAPL</b><div class="tk">予想PER 31 vs 5年平均 27</div></div><span class="lab mid">やや割高</span></div>
       <div class="flag"><div><b>銀行ETF 1615</b><div class="tk">加重PER 低位＝利益ピーク?</div></div><span class="lab hi">サイクル天井注意</span></div>
       <div class="flag"><div><b>PLTR</b><div class="tk">PEG 2.x</div></div><span class="lab hi">割高（成長株基準）</span></div>
-      <div class="talk"><b>壁打ち：</b>1615は「PER低い＝割安」ではなくサイクル株の罠（利益ピーク=売り時）を要確認。利益が出ている今こそ一部利確の議論を。</div>
+      <div class="insight"><span class="ilabel">💡 インサイト：</span>1615は「PER低い＝割安」ではなくサイクル株の罠（利益ピーク=売り時）を要確認。利益が出ている今こそ一部利確の議論を。</div>
     </div>
   </section>
 
   <section id="s6">
-    <div class="sec-title"><b>6</b> アクション＆監視ライン</div>
+    <div class="sec-title"><b>6</b> トリガー＆アクション</div>
     <div class="card">
       <div class="act"><span class="dot"></span><div>MSFT <b>$380 逆指値</b> 設定済 — 維持</div></div>
       <div class="act"><span class="dot"></span><div>NLR / DTCR：マネックス取扱再開待ち（各$50K枠）</div></div>
@@ -158,13 +183,13 @@
       <div class="ev"><div class="d">6/18</div><div>FOMC 政策金利・会見（最重要）</div></div>
       <div class="ev"><div class="d">6/20</div><div>日銀 金融政策決定会合</div></div>
       <div class="ev"><div class="d">週内</div><div>主要半導体・テック決算</div></div>
-      <div class="talk"><b>壁打ち：</b>FOMCが最大の波乱要因。黄信号＋高キャッシュなので、急落時の買い候補リストを事前に決めておくと動ける。</div>
+      <div class="insight"><span class="ilabel">💡 インサイト：</span>FOMCが最大の波乱要因。黄信号＋高キャッシュなので、急落時の買い候補リストを事前に決めておくと動ける。</div>
     </div>
   </section>
 
   <div class="foot">
-    ソース：じっちゃま(mh-*) / 中島聡(lib-*) / ゆな・藤沢(準備中) / MF保有(mf-holdings) / WebSearch<br>
-    生成：MulmoClaude 週次タスク（プレビュー）。投資助言ではなく壁打ち材料です。
+    ソース：じっちゃま(mh-*) / 中島聡(lib-*) / 藤沢数希(準備中) / MF保有(mf-holdings) / WebSearch<br>
+    生成：MulmoClaude（プレビュー）。投資助言ではなく壁打ち材料です。
   </div>
 </div>
 </body>
