@@ -32,15 +32,17 @@ export function renderStats() {
 
   const mfTag = mf ? '<span style="display:block;font-size:9px;font-weight:400;color:var(--text2);opacity:0.6;text-transform:none;letter-spacing:0;">MF実値</span>' : '';
   let html = `<div class="stat">
-    <span class="stat-label">資産総額${mfTag}</span>
-    <span class="stat-value neu">${fmtJPYInt(grandTotal)}</span>
+    <span class="stat-label">運用資産総額${mfTag}</span>
+    <span class="stat-value stat-fg">${fmtJPYInt(grandTotal)}</span>
   </div>`;
 
   if (mf) {
+    // 投資用キャッシュ: 金額（万単位）→ 改行 → 比率（%）。文字は白（#309）
+    const dryMan = `¥${Math.round(mf.dryPowder / 1e4).toLocaleString()}万`;
     html += `<div class="stat">
-      <span class="stat-label">キャッシュ比率</span>
-      <span class="stat-value neu">${mf.cashRatio.toFixed(1)}%</span>
-      <span class="stat-sub neu">投資用¥${Math.round(mf.dryPowder / 1e6)}M</span>
+      <span class="stat-label">投資用キャッシュ</span>
+      <span class="stat-value stat-fg">${dryMan}</span>
+      <span class="stat-sub stat-fg">${mf.cashRatio.toFixed(1)}%</span>
     </div>`;
   }
 

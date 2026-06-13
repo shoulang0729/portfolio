@@ -16,12 +16,12 @@
 //   live（Worker /etf/constituents の holdings）> curated（この JSON）> 既定推定
 //
 // カテゴリキー（表示ラベルは risk-charts.js の LABELS で定義）:
-//   assetClass: equity | bond | commodity | reit | cash
+//   assetClass: equity | bond | commodity | reit | cash | crypto
 //   currency  : JPY | USD | EUR | other
 //   country   : japan | us | europe | em | latam | china | global | commodity
 //   sector    : tech | semis | financials | healthcare | consumer | staples |
 //               industrials | energy | materials | comm | utilities |
-//               realestate | commodity | bond | cash
+//               realestate | commodity | bond | cash | crypto
 // ══════════════════════════════════════════════════════════════
 
 /** @typedef {Record<string, number>} WeightMap */
