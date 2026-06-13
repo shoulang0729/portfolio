@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "updatedAt": "2026-06-13",
   "purpose": "Claude for Chrome が MoneyForward (moneyforward.com/bs/portfolio) から data/mf-holdings.json を更新する際の取り込みルール。Chrome は取り込み前に必ず本ファイル(raw)を読み、ここに書かれたルールだけに従うこと。",
   "source": "https://moneyforward.com/bs/portfolio",
@@ -8,18 +8,31 @@
       "株式(現物)",
       "投資信託",
       "債券",
-      "年金",
       "暗号資産",
       "預金・現金",
       "FX・商品先物",
       "その他・事業性資産"
     ],
-    "note": "allowlist。MFの資産種類すべてを対象。ここに無い種類(ポイント・マイル/保険/不動産 等)は取り込まない。"
+    "note": "allowlist。ここに無い種類は取り込まない。除外: ポイント・マイル / 保険 / 不動産 / 年金(2026/06 ユーザー判断で年金は全除外→カテゴリごと外した。みずほ信託外株が読み取り不可で口座名マッチが効かないためカテゴリ除外が確実)。"
   },
   "exclude": {
-    "accounts": [],
+    "accounts": [
+      "ようたのSuica",
+      "こうたのSuica",
+      "モバイルPASMO",
+      "マネックスCRYPT",
+      "NTTデータ社員持株会",
+      "Wealth Wing",
+      "三井住友銀行",
+      "十六銀行",
+      "三菱UFJ銀行",
+      "岐阜信用金庫",
+      "相対契約",
+      "陽太子どもNISA",
+      "恒太子どもNISA"
+    ],
     "holdings": [],
-    "note": "口座/金融機関 単位の除外リスト(部分一致で判定)。初回の口座棚卸し(docs/routine_mf_discovery.md)で全口座を一覧化し、除外したい口座名をここ accounts に追記する。holdings は特定銘柄をピンポイントで外したいとき。"
+    "note": "口座/金融機関 単位の除外リスト(部分一致で判定)。2026/06 棚卸し結果で確定。★『マネックスCRYPT』は『マネックス証券』(取込対象)と部分一致衝突するため、必ず完全な『マネックスCRYPT』で判定し、単独の『マネックス』では判定しないこと。年金はカテゴリ除外済み。結果: 取込対象は SMBC信託 / マネックス証券 / bitFlyer / ひふみ投信 の4口座のみ。"
   },
   "cash": {
     "includeInPositions": true,
@@ -41,8 +54,8 @@
   "checksum": {
     "enabled": true,
     "tolerancePct": 1.0,
-    "rule": "Σ(holdings[].value) ≈ MF総資産 − Σ(除外した口座の評価額) を ±1% で確認。加えて、口座ごとに Σ(該当holdings.value) ≈ MFのその口座の合計表示 を確認する。",
-    "onMismatch": "data/mf-holdings.json をコミットせず中止し、どの口座/カテゴリで何円ズレたかを報告する。"
+    "rule": "取込対象の各口座(SMBC信託/マネックス証券/bitFlyer/ひふみ投信)ごとに Σ(その口座のholdings.value) ≈ MFのその口座の合計表示 を ±1% で確認。さらに imported合計 ≈ 493,346,753 付近(2026/06基準。資産変動で動く)を目安に確認。大きく外れたら除外漏れ/読み取りミスを疑う。",
+    "onMismatch": "data/mf-holdings.json をコミットせず中止し、どの口座で何円ズレたかを報告する。"
   },
   "commit": {
     "target": "main",
