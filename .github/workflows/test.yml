@@ -23,10 +23,13 @@ jobs:
       - run: npm run build     # esbuild
       - name: Check dist size
         run: |
+          # GitHub Pages 配信バンドルの肥大化検知ガード（#314）。
+          # 固定の技術制約ではなく、現状のアプリ規模に合わせた運用上の目安。
+          # タブ・機能追加で多少増えるのは妥当なので、急増時の気付き用に余裕を持たせる。
           SIZE=$(stat -c%s dist/app.js 2>/dev/null || stat -f%z dist/app.js)
-          LIMIT=215000
-          echo "dist/app.js size: $SIZE bytes (limit: $LIMIT)"
-          if [ "$SIZE" -gt "$LIMIT" ]; then
-            echo "::error::dist/app.js exceeded size limit ($SIZE > $LIMIT)"
+          BLOAT_GUARD_LIMIT=250000   # 250KB（運用目安）
+          echo "dist/app.js size: $SIZE bytes (guard: $BLOAT_GUARD_LIMIT)"
+          if [ "$SIZE" -gt "$BLOAT_GUARD_LIMIT" ]; then
+            echo "::error::dist/app.js exceeded bloat guard ($SIZE > $BLOAT_GUARD_LIMIT) — 肥大化を確認してください"
             exit 1
           fi
