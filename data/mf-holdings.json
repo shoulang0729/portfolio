@@ -1,13 +1,11 @@
 {
-  "snapshotDate": "2026-06-13",
+  "asOf": "2026-06-13T00:00:00+09:00",
   "source": "https://moneyforward.com/bs/portfolio",
-  "importedTotal": 493346753,
-  "checksumPassed": true,
-  "accountTotals": {
-    "SMBC信託銀行プレスティア(旧シティバンク)": 6186080,
-    "マネックス証券": 435980723,
-    "bitFlyer": 2834720,
-    "ひふみ投信": 48345230
+  "configVersion": 2,
+  "totals": {
+    "mfNetWorth": 569936366,
+    "imported": 493346753,
+    "excludedAccounts": 76589613
   },
   "holdings": [
     {
@@ -19,7 +17,8 @@
       "costPrice": 32747,
       "currentPrice": 32747,
       "value": 32747,
-      "currency": "JPY"
+      "currency": "JPY",
+      "cur": "JPY"
     },
     {
       "account": "SMBC信託銀行プレスティア(旧シティバンク)",
@@ -30,7 +29,8 @@
       "costPrice": 636200,
       "currentPrice": 636200,
       "value": 636200,
-      "currency": "JPY"
+      "currency": "JPY",
+      "cur": "USD"
     },
     {
       "account": "SMBC信託銀行プレスティア(旧シティバンク)",
@@ -41,7 +41,8 @@
       "costPrice": 1009622,
       "currentPrice": 1009622,
       "value": 1009622,
-      "currency": "JPY"
+      "currency": "JPY",
+      "cur": "JPY"
     },
     {
       "account": "SMBC信託銀行プレスティア(旧シティバンク)",
@@ -52,7 +53,8 @@
       "costPrice": 486261,
       "currentPrice": 486261,
       "value": 486261,
-      "currency": "JPY"
+      "currency": "JPY",
+      "cur": "JPY"
     },
     {
       "account": "SMBC信託銀行プレスティア(旧シティバンク)",
@@ -63,7 +65,8 @@
       "costPrice": 0,
       "currentPrice": 0,
       "value": 4021250,
-      "currency": "JPY"
+      "currency": "JPY",
+      "cur": "JPY"
     },
     {
       "account": "マネックス証券",
@@ -74,7 +77,8 @@
       "costPrice": 27622722,
       "currentPrice": 27622722,
       "value": 27622722,
-      "currency": "JPY"
+      "currency": "JPY",
+      "cur": "JPY"
     },
     {
       "account": "マネックス証券",
@@ -85,7 +89,8 @@
       "costPrice": 24796664,
       "currentPrice": 24796664,
       "value": 24796664,
-      "currency": "JPY"
+      "currency": "JPY",
+      "cur": "USD"
     },
     {
       "account": "マネックス証券",
@@ -96,7 +101,8 @@
       "costPrice": 416,
       "currentPrice": 412,
       "value": 24855660,
-      "currency": "JPY"
+      "currency": "JPY",
+      "cur": "JPY"
     },
     {
       "account": "マネックス証券",
@@ -107,7 +113,8 @@
       "costPrice": 548,
       "currentPrice": 697,
       "value": 26391603,
-      "currency": "JPY"
+      "currency": "JPY",
+      "cur": "JPY"
     },
     {
       "account": "マネックス証券",
@@ -118,7 +125,8 @@
       "costPrice": 245,
       "currentPrice": 253,
       "value": 22155000,
-      "currency": "JPY"
+      "currency": "JPY",
+      "cur": "JPY"
     },
     {
       "account": "マネックス証券",
@@ -129,7 +137,8 @@
       "costPrice": 2645,
       "currentPrice": 5348,
       "value": 32248440,
-      "currency": "JPY"
+      "currency": "JPY",
+      "cur": "JPY"
     },
     {
       "account": "マネックス証券",
@@ -140,7 +149,8 @@
       "costPrice": 3181,
       "currentPrice": 6525,
       "value": 1957500,
-      "currency": "JPY"
+      "currency": "JPY",
+      "cur": "JPY"
     },
     {
       "account": "マネックス証券",
@@ -151,7 +161,8 @@
       "costPrice": 3451,
       "currentPrice": 7000,
       "value": 14000000,
-      "currency": "JPY"
+      "currency": "JPY",
+      "cur": "JPY"
     },
     {
       "account": "マネックス証券",
@@ -162,7 +173,8 @@
       "costPrice": 43966,
       "currentPrice": 80530,
       "value": 16106000,
-      "currency": "JPY"
+      "currency": "JPY",
+      "cur": "JPY"
     },
     {
       "account": "マネックス証券",
@@ -173,7 +185,8 @@
       "costPrice": 12693,
       "currentPrice": 13752,
       "value": 8938645,
-      "currency": "JPY"
+      "currency": "JPY",
+      "cur": "USD"
     },
     {
       "account": "マネックス証券",
@@ -184,7 +197,8 @@
       "costPrice": 13677,
       "currentPrice": 13328,
       "value": 43408864,
-      "currency": "JPY"
+      "currency": "JPY",
+      "cur": "USD"
     },
     {
       "account": "マネックス証券",
@@ -195,7 +209,8 @@
       "costPrice": 5023,
       "currentPrice": 5575,
       "value": 7804449,
-      "currency": "JPY"
+      "currency": "JPY",
+      "cur": "USD"
     },
     {
       "account": "マネックス証券",
@@ -206,7 +221,8 @@
       "costPrice": 8002,
       "currentPrice": 8076,
       "value": 3069025,
-      "currency": "JPY"
+      "currency": "JPY",
+      "cur": "USD"
     },
     {
       "account": "マネックス証券",
@@ -217,7 +233,8 @@
       "costPrice": 12681,
       "currentPrice": 15276,
       "value": 7638090,
-      "currency": "JPY"
+      "currency": "JPY",
+      "cur": "USD"
     },
     {
       "account": "マネックス証券",
@@ -228,7 +245,8 @@
       "costPrice": 11530,
       "currentPrice": 9804,
       "value": 6862764,
-      "currency": "JPY"
+      "currency": "JPY",
+      "cur": "USD"
     },
     {
       "account": "マネックス証券",
@@ -239,7 +257,8 @@
       "costPrice": 51582,
       "currentPrice": 99169,
       "value": 39667521,
-      "currency": "JPY"
+      "currency": "JPY",
+      "cur": "USD"
     },
     {
       "account": "マネックス証券",
@@ -250,7 +269,8 @@
       "costPrice": 8162,
       "currentPrice": 7281,
       "value": 7281380,
-      "currency": "JPY"
+      "currency": "JPY",
+      "cur": "USD"
     },
     {
       "account": "マネックス証券",
@@ -261,7 +281,8 @@
       "costPrice": 9404,
       "currentPrice": 9206,
       "value": 7824844,
-      "currency": "JPY"
+      "currency": "JPY",
+      "cur": "USD"
     },
     {
       "account": "マネックス証券",
@@ -272,7 +293,8 @@
       "costPrice": 30699,
       "currentPrice": 46569,
       "value": 8661863,
-      "currency": "JPY"
+      "currency": "JPY",
+      "cur": "USD"
     },
     {
       "account": "マネックス証券",
@@ -283,7 +305,8 @@
       "costPrice": 34357,
       "currentPrice": 38158,
       "value": 9539615,
-      "currency": "JPY"
+      "currency": "JPY",
+      "cur": "USD"
     },
     {
       "account": "マネックス証券",
@@ -294,7 +317,8 @@
       "costPrice": 29275,
       "currentPrice": 57534,
       "value": 9780851,
-      "currency": "JPY"
+      "currency": "JPY",
+      "cur": "USD"
     },
     {
       "account": "マネックス証券",
@@ -305,7 +329,8 @@
       "costPrice": 65767,
       "currentPrice": 62503,
       "value": 7625338,
-      "currency": "JPY"
+      "currency": "JPY",
+      "cur": "USD"
     },
     {
       "account": "マネックス証券",
@@ -316,7 +341,8 @@
       "costPrice": 21126,
       "currentPrice": 20473,
       "value": 7738900,
-      "currency": "JPY"
+      "currency": "JPY",
+      "cur": "USD"
     },
     {
       "account": "マネックス証券",
@@ -327,7 +353,8 @@
       "costPrice": 49332,
       "currentPrice": 65013,
       "value": 8126568,
-      "currency": "JPY"
+      "currency": "JPY",
+      "cur": "USD"
     },
     {
       "account": "マネックス証券",
@@ -338,7 +365,8 @@
       "costPrice": 27955,
       "currentPrice": 37147,
       "value": 61878417,
-      "currency": "JPY"
+      "currency": "JPY",
+      "cur": "JPY"
     },
     {
       "account": "bitFlyer",
@@ -349,7 +377,8 @@
       "costPrice": 1523033,
       "currentPrice": 1523033,
       "value": 1523033,
-      "currency": "JPY"
+      "currency": "JPY",
+      "cur": "JPY"
     },
     {
       "account": "bitFlyer",
@@ -360,7 +389,8 @@
       "costPrice": 1311625,
       "currentPrice": 1311625,
       "value": 1311625,
-      "currency": "JPY"
+      "currency": "JPY",
+      "cur": "JPY"
     },
     {
       "account": "bitFlyer",
@@ -371,7 +401,8 @@
       "costPrice": 62,
       "currentPrice": 62,
       "value": 62,
-      "currency": "JPY"
+      "currency": "JPY",
+      "cur": "JPY"
     },
     {
       "account": "ひふみ投信",
@@ -382,7 +413,8 @@
       "costPrice": 72959,
       "currentPrice": 98348,
       "value": 22264954,
-      "currency": "JPY"
+      "currency": "JPY",
+      "cur": "JPY"
     },
     {
       "account": "ひふみ投信",
@@ -393,7 +425,8 @@
       "costPrice": 72959,
       "currentPrice": 98348,
       "value": 22264954,
-      "currency": "JPY"
+      "currency": "JPY",
+      "cur": "JPY"
     },
     {
       "account": "ひふみ投信",
@@ -404,7 +437,8 @@
       "costPrice": 10048,
       "currentPrice": 11993,
       "value": 954904,
-      "currency": "JPY"
+      "currency": "JPY",
+      "cur": "JPY"
     },
     {
       "account": "ひふみ投信",
@@ -415,7 +449,8 @@
       "costPrice": 10048,
       "currentPrice": 11993,
       "value": 954904,
-      "currency": "JPY"
+      "currency": "JPY",
+      "cur": "JPY"
     },
     {
       "account": "ひふみ投信",
@@ -426,7 +461,8 @@
       "costPrice": 10178,
       "currentPrice": 13852,
       "value": 952757,
-      "currency": "JPY"
+      "currency": "JPY",
+      "cur": "JPY"
     },
     {
       "account": "ひふみ投信",
@@ -437,7 +473,8 @@
       "costPrice": 10178,
       "currentPrice": 13852,
       "value": 952757,
-      "currency": "JPY"
+      "currency": "JPY",
+      "cur": "JPY"
     }
   ]
 }
