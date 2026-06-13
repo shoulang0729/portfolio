@@ -4150,7 +4150,8 @@ function renderBriefing(force = false) {
     const latest = issues[0];
     const past = issues.slice(1);
     const pastHtml = past.length ? past.map((p) => `<a class="bf-past-item" href="${p.path}" target="_blank" rel="noopener"><span class="bf-past-name">${_esc(p.title)}</span><span class="bf-past-date">${_esc(p.date)}</span></a>`).join("") : '<div class="bf-none">\u904E\u53BB\u53F7\u306F\u307E\u3060\u3042\u308A\u307E\u305B\u3093</div>';
-    panel.innerHTML = `<div class="bf-wrap"><div class="bf-toolbar"><span class="bf-cur">${_esc(latest.title)}</span><span class="bf-actions"><a class="bf-ondemand" href="${TG_ONDEMAND_URL}" target="_blank" rel="noopener">\u{1F4AC} \u4ECA\u3059\u3050\u751F\u6210</a></span></div><iframe class="bf-frame" src="${latest.path}?_=${Date.now()}" title="${_esc(latest.title)}" loading="lazy"></iframe><div class="bf-past"><div class="bf-past-head">\u904E\u53BB\u306E Briefing</div>${pastHtml}</div></div>`;
+    const sparkle = '<svg class="bf-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.5z"/></svg>';
+    panel.innerHTML = `<div class="bf-wrap"><div class="bf-toolbar"><span class="bf-actions"><a class="bf-ondemand" href="${TG_ONDEMAND_URL}" target="_blank" rel="noopener">${sparkle}\u4ECA\u3059\u3050\u751F\u6210</a></span></div><iframe class="bf-frame" src="${latest.path}?_=${Date.now()}" title="${_esc(latest.title)}" loading="lazy"></iframe><div class="bf-past"><div class="bf-past-head">\u904E\u53BB\u306E Briefing</div>${pastHtml}</div></div>`;
     _frame = /** @type {HTMLIFrameElement|null} */
     panel.querySelector(".bf-frame");
     if (_frame) {
