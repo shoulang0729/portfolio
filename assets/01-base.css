@@ -55,6 +55,15 @@ html[data-theme="dark"] {
   --scrollbar-track:       transparent;
   --accent:    #cc785c;
 }
+/* セマンティックカラー（テーマ非依存・市場慣例＋状態色）。
+   ハードコード hex を排し、意味で参照できるようトークン化（Design System 準拠）。 */
+:root {
+  --pos:     #FF3B30;  /* 上昇・含み益＝赤（日本市場慣例） */
+  --neg:     #34C759;  /* 下落・含み損＝緑 */
+  --danger:  #FF3B30;  /* エラー・破壊的操作 */
+  --success: #34C759;  /* 成功・確定 */
+  --warn:    #FF9F0A;  /* 警告・コード強調 */
+}
 /* @media (prefers-color-scheme: dark) は app.js の applyTheme() が
    matchMedia で解決して data-theme="dark" を明示セットするため不要。
    システムテーマ追従は JS 側で行う（applyTheme / matchMedia listener）。 */
@@ -77,9 +86,9 @@ body {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   padding: 32px; text-align: center; gap: 16px;
 }
-#d3-load-error h2 { color: #FF3B30; font-size: 18px; }
+#d3-load-error h2 { color: var(--danger); font-size: 18px; }
 #d3-load-error p  { color: var(--text2); font-size: 13px; line-height: 1.6; }
-#d3-load-error code { color: #FF9F0A; background: var(--surface3); padding: 2px 6px; border-radius: 4px; }
+#d3-load-error code { color: var(--warn); background: var(--surface3); padding: 2px 6px; border-radius: 4px; }
 
 .sticky-top {
   position: sticky;
@@ -180,8 +189,8 @@ body {
 .stat-label { font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; text-align: left; }
 .stat-value { font-size: 14px; font-weight: 700; white-space: nowrap; text-align: right; }
 .stat-sub   { font-size: 12px; font-weight: 600; white-space: nowrap; text-align: right; }
-.pos { color: #FF3B30; }  /* プラス=赤（日本株市場慣例） */
-.neg { color: #34C759; }  /* マイナス=緑 */
+.pos { color: var(--pos); }  /* プラス=赤（日本株市場慣例） */
+.neg { color: var(--neg); }  /* マイナス=緑 */
 .neu { color: var(--text2); }
 .stat-fg { color: var(--text); }  /* stats バーの白文字（#309） */
 
@@ -316,12 +325,12 @@ body {
 .legend { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text2); }
 .legend-bar { height: 9px; width: 160px; border-radius: 3px; background: linear-gradient(to right, #1B5E20, #A5D6A7, #E8E8ED, #EF9A9A, #C62828); }
 .status-line { font-size: 11px; color: var(--text2); display: flex; align-items: center; gap: 5px; cursor: pointer; }
-.dot { width: 6px; height: 6px; border-radius: 50%; background: #34C759; display: inline-block; }
-.dot.red { background: #FF3B30; }
-.dot.yellow { background: #FF9F0A; }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); display: inline-block; }
+.dot.red { background: var(--danger); }
+.dot.yellow { background: var(--warn); }
 .provider-health { font-size: 10px; color: var(--text3); white-space: nowrap; flex-shrink: 0; }
 .provider-health.health-ok { color: var(--text3); }
-.provider-health.health-warn { color: #FF9F0A; }
+.provider-health.health-warn { color: var(--warn); }
 
 .ctrl-label { font-size: 12px; color: var(--text2); white-space: nowrap; flex-shrink: 0; }
 .ctrl-group { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
@@ -343,8 +352,8 @@ body {
   align-items: center;
 }
 #hm-menu-btn {
-  border: none !important;
-  background: transparent !important;
+  border: none;
+  background: transparent;
   padding: 4px 6px;
   width: 48px; height: 48px;
   display: flex; align-items: center; justify-content: center;
@@ -353,7 +362,7 @@ body {
   cursor: pointer;
   min-width: unset;
 }
-#hm-menu-btn:hover { color: var(--text); background: transparent !important; }
+#hm-menu-btn:hover { color: var(--text); background: transparent; }
 #hm-menu-btn .hm-bar,
 #hm-menu-btn .hm-x {
   position: absolute;
@@ -501,14 +510,14 @@ body {
 .range-btn:hover { background: var(--surface3); }
 .range-btn.active { background: #007AFF; border-color: #007AFF; color: #fff; }
 .chart-loading { text-align: center; padding: 60px 20px; color: var(--text2); font-size: 14px; }
-.chart-error { text-align: center; padding: 60px 20px; color: #FF3B30; font-size: 14px; }
+.chart-error { text-align: center; padding: 60px 20px; color: var(--danger); font-size: 14px; }
 .chart-stats {
   display: flex; gap: 14px 20px; font-size: 12.5px; color: var(--text2);
   margin-top: 12px; flex-wrap: wrap; align-items: center;
 }
 .chart-stats strong { font-weight: 600; color: var(--text); }
-.chart-stats .pos  strong { color: #FF453A; }  /* プラス=赤 */
-.chart-stats .neg  strong { color: #30D158; }  /* マイナス=緑 */
+.chart-stats .pos  strong { color: var(--pos); }  /* プラス=赤 */
+.chart-stats .neg  strong { color: var(--neg); }  /* マイナス=緑 */
 #chart-svg { display: block; }
 
 /* ── Stock List ── */

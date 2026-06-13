@@ -245,7 +245,7 @@
 #panel-briefing { padding: 0; }
 .bf-wrap { display: flex; flex-direction: column; }
 .bf-msg { padding: 32px 16px; text-align: center; color: var(--text2); font-size: 14px; }
-.bf-msg.bf-err { color: var(--down, #c8472f); }
+.bf-msg.bf-err { color: var(--danger); }
 .bf-toolbar {
   display: flex; align-items: center; justify-content: space-between;
   gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border);
@@ -389,7 +389,7 @@
   font-weight: 600;
 }
 .wl-add-tag {
-  background: var(--accent, #0a84ff);
+  background: var(--accent);
   color: #fff;
 }
 .wl-registered {
