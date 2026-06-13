@@ -183,6 +183,7 @@ body {
 .pos { color: #FF3B30; }  /* プラス=赤（日本株市場慣例） */
 .neg { color: #34C759; }  /* マイナス=緑 */
 .neu { color: var(--text2); }
+.stat-fg { color: var(--text); }  /* stats バーの白文字（#309） */
 
 /* ── Period / Refresh switch ── */
 .period-switch, .refresh-switch {

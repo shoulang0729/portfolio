@@ -21,14 +21,14 @@ const TITLES = {
 
 /** カテゴリキー → 表示ラベル */
 const LABELS = {
-  assetClass: { equity: '株式', bond: '債券', commodity: 'コモディティ', reit: 'REIT', cash: '現金' },
+  assetClass: { equity: '株式', bond: '債券', commodity: 'コモディティ', reit: 'REIT', cash: '現金', crypto: '暗号資産' },
   currency: { JPY: '円 JPY', USD: 'ドル USD', EUR: 'ユーロ EUR', other: 'その他通貨' },
   country: { japan: '日本', us: '米国', europe: '欧州', em: '新興国', latam: '中南米', china: '中国', global: '分散', commodity: 'コモディティ' },
   sector: {
     tech: 'ソフトウェア/IT', semis: '半導体', financials: '金融', healthcare: 'ヘルスケア',
     consumer: '一般消費財', staples: '生活必需品', industrials: '資本財', energy: 'エネルギー',
     materials: '素材', comm: '通信', utilities: '公益', realestate: '不動産',
-    commodity: 'コモディティ', bond: '債券', cash: '現金',
+    commodity: 'コモディティ', bond: '債券', cash: '現金', crypto: '暗号資産',
   },
 };
 
