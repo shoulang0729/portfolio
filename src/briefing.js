@@ -9,6 +9,31 @@
 // ══════════════════════════════════════════════════════════════
 
 let _loaded = false;
+/** @type {HTMLIFrameElement|null} */
+let _frame = null;
+let _themeObserver = null;
+
+/**
+ * アプリの現在テーマを iframe 内ドキュメントに伝搬する。
+ * 'light'/'dark' は data-theme で明示、'auto' は属性を外して prefers-color-scheme に委ねる。
+ */
+function _syncFrameTheme() {
+  if (!_frame) return;
+  try {
+    const t = document.documentElement.getAttribute('data-theme');
+    const idoc = _frame.contentDocument?.documentElement;
+    if (!idoc) return;
+    if (t === 'light' || t === 'dark') idoc.setAttribute('data-theme', t);
+    else idoc.removeAttribute('data-theme');
+  } catch { /* cross-origin 等は無視 */ }
+}
+
+/** 親アプリの data-theme 変化を監視して iframe に伝搬（一度だけ設置） */
+function _ensureThemeObserver() {
+  if (_themeObserver) return;
+  _themeObserver = new MutationObserver(_syncFrameTheme);
+  _themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+}
 
 /**
  * Briefing タブを描画する（初回のみ自動ロード、force で再読込）
@@ -40,15 +65,17 @@ export function renderBriefing(force = false) {
 
       panel.innerHTML = `<div class="bf-wrap"><div class="bf-toolbar"><span class="bf-cur">${_esc(latest.title)}</span><button class="bf-reload" data-action="reloadBriefing" title="再読み込み">↻</button></div><iframe class="bf-frame" src="${latest.path}" title="${_esc(latest.title)}" loading="lazy"></iframe><div class="bf-past"><div class="bf-past-head">過去の Briefing</div>${pastHtml}</div></div>`;
 
-      // 同一オリジンなので iframe を中身の高さにフィットさせる
-      const frame = /** @type {HTMLIFrameElement|null} */ (panel.querySelector('.bf-frame'));
-      if (frame) {
-        frame.addEventListener('load', () => {
+      // 同一オリジンなので iframe を中身の高さにフィットさせ、テーマを伝搬
+      _frame = /** @type {HTMLIFrameElement|null} */ (panel.querySelector('.bf-frame'));
+      if (_frame) {
+        _frame.addEventListener('load', () => {
+          _syncFrameTheme();
           try {
-            const h = frame.contentWindow?.document?.body?.scrollHeight;
-            if (h) frame.style.height = `${h + 24}px`;
+            const h = _frame?.contentWindow?.document?.body?.scrollHeight;
+            if (h) _frame.style.height = `${h + 24}px`;
           } catch { /* cross-origin 等は無視 */ }
         });
+        _ensureThemeObserver();
       }
       _loaded = true;
     })
