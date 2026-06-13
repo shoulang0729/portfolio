@@ -4074,7 +4074,7 @@ function renderBriefing(force = false) {
     const latest = issues[0];
     const past = issues.slice(1);
     const pastHtml = past.length ? past.map((p) => `<a class="bf-past-item" href="${p.path}" target="_blank" rel="noopener"><span class="bf-past-name">${_esc(p.title)}</span><span class="bf-past-date">${_esc(p.date)}</span></a>`).join("") : '<div class="bf-none">\u904E\u53BB\u53F7\u306F\u307E\u3060\u3042\u308A\u307E\u305B\u3093</div>';
-    panel.innerHTML = `<div class="bf-wrap"><div class="bf-toolbar"><span class="bf-cur">${_esc(latest.title)}</span><span class="bf-actions"><a class="bf-ondemand" href="${TG_ONDEMAND_URL}" target="_blank" rel="noopener">\u{1F4AC} \u4ECA\u3059\u3050\u751F\u6210</a><button class="bf-reload" data-action="reloadBriefing" title="\u518D\u8AAD\u307F\u8FBC\u307F">\u21BB</button></span></div><iframe class="bf-frame" src="${latest.path}?_=${Date.now()}" title="${_esc(latest.title)}" loading="lazy"></iframe><div class="bf-past"><div class="bf-past-head">\u904E\u53BB\u306E Briefing</div>${pastHtml}</div></div>`;
+    panel.innerHTML = `<div class="bf-wrap"><div class="bf-toolbar"><span class="bf-cur">${_esc(latest.title)}</span><span class="bf-actions"><a class="bf-ondemand" href="${TG_ONDEMAND_URL}" target="_blank" rel="noopener">\u{1F4AC} \u4ECA\u3059\u3050\u751F\u6210</a></span></div><iframe class="bf-frame" src="${latest.path}?_=${Date.now()}" title="${_esc(latest.title)}" loading="lazy"></iframe><div class="bf-past"><div class="bf-past-head">\u904E\u53BB\u306E Briefing</div>${pastHtml}</div></div>`;
     _frame = /** @type {HTMLIFrameElement|null} */
     panel.querySelector(".bf-frame");
     if (_frame) {
