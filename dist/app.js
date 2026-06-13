@@ -3049,16 +3049,70 @@ function renderWatchlist() {
   </table>`;
 }
 
+// src/networth.js
+var MF_URL = "data/mf-holdings.json";
+var EMERGENCY_FUND = 2e7;
+var _mf = null;
+async function loadMfHoldings() {
+  try {
+    const r = await fetch(`${MF_URL}?_=${Date.now()}`);
+    if (!r.ok) throw new Error(`mf ${r.status}`);
+    _mf = await r.json();
+  } catch {
+    _mf = null;
+  }
+  return _mf;
+}
+function _sum(pred) {
+  if (!_mf || !_mf.holdings) return 0;
+  return _mf.holdings.reduce((a, x) => a + (pred(x) ? Number(x.value) || 0 : 0), 0);
+}
+function getMfTotals() {
+  if (!_mf || !_mf.holdings) return null;
+  const imported = _mf.totals && _mf.totals.imported || _sum(() => true);
+  const cash = _sum((x) => x.cat === "\u73FE\u91D1\u30FB\u9810\u91D1");
+  const crypto2 = _sum((x) => x.cat === "\u6697\u53F7\u8CC7\u7523");
+  const securities = imported - cash - crypto2;
+  const dryPowder = Math.max(0, cash - EMERGENCY_FUND);
+  const investable = imported - EMERGENCY_FUND;
+  const cashRatio = investable > 0 ? dryPowder / investable * 100 : 0;
+  return { imported, cash, crypto: crypto2, securities, dryPowder, cashRatio, emergencyFund: EMERGENCY_FUND, asOf: _mf.asOf };
+}
+function getMfManualAssets() {
+  if (!_mf || !_mf.holdings) return null;
+  const jpyCash = _sum((x) => x.cat === "\u73FE\u91D1\u30FB\u9810\u91D1" && x.cur !== "USD");
+  const usdCash = _sum((x) => x.cat === "\u73FE\u91D1\u30FB\u9810\u91D1" && x.cur === "USD");
+  const crypto2 = _sum((x) => x.cat === "\u6697\u53F7\u8CC7\u7523");
+  const out = [];
+  if (jpyCash) out.push({ symbol: "\u73FE\u91D1(\u5186)", name: "\u73FE\u91D1\uFF08\u65E5\u672C\u5186\uFF09", value: jpyCash, cur: "JPY" });
+  if (usdCash) out.push({ symbol: "\u73FE\u91D1(USD)", name: "\u73FE\u91D1\uFF08\u7C73\u30C9\u30EB\u30FB\u5186\u63DB\u7B97\uFF09", value: usdCash, cur: "USD" });
+  if (crypto2) out.push({ symbol: "\u6697\u53F7\u8CC7\u7523", name: "\u6697\u53F7\u8CC7\u7523\uFF08BTC/ETH\u7B49\uFF09", value: crypto2, cur: "JPY" });
+  return out.length ? out : null;
+}
+function getMfSources() {
+  if (!_mf) return null;
+  return [`\u73FE\u91D1\u30FB\u6697\u53F7\u8CC7\u7523 = Money Forward \u5B9F\u5024\uFF08${_mf.asOf || ""}\u30FBmf-holdings.json\uFF09`];
+}
+
 // src/render.js
 function renderStats() {
   const totalValue = positions.reduce((s, p) => s + (p.value || 0), 0);
   const totalPnl = positions.reduce((s, p) => s + (p.pnl || 0), 0);
   const totalCost = totalValue - totalPnl;
   const pnlPct = totalCost > 0 ? totalPnl / totalCost * 100 : 0;
+  const mf = getMfTotals();
+  const grandTotal = mf ? mf.imported : totalValue;
   let html = `<div class="stat">
-    <span class="stat-label">\u8CC7\u7523\u7DCF\u984D</span>
-    <span class="stat-value neu">${fmtJPYInt(totalValue)}</span>
+    <span class="stat-label">\u8CC7\u7523\u7DCF\u984D${mf ? "\uFF08MF\u5B9F\u5024\uFF09" : ""}</span>
+    <span class="stat-value neu">${fmtJPYInt(grandTotal)}</span>
   </div>`;
+  if (mf) {
+    html += `<div class="stat">
+      <span class="stat-label">\u30AD\u30E3\u30C3\u30B7\u30E5\u6BD4\u7387</span>
+      <span class="stat-value neu">${mf.cashRatio.toFixed(1)}%</span>
+      <span class="stat-sub neu">\u6295\u8CC7\u7528\xA5${Math.round(mf.dryPowder / 1e6)}M</span>
+    </div>`;
+  }
   html += `<div class="stat">
     <span class="stat-label">\u542B\u307F\u640D\u76CA</span>
     <span class="stat-value ${sgn(totalPnl)}">${fmtJPYInt(totalPnl)}</span>
@@ -3964,7 +4018,8 @@ function renderRiskCharts() {
   const wrap = document.getElementById("risk-charts-wrap");
   if (!wrap) return;
   if (typeof d3 === "undefined") return;
-  const assets = [...positions, ...MANUAL_ASSETS];
+  const manualAssets = getMfManualAssets() || MANUAL_ASSETS;
+  const assets = [...positions, ...manualAssets];
   const breakdown = computeRiskBreakdown(assets);
   const sourceSummary = getSourceSummary(assets);
   wrap.textContent = "";
@@ -3997,7 +4052,9 @@ function renderRiskCharts() {
   const src = document.createElement("div");
   src.className = "risk-source";
   const baseSrc = "\u30C7\u30FC\u30BF\u30BD\u30FC\u30B9: \u4FA1\u683C = Finnhub / Yahoo Finance \u30FB \u30A2\u30BB\u30C3\u30C8\u30AF\u30E9\u30B9/\u901A\u8CA8/\u56FD/\u30BB\u30AF\u30BF\u30FC\u5206\u985E = \u9298\u67C4\u30DE\u30B9\u30BF\uFF08positions.js\u30FBconstituents.js\uFF09";
-  src.textContent = [baseSrc, ...MANUAL_SOURCES].join(" \uFF0F ");
+  const mfSrc = getMfSources();
+  const srcLines = mfSrc ? [baseSrc, ...mfSrc, MANUAL_SOURCES[1]] : [baseSrc, ...MANUAL_SOURCES];
+  src.textContent = srcLines.filter(Boolean).join(" \uFF0F ");
   wrap.appendChild(src);
 }
 function showLegendTip(ev, dim, key, dimResult) {
@@ -5617,6 +5674,8 @@ function init() {
   if (panelBriefing) panelBriefing.hidden = true;
   if (panelAi) panelAi.hidden = true;
   renderStats();
+  loadMfHoldings().then(() => renderStats()).catch(() => {
+  });
   const _stats = document.getElementById("stats");
   if (_stats) _stats.style.display = state.statsVisible ? "" : "none";
   const _eye = document.getElementById("stats-eye");
