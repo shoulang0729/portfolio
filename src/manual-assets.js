@@ -1,14 +1,12 @@
 // ══════════════════════════════════════════════════════════════
-// manual-assets.js  ―  手動入力の資産（Exposure タブの look-through に含める）
+// manual-assets.js  ―  非証券資産の【フォールバック】定義
 //
-// positions.js（証券）に乗らない資産（現金など）をここに定義する。
-// Exposure タブの集計にのみ使われ、Heatmap/Historical/価格取得には影響しない。
+// ★2026/06〜: 現金・暗号資産の正は Money Forward 実値（networth.js / mf-holdings.json）。
+//   Exposure の look-through は getMfManualAssets() を優先し、mf-holdings 未ロード時のみ
+//   この MANUAL_ASSETS を使う（＝二重計上しない）。通常運用ではこの値は使われない。
 //
 // 各エントリは positions と同じ {symbol, name, value, cur} 形。
-// 分解（資産クラス/通貨/国/セクター）は constituents.js の CONSTITUENTS に
-// 同じ symbol で定義すること。
-//
-// ★ 値は手動更新。更新時は MANUAL_SOURCES の日付も合わせて直すこと。
+// 分解（資産クラス/通貨/国/セクター）は constituents.js の CONSTITUENTS に同じ symbol で定義。
 // ══════════════════════════════════════════════════════════════
 
 /** @type {Array<{symbol: string, name: string, value: number, cur: string}>} */

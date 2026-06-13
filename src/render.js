@@ -13,22 +13,35 @@ import { renderStockList } from './stock-list.js';
 import { renderWatchlist } from './watchlist.js';
 import { fetchAllHistorical } from './data.js';
 import { setStatus } from './ui-status.js';
+import { getMfTotals } from './networth.js';
 
 /**
  * Stats バー（資産総額・含み損益・期間パフォーマンス）の再描画
  * @returns {void}
  */
 export function renderStats() {
-  const totalValue = positions.reduce((s, p) => s + (p.value || 0), 0);
+  const totalValue = positions.reduce((s, p) => s + (p.value || 0), 0); // ライブ証券（期間PFの基準）
   const totalPnl   = positions.reduce((s, p) => s + (p.pnl   || 0), 0);
 
   const totalCost  = totalValue - totalPnl;
   const pnlPct     = totalCost > 0 ? totalPnl / totalCost * 100 : 0;
 
+  // 資産総額は Money Forward 実値（mf-holdings）。未ロードならライブ証券合計にフォールバック
+  const mf = getMfTotals();
+  const grandTotal = mf ? mf.imported : totalValue;
+
   let html = `<div class="stat">
-    <span class="stat-label">資産総額</span>
-    <span class="stat-value neu">${fmtJPYInt(totalValue)}</span>
+    <span class="stat-label">資産総額${mf ? '（MF実値）' : ''}</span>
+    <span class="stat-value neu">${fmtJPYInt(grandTotal)}</span>
   </div>`;
+
+  if (mf) {
+    html += `<div class="stat">
+      <span class="stat-label">キャッシュ比率</span>
+      <span class="stat-value neu">${mf.cashRatio.toFixed(1)}%</span>
+      <span class="stat-sub neu">投資用¥${Math.round(mf.dryPowder / 1e6)}M</span>
+    </div>`;
+  }
 
   html += `<div class="stat">
     <span class="stat-label">含み損益</span>
