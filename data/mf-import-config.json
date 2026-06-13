@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "updatedAt": "2026-06-13",
+  "purpose": "Claude for Chrome が MoneyForward (moneyforward.com/bs/portfolio) から data/mf-holdings.json を更新する際の取り込みルール。Chrome は取り込み前に必ず本ファイル(raw)を読み、ここに書かれたルールだけに従うこと。",
+  "source": "https://moneyforward.com/bs/portfolio",
+  "include": {
+    "categories": [
+      "株式(現物)",
+      "投資信託",
+      "債券",
+      "年金",
+      "暗号資産",
+      "預金・現金",
+      "FX・商品先物",
+      "その他・事業性資産"
+    ],
+    "note": "allowlist。MFの資産種類すべてを対象。ここに無い種類(ポイント・マイル/保険/不動産 等)は取り込まない。"
+  },
+  "exclude": {
+    "accounts": [],
+    "holdings": [],
+    "note": "口座/金融機関 単位の除外リスト(部分一致で判定)。初回の口座棚卸し(docs/routine_mf_discovery.md)で全口座を一覧化し、除外したい口座名をここ accounts に追記する。holdings は特定銘柄をピンポイントで外したいとき。"
+  },
+  "cash": {
+    "includeInPositions": true,
+    "cat": "現金・預金",
+    "note": "預金・現金を holdings にも入れる。★二重計上注意: フロントの src/manual-assets.js が現金をハードコードで別計上しているため、本運用に移行したら manual-assets.js 側の現金エントリは撤去すること(別タスク)。"
+  },
+  "categoryToCat": {
+    "株式(現物)_JP": "日本株・ETF",
+    "株式(現物)_US": "米国株・ETF",
+    "投資信託": "投資信託",
+    "債券": "債券",
+    "年金": "年金",
+    "暗号資産": "暗号資産",
+    "預金・現金": "現金・預金",
+    "FX・商品先物": "FX・商品先物",
+    "その他・事業性資産": "その他",
+    "note": "株式(現物)は市場で日米を判定する。日本株/ETF(4桁コード or .T) → 日本株・ETF / ySymbol=\"<code>.T\"。米国株/ETF → 米国株・ETF / ySymbol=ティッカー。"
+  },
+  "checksum": {
+    "enabled": true,
+    "tolerancePct": 1.0,
+    "rule": "Σ(holdings[].value) ≈ MF総資産 − Σ(除外した口座の評価額) を ±1% で確認。加えて、口座ごとに Σ(該当holdings.value) ≈ MFのその口座の合計表示 を確認する。",
+    "onMismatch": "data/mf-holdings.json をコミットせず中止し、どの口座/カテゴリで何円ズレたかを報告する。"
+  },
+  "commit": {
+    "target": "main",
+    "path": "data/mf-holdings.json",
+    "method": "GitHub Web editor: github.com/shoulang0729/portfolio/blob/main/data/mf-holdings.json → 鉛筆アイコン → 内容を差し替え → Commit directly to the main branch。",
+    "commitMessage": "data: refresh MF holdings snapshot (YYYY-MM-DD)"
+  }
+}
