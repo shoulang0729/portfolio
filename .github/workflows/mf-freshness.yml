@@ -1,0 +1,85 @@
+name: MF Holdings Freshness
+
+# data/mf-holdings.json（MoneyForward 取り込み）の鮮度を見張る専任ワークフロー。
+# MFログイン不要（asOf を見るだけ）なので Actions で完結し、Mulmo が落ちていても動く。
+# 取り込み本体は Claude for Chrome（実ブラウザセッション）のまま。Actions は鮮度の見張り専任（#312）。
+
+on:
+  schedule:
+    - cron: '0 22 * * *'   # 毎日 22:00 UTC = 翌 07:00 JST（朝にチェック）
+  workflow_dispatch:         # 手動実行
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  STALE_DAYS: '3'            # この日数以上古ければ Issue を起票（既定3・env で可変）
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute freshness
+        id: fresh
+        run: |
+          ASOF=$(jq -r '.asOf // empty' data/mf-holdings.json)
+          if [ -z "$ASOF" ]; then
+            echo "::error::data/mf-holdings.json に asOf がありません"
+            exit 1
+          fi
+          ASOF_EPOCH=$(date -d "$ASOF" +%s)
+          NOW_EPOCH=$(date +%s)
+          DAYS=$(( (NOW_EPOCH - ASOF_EPOCH) / 86400 ))
+          ASOF_DATE=$(date -d "$ASOF" +%Y-%m-%d)
+          echo "asof=$ASOF_DATE" >> "$GITHUB_OUTPUT"
+          echo "days=$DAYS"      >> "$GITHUB_OUTPUT"
+          echo "MF asOf=$ASOF_DATE / 経過 $DAYS 日 / 閾値 $STALE_DAYS 日"
+
+      - name: Ensure stale-mf-holdings label exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create stale-mf-holdings \
+            --color D93F0B \
+            --description "MoneyForward 取り込みが古い（自動管理）" 2>/dev/null || true
+
+      - name: Open / update / close stale issue (idempotent)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DAYS: ${{ steps.fresh.outputs.days }}
+          ASOF: ${{ steps.fresh.outputs.asof }}
+          REPO: ${{ github.repository }}
+        run: |
+          EXISTING=$(gh issue list --state open --label stale-mf-holdings --json number --jq '.[0].number // ""')
+
+          if [ "$DAYS" -ge "$STALE_DAYS" ]; then
+            TITLE="⚠ MF取り込みが ${DAYS} 日前です（再取り込み推奨）"
+            BODY=$(cat <<EOF
+          MoneyForward 取り込み（\`data/mf-holdings.json\`）が古くなっています。
+
+          - **asOf**: ${ASOF}
+          - **経過日数**: ${DAYS} 日（閾値 ${STALE_DAYS} 日）
+          - **再取り込み手順**: [docs/routine_mf_snapshot.md](https://github.com/${REPO}/blob/main/docs/routine_mf_snapshot.md)（Claude for Chrome の実ブラウザセッションで実行）
+
+          > このIssueは \`MF Holdings Freshness\` ワークフローが自動管理しています（鮮度OKになると自動クローズ）。
+          EOF
+          )
+            if [ -n "$EXISTING" ]; then
+              gh issue edit "$EXISTING" --title "$TITLE" --body "$BODY"
+              echo "Updated stale issue #$EXISTING"
+            else
+              gh issue create --title "$TITLE" --body "$BODY" --label stale-mf-holdings
+              echo "Created stale issue"
+            fi
+          else
+            if [ -n "$EXISTING" ]; then
+              gh issue close "$EXISTING" \
+                --comment "✅ MF取り込みが最新化されました（asOf ${ASOF} / 経過 ${DAYS} 日）。自動クローズします。"
+              echo "Closed stale issue #$EXISTING"
+            else
+              echo "鮮度OK（経過 ${DAYS} 日 < 閾値 ${STALE_DAYS} 日）・対応不要"
+            fi
+          fi

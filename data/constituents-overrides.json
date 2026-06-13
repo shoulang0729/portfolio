@@ -500,5 +500,19 @@
     "sector": {
       "cash": 1
     }
+  },
+  "暗号資産": {
+    "assetClass": {
+      "crypto": 1
+    },
+    "currency": {
+      "other": 1
+    },
+    "country": {
+      "global": 1
+    },
+    "sector": {
+      "crypto": 1
+    }
   }
 }
