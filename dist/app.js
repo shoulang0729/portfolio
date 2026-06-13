@@ -4036,6 +4036,51 @@ function showSymbolTip(ev, title, symbols) {
   moveLegendTip(ev);
 }
 
+// src/briefing.js
+var _loaded = false;
+function renderBriefing(force = false) {
+  const panel = document.getElementById("panel-briefing");
+  if (!panel) return;
+  if (_loaded && !force) return;
+  panel.innerHTML = '<div class="bf-msg">\u8AAD\u307F\u8FBC\u307F\u4E2D\u2026</div>';
+  fetch(`data/briefings/index.json?_=${Date.now()}`).then((r) => {
+    if (!r.ok) throw new Error(`index ${r.status}`);
+    return r.json();
+  }).then((idx) => {
+    const issues = (idx.issues || []).slice().sort((a, b) => a.date < b.date ? 1 : -1);
+    if (!issues.length) {
+      panel.innerHTML = '<div class="bf-msg">\u307E\u3060 Briefing \u304C\u3042\u308A\u307E\u305B\u3093\u3002</div>';
+      return;
+    }
+    const latest = issues[0];
+    const past = issues.slice(1);
+    const pastHtml = past.length ? past.map((p) => `<a class="bf-past-item" href="${p.path}" target="_blank" rel="noopener"><span class="bf-past-name">${_esc(p.title)}</span><span class="bf-past-date">${_esc(p.date)}</span></a>`).join("") : '<div class="bf-none">\u904E\u53BB\u53F7\u306F\u307E\u3060\u3042\u308A\u307E\u305B\u3093</div>';
+    panel.innerHTML = `<div class="bf-wrap"><div class="bf-toolbar"><span class="bf-cur">${_esc(latest.title)}</span><button class="bf-reload" data-action="reloadBriefing" title="\u518D\u8AAD\u307F\u8FBC\u307F">\u21BB</button></div><iframe class="bf-frame" src="${latest.path}" title="${_esc(latest.title)}" loading="lazy"></iframe><div class="bf-past"><div class="bf-past-head">\u904E\u53BB\u306E Briefing</div>${pastHtml}</div></div>`;
+    const frame = (
+      /** @type {HTMLIFrameElement|null} */
+      panel.querySelector(".bf-frame")
+    );
+    if (frame) {
+      frame.addEventListener("load", () => {
+        try {
+          const h = frame.contentWindow?.document?.body?.scrollHeight;
+          if (h) frame.style.height = `${h + 24}px`;
+        } catch {
+        }
+      });
+    }
+    _loaded = true;
+  }).catch(() => {
+    panel.innerHTML = '<div class="bf-msg bf-err">Briefing \u306E\u8AAD\u307F\u8FBC\u307F\u306B\u5931\u6557\u3057\u307E\u3057\u305F\u3002</div>';
+  });
+}
+function reloadBriefing() {
+  renderBriefing(true);
+}
+function _esc(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] || c);
+}
+
 // src/tabs.js
 function switchTab(name) {
   if (state.activeTab === name) return;
@@ -4048,11 +4093,13 @@ function switchTab(name) {
   const panelList = document.getElementById("panel-list");
   const panelWatchlist = document.getElementById("panel-watchlist");
   const panelRisk = document.getElementById("panel-risk");
+  const panelBriefing = document.getElementById("panel-briefing");
   const panelAi = document.getElementById("panel-ai");
   if (panelHeatmap) panelHeatmap.hidden = name !== "heatmap";
   if (panelList) panelList.hidden = name !== "list";
   if (panelWatchlist) panelWatchlist.hidden = name !== "watchlist";
   if (panelRisk) panelRisk.hidden = name !== "risk";
+  if (panelBriefing) panelBriefing.hidden = name !== "briefing";
   if (panelAi) panelAi.hidden = name !== "ai";
   document.querySelectorAll(".tab-btn[data-tab]").forEach((b) => {
     const isActive = b.dataset.tab === name;
@@ -4080,6 +4127,7 @@ function switchTab(name) {
     })();
   }
   if (name === "risk") renderRiskCharts();
+  if (name === "briefing") renderBriefing();
 }
 
 // src/init.js
@@ -5470,6 +5518,8 @@ var ACTION_MAP = {
   handleRefreshSelect,
   switchTab,
   triggerPortfolioSnapshot,
+  // briefing.js
+  reloadBriefing,
   // auth-ui.js
   authKeyPress,
   authBackspace,
@@ -5540,10 +5590,12 @@ function init() {
   const panelList = document.getElementById("panel-list");
   const panelWatchlist = document.getElementById("panel-watchlist");
   const panelRisk = document.getElementById("panel-risk");
+  const panelBriefing = document.getElementById("panel-briefing");
   const panelAi = document.getElementById("panel-ai");
   if (panelList) panelList.hidden = true;
   if (panelWatchlist) panelWatchlist.hidden = true;
   if (panelRisk) panelRisk.hidden = true;
+  if (panelBriefing) panelBriefing.hidden = true;
   if (panelAi) panelAi.hidden = true;
   renderStats();
   const _stats = document.getElementById("stats");
@@ -5562,7 +5614,7 @@ function init() {
   requestAnimationFrame(updateActiveTableHeight);
   try {
     const lastTab = localStorage.getItem("hm-active-tab");
-    if (lastTab && lastTab !== "heatmap" && ["list", "watchlist", "risk"].includes(lastTab)) {
+    if (lastTab && lastTab !== "heatmap" && ["list", "watchlist", "risk", "briefing"].includes(lastTab)) {
       requestAnimationFrame(() => switchTab(lastTab));
     } else if (lastTab === "ai") {
       localStorage.removeItem("hm-active-tab");
