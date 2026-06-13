@@ -3102,8 +3102,9 @@ function renderStats() {
   const pnlPct = totalCost > 0 ? totalPnl / totalCost * 100 : 0;
   const mf = getMfTotals();
   const grandTotal = mf ? mf.imported : totalValue;
+  const mfTag = mf ? '<span style="display:block;font-size:9px;font-weight:400;color:var(--text2);opacity:0.6;text-transform:none;letter-spacing:0;">MF\u5B9F\u5024</span>' : "";
   let html = `<div class="stat">
-    <span class="stat-label">\u8CC7\u7523\u7DCF\u984D${mf ? "\uFF08MF\u5B9F\u5024\uFF09" : ""}</span>
+    <span class="stat-label">\u8CC7\u7523\u7DCF\u984D${mfTag}</span>
     <span class="stat-value neu">${fmtJPYInt(grandTotal)}</span>
   </div>`;
   if (mf) {
