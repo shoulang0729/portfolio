@@ -29,6 +29,7 @@
   h1{font-size:22px;margin:0 0 2px;font-weight:800;letter-spacing:.03em;}
   .date{color:var(--text2);font-size:12.5px;}
   .stance{font-weight:800;color:var(--stance);}
+  .trend-stance{font-size:14.5px;font-weight:800;margin-bottom:10px;padding-bottom:9px;border-bottom:1px solid var(--border);}
   .nav{display:flex;gap:6px;overflow-x:auto;padding:10px 0 2px;-webkit-overflow-scrolling:touch;}
   .nav a{flex:0 0 auto;font-size:12px;color:var(--text2);text-decoration:none;
     background:var(--surface2);border:1px solid var(--border);padding:5px 10px;border-radius:999px;}
@@ -92,7 +93,7 @@
 </head>
 <body>
 <header>
-  <div class="date">2026/06/13（土）週次 · スタンス <span class="stance">⚠ 黄信号（乱高下後・高所警戒）</span></div>
+  <div class="date">2026/06/13（土）週次</div>
   <div class="nav">
     <a href="#s1">トレンド</a><a href="#s2">マクロ</a><a href="#s3">ヘルスチェック</a>
     <a href="#s4">PER</a><a href="#s5">メンター</a><a href="#s6">トリガー</a><a href="#s7">来週</a>
@@ -103,6 +104,7 @@
   <section id="s1">
     <div class="sec-title"><b>1</b> トレンド</div>
     <div class="card">
+      <div class="trend-stance">スタンス <span class="stance">⚠ 黄信号（乱高下後・高所警戒）</span></div>
       <table class="perf">
         <thead><tr><th>今週の地合い</th><th>月</th><th>火</th><th>水</th><th>木</th><th>金</th></tr></thead>
         <tbody><tr><td>S&amp;P500（V字）</td><td>小動き</td><td class="down">-0.5%</td><td class="down">急落 -1.6%</td><td class="up">反発</td><td class="up">+0.5%</td></tr></tbody>
