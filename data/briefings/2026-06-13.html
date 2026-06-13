@@ -29,6 +29,7 @@
   h1{font-size:22px;margin:0 0 2px;font-weight:800;letter-spacing:.03em;}
   .date{color:var(--text2);font-size:12.5px;}
   .stance{font-weight:800;color:var(--stance);}
+  .trend-stance{font-size:14.5px;font-weight:800;margin-bottom:10px;padding-bottom:9px;border-bottom:1px solid var(--border);}
   .nav{display:flex;gap:6px;overflow-x:auto;padding:10px 0 2px;-webkit-overflow-scrolling:touch;}
   .nav a{flex:0 0 auto;font-size:12px;color:var(--text2);text-decoration:none;
     background:var(--surface2);border:1px solid var(--border);padding:5px 10px;border-radius:999px;}
@@ -69,6 +70,7 @@
   .ment .who{font-weight:800;font-size:14px;color:var(--accent);}
   .ment .claim{font-size:14.5px;}
   .subh{font-size:11.5px;font-weight:800;color:var(--text2);margin:10px 0 2px;letter-spacing:.03em;}
+  .subh-ic{width:12px;height:12px;vertical-align:-1px;}
   .flag{display:flex;justify-content:space-between;gap:8px;padding:9px 0;border-bottom:1px solid var(--border);}
   .flag:last-child{border-bottom:none;}
   .lab{font-size:12px;padding:1px 8px;border-radius:6px;font-weight:800;align-self:flex-start;white-space:nowrap;}
@@ -91,21 +93,24 @@
 </head>
 <body>
 <header>
-  <div class="date">2026/06/13（土）週次 · スタンス <span class="stance">⚠ 黄信号（乱高下後・高所警戒）</span></div>
+  <div class="date">2026/06/13（土）週次</div>
   <div class="nav">
-    <a href="#s1">資産</a><a href="#s2">マクロ</a><a href="#s3">ヘルスチェック</a>
+    <a href="#s1">トレンド</a><a href="#s2">マクロ</a><a href="#s3">ヘルスチェック</a>
     <a href="#s4">PER</a><a href="#s5">メンター</a><a href="#s6">トリガー</a><a href="#s7">来週</a>
   </div>
 </header>
 <div class="wrap">
 
   <section id="s1">
-    <div class="sec-title"><b>1</b> 資産サマリ</div>
+    <div class="sec-title"><b>1</b> トレンド</div>
     <div class="card">
-      <div class="cashline"><span class="k">キャッシュ比率</span><span class="v">14.3%</span></div>
+      <div class="trend-stance">スタンス <span class="stance">⚠ 黄信号（乱高下後・高所警戒）</span></div>
       <table class="perf">
-        <thead><tr><th>今週の地合い</th><th>火</th><th>水</th><th>木</th><th>金</th></tr></thead>
-        <tbody><tr><td>S&amp;P500（V字）</td><td class="down">急落</td><td class="down">-1.6%</td><td class="up">反発</td><td class="up">+0.5%</td></tr></tbody>
+        <thead><tr><th>今週の地合い</th><th>月</th><th>火</th><th>水</th><th>木</th><th>金</th></tr></thead>
+        <tbody>
+          <tr><td>S&amp;P500（V字）</td><td>小動き</td><td class="down">-0.5%</td><td class="down">急落 -1.6%</td><td class="up">反発</td><td class="up">+0.5%</td></tr>
+          <tr><td>日経平均</td><td>小動き</td><td class="up">+0.3%</td><td class="down">-0.5%</td><td class="down">-1.2%</td><td class="up">+2.8%</td></tr>
+        </tbody>
       </table>
       <div class="movers">
         <div class="mv-col">
@@ -122,7 +127,7 @@
         </div>
       </div>
       <div class="insight"><span class="ilabel">💡 Claudeのインサイト：</span>今週は<b>水曜にCPI+4.2%（3年ぶり高水準）＋米イラン軍事衝突で急落 → 木金に和平期待＋SpaceX上場でV字回復</b>。あなたは<b>半導体を事前に抜いて現金14.3%で静観</b>＝乱高下を被弾せず眺められた。投資用現金（生活防衛除く）が押し目の弾。最大の使い道は依然 <b>NLR/DTCR 規制解除待ち</b>。</div>
-      <div class="note">※キャッシュ比率は運用資産（≈¥526M）が母数。総資産・現預金額は stats バー／Exposure で確認。期間騰落・主役は概算、精緻値は履歴蓄積後。</div>
+      <div class="note">※総資産・現預金・キャッシュ比率は stats バー／Exposure で確認。今週の地合い・主役は概算。</div>
     </div>
   </section>
 
@@ -170,7 +175,7 @@
       <div class="subh">◎ 割安・妥当（保有）</div>
       <div class="flag"><div><b>日本株ETF（TOPIX/1306）</b><div class="tk">日本株PER ≈16x vs S&amp;P ≈24x＝相対割安</div></div><span class="lab ok">相対割安</span></div>
       <div class="flag"><div><b>eMAXIS Slim 全世界（¥61.9M）</b><div class="tk">市場平均PER＝コア妥当水準</div></div><span class="lab ok">妥当</span></div>
-      <div class="subh">👁 ウォッチリスト（監視中）</div>
+      <div class="subh"><svg class="subh-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="2.6"/></svg> ウォッチリスト（監視中）</div>
       <div class="flag"><div><b>CRWD（数値訂正）</b><div class="tk">$658.79・予想PER128倍（旧記録"$380/78倍"は誤り）＝全く安くない</div></div><span class="lab hi">割高・据置</span></div>
       <div class="flag"><div><b>CBRS / LITE</b><div class="tk">CBRS $237 PER171倍／LITE 光通信は買い場待ち</div></div><span class="lab mid">割高・監視</span></div>
       <div class="insight"><span class="ilabel">💡 Claudeのインサイト：</span>米株が割高圏の今、<b>相対割安な日本株（TOPIX系）はリバランスの受け皿</b>。CRWDは「好決算後に押したら拾う」前提が崩れていた（PER128倍＝そもそも安くない）→ウォッチ優先度を下げてOK。銀行業1615は「PER低い=割安」でなくサイクル株の罠に注意。</div>
