@@ -12,10 +12,11 @@ import { renderStockList } from './stock-list.js';
 import { renderWatchlist, fetchWatchlistData, _loadWatchlistFromWorker } from './watchlist.js';
 import { updateListHeight, updateWatchlistHeight, updateHeatmapHeight } from './render.js';
 import { renderRiskCharts } from './risk-charts.js';
+import { renderBriefing } from './briefing.js';
 
 /**
  * Switch to a different tab and render its content
- * @param {'heatmap' | 'list' | 'watchlist' | 'risk' | 'ai'} name - Tab name
+ * @param {'heatmap' | 'list' | 'watchlist' | 'risk' | 'briefing' | 'ai'} name - Tab name
  * @returns {void}
  */
 export function switchTab(name) {
@@ -27,11 +28,13 @@ export function switchTab(name) {
   const panelList      = document.getElementById('panel-list');
   const panelWatchlist = document.getElementById('panel-watchlist');
   const panelRisk      = document.getElementById('panel-risk');
+  const panelBriefing  = document.getElementById('panel-briefing');
   const panelAi        = document.getElementById('panel-ai');
   if (panelHeatmap)   panelHeatmap.hidden   = (name !== 'heatmap');
   if (panelList)      panelList.hidden      = (name !== 'list');
   if (panelWatchlist) panelWatchlist.hidden = (name !== 'watchlist');
   if (panelRisk)      panelRisk.hidden      = (name !== 'risk');
+  if (panelBriefing)  panelBriefing.hidden  = (name !== 'briefing');
   if (panelAi)        panelAi.hidden        = (name !== 'ai');
 
   document.querySelectorAll('.tab-btn[data-tab]').forEach(b => {
@@ -69,4 +72,6 @@ export function switchTab(name) {
   }
 
   if (name === 'risk') renderRiskCharts();
+
+  if (name === 'briefing') renderBriefing();
 }
