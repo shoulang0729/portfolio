@@ -35,7 +35,7 @@
   line-height: 1;
   transition: background 0.1s, color 0.1s;
 }
-.wl-del-btn:hover { background: rgba(255,59,48,0.15); color: #ff3b30; }
+.wl-del-btn:hover { background: rgba(255,59,48,0.15); color: var(--danger); }
 
 /* ウォッチリスト検索ドロップダウン：価格・騰落率 */
 .wl-item-price {
@@ -47,8 +47,8 @@
   flex-shrink: 0;
 }
 .wl-item-pct { font-weight: 600; }
-.wl-item-pct.pos { color: #FF3B30; }
-.wl-item-pct.neg { color: #34C759; }
+.wl-item-pct.pos { color: var(--pos); }
+.wl-item-pct.neg { color: var(--neg); }
 
 
 /* ══════════════════════════════════════════════
@@ -136,16 +136,16 @@
   transform: scale(1.18);
 }
 .pin-dots.success .pin-dot.filled {
-  background: #34C759;
-  border-color: #34C759;
+  background: var(--success);
+  border-color: var(--success);
 }
-.pin-dots.success .pin-lock-icon { color: #34C759; }
+.pin-dots.success .pin-lock-icon { color: var(--success); }
 
 /* ── エラーメッセージ ── */
 .pin-error {
   height: 18px;
   font-size: 12px;
-  color: #FF3B30;
+  color: var(--danger);
   margin-top: 12px;
   margin-bottom: 0;
   text-align: center;
