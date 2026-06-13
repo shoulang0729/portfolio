@@ -22,9 +22,13 @@ function getHistoricalChangePct(symbol, periodId) {
   if (periodId === '1d') {
     startPoint = data[data.length - 2];
   } else {
-    const targetDate = new Date(Date.now() - cfg.days * 86400000);
+    // 基準は「現在時刻」ではなく履歴データの最終点。アプリ時刻と履歴の最終日がズレても
+    // 期間が潰れない（履歴が数日古いと 1w が同一点を拾って 0% になるバグの修正）。
+    const lastPt = data[data.length - 1];
+    const lastMs = lastPt.date instanceof Date ? lastPt.date.getTime() : new Date(lastPt.date).getTime();
+    const targetDate = new Date(lastMs - cfg.days * 86400000);
     startPoint = null;
-    for (let i = data.length - 1; i >= 0; i--) {
+    for (let i = data.length - 2; i >= 0; i--) {
       if (data[i].date <= targetDate) { startPoint = data[i]; break; }
     }
     if (!startPoint) startPoint = data[0];
