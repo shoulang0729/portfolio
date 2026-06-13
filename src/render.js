@@ -30,8 +30,9 @@ export function renderStats() {
   const mf = getMfTotals();
   const grandTotal = mf ? mf.imported : totalValue;
 
+  const mfTag = mf ? '<span style="display:block;font-size:9px;font-weight:400;color:var(--text2);opacity:0.6;text-transform:none;letter-spacing:0;">MF実値</span>' : '';
   let html = `<div class="stat">
-    <span class="stat-label">資産総額${mf ? '（MF実値）' : ''}</span>
+    <span class="stat-label">資産総額${mfTag}</span>
     <span class="stat-value neu">${fmtJPYInt(grandTotal)}</span>
   </div>`;
 

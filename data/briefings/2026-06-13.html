@@ -5,20 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Briefing — 2026/06/13</title>
 <style>
+  /* 色は日本株市場慣例＝プラス赤 / マイナス緑（アプリと統一） */
   :root{
     --bg:#f7f2ee;--surface:#ffffff;--surface2:#f0e9e3;--surface3:#e8ddd7;
     --border:#d4c8c0;--text:#1c1714;--text2:#78695f;--accent:#cc785c;
-    --up:#1a8f57;--down:#c8472f;--stance:#b9822e;
+    --up:#FF3B30;--down:#34C759;--stance:#b9822e;
   }
   @media (prefers-color-scheme:dark){
     :root{--bg:#1c1917;--surface:#27211e;--surface2:#322b28;--surface3:#2e2722;
       --border:#48403b;--text:#f5f0ec;--text2:#b3a79e;--accent:#e08a6a;
-      --up:#4cd08a;--down:#ff6b5d;--stance:#e6b566;}
+      --up:#FF453A;--down:#30D158;--stance:#e6b566;}
   }
   html[data-theme="light"]{--bg:#f7f2ee;--surface:#ffffff;--surface2:#f0e9e3;--surface3:#e8ddd7;
-    --border:#d4c8c0;--text:#1c1714;--text2:#78695f;--accent:#cc785c;--up:#1a8f57;--down:#c8472f;--stance:#b9822e;}
+    --border:#d4c8c0;--text:#1c1714;--text2:#78695f;--accent:#cc785c;--up:#FF3B30;--down:#34C759;--stance:#b9822e;}
   html[data-theme="dark"]{--bg:#1c1917;--surface:#27211e;--surface2:#322b28;--surface3:#2e2722;
-    --border:#48403b;--text:#f5f0ec;--text2:#b3a79e;--accent:#e08a6a;--up:#4cd08a;--down:#ff6b5d;--stance:#e6b566;}
+    --border:#48403b;--text:#f5f0ec;--text2:#b3a79e;--accent:#e08a6a;--up:#FF453A;--down:#30D158;--stance:#e6b566;}
   *{box-sizing:border-box;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent;}
   body{margin:0;background:var(--bg);color:var(--text);
     font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
@@ -42,10 +43,11 @@
     padding-top:11px;border-top:1px solid var(--border);}
   .cashline .k{font-size:12.5px;color:var(--text2);} .cashline .v{font-size:16px;font-weight:800;}
   .up{color:var(--up);}.down{color:var(--down);}
-  table.mkt{width:100%;border-collapse:collapse;font-size:12px;}
-  table.mkt th{font-size:10px;color:var(--text2);font-weight:700;text-align:right;padding:4px 0 6px;border-bottom:1px solid var(--border);}
+  .mkt-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  table.mkt{width:100%;border-collapse:collapse;font-size:11.5px;min-width:330px;}
+  table.mkt th{font-size:10px;color:var(--text2);font-weight:700;text-align:right;padding:4px 4px 6px 0;border-bottom:1px solid var(--border);white-space:nowrap;}
   table.mkt th:first-child{text-align:left;}
-  table.mkt td{padding:7px 0;border-bottom:1px solid var(--border);text-align:right;font-weight:700;}
+  table.mkt td{padding:7px 4px 7px 0;border-bottom:1px solid var(--border);text-align:right;font-weight:700;white-space:nowrap;}
   table.mkt td:first-child{text-align:left;font-weight:600;}
   table.mkt .lv{display:block;font-size:10px;color:var(--text2);font-weight:600;}
   table.mkt tr:last-child td{border-bottom:none;}
@@ -56,8 +58,8 @@
   .flag{display:flex;justify-content:space-between;gap:8px;padding:9px 0;border-bottom:1px solid var(--border);}
   .flag:last-child{border-bottom:none;}
   .lab{font-size:12px;padding:1px 8px;border-radius:6px;font-weight:800;align-self:flex-start;white-space:nowrap;}
-  .lab.hi{background:rgba(200,71,47,0.16);color:var(--down);}
-  .lab.ok{background:rgba(26,143,87,0.16);color:var(--up);}
+  .lab.hi{background:rgba(255,59,48,0.15);color:var(--up);}
+  .lab.ok{background:rgba(52,199,89,0.16);color:var(--down);}
   .lab.mid{background:rgba(204,120,92,0.18);color:var(--accent);}
   .act{display:flex;gap:9px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);}
   .act:last-child{border-bottom:none;} .dot{flex:0 0 auto;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-top:9px;}
@@ -65,7 +67,9 @@
     padding:10px 13px;margin-top:9px;font-size:14px;color:var(--text);}
   .insight .ilabel{font-weight:800;color:var(--accent);}
   .ev{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);}
-  .ev:last-child{border-bottom:none;} .ev .d{font-weight:800;color:var(--accent);font-size:12.5px;flex:0 0 78px;}
+  .ev:last-child{border-bottom:none;}
+  .ev .d{font-weight:800;color:var(--text);font-size:13px;flex:0 0 84px;line-height:1.3;}
+  .ev .d .us{display:block;font-size:10.5px;color:var(--text2);font-weight:700;}
   .tk{color:var(--text2);font-size:11.5px;}
   .note{font-size:11px;color:var(--text2);margin-top:6px;}
   .foot{color:var(--text2);font-size:11.5px;text-align:center;margin-top:20px;line-height:1.6;}
@@ -83,33 +87,36 @@
 <div class="wrap">
 
   <section id="s1">
-    <div class="sec-title"><b>1</b> 資産サマリー</div>
+    <div class="sec-title"><b>1</b> 資産サマリ</div>
     <div class="card">
-      <div class="total">¥493,346,753 <small>取込総資産（Money Forward 実値・4口座 2026/06/13）</small></div>
-      <div class="cashline"><span class="k">現金・預金（取込内）</span><span class="v">¥54.6M <span class="up">／ 11%</span></span></div>
-      <div class="insight"><span class="ilabel">💡 Claudeのインサイト：</span>取込内の現金は¥54.6M（11%）。ただし<b>キャッシュ比率の母数は要再定義</b>——除外した銀行預金（三井住友等）を入れるか、Money Forward総資産¥570M基準にするかで数字が変わります。前週比/前月比は履歴蓄積後に表示予定。</div>
+      <div class="total">¥525,770,538 <small>運用資産（Money Forward 実値 2026/06/13）</small></div>
+      <div class="cashline"><span class="k">現金・預金 ¥75.1M ／ 暗号資産 ¥2.8M</span></div>
+      <div class="cashline"><span class="k">キャッシュ比率（投資用 ¥55M ÷ 投資可能 ¥506M）</span><span class="v">10.9%</span></div>
+      <div class="insight"><span class="ilabel">💡 Claudeのインサイト：</span>キャッシュ比率10.9%＝投資家標準（2-10%）の上限〜やや厚め。生活防衛資金¥20Mを除いた「投資用現金¥55M」が押し目の弾。最大の使い道は依然 <b>NLR/DTCR 規制解除待ち</b>。MF総資産¥570Mとの差¥44Mは年金・保険・ポイント（運用対象外）。</div>
     </div>
   </section>
 
   <section id="s2">
     <div class="sec-title"><b>2</b> マクロ</div>
     <div class="card">
+      <div class="mkt-wrap">
       <table class="mkt">
-        <thead><tr><th>指標</th><th>1週</th><th>1月</th><th>3月</th><th>6月</th></tr></thead>
+        <thead><tr><th>指標</th><th>1週</th><th>1月</th><th>3月</th><th>6月</th><th>1年</th></tr></thead>
         <tbody>
-          <tr><td>日経平均<span class="lv">≈60,000</span></td><td class="up">+1%</td><td class="up">+3%</td><td class="up">+8%</td><td class="up">+22%</td></tr>
-          <tr><td>TOPIX</td><td class="up">+0.7%</td><td class="up">+2%</td><td class="up">+6%</td><td class="up">+16%</td></tr>
-          <tr><td>ダウ平均<span class="lv">51,202</span></td><td class="up">+1.4%</td><td class="up">+3%</td><td class="up">+6%</td><td class="up">+12%</td></tr>
-          <tr><td>S&amp;P500<span class="lv">7,600超</span></td><td class="up">+1.2%</td><td class="up">+4%</td><td class="up">+11%</td><td class="up">+20%</td></tr>
-          <tr><td>Nasdaq100</td><td class="up">+1.6%</td><td class="up">+5%</td><td class="up">+13%</td><td class="up">+26%</td></tr>
-          <tr><td>ハンセン</td><td class="down">-0.4%</td><td class="up">+1%</td><td class="down">-2%</td><td class="up">+4%</td></tr>
-          <tr><td>米10年債<span class="lv">4.53%</span></td><td class="down">+3bp</td><td class="up">-2bp</td><td class="up">-10bp</td><td class="down">+8bp</td></tr>
-          <tr><td>ドル円<span class="lv">160.2</span></td><td class="down">円安</td><td class="down">円安</td><td class="down">円安</td><td class="down">円安</td></tr>
-          <tr><td>VIX<span class="lv">17.7</span></td><td class="up">-9%</td><td>低位</td><td>低位</td><td>低位</td></tr>
+          <tr><td>日経平均<span class="lv">≈60,000</span></td><td class="up">+1%</td><td class="up">+3%</td><td class="up">+8%</td><td class="up">+22%</td><td class="up">+40%</td></tr>
+          <tr><td>TOPIX</td><td class="up">+0.7%</td><td class="up">+2%</td><td class="up">+6%</td><td class="up">+16%</td><td class="up">+30%</td></tr>
+          <tr><td>ダウ平均<span class="lv">51,202</span></td><td class="up">+1.4%</td><td class="up">+3%</td><td class="up">+6%</td><td class="up">+12%</td><td class="up">+18%</td></tr>
+          <tr><td>S&amp;P500<span class="lv">7,600超</span></td><td class="up">+1.2%</td><td class="up">+4%</td><td class="up">+11%</td><td class="up">+20%</td><td class="up">+32%</td></tr>
+          <tr><td>Nasdaq100</td><td class="up">+1.6%</td><td class="up">+5%</td><td class="up">+13%</td><td class="up">+26%</td><td class="up">+41%</td></tr>
+          <tr><td>ハンセン</td><td class="down">-0.4%</td><td class="up">+1%</td><td class="down">-2%</td><td class="up">+4%</td><td class="up">+10%</td></tr>
+          <tr><td>米10年債<span class="lv">4.53%</span></td><td class="up">+3bp</td><td class="down">-2bp</td><td class="down">-10bp</td><td class="up">+8bp</td><td class="up">+15bp</td></tr>
+          <tr><td>ドル円<span class="lv">160.2</span></td><td class="up">+0.2%</td><td class="up">+1.5%</td><td class="up">+3%</td><td class="up">+5%</td><td class="up">+6.7%</td></tr>
+          <tr><td>VIX<span class="lv">17.7</span></td><td class="down">-9%</td><td class="down">-12%</td><td class="down">-5%</td><td class="up">+2%</td><td class="down">-11%</td></tr>
         </tbody>
       </table>
-      <div class="insight"><span class="ilabel">💡 Claudeのインサイト：</span>①<b>S&amp;P500は7,600超でじっちゃま年末予想7,000を既に突破</b>＝強気予想すら追い越した高所。本人も6月は黄信号。②<b>ドル円160は予想153を超える円安</b>。米国株¥184M＋米ドル現金に追い風だが、<b>日銀利上げ/円高転換が最大の隠れリスク</b>。Nasdaq6月+26%の過熱に注意。</div>
-      <div class="note">※指数の各期間%は取得時点の概算。精緻な多期間データは週次自動版で改善予定。</div>
+      </div>
+      <div class="insight"><span class="ilabel">💡 Claudeのインサイト：</span>①<b>S&amp;P500は7,600超でじっちゃま年末予想7,000を既に突破</b>＝高所。本人も6月は黄信号。②<b>ドル円160は予想153を超える円安（1年+6.7%）</b>。米国株¥184M＋米ドル現金に追い風だが、<b>日銀利上げ/円高転換が最大の隠れリスク</b>。VIXは1年−11%で楽観支配＝逆に警戒。</div>
+      <div class="note">※各期間%は取得時点の概算（ドル円・VIXは数値%、債券はbp）。精緻な多期間データは週次自動版で改善予定。</div>
     </div>
   </section>
 
@@ -122,6 +129,8 @@
         <div class="claim">AIの本命ボトルネックは「電力・配線不足」。半導体の先の送電・冷却・SMRが次の主役。最大の欠落「AI電力」は NLR/DTCR で取りに行く。</div></div>
       <div class="ment"><div class="who">ゆな先生</div>
         <div class="claim">サプライチェーンのチョークポイント重視＝<b>光通信(LITE)・AI=核兵器(CRWD/PANW/PLTR)・SpaceX</b>。個別＋日本株＋フィールドワーク投資（アシックス10倍の原体験、直近PFはAlphabet最大ポジ）。</div></div>
+      <div class="ment"><div class="who">藤沢数希</div>
+        <div class="claim"><span style="color:var(--text2)">※note取り込みパイプライン整備後に自動反映（準備中）。</span></div></div>
       <div class="insight"><span class="ilabel">💡 Claudeのインサイト：</span>3者の共通解は<b>「NVDA以外の周辺＝光通信/電力/サイバー/宇宙」へ重心シフト＋高所警戒</b>。あなたの保有はNVDA系(SMH)に厚いが、電力(NLR/DTCR待ち)・光通信(LITE)・宇宙は薄い——次の弾の方向はここ。</div>
     </div>
   </section>
@@ -129,10 +138,10 @@
   <section id="s4">
     <div class="sec-title"><b>4</b> ヘルスチェック</div>
     <div class="card">
-      <div class="flag"><div><b>半導体テーマ集中</b><div class="tk">SMH ¥39.7M ＋ 日経半導体 ¥32.2M ＝ ¥72M</div></div><span class="lab hi">15% 高</span></div>
-      <div class="flag"><div><b>ゴールド</b><div class="tk">GLDM ¥43.4M（地政学・インフレヘッジ）</div></div><span class="lab mid">9%</span></div>
-      <div class="flag"><div><b>米国株偏重</b><div class="tk">¥184M／円安追い風だが円高転換リスク</div></div><span class="lab mid">37%</span></div>
-      <div class="insight"><span class="ilabel">💡 Claudeのインサイト（売り発議）：</span>S&amp;P最高値圏＋VIX低＋半導体15%集中——<b>「頭と尻尾はくれてやる」なら半導体(SMH/日経半導体)の一部利確を今こそ検討</b>。todoの役割ルール通り、こちらから先に出す売りシグナルです。</div>
+      <div class="flag"><div><b>半導体テーマ集中</b><div class="tk">SMH ¥39.7M ＋ 日経半導体 ¥32.2M ＝ ¥72M</div></div><span class="lab hi">14% 高</span></div>
+      <div class="flag"><div><b>ゴールド</b><div class="tk">GLDM ¥43.4M（地政学・インフレヘッジ）</div></div><span class="lab mid">8%</span></div>
+      <div class="flag"><div><b>米国株偏重</b><div class="tk">¥184M／円安追い風だが円高転換リスク</div></div><span class="lab mid">35%</span></div>
+      <div class="insight"><span class="ilabel">💡 Claudeのインサイト（売り発議）：</span>S&amp;P最高値圏＋VIX低＋半導体集中——<b>「頭と尻尾はくれてやる」なら半導体(SMH/日経半導体)の一部利確を今こそ検討</b>。todoの役割ルール通り、こちらから先に出す売りシグナルです。</div>
     </div>
   </section>
 
@@ -165,10 +174,10 @@
     <div class="card">
       <div class="ev"><div class="d">6/16(火)–17(水)</div><div>日銀 金融政策決定会合 → 結果17日午後（利上げ＝円高転換の起点）</div></div>
       <div class="ev"><div class="d">6/19(金)</div><div>日本 5月 全国CPI（朝8:30）</div></div>
-      <div class="ev"><div class="d">6/18(木) 日本朝</div><div>米 新規失業保険・住宅指標（米6/17発表）</div></div>
+      <div class="ev"><div class="d">6/18(木)<span class="us">米 6/17</span></div><div>米 小売売上高・住宅指標</div></div>
       <div class="ev"><div class="d">継続</div><div>SpaceX上場後の値動き／OpenAI(9月)・Anthropic(年末)IPO前哨</div></div>
-      <div class="insight"><span class="ilabel">💡 Claudeのインサイト：</span>最大の波乱要因は<b>6/17 日銀利上げ→円高</b>（米国株37%＋米ドル現金に逆風）。黄信号局面なので、急落時の買い候補（NLR/DTCR/光通信LITE/相対割安な日本株）を今のうちにリスト化を。</div>
-      <div class="note">※米国時間のイベントは日本時間を併記。正確な発表時刻は週次自動版でカレンダー照合。</div>
+      <div class="insight"><span class="ilabel">💡 Claudeのインサイト：</span>最大の波乱要因は<b>6/17 日銀利上げ→円高</b>（米国株35%＋米ドル現金に逆風）。黄信号局面なので、急落時の買い候補（NLR/DTCR/光通信LITE/相対割安な日本株）を今のうちにリスト化を。</div>
+      <div class="note">※日付は日本時間。米国時間のイベントは下段に「米 ◯/◯」を併記。正確な発表時刻は週次自動版でカレンダー照合。</div>
     </div>
   </section>
 
