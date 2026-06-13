@@ -92,7 +92,7 @@
 <body>
 <header>
   <h1>Briefing</h1>
-  <div class="date">2026/06/13（金）週次 · スタンス <span class="stance">⚠ 黄信号（高所警戒）</span></div>
+  <div class="date">2026/06/13（土）週次 · スタンス <span class="stance">⚠ 黄信号（乱高下後・高所警戒）</span></div>
   <div class="nav">
     <a href="#s1">資産</a><a href="#s2">マクロ</a><a href="#s3">ヘルスチェック</a>
     <a href="#s4">PER</a><a href="#s5">メンター</a><a href="#s6">トリガー</a><a href="#s7">来週</a>
@@ -103,27 +103,28 @@
   <section id="s1">
     <div class="sec-title"><b>1</b> 資産サマリ</div>
     <div class="card">
-      <div class="cashline"><span class="k">キャッシュ比率</span><span class="v">10.9%</span></div>
+      <div class="total">¥570M<small>総資産（Money Forward実値）／うち運用資産 ≈¥526M</small></div>
+      <div class="cashline"><span class="k">現金・預金</span><span class="v">¥75M（運用資産の14.3%）</span></div>
       <table class="perf">
-        <thead><tr><th>運用資産 ≈¥526M</th><th>1週</th><th>1月</th><th>3月</th><th>1年</th></tr></thead>
-        <tbody><tr><td>期間騰落（概算）</td><td class="up">+1%</td><td class="up">+3%</td><td class="up">+7%</td><td class="up">+24%</td></tr></tbody>
+        <thead><tr><th>今週の地合い</th><th>火</th><th>水</th><th>木</th><th>金</th></tr></thead>
+        <tbody><tr><td>S&amp;P500（V字）</td><td class="down">急落</td><td class="down">-1.6%</td><td class="up">反発</td><td class="up">+0.5%</td></tr></tbody>
       </table>
       <div class="movers">
         <div class="mv-col">
           <div class="mv-h up">今週の主役 ▲</div>
-          <div class="mv"><span>SMH 半導体</span><span class="up">+4.2%</span></div>
-          <div class="mv"><span>GLDM ゴールド</span><span class="up">+2.1%</span></div>
-          <div class="mv"><span>PLTR</span><span class="up">+1.8%</span></div>
+          <div class="mv"><span>SpaceX上場(初日)</span><span class="up">+19.2%</span></div>
+          <div class="mv"><span>日本株(金 日経)</span><span class="up">+2.8%</span></div>
+          <div class="mv"><span>SMH 半導体(反発)</span><span class="up">戻り</span></div>
         </div>
         <div class="mv-col">
           <div class="mv-h down">今週の重し ▼</div>
-          <div class="mv"><span>ハンセン連動</span><span class="down">-0.4%</span></div>
-          <div class="mv"><span>米10年債連動</span><span class="down">-0.3%</span></div>
-          <div class="mv"><span>—</span><span class="down">—</span></div>
+          <div class="mv"><span>SLV 銀</span><span class="down">-8%</span></div>
+          <div class="mv"><span>AAPL(WWDC失望)</span><span class="down">-3.6%</span></div>
+          <div class="mv"><span>GLDM 金</span><span class="down">軟調</span></div>
         </div>
       </div>
-      <div class="insight"><span class="ilabel">💡 Claudeのインサイト：</span>キャッシュ比率10.9%＝投資家標準（2-10%）の上限〜やや厚め。生活防衛資金¥20Mを除いた「投資用現金¥55M」が押し目の弾。最大の使い道は依然 <b>NLR/DTCR 規制解除待ち</b>。今週は半導体・ゴールドが牽引、重しは小さく総じて堅調。</div>
-      <div class="note">※期間騰落・主役は保有＋ウォッチの概算。精緻な値は週次自動版で算出。</div>
+      <div class="insight"><span class="ilabel">💡 Claudeのインサイト：</span>今週は<b>水曜にCPI+4.2%（3年ぶり高水準）＋米イラン軍事衝突で急落 → 木金に和平期待＋SpaceX上場でV字回復</b>。あなたは<b>半導体を事前に抜いて現金14.3%で静観</b>＝乱高下を被弾せず眺められた。投資用現金（生活防衛除く）が押し目の弾。最大の使い道は依然 <b>NLR/DTCR 規制解除待ち</b>。</div>
+      <div class="note">※総資産=Money Forward実値（mfNetWorth ¥569.9M）。運用資産=取込分¥525.8M。比率は運用資産が母数。期間騰落の精緻値は履歴蓄積後。</div>
     </div>
   </section>
 
@@ -134,30 +135,31 @@
       <table class="mkt">
         <thead><tr><th>指標</th><th>1週</th><th>1月</th><th>3月</th><th>6月</th><th>1年</th></tr></thead>
         <tbody>
-          <tr><td>日経平均<span class="lv">≈60,000</span></td><td class="up">+1%</td><td class="up">+3%</td><td class="up">+8%</td><td class="up">+22%</td><td class="up">+40%</td></tr>
-          <tr><td>TOPIX</td><td class="up">+0.7%</td><td class="up">+2%</td><td class="up">+6%</td><td class="up">+16%</td><td class="up">+30%</td></tr>
-          <tr><td>ダウ平均<span class="lv">51,202</span></td><td class="up">+1.4%</td><td class="up">+3%</td><td class="up">+6%</td><td class="up">+12%</td><td class="up">+18%</td></tr>
-          <tr><td>S&amp;P500<span class="lv">7,600超</span></td><td class="up">+1.2%</td><td class="up">+4%</td><td class="up">+11%</td><td class="up">+20%</td><td class="up">+32%</td></tr>
-          <tr><td>Nasdaq100</td><td class="up">+1.6%</td><td class="up">+5%</td><td class="up">+13%</td><td class="up">+26%</td><td class="up">+41%</td></tr>
-          <tr><td>ハンセン</td><td class="down">-0.4%</td><td class="up">+1%</td><td class="down">-2%</td><td class="up">+4%</td><td class="up">+10%</td></tr>
-          <tr><td>米10年債<span class="lv">4.53%</span></td><td class="up">+3bp</td><td class="down">-2bp</td><td class="down">-10bp</td><td class="up">+8bp</td><td class="up">+15bp</td></tr>
-          <tr><td>ドル円<span class="lv">現在 160.2</span></td><td class="up">159.9</td><td class="up">157.8</td><td class="up">155.5</td><td class="up">152.6</td><td class="up">150.1</td></tr>
-          <tr><td>VIX<span class="lv">現在 17.7</span></td><td class="down">19.5</td><td class="down">20.1</td><td class="down">18.6</td><td class="up">17.4</td><td class="down">19.9</td></tr>
+          <tr><td>日経平均<span class="lv">66,020</span></td><td class="up">+1%</td><td class="up">+2%</td><td class="up">+7%</td><td class="up">+20%</td><td class="up">+38%</td></tr>
+          <tr><td>TOPIX</td><td class="up">+0.8%</td><td class="up">+1%</td><td class="up">+5%</td><td class="up">+15%</td><td class="up">+28%</td></tr>
+          <tr><td>ダウ平均<span class="lv">51,202</span></td><td class="down">-0.5%</td><td class="up">+1%</td><td class="up">+4%</td><td class="up">+10%</td><td class="up">+16%</td></tr>
+          <tr><td>S&amp;P500<span class="lv">7,431</span></td><td class="down">-0.7%</td><td class="up">+1%</td><td class="up">+8%</td><td class="up">+17%</td><td class="up">+28%</td></tr>
+          <tr><td>Nasdaq100<span class="lv">25,889</span></td><td class="down">-1%</td><td class="up">+1%</td><td class="up">+9%</td><td class="up">+22%</td><td class="up">+36%</td></tr>
+          <tr><td>ハンセン</td><td class="down">-1%</td><td class="down">-1%</td><td class="down">-3%</td><td class="up">+3%</td><td class="up">+8%</td></tr>
+          <tr><td>米10年債<span class="lv">≈4.55%</span></td><td class="up">+5bp</td><td class="up">+3bp</td><td class="down">-5bp</td><td class="up">+12bp</td><td class="up">+18bp</td></tr>
+          <tr><td>ドル円<span class="lv">現在 160.6</span></td><td class="up">159.5</td><td class="up">157.8</td><td class="up">155.5</td><td class="up">152.6</td><td class="up">150.1</td></tr>
+          <tr><td>VIX<span class="lv">現在 17.7</span></td><td class="down">21.0</td><td class="down">20.1</td><td class="down">18.6</td><td class="up">17.4</td><td class="down">19.9</td></tr>
         </tbody>
       </table>
       </div>
-      <div class="insight"><span class="ilabel">💡 Claudeのインサイト：</span>①<b>S&amp;P500は7,600超でじっちゃま年末予想7,000を既に突破</b>＝高所。本人も6月は黄信号。②<b>ドル円160は予想153を超える円安（1年+6.7%）</b>。米国株¥184M＋米ドル現金に追い風だが、<b>日銀利上げ/円高転換が最大の隠れリスク</b>。VIXは1年−11%で楽観支配＝逆に警戒。</div>
-      <div class="note">※各期間は取得時点の概算（株価指数は騰落%、債券はbp、ドル円・VIXは各時点の実数値＝色は現在への騰落方向）。精緻な多期間データは週次自動版で改善予定。</div>
+      <div class="insight"><span class="ilabel">💡 Claudeのインサイト：</span>①<b>CPI+4.2%でも株はV字＝楽観が根強い</b>。S&amp;P 7,431はじっちゃま年末予想7,000を超える高所。②<b>ドル円160.6＝4月以来の円安</b>。米国株¥184M＋米ドル現金に追い風だが、来週<b>6/16-17 日銀会合＝円高転換の最大トリガー</b>。③VIX17.7に戻り楽観支配＝週中の急落を一瞬で忘れた状態こそ警戒。</div>
+      <div class="note">※各期間は取得時点の概算（株価指数は騰落%、債券はbp、ドル円・VIXは各時点の実数値＝色は現在への騰落方向）。今週は乱高下のため1週はネット変化が小さい。</div>
     </div>
   </section>
 
   <section id="s3">
     <div class="sec-title"><b>3</b> ヘルスチェック</div>
     <div class="card">
-      <div class="flag"><div><b>半導体テーマ集中</b><div class="tk">SMH ¥39.7M ＋ 日経半導体 ¥32.2M ＝ ¥72M</div></div><span class="lab hi">14% 高</span></div>
-      <div class="flag"><div><b>ゴールド</b><div class="tk">GLDM ¥43.4M（地政学・インフレヘッジ）</div></div><span class="lab mid">8%</span></div>
-      <div class="flag"><div><b>米国株偏重</b><div class="tk">¥184M／円安追い風だが円高転換リスク</div></div><span class="lab mid">35%</span></div>
-      <div class="insight"><span class="ilabel">💡 Claudeのインサイト（売り発議）：</span>S&amp;P最高値圏＋VIX低＋半導体集中——<b>「頭と尻尾はくれてやる」なら半導体(SMH/日経半導体)の一部利確を今こそ検討</b>。todoの役割ルール通り、こちらから先に出す売りシグナルです。</div>
+      <div class="flag"><div><b>半導体テーマ集中</b><div class="tk">SMH ¥39.7M ＋ 日経半導体200A ¥32.2M ＝ ¥72M</div></div><span class="lab hi">14% 高</span></div>
+      <div class="flag"><div><b>ゴールド</b><div class="tk">GLDM ¥43.4M（保険＝下げても安心して持てるコア）</div></div><span class="lab mid">8%</span></div>
+      <div class="flag"><div><b>米国株偏重＋円安160</b><div class="tk">米国株¥184M（35%）／円安は追い風だが日銀で円高転換リスク</div></div><span class="lab mid">35%</span></div>
+      <div class="flag"><div><b>SLV 銀・URA（心配ポジ）</b><div class="tk">銀は半工業＝保険にならず-8%／URAは鉱業株型で含み損-10%</div></div><span class="lab mid">役割見直し</span></div>
+      <div class="insight"><span class="ilabel">💡 Claudeのインサイト（売り発議）：</span>V字で半導体が戻った今こそ<b>「頭と尻尾はくれてやる」＝半導体(SMH/200A)の一部利確を再検討</b>。先週の売りのキモも「含み益最大×値動き最大の半導体を先に抜く」だった。todoの役割ルール通り、こちらから先に出す売りシグナル。SLVは「保険集約方針」と矛盾＝役割の見直し対象、URAはテーゼ無傷なら握る。</div>
     </div>
   </section>
 
@@ -166,14 +168,14 @@
     <div class="card">
       <div class="subh">⚠ 割高・注意（保有）</div>
       <div class="flag"><div><b>NEXT FUNDS 東証銀行業 1615</b><div class="tk">加重PER低位＝利益ピーク?（保有¥26.4M・含み益+20%）</div></div><span class="lab hi">サイクル天井</span></div>
-      <div class="flag"><div><b>PLTR・CBRS（保有）</b><div class="tk">PLTR PEG2.x／CBRS PER171倍</div></div><span class="lab mid">割高</span></div>
+      <div class="flag"><div><b>TSLA / PLTR（保有）</b><div class="tk">TSLA PER357倍／PLTR PEG2.x（$132）。歴史的水準で判断＝即売りではない</div></div><span class="lab mid">割高</span></div>
       <div class="subh">◎ 割安・妥当（保有）</div>
       <div class="flag"><div><b>日本株ETF（TOPIX/1306）</b><div class="tk">日本株PER ≈16x vs S&amp;P ≈24x＝相対割安</div></div><span class="lab ok">相対割安</span></div>
       <div class="flag"><div><b>eMAXIS Slim 全世界（¥61.9M）</b><div class="tk">市場平均PER＝コア妥当水準</div></div><span class="lab ok">妥当</span></div>
       <div class="subh">👁 ウォッチリスト（監視中）</div>
-      <div class="flag"><div><b>LITE 光通信</b><div class="tk">AI＝光通信の本命。成長期待先行でPER高め（買い場待ち）</div></div><span class="lab mid">割高・監視</span></div>
-      <div class="flag"><div><b>NLR / DTCR（AI電力・ウラン）</b><div class="tk">PERより電力テーマの需給で評価。規制解除＝押し目候補</div></div><span class="lab ok">押し目候補</span></div>
-      <div class="insight"><span class="ilabel">💡 Claudeのインサイト：</span>米株が割高圏の今、<b>相対割安な日本株（TOPIX系）はリバランスの受け皿</b>になり得る。銀行業1615だけは「PER低い＝割安」ではなくサイクル株の罠（利益ピーク=売り時）に注意。ウォッチのLITEは割高だが押し目を待つ価値あり。※保有＋ウォッチの個別実PERのライブ取得は週次で拡充。</div>
+      <div class="flag"><div><b>CRWD（数値訂正）</b><div class="tk">$658.79・予想PER128倍（旧記録"$380/78倍"は誤り）＝全く安くない</div></div><span class="lab hi">割高・据置</span></div>
+      <div class="flag"><div><b>CBRS / LITE</b><div class="tk">CBRS $237 PER171倍／LITE 光通信は買い場待ち</div></div><span class="lab mid">割高・監視</span></div>
+      <div class="insight"><span class="ilabel">💡 Claudeのインサイト：</span>米株が割高圏の今、<b>相対割安な日本株（TOPIX系）はリバランスの受け皿</b>。CRWDは「好決算後に押したら拾う」前提が崩れていた（PER128倍＝そもそも安くない）→ウォッチ優先度を下げてOK。銀行業1615は「PER低い=割安」でなくサイクル株の罠に注意。</div>
     </div>
   </section>
 
@@ -181,14 +183,14 @@
     <div class="sec-title"><b>5</b> メンターの主な主張</div>
     <div class="card">
       <div class="ment"><div class="who">じっちゃま（広瀬隆雄）</div>
-        <div class="claim">年末ターゲット S&amp;P 7,000 / ドル円153 / 10年債4.50%。AI設備投資がGDP+1%→EPS+23%で強気だが、<b>6月は「買いの月ではなくリバランスの月」＝黄信号</b>。IPOラッシュ(SpaceX 6/12, OpenAI 9月, Anthropic年末)が牽引。</div></div>
+        <div class="claim">年末ターゲット S&amp;P 7,000 / ドル円153 / 10年債4.50%（数値据置）。だが相場観は<b>「黄信号」</b>＝「設備投資ブームは必ず暴落で終わる」。今週<b>CPI+4.2%＋イラン衝突という三重苦のうち2つが現実化</b>したが株はV字＝「AIは本物でも株式投資として成功するかは別」。</div></div>
       <div class="ment"><div class="who">中島聡</div>
-        <div class="claim">AIの本命ボトルネックは「電力・配線不足」。半導体の先の送電・冷却・SMRが次の主役。最大の欠落「AI電力」は NLR/DTCR で取りに行く。</div></div>
+        <div class="claim">AIの本命ボトルネックは「電力・配線不足」。次の主役は送電・冷却・SMR。<b>Google</b>は検索広告シェアを失うがGemini(MAU6.5億)＋サブスク＋TPUで企業価値維持＝中島氏は'22に売って後悔、'24買い戻し。最大の欠落「AI電力」は NLR/DTCR で取りに行く。</div></div>
       <div class="ment"><div class="who">ゆな先生</div>
-        <div class="claim">サプライチェーンのチョークポイント重視＝<b>光通信(LITE)・AI=核兵器(CRWD/PANW/PLTR)・SpaceX</b>。個別＋日本株＋フィールドワーク投資（アシックス10倍の原体験、直近PFはAlphabet最大ポジ）。</div></div>
+        <div class="claim">サプライチェーンのチョークポイント重視＝<b>光通信(LITE)・AI=核兵器(CRWD/PANW/PLTR)・SpaceX</b>。SpaceX S-1分析では「全力投資せず超長期で一部保有、初日20-30%まで・PF5-10%以内」。</div></div>
       <div class="ment"><div class="who">藤沢数希</div>
         <div class="claim"><span style="color:var(--text2)">※note取り込みパイプライン整備後に自動反映（準備中）。</span></div></div>
-      <div class="insight"><span class="ilabel">💡 Claudeのインサイト：</span>3者の共通解は<b>「NVDA以外の周辺＝光通信/電力/サイバー/宇宙」へ重心シフト＋高所警戒</b>。あなたの保有はNVDA系(SMH)に厚いが、電力(NLR/DTCR待ち)・光通信(LITE)・宇宙は薄い——次の弾の方向はここ。</div>
+      <div class="insight"><span class="ilabel">💡 Claudeのインサイト：</span>3者の共通解は<b>「NVDA以外の周辺＝光通信/電力/サイバー/宇宙」へ重心シフト＋高所警戒</b>。SpaceXは初日+19%で値決め成功＝ゆな先生の「初日20-30%」枠内。あなたの保有は半導体に厚く電力・光通信・宇宙が薄い——次の弾の方向はここ。</div>
     </div>
   </section>
 
@@ -196,9 +198,10 @@
     <div class="sec-title"><b>6</b> トリガー＆アクション</div>
     <div class="card">
       <div class="act"><span class="dot"></span><div><b>NLR / DTCR 各$50K</b>：マネックス規制解除＝即実行（最優先・AI電力の本丸）</div></div>
+      <div class="act"><span class="dot"></span><div><b>SpaceX(SPCX)</b>：初日$160.95(+19%)で<b>初日見送り完了</b> → 落ち着き確認後に第1弾$15K（→$20K→$15Kの3段階）</div></div>
+      <div class="act"><span class="dot"></span><div><b>AMZN $245</b>：現$245.73で第1指値タッチ済。CPI通過後、$245近辺で第1弾$15Kのみ（第2指値$220控え）</div></div>
+      <div class="act"><span class="dot"></span><div><b>GOOGL買い戻し</b>：現$360＝売値と同値・ATH overhang残でエッジ無。<b>$330割れ or ATM増資完了(〜9月)</b>で$15Kから</div></div>
       <div class="act"><span class="dot"></span><div><b>CBRS</b>：現$237。次の<b>$220割れ</b>を待って打診買い（急騰追わない）</div></div>
-      <div class="act"><span class="dot"></span><div><b>AMZN $245</b> 第1指値タッチ済 → $245近辺で第1弾$15Kのみ、第2指値$220控え</div></div>
-      <div class="act"><span class="dot"></span><div><b>SpaceX(SPCX)</b>：上場済$161。初日見送り→$15K→$20K→$15Kの3段階</div></div>
       <div class="act"><span class="dot"></span><div><b>半導体一部利確</b>を検討（ヘルスチェックの売り発議）</div></div>
     </div>
   </section>
@@ -206,17 +209,17 @@
   <section id="s7">
     <div class="sec-title"><b>7</b> 来週の注目イベント</div>
     <div class="card">
-      <div class="ev"><div class="d">6/16(火)–17(水)</div><div>日銀 金融政策決定会合 → 結果17日午後（利上げ＝円高転換の起点）</div></div>
+      <div class="ev"><div class="d">6/16(火)–17(水)</div><div><b>日銀 金融政策決定会合</b> → 結果17日午後。利上げ＝円高転換の起点（ドル円160の今、最大の波乱要因）</div></div>
       <div class="ev"><div class="d">6/19(金)</div><div>日本 5月 全国CPI（朝8:30）</div></div>
       <div class="ev"><div class="d">6/18(木)<span class="us">米 6/17</span></div><div>米 小売売上高・住宅指標</div></div>
-      <div class="ev"><div class="d">継続</div><div>SpaceX上場後の値動き／OpenAI(9月)・Anthropic(年末)IPO前哨</div></div>
-      <div class="insight"><span class="ilabel">💡 Claudeのインサイト：</span>最大の波乱要因は<b>6/17 日銀利上げ→円高</b>（米国株35%＋米ドル現金に逆風）。黄信号局面なので、急落時の買い候補（NLR/DTCR/光通信LITE/相対割安な日本株）を今のうちにリスト化を。</div>
-      <div class="note">※日付は日本時間。米国時間のイベントは下段に「米 ◯/◯」を併記。正確な発表時刻は週次自動版でカレンダー照合。</div>
+      <div class="ev"><div class="d">継続</div><div>SpaceX上場後の値動き（初日+19%の持続性）／米イラン和平交渉の行方／OpenAI(9月)・Anthropic(9月)IPO前哨</div></div>
+      <div class="insight"><span class="ilabel">💡 Claudeのインサイト：</span>最大の波乱は<b>6/17 日銀利上げ→円高</b>（米国株35%＋米ドル現金に逆風、ドル円160は反転リスク大）。黄信号＆乱高下後なので、急落時の買い候補（NLR/DTCR・光通信LITE・相対割安な日本株・SpaceX第1弾）を弾込めして待つ局面。自分から動くより材料待ち。</div>
+      <div class="note">※日付は日本時間。米国時間のイベントは下段に「米 ◯/◯」を併記。正確な発表時刻は要カレンダー照合。</div>
     </div>
   </section>
 
   <div class="foot">
-    ソース：保有=Money Forward実値(mf-holdings.json) / じっちゃま(mh-*) / 中島聡(lib-*) / ゆな先生(yuna-investment) / 投資ToDo / WebSearch(2026-06-12〜13)<br>
+    ソース：保有=Money Forward実値(mf-holdings.json, asOf 2026-06-13) / じっちゃま(mh-*) / 中島聡(lib-*) / ゆな先生(yuna-investment) / 投資ToDo・意思決定ログ / WebSearch(2026-06-10〜13)<br>
     生成：MulmoClaude。投資助言ではなく壁打ち材料です。
   </div>
 </div>
