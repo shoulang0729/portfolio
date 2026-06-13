@@ -1456,9 +1456,11 @@ function getHistoricalChangePct(symbol, periodId) {
   if (periodId === "1d") {
     startPoint = data[data.length - 2];
   } else {
-    const targetDate = new Date(Date.now() - cfg.days * 864e5);
+    const lastPt = data[data.length - 1];
+    const lastMs = lastPt.date instanceof Date ? lastPt.date.getTime() : new Date(lastPt.date).getTime();
+    const targetDate = new Date(lastMs - cfg.days * 864e5);
     startPoint = null;
-    for (let i = data.length - 1; i >= 0; i--) {
+    for (let i = data.length - 2; i >= 0; i--) {
       if (data[i].date <= targetDate) {
         startPoint = data[i];
         break;
