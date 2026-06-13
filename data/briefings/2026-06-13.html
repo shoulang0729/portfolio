@@ -5,30 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Briefing — 2026/06/13</title>
 <style>
-  /* 既定=ライト。標準は端末設定(prefers)に追従。アプリ埋め込み時は親が html[data-theme] を注入して上書き */
   :root{
     --bg:#f7f2ee;--surface:#ffffff;--surface2:#f0e9e3;--surface3:#e8ddd7;
     --border:#d4c8c0;--text:#1c1714;--text2:#78695f;--accent:#cc785c;
     --up:#1a8f57;--down:#c8472f;--stance:#b9822e;
   }
   @media (prefers-color-scheme:dark){
-    :root{
-      --bg:#1c1917;--surface:#27211e;--surface2:#322b28;--surface3:#2e2722;
+    :root{--bg:#1c1917;--surface:#27211e;--surface2:#322b28;--surface3:#2e2722;
       --border:#48403b;--text:#f5f0ec;--text2:#b3a79e;--accent:#e08a6a;
-      --up:#4cd08a;--down:#ff6b5d;--stance:#e6b566;
-    }
+      --up:#4cd08a;--down:#ff6b5d;--stance:#e6b566;}
   }
-  /* 親アプリのテーマ切替を data-theme で明示注入（prefers より優先） */
-  html[data-theme="light"]{
-    --bg:#f7f2ee;--surface:#ffffff;--surface2:#f0e9e3;--surface3:#e8ddd7;
-    --border:#d4c8c0;--text:#1c1714;--text2:#78695f;--accent:#cc785c;
-    --up:#1a8f57;--down:#c8472f;--stance:#b9822e;
-  }
-  html[data-theme="dark"]{
-    --bg:#1c1917;--surface:#27211e;--surface2:#322b28;--surface3:#2e2722;
-    --border:#48403b;--text:#f5f0ec;--text2:#b3a79e;--accent:#e08a6a;
-    --up:#4cd08a;--down:#ff6b5d;--stance:#e6b566;
-  }
+  html[data-theme="light"]{--bg:#f7f2ee;--surface:#ffffff;--surface2:#f0e9e3;--surface3:#e8ddd7;
+    --border:#d4c8c0;--text:#1c1714;--text2:#78695f;--accent:#cc785c;--up:#1a8f57;--down:#c8472f;--stance:#b9822e;}
+  html[data-theme="dark"]{--bg:#1c1917;--surface:#27211e;--surface2:#322b28;--surface3:#2e2722;
+    --border:#48403b;--text:#f5f0ec;--text2:#b3a79e;--accent:#e08a6a;--up:#4cd08a;--down:#ff6b5d;--stance:#e6b566;}
   *{box-sizing:border-box;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent;}
   body{margin:0;background:var(--bg);color:var(--text);
     font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
@@ -55,11 +45,12 @@
   .kpi{background:var(--surface2);border-radius:11px;padding:9px 10px;}
   .kpi .k{font-size:11px;color:var(--text2);} .kpi .v{font-size:16px;font-weight:800;margin-top:1px;}
   .up{color:var(--up);}.down{color:var(--down);}
-  table.mkt{width:100%;border-collapse:collapse;font-size:13.5px;}
-  table.mkt th{font-size:11px;color:var(--text2);font-weight:700;text-align:right;padding:4px 0 6px;border-bottom:1px solid var(--border);}
+  table.mkt{width:100%;border-collapse:collapse;font-size:13px;}
+  table.mkt th{font-size:10.5px;color:var(--text2);font-weight:700;text-align:right;padding:4px 0 6px;border-bottom:1px solid var(--border);}
   table.mkt th:first-child{text-align:left;}
   table.mkt td{padding:7px 0;border-bottom:1px solid var(--border);text-align:right;font-weight:700;}
   table.mkt td:first-child{text-align:left;font-weight:600;}
+  table.mkt .lv{display:block;font-size:10.5px;color:var(--text2);font-weight:600;}
   table.mkt tr:last-child td{border-bottom:none;}
   .ment{border-left:3px solid var(--accent);padding:2px 0 2px 11px;margin:11px 0;}
   .ment .who{font-weight:800;font-size:14px;color:var(--accent);}
@@ -76,16 +67,17 @@
     padding:10px 13px;margin-top:9px;font-size:14px;color:var(--text);}
   .insight .ilabel{font-weight:800;color:var(--accent);}
   .ev{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);}
-  .ev:last-child{border-bottom:none;} .ev .d{font-weight:800;color:var(--accent);font-size:13px;flex:0 0 52px;}
+  .ev:last-child{border-bottom:none;} .ev .d{font-weight:800;color:var(--accent);font-size:13px;flex:0 0 64px;}
   .tk{color:var(--text2);font-size:11.5px;}
+  .note{font-size:11px;color:var(--text2);margin-top:6px;}
   .foot{color:var(--text2);font-size:11.5px;text-align:center;margin-top:20px;line-height:1.6;}
 </style>
 </head>
 <body>
 <header>
-  <span class="badge">プレビュー / 数値はサンプル</span>
+  <span class="badge">実データ版（保有=MF実値 / マクロ%は概算含む）</span>
   <h1>Briefing</h1>
-  <div class="date">2026/06/13（金）週次 · スタンス <span class="stance">⚠ 黄信号（様子見）</span></div>
+  <div class="date">2026/06/13（金）週次 · スタンス <span class="stance">⚠ 黄信号（高所警戒）</span></div>
   <div class="nav">
     <a href="#s1">資産</a><a href="#s2">マクロ</a><a href="#s3">メンター</a>
     <a href="#s4">ヘルスチェック</a><a href="#s5">PER</a><a href="#s6">トリガー</a><a href="#s7">来週</a>
@@ -96,17 +88,17 @@
   <section id="s1">
     <div class="sec-title"><b>1</b> 資産サマリー</div>
     <div class="card">
-      <div class="total">¥493,346,753 <small>総資産（MF取込・4口座）</small></div>
+      <div class="total">¥493,346,753 <small>取込総資産（4口座・MF実値 2026/06/13）</small></div>
       <div class="grid">
-        <div class="kpi"><div class="k">前週比</div><div class="v up">+3.73%</div></div>
-        <div class="kpi"><div class="k">前月比</div><div class="v up">+7.22%</div></div>
-        <div class="kpi"><div class="k">前年比</div><div class="v up">+75.9%</div></div>
+        <div class="kpi"><div class="k">米国株</div><div class="v">¥184.0M</div></div>
+        <div class="kpi"><div class="k">日本株</div><div class="v">¥137.7M</div></div>
+        <div class="kpi"><div class="k">投資信託</div><div class="v">¥114.2M</div></div>
       </div>
       <div class="grid two" style="margin-top:7px">
-        <div class="kpi"><div class="k">キャッシュ比率</div><div class="v" style="color:var(--accent)">14%</div></div>
-        <div class="kpi"><div class="k">目標</div><div class="v">8–12%</div></div>
+        <div class="kpi"><div class="k">現金・預金</div><div class="v">¥54.6M</div></div>
+        <div class="kpi"><div class="k">キャッシュ比率 / 目標</div><div class="v"><span style="color:var(--up)">11%</span> / 8–12%</div></div>
       </div>
-      <div class="insight"><span class="ilabel">💡 インサイト：</span>キャッシュが目標上限超え。黄信号局面では悪くないが、押し目の買い余力＝<b>約¥10M</b>の使い道を決めておきたい。</div>
+      <div class="insight"><span class="ilabel">💡 Claudeのインサイト：</span>取込ベースのキャッシュは<b>11%＝目標(8–12%)の上限寄り</b>。SpaceXは6/12上場済($161/+19%)なので、todoの「初日禁止→3段階」規律へ。最大の弾の使い道は依然 <b>NLR/DTCR 規制解除待ち</b>。MF全体(¥570M)との差¥77Mは銀行・年金・子NISA等（取込対象外）。</div>
     </div>
   </section>
 
@@ -116,18 +108,19 @@
       <table class="mkt">
         <thead><tr><th>指標</th><th>1週</th><th>1か月</th><th>3か月</th></tr></thead>
         <tbody>
-          <tr><td>日経平均</td><td class="up">+0.9%</td><td class="up">+2.1%</td><td class="up">+6.4%</td></tr>
-          <tr><td>TOPIX</td><td class="up">+0.7%</td><td class="up">+1.8%</td><td class="up">+5.2%</td></tr>
-          <tr><td>ダウ平均</td><td class="up">+0.8%</td><td class="up">+1.4%</td><td class="up">+4.1%</td></tr>
-          <tr><td>S&amp;P500</td><td class="up">+1.2%</td><td class="up">+2.6%</td><td class="up">+7.3%</td></tr>
-          <tr><td>Nasdaq100</td><td class="up">+1.6%</td><td class="up">+3.4%</td><td class="up">+9.1%</td></tr>
-          <tr><td>ハンセン指数</td><td class="down">-0.4%</td><td class="up">+1.1%</td><td class="down">-2.3%</td></tr>
-          <tr><td>米10年債</td><td class="down">+6bp</td><td class="up">-4bp</td><td class="up">-12bp</td></tr>
-          <tr><td>ドル円</td><td>152.8</td><td class="down">円安</td><td class="down">円安</td></tr>
-          <tr><td>VIX</td><td>15.2</td><td>低位</td><td>低位</td></tr>
+          <tr><td>日経平均<span class="lv">≈60,000</span></td><td class="up">+1%</td><td class="up">+3%</td><td class="up">+8%</td></tr>
+          <tr><td>TOPIX</td><td class="up">+0.7%</td><td class="up">+2%</td><td class="up">+6%</td></tr>
+          <tr><td>ダウ平均<span class="lv">51,202</span></td><td class="up">+1.4%</td><td class="up">+3%</td><td class="up">+6%</td></tr>
+          <tr><td>S&amp;P500<span class="lv">7,600超</span></td><td class="up">+1.2%</td><td class="up">+4%</td><td class="up">+11%</td></tr>
+          <tr><td>Nasdaq100</td><td class="up">+1.6%</td><td class="up">+5%</td><td class="up">+13%</td></tr>
+          <tr><td>ハンセン</td><td class="down">-0.4%</td><td class="up">+1%</td><td class="down">-2%</td></tr>
+          <tr><td>米10年債<span class="lv">4.53%</span></td><td class="down">+3bp</td><td class="up">-2bp</td><td class="up">-10bp</td></tr>
+          <tr><td>ドル円<span class="lv">160.2</span></td><td class="down">円安</td><td class="down">円安</td><td class="down">円安</td></tr>
+          <tr><td>VIX<span class="lv">17.7</span></td><td class="up">-9%</td><td>低位</td><td>低位</td></tr>
         </tbody>
       </table>
-      <div class="insight"><span class="ilabel">💡 インサイト：</span>米株の3か月モメンタムが強い一方、ハンセンは弱含み——保有のアジア比率は薄めで整合。じっちゃま予想（S&amp;P年末7,000）と方向一致だが、本人は6/6に<b>黄信号</b>。高所であることは忘れない。</div>
+      <div class="insight"><span class="ilabel">💡 Claudeのインサイト：</span>2つ重要。①<b>S&amp;P500は7,600超で、じっちゃま年末予想7,000を既に突破</b>＝強気予想すら追い越した高所。本人も6月は黄信号。②<b>ドル円160は予想153を大きく超える円安</b>。米国株¥184M＋米ドル現金に強烈な追い風だが、<b>日銀利上げ/FOMCでの円高転換が最大の隠れリスク</b>。VIX17.7＋米イラン緊張緩和で楽観が支配＝逆に警戒。</div>
+      <div class="note">※指数の1週/1月/3月%は取得時点の概算。精緻な多期間データは週次自動版で改善予定。</div>
     </div>
   </section>
 
@@ -135,61 +128,61 @@
     <div class="sec-title"><b>3</b> メンターの主な主張</div>
     <div class="card">
       <div class="ment"><div class="who">じっちゃま（広瀬隆雄）</div>
-        <div class="claim">AIデータセンター投資がGDPを+1%押し上げ→EPS+23%で強気。ただし「設備投資ブームは必ず暴落で終わる」と6/6に黄信号へ。高所警戒。</div></div>
+        <div class="claim">年末ターゲット S&amp;P 7,000 / ドル円153 / 10年債4.50%。AI設備投資がGDP+1%→EPS+23%で強気だが、<b>6月は「買いの月ではなくリバランスの月」＝黄信号</b>。IPOラッシュ(SpaceX 6/12, OpenAI 9月, Anthropic年末)が牽引。</div></div>
       <div class="ment"><div class="who">中島聡</div>
-        <div class="claim">AIの本命ボトルネックは「電力・配線不足」。半導体の先の送電・冷却・SMRが次の主役。VST/CEG/GEV/VRT系を注視。</div></div>
+        <div class="claim">AIの本命ボトルネックは「電力・配線不足」。半導体の先の送電・冷却・SMRが次の主役。最大の欠落「AI電力」は NLR/DTCR で取りに行く。</div></div>
       <div class="ment"><div class="who">ゆな先生</div>
-        <div class="claim">個別銘柄＋日本株＋実体験寄り（フィールドワーク投資）。直近PFはAlphabet最大ポジ、アシックス10倍の原体験。AI半導体・宇宙も追う。</div></div>
-      <div class="ment"><div class="who">藤沢数希</div>
-        <div class="claim"><span style="color:var(--down)">※note取り込みパイプライン整備後に自動反映（現在準備中）。</span></div></div>
-      <div class="insight"><span class="ilabel">💡 インサイト：</span>じっちゃま・中島は「AI強気だが電力テーマへ重心シフト＋高所警戒」で収束。ゆな先生は個別・日本株目線で補完。保有のAIデータセンター電力エクスポージャーは薄め——検討余地あり。</div>
+        <div class="claim">サプライチェーンのチョークポイント重視＝<b>光通信(LITE)・AI=核兵器(CRWD/PANW/PLTR)・SpaceX</b>。個別＋日本株＋フィールドワーク投資（アシックス10倍の原体験、直近PFはAlphabet最大ポジ）。</div></div>
+      <div class="insight"><span class="ilabel">💡 Claudeのインサイト：</span>3者の共通解は<b>「NVDA以外の周辺＝光通信/電力/サイバー/宇宙」へ重心シフト＋高所警戒</b>。あなたの保有はNVDA系(SMH)に厚いが、電力(NLR/DTCR待ち)・光通信(LITE)・宇宙は薄い——次の弾の方向はここ。</div>
     </div>
   </section>
 
   <section id="s4">
     <div class="sec-title"><b>4</b> ヘルスチェック</div>
     <div class="card">
-      <div class="flag"><div><b>テーマ集中：AI/半導体</b><div class="tk">GOOGL・MSFT・PLTR・SMH 等</div></div><span class="lab hi">高 38%</span></div>
-      <div class="flag"><div><b>単一口座集中：マネックス証券</b><div class="tk">取込資産の大半</div></div><span class="lab mid">中</span></div>
-      <div class="flag"><div><b>今週の変動大</b><div class="tk">URA / 銀行ETF 1615</div></div><span class="lab ok">監視</span></div>
-      <div class="insight"><span class="ilabel">💡 インサイト：</span>AI/半導体の集中が高め。電力テーマ(VST/CEG等)は分散にもなる二鳥。単一テーマ急反落リスクは常に意識。</div>
+      <div class="flag"><div><b>半導体テーマ集中</b><div class="tk">SMH ¥39.7M ＋ 日経半導体 ¥32.2M ＝ ¥72M</div></div><span class="lab hi">15% 高</span></div>
+      <div class="flag"><div><b>ゴールド</b><div class="tk">GLDM ¥43.4M（地政学・インフレヘッジ）</div></div><span class="lab mid">9%</span></div>
+      <div class="flag"><div><b>米国株偏重</b><div class="tk">¥184M／円安追い風だが円高転換リスク</div></div><span class="lab mid">37%</span></div>
+      <div class="flag"><div><b>単一口座集中：マネックス証券</b><div class="tk">取込¥436M（大半）</div></div><span class="lab mid">中</span></div>
+      <div class="insight"><span class="ilabel">💡 Claudeのインサイト（売り発議）：</span>S&amp;P最高値圏＋VIX低＋半導体15%集中——<b>「頭と尻尾はくれてやる」なら半導体(SMH/日経半導体)の一部利確を今こそ検討</b>。todoの役割ルール通り、これはこちらから先に出す売りシグナルです。ゴールド9%は地政学緩和(イラン)局面では一服も。</div>
     </div>
   </section>
 
   <section id="s5">
     <div class="sec-title"><b>5</b> PERアナリシス</div>
     <div class="card">
-      <div class="flag"><div><b>AAPL</b><div class="tk">予想PER 31 vs 5年平均 27</div></div><span class="lab mid">やや割高</span></div>
-      <div class="flag"><div><b>銀行ETF 1615</b><div class="tk">加重PER 低位＝利益ピーク?</div></div><span class="lab hi">サイクル天井注意</span></div>
-      <div class="flag"><div><b>PLTR</b><div class="tk">PEG 2.x</div></div><span class="lab hi">割高（成長株基準）</span></div>
-      <div class="insight"><span class="ilabel">💡 インサイト：</span>1615は「PER低い＝割安」ではなくサイクル株の罠（利益ピーク=売り時）を要確認。利益が出ている今こそ一部利確の議論を。</div>
+      <div class="flag"><div><b>NEXT FUNDS 東証銀行業 1615</b><div class="tk">加重PER低位＝利益ピーク?（保有¥26.4M）</div></div><span class="lab hi">サイクル天井注意</span></div>
+      <div class="flag"><div><b>CBRS（監視）</b><div class="tk">PER 171倍・$237（打診買い候補）</div></div><span class="lab hi">高PER</span></div>
+      <div class="flag"><div><b>PLTR（ゆな筆頭テーマ）</b><div class="tk">PEG 2.x＝成長株基準で割高</div></div><span class="lab mid">割高</span></div>
+      <div class="insight"><span class="ilabel">💡 Claudeのインサイト：</span>銀行業1615は「PER低い＝割安」ではなく<b>サイクル株の罠（利益ピーク=売り時）</b>を要確認。+20%含み益が出ている今こそ一部利確の議論を。※保有銘柄の実PERライブ取得は週次自動版で拡充。</div>
     </div>
   </section>
 
   <section id="s6">
     <div class="sec-title"><b>6</b> トリガー＆アクション</div>
     <div class="card">
-      <div class="act"><span class="dot"></span><div>MSFT <b>$380 逆指値</b> 設定済 — 維持</div></div>
-      <div class="act"><span class="dot"></span><div>NLR / DTCR：マネックス取扱再開待ち（各$50K枠）</div></div>
-      <div class="act"><span class="dot"></span><div>CBRS：$220以下で打診買い検討</div></div>
-      <div class="act"><span class="dot"></span><div>余剰キャッシュ ¥10M：電力テーマ(VST/CEG)へ一部配分を検討</div></div>
+      <div class="act"><span class="dot"></span><div><b>NLR / DTCR 各$50K</b>：マネックス規制解除＝即実行（最優先・AI電力の本丸）</div></div>
+      <div class="act"><span class="dot"></span><div><b>CBRS</b>：現$237。次の<b>$220割れ</b>を待って打診買い（急騰追わない）</div></div>
+      <div class="act"><span class="dot"></span><div><b>AMZN $245</b> 第1指値タッチ済 → $245近辺で第1弾$15Kのみ、第2指値$220控え</div></div>
+      <div class="act"><span class="dot"></span><div><b>SpaceX(SPCX)</b>：上場済$161。初日見送り→$15K→$20K→$15Kの3段階</div></div>
+      <div class="act"><span class="dot"></span><div><b>半導体一部利確</b>を検討（上記ヘルスチェックの売り発議）</div></div>
     </div>
   </section>
 
   <section id="s7">
     <div class="sec-title"><b>7</b> 来週の注目イベント</div>
     <div class="card">
-      <div class="ev"><div class="d">6/17</div><div>米小売売上高</div></div>
-      <div class="ev"><div class="d">6/18</div><div>FOMC 政策金利・会見（最重要）</div></div>
-      <div class="ev"><div class="d">6/20</div><div>日銀 金融政策決定会合</div></div>
-      <div class="ev"><div class="d">週内</div><div>主要半導体・テック決算</div></div>
-      <div class="insight"><span class="ilabel">💡 インサイト：</span>FOMCが最大の波乱要因。黄信号＋高キャッシュなので、急落時の買い候補リストを事前に決めておくと動ける。</div>
+      <div class="ev"><div class="d">来週前半</div><div>米CPI・小売など物価/消費指標</div></div>
+      <div class="ev"><div class="d">FOMC</div><div>ウォーシュ新議長下の金利判断（利上げ観測の有無）</div></div>
+      <div class="ev"><div class="d">日銀</div><div>金融政策決定会合（利上げ＝円高転換の起点になり得る）</div></div>
+      <div class="ev"><div class="d">継続</div><div>SpaceX上場後の値動き／OpenAI(9月)・Anthropic(年末)IPO前哨</div></div>
+      <div class="insight"><span class="ilabel">💡 Claudeのインサイト：</span>最大の波乱要因は<b>日銀利上げ→円高</b>（米国株37%＋米ドル現金に逆風）。黄信号＋高キャッシュ余地は薄め(11%)なので、急落時の買い候補（NLR/DTCR/光通信）を今のうちにリスト化を。</div>
     </div>
   </section>
 
   <div class="foot">
-    ソース：じっちゃま(mh-*) / 中島聡(lib-*) / 藤沢数希(準備中) / MF保有(mf-holdings) / WebSearch<br>
-    生成：MulmoClaude（プレビュー）。投資助言ではなく壁打ち材料です。
+    ソース：保有=MF実値(mf-holdings.json) / じっちゃま(mh-*) / 中島聡(lib-*) / ゆな先生(yuna-investment) / 投資ToDo / WebSearch(2026-06-12〜13)<br>
+    生成：MulmoClaude。投資助言ではなく壁打ち材料です。
   </div>
 </div>
 </body>
