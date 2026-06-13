@@ -4038,6 +4038,24 @@ function showSymbolTip(ev, title, symbols) {
 
 // src/briefing.js
 var _loaded = false;
+var _frame = null;
+var _themeObserver = null;
+function _syncFrameTheme() {
+  if (!_frame) return;
+  try {
+    const t = document.documentElement.getAttribute("data-theme");
+    const idoc = _frame.contentDocument?.documentElement;
+    if (!idoc) return;
+    if (t === "light" || t === "dark") idoc.setAttribute("data-theme", t);
+    else idoc.removeAttribute("data-theme");
+  } catch {
+  }
+}
+function _ensureThemeObserver() {
+  if (_themeObserver) return;
+  _themeObserver = new MutationObserver(_syncFrameTheme);
+  _themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+}
 function renderBriefing(force = false) {
   const panel = document.getElementById("panel-briefing");
   if (!panel) return;
@@ -4056,18 +4074,18 @@ function renderBriefing(force = false) {
     const past = issues.slice(1);
     const pastHtml = past.length ? past.map((p) => `<a class="bf-past-item" href="${p.path}" target="_blank" rel="noopener"><span class="bf-past-name">${_esc(p.title)}</span><span class="bf-past-date">${_esc(p.date)}</span></a>`).join("") : '<div class="bf-none">\u904E\u53BB\u53F7\u306F\u307E\u3060\u3042\u308A\u307E\u305B\u3093</div>';
     panel.innerHTML = `<div class="bf-wrap"><div class="bf-toolbar"><span class="bf-cur">${_esc(latest.title)}</span><button class="bf-reload" data-action="reloadBriefing" title="\u518D\u8AAD\u307F\u8FBC\u307F">\u21BB</button></div><iframe class="bf-frame" src="${latest.path}" title="${_esc(latest.title)}" loading="lazy"></iframe><div class="bf-past"><div class="bf-past-head">\u904E\u53BB\u306E Briefing</div>${pastHtml}</div></div>`;
-    const frame = (
-      /** @type {HTMLIFrameElement|null} */
-      panel.querySelector(".bf-frame")
-    );
-    if (frame) {
-      frame.addEventListener("load", () => {
+    _frame = /** @type {HTMLIFrameElement|null} */
+    panel.querySelector(".bf-frame");
+    if (_frame) {
+      _frame.addEventListener("load", () => {
+        _syncFrameTheme();
         try {
-          const h = frame.contentWindow?.document?.body?.scrollHeight;
-          if (h) frame.style.height = `${h + 24}px`;
+          const h = _frame?.contentWindow?.document?.body?.scrollHeight;
+          if (h) _frame.style.height = `${h + 24}px`;
         } catch {
         }
       });
+      _ensureThemeObserver();
     }
     _loaded = true;
   }).catch(() => {
