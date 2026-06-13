@@ -3106,14 +3106,15 @@ function renderStats() {
   const grandTotal = mf ? mf.imported : totalValue;
   const mfTag = mf ? '<span style="display:block;font-size:9px;font-weight:400;color:var(--text2);opacity:0.6;text-transform:none;letter-spacing:0;">MF\u5B9F\u5024</span>' : "";
   let html = `<div class="stat">
-    <span class="stat-label">\u8CC7\u7523\u7DCF\u984D${mfTag}</span>
-    <span class="stat-value neu">${fmtJPYInt(grandTotal)}</span>
+    <span class="stat-label">\u904B\u7528\u8CC7\u7523\u7DCF\u984D${mfTag}</span>
+    <span class="stat-value stat-fg">${fmtJPYInt(grandTotal)}</span>
   </div>`;
   if (mf) {
+    const dryMan = `\xA5${Math.round(mf.dryPowder / 1e4).toLocaleString()}\u4E07`;
     html += `<div class="stat">
-      <span class="stat-label">\u30AD\u30E3\u30C3\u30B7\u30E5\u6BD4\u7387</span>
-      <span class="stat-value neu">${mf.cashRatio.toFixed(1)}%</span>
-      <span class="stat-sub neu">\u6295\u8CC7\u7528\xA5${Math.round(mf.dryPowder / 1e6)}M</span>
+      <span class="stat-label">\u6295\u8CC7\u7528\u30AD\u30E3\u30C3\u30B7\u30E5</span>
+      <span class="stat-value stat-fg">${dryMan}</span>
+      <span class="stat-sub stat-fg">${mf.cashRatio.toFixed(1)}%</span>
     </div>`;
   }
   html += `<div class="stat">
@@ -3709,6 +3710,20 @@ var constituents_overrides_default = {
     sector: {
       cash: 1
     }
+  },
+  \u6697\u53F7\u8CC7\u7523: {
+    assetClass: {
+      crypto: 1
+    },
+    currency: {
+      other: 1
+    },
+    country: {
+      global: 1
+    },
+    sector: {
+      crypto: 1
+    }
   }
 };
 
@@ -3884,7 +3899,7 @@ var TITLES = {
   sector: "\u30BB\u30AF\u30BF\u30FC"
 };
 var LABELS = {
-  assetClass: { equity: "\u682A\u5F0F", bond: "\u50B5\u5238", commodity: "\u30B3\u30E2\u30C7\u30A3\u30C6\u30A3", reit: "REIT", cash: "\u73FE\u91D1" },
+  assetClass: { equity: "\u682A\u5F0F", bond: "\u50B5\u5238", commodity: "\u30B3\u30E2\u30C7\u30A3\u30C6\u30A3", reit: "REIT", cash: "\u73FE\u91D1", crypto: "\u6697\u53F7\u8CC7\u7523" },
   currency: { JPY: "\u5186 JPY", USD: "\u30C9\u30EB USD", EUR: "\u30E6\u30FC\u30ED EUR", other: "\u305D\u306E\u4ED6\u901A\u8CA8" },
   country: { japan: "\u65E5\u672C", us: "\u7C73\u56FD", europe: "\u6B27\u5DDE", em: "\u65B0\u8208\u56FD", latam: "\u4E2D\u5357\u7C73", china: "\u4E2D\u56FD", global: "\u5206\u6563", commodity: "\u30B3\u30E2\u30C7\u30A3\u30C6\u30A3" },
   sector: {
@@ -3902,7 +3917,8 @@ var LABELS = {
     realestate: "\u4E0D\u52D5\u7523",
     commodity: "\u30B3\u30E2\u30C7\u30A3\u30C6\u30A3",
     bond: "\u50B5\u5238",
-    cash: "\u73FE\u91D1"
+    cash: "\u73FE\u91D1",
+    crypto: "\u6697\u53F7\u8CC7\u7523"
   }
 };
 var PALETTE = [
