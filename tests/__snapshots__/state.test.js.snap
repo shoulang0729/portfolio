@@ -44,7 +44,7 @@ exports[`state.js > state (initial values) > state matches snapshot 1`] = `
     },
   },
   "slDetailVisible": false,
-  "statsVisible": false,
+  "statsMasked": true,
   "themeMode": "auto",
   "watchlist": [],
   "watchlistPrices": {},

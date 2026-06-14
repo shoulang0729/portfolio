@@ -20,6 +20,13 @@ const fmtJPY = v => {
 
 const fmtJPYFull = v => `${(v >= 0 ? '+' : '') + Math.round(v).toLocaleString()  }\u5186`;
 
+// 1\u5186\u5358\u4f4d\u30fb\u30ab\u30f3\u30de\u533a\u5207\u308a\u306e\u5186\u8868\u8a18\uff08\u7b26\u53f7\u306a\u3057\u30fb\u00a5\u524d\u7f6e\uff09\u3002\u8cc7\u7523\u7dcf\u984d\u30d0\u30fc\u3067\u4f7f\u7528\u3002
+const fmtYen = v => `\u00a5${  Math.round(v || 0).toLocaleString()}`;
+
+// \u30de\u30cd\u30fc\u30d5\u30a9\u30ef\u30fc\u30c9\u5f0f\u30de\u30b9\u30af: \u6570\u5b57\u306e\u307f\u3092 * \u306b\u7f6e\u63db\u3057\u3001\u30ab\u30f3\u30de\u30fb\u00a5\u30fb\u8a18\u53f7\u306f\u6b8b\u3059\u3002
+// \u4f8b: "\u00a5524,345,245" -> "\u00a5***,***,***"
+const maskAmount = s => String(s).replace(/[0-9]/g, '*');
+
 const fmtPct = v => `${v.toFixed(1)  }%`;
 
 const fmtPrice = (v, cur) => {
@@ -71,4 +78,4 @@ function getColor(pct, mode, scaleOverride) {
   }
 }
 
-export { escapeHTML, fmtJPY, fmtJPYFull, fmtPct, fmtPrice, sgn, fmtJPYInt, fmtPctInt, fmtShares, getColor };
+export { escapeHTML, fmtJPY, fmtJPYFull, fmtYen, maskAmount, fmtPct, fmtPrice, sgn, fmtJPYInt, fmtPctInt, fmtShares, getColor };

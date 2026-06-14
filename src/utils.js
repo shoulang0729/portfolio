@@ -6,7 +6,7 @@
 // 既存の `import { ... } from './utils.js'` はそのまま動く。
 // ══════════════════════════════════════════════════════════════
 
-export { escapeHTML, fmtJPY, fmtJPYFull, fmtPct, fmtPrice, sgn, fmtJPYInt, fmtPctInt, fmtShares } from './fmt.js';
+export { escapeHTML, fmtJPY, fmtJPYFull, fmtYen, maskAmount, fmtPct, fmtPrice, sgn, fmtJPYInt, fmtPctInt, fmtShares } from './fmt.js';
 export { cssVar, getColor, getCellTextColor, getCellTextColorSub } from './color.js';
 export { makeTh, makePctCell, _tableSort, makePeriodCells, makePeriodHeaderCells } from './table.js';
-export { getHistoricalChangePct, getDisplayPct, calcPortfolioPeriodPct } from './portfolio-calc.js';
+export { getHistoricalChangePct, getDisplayPct, calcPortfolioPeriodPct, trackedSymbolCount } from './portfolio-calc.js';
