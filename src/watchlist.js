@@ -335,6 +335,28 @@ function wlGetPct(item, periodId) {
 }
 
 /** ウォッチリストテーブルを描画 */
+// ── PER採点セル ──
+// item.valuation（PM が採点時に書き込む値）を表示するだけ。アプリはライブ計算しない。
+const WL_VAL_STATUS = {
+  cheap: { icon: '🟢', label: '割安' },
+  fair:  { icon: '🟡', label: '中立' },
+  rich:  { icon: '🔴', label: '割高' },
+  hold:  { icon: '⚪', label: '保留' },
+};
+function wlValuationCell(item) {
+  const v = item.valuation;
+  if (!v) return '<td class="wl-per-cell wl-per-empty" data-col="per">–</td>';
+  const s    = WL_VAL_STATUS[v.status] || WL_VAL_STATUS.hold;
+  const pct  = Math.round(v.percentile);
+  const per  = isFinite(v.perCurrent) ? v.perCurrent.toFixed(1) : '–';
+  const band = `${v.bandLow}–${v.bandHigh}${v.bandMedian != null ? ` 中央${v.bandMedian}` : ''}`;
+  const title = `PER ${per} ／ バンド ${band} ／ ${pct}%ile ／ ${v.asOf}${v.note ? ` ／ ${v.note}` : ''}`;
+  return `<td class="wl-per-cell" data-col="per" title="${escapeHTML(title)}">
+      <span class="wl-per-tile">${pct}<span class="wl-per-unit">%ile</span></span>
+      <span class="wl-per-status">${s.icon}<span class="wl-per-label">${s.label}</span></span>
+    </td>`;
+}
+
 export function renderWatchlist() {
   const panel = document.getElementById('panel-watchlist');
   if (panel?.hidden) return;
@@ -359,7 +381,10 @@ export function renderWatchlist() {
       va = a.exchange ?? ''; vb = b.exchange ?? '';
       return dir * va.localeCompare(vb);
     }
-    if (col === 'price') {
+    if (col === 'per') {
+      va = a.valuation?.percentile ?? -Infinity;
+      vb = b.valuation?.percentile ?? -Infinity;
+    } else if (col === 'price') {
       va = state.watchlistPrices[a.symbol]?.price ?? -Infinity;
       vb = state.watchlistPrices[b.symbol]?.price ?? -Infinity;
     } else {
@@ -391,6 +416,7 @@ export function renderWatchlist() {
       <td data-col="symbol" class="sl-sym">${symEsc}<span class="sl-inline-name">${nameEsc}</span></td>
       <td class="wl-market-cell"><span class="wl-type-badge">${exEsc}</span></td>
       <td class="wl-price-cell">${priceStr}</td>
+      ${wlValuationCell(item)}
       ${periodCells}
       <td class="wl-del-cell">
         <button class="wl-del-btn" data-action="removeFromWatchlist" data-arg="${escapeHTML(item.symbol)}" title="ウォッチリストから削除">×</button>
@@ -403,6 +429,7 @@ export function renderWatchlist() {
       ${th('ティッカー<br><span class="sl-th-sub">銘柄名</span>', 'symbol')}
       ${th('市場', 'market', 'center')}
       ${th('現在値', 'price')}
+      ${th('PER採点<br><span class="sl-th-sub">%ile</span>', 'per', 'center')}
       ${makePeriodHeaderCells(state.wlSortCol, state.wlSortDir, 'wlSort')}
       <th></th>
     </tr></thead>
