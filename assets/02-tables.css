@@ -1,5 +1,7 @@
 /* ── ヒートマップ色付きセル（中央揃え・角丸） ── */
-.sl-pct-cell { text-align: center; }
+.sl-pct-cell {
+  text-align: center;
+}
 
 /* 履歴データ取得中のプレースホルダ（"…"）。点滅で更新中を示す。 */
 .sl-pct-loading {
@@ -8,30 +10,93 @@
   animation: sl-pct-loading-pulse 1.2s ease-in-out infinite;
 }
 @keyframes sl-pct-loading-pulse {
-  0%, 100% { opacity: 0.35; }
-  50%      { opacity: 0.85; }
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.85;
+  }
 }
 /* 騰落率列：全期間で幅を統一（white-space:nowrap で「1週間」が列幅を決める） */
-.sl-table th[data-col="1d"],  .sl-table th[data-col="1w"],
-.sl-table th[data-col="1mo"], .sl-table th[data-col="1Q"],
-.sl-table th[data-col="2Q"],  .sl-table th[data-col="3Q"],
-.sl-table th[data-col="1y"],  .sl-table th[data-col="3y"] { white-space: nowrap; }
-.sl-table th[data-col="1d"],  .sl-table th[data-col="1w"],
-.sl-table th[data-col="1mo"], .sl-table th[data-col="1Q"],
-.sl-table th[data-col="2Q"],  .sl-table th[data-col="3Q"],
-.sl-table th[data-col="1y"],  .sl-table th[data-col="3y"],
-.sl-table td.sl-pct-cell { width: 56px; min-width: 56px; }
-.sl-table td[style*="background"] { border-radius: 3px; }
+.sl-table th[data-col='1d'],
+.sl-table th[data-col='1w'],
+.sl-table th[data-col='1mo'],
+.sl-table th[data-col='1Q'],
+.sl-table th[data-col='2Q'],
+.sl-table th[data-col='3Q'],
+.sl-table th[data-col='1y'],
+.sl-table th[data-col='3y'] {
+  white-space: nowrap;
+}
+.sl-table th[data-col='1d'],
+.sl-table th[data-col='1w'],
+.sl-table th[data-col='1mo'],
+.sl-table th[data-col='1Q'],
+.sl-table th[data-col='2Q'],
+.sl-table th[data-col='3Q'],
+.sl-table th[data-col='1y'],
+.sl-table th[data-col='3y'],
+.sl-table td.sl-pct-cell {
+  width: 56px;
+  min-width: 56px;
+}
+.sl-table td[style*='background'] {
+  border-radius: 3px;
+}
 /* ティッカー列：幅を固定してバーグラフ左端が動かないようにする / 横スクロール時に固定 */
-.sl-table th[data-col="symbol"] { width: 150px; max-width: 150px; position: sticky; left: 0; z-index: 4; background: var(--surface3); box-shadow: 1px 0 0 var(--border2); }
-.sl-table td[data-col="symbol"] { width: 150px; max-width: 150px; position: sticky; left: 0; z-index: 1; background: var(--surface); box-shadow: 1px 0 0 var(--border2); }
+.sl-table th[data-col='symbol'] {
+  width: 150px;
+  max-width: 150px;
+  position: sticky;
+  left: 0;
+  z-index: 4;
+  background: var(--surface3);
+  box-shadow: 1px 0 0 var(--border2);
+}
+.sl-table td[data-col='symbol'] {
+  width: 150px;
+  max-width: 150px;
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface);
+  box-shadow: 1px 0 0 var(--border2);
+}
 /* ウォッチリスト：ティッカー列も固定 */
-.wl-table th[data-col="symbol"] { width: 130px; max-width: 130px; position: sticky; left: 0; z-index: 20; background: var(--surface3); box-shadow: 1px 0 0 var(--border2); }
-.wl-table td[data-col="symbol"] { width: 130px; max-width: 130px; position: sticky; left: 0; z-index: 1; background: var(--surface); box-shadow: 1px 0 0 var(--border2); }
-.sl-sym  { font-weight: 600; font-size: 13px; }
-.sl-name { color: var(--text2); font-size: 11.5px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
+.wl-table th[data-col='symbol'] {
+  width: 130px;
+  max-width: 130px;
+  position: sticky;
+  left: 0;
+  z-index: 20;
+  background: var(--surface3);
+  box-shadow: 1px 0 0 var(--border2);
+}
+.wl-table td[data-col='symbol'] {
+  width: 130px;
+  max-width: 130px;
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface);
+  box-shadow: 1px 0 0 var(--border2);
+}
+.sl-sym {
+  font-weight: 600;
+  font-size: 13px;
+}
+.sl-name {
+  color: var(--text2);
+  font-size: 11.5px;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 /* ── 列表示/非表示（data-col を使ってCSS動的制御） ── */
-#sl-col-style { /* populated by JS */ }
+#sl-col-style {
+  /* populated by JS */
+}
 /* ── 銘柄リスト：表の外のコントロールエリア ── */
 .sl-controls {
   display: flex;
@@ -42,7 +107,9 @@
 /* display:flex が [hidden] 属性を上書きしてしまうため明示的に打ち消す。
    これがないと sl-controls 内の sl-eye（詳細列トグル）が Historical Heatmap
    以外のタブでも表示される（#210 後半）。 */
-.sl-controls[hidden] { display: none; }
+.sl-controls[hidden] {
+  display: none;
+}
 .sl-eye-btn {
   background: none;
   border: 1px solid var(--border);
@@ -57,70 +124,193 @@
   display: flex;
   align-items: center;
 }
-.sl-eye-btn:hover { color: var(--text); }
-.sl-eye-btn.hidden { opacity: 0.35; }
+.sl-eye-btn:hover {
+  color: var(--text);
+}
+.sl-eye-btn.hidden {
+  opacity: 0.35;
+}
 /* ティッカーセル内の銘柄名（PC・スマホ共通表示） */
-.sl-inline-name { display: block; font-size: 10px; color: var(--text2);
-  max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  margin-top: 1px; }
+.sl-inline-name {
+  display: block;
+  font-size: 10px;
+  color: var(--text2);
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 1px;
+}
 /* ヘッダーの補助ラベル（銘柄名・期間表示） */
-.sl-th-sub { display: block; font-size: 9px; font-weight: 400; color: var(--text2);
-  text-transform: none; letter-spacing: 0; margin-top: 1px; }
+.sl-th-sub {
+  display: block;
+  font-size: 9px;
+  font-weight: 400;
+  color: var(--text2);
+  text-transform: none;
+  letter-spacing: 0;
+  margin-top: 1px;
+}
 
 /* ウォッチリスト PER採点セル（valuation の表示。色は status 絵文字で表現） */
-.wl-per-cell { text-align: center; white-space: nowrap; }
-.wl-per-cell.wl-per-empty { color: var(--text3); }
-.wl-per-tile { display: block; font-size: 12px; font-weight: 600; color: var(--text); }
-.wl-per-unit { font-size: 9px; font-weight: 400; color: var(--text2); margin-left: 1px; }
-.wl-per-status { display: block; font-size: 10px; color: var(--text2); margin-top: 1px; }
-.wl-per-label { margin-left: 2px; }
+.wl-per-cell {
+  text-align: center;
+  white-space: nowrap;
+}
+.wl-per-cell.wl-per-empty {
+  color: var(--text3);
+}
+.wl-per-tile {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+.wl-per-unit {
+  font-size: 9px;
+  font-weight: 400;
+  color: var(--text2);
+  margin-left: 1px;
+}
+.wl-per-status {
+  display: block;
+  font-size: 10px;
+  color: var(--text2);
+  margin-top: 1px;
+}
+.wl-per-label {
+  margin-left: 2px;
+}
 
 /* ══════════════════════════════════════════
    ヘッダー右列コンポーネント
    ══════════════════════════════════════════ */
 
 /* ヘッダー右列：更新頻度（上段）＋ 次回更新ステータス（下段） */
-.mobile-refresh { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
-.mobile-refresh-top { display: flex; align-items: stretch; gap: 4px; }
-.mobile-refresh-top .refresh-switch { display: flex; align-items: stretch; flex-wrap: nowrap; overflow-x: visible; flex-shrink: 0; }
-.mobile-refresh-top .refresh-btn { align-self: stretch; }
-.mobile-refresh-top .theme-btn { flex-shrink: 0; align-self: stretch; }
-.mobile-refresh-top .csv-btn   { flex-shrink: 0; align-self: stretch; }
-.mobile-status-row { display: flex; align-items: center; gap: 5px; color: var(--text2);
-  white-space: nowrap; justify-content: flex-end; overflow: hidden; align-self: stretch; }
-.mobile-status-row .status-line { white-space: nowrap; justify-content: flex-end;
-  overflow: hidden; min-width: 0; }
-#status-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-.mobile-status-row .dot { width: 6px; height: 6px; }
+.mobile-refresh {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.mobile-refresh-top {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+}
+.mobile-refresh-top .refresh-switch {
+  display: flex;
+  align-items: stretch;
+  flex-wrap: nowrap;
+  overflow-x: visible;
+  flex-shrink: 0;
+}
+.mobile-refresh-top .refresh-btn {
+  align-self: stretch;
+}
+.mobile-refresh-top .theme-btn {
+  flex-shrink: 0;
+  align-self: stretch;
+}
+.mobile-refresh-top .csv-btn {
+  flex-shrink: 0;
+  align-self: stretch;
+}
+.mobile-status-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text2);
+  white-space: nowrap;
+  justify-content: flex-end;
+  overflow: hidden;
+  align-self: stretch;
+}
+.mobile-status-row .status-line {
+  white-space: nowrap;
+  justify-content: flex-end;
+  overflow: hidden;
+  min-width: 0;
+}
+#status-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.mobile-status-row .dot {
+  width: 6px;
+  height: 6px;
+}
 
 /* period-switch：ボタン枠外にはみ出しを許容（overflow:hidden の round-clip 解除） */
-.period-switch { overflow-x: visible; }
-
+.period-switch {
+  overflow-x: visible;
+}
 
 /* ══════════════════════════════════════════
    PC サイズ調整 (≥601px)
    ══════════════════════════════════════════ */
 @media (min-width: 601px) {
-  body { padding: 20px; padding-top: 0; padding-bottom: max(20px, env(safe-area-inset-bottom)); /* sticky-top を y=0 から開始 */ }
-  .mobile-refresh-top .refresh-btn { padding: 5px 10px; font-size: 13px; min-height: unset; }
+  body {
+    padding: 20px;
+    padding-top: 0;
+    padding-bottom: max(20px, env(safe-area-inset-bottom)); /* sticky-top を y=0 から開始 */
+  }
+  .mobile-refresh-top .refresh-btn {
+    padding: 5px 10px;
+    font-size: 13px;
+    min-height: unset;
+  }
   /* PC: ボタン高さ統一（#hm-menu-wrapはボタン自身の高さに任せる） */
   .mobile-refresh-top .refresh-switch,
   .mobile-refresh-top .theme-btn,
-  .mobile-refresh-top .csv-btn   { height: 34px; box-sizing: border-box; }
-  .mobile-refresh-top .refresh-btn { height: 32px; box-sizing: border-box; }
-  .mobile-status-row { font-size: 12px; gap: 6px; }
-  .mobile-status-row .countdown { font-size: 12px; }
-  .mobile-status-row .status-line { font-size: 12px; }
-  .mobile-status-row .dot { width: 7px; height: 7px; }
-  .controls { padding: 0; gap: 8px; }
-  .stats-outer { margin-bottom: 20px; }
-  .stat { min-width: 76px; }
+  .mobile-refresh-top .csv-btn {
+    height: 34px;
+    box-sizing: border-box;
+  }
+  .mobile-refresh-top .refresh-btn {
+    height: 32px;
+    box-sizing: border-box;
+  }
+  .mobile-status-row {
+    font-size: 12px;
+    gap: 6px;
+  }
+  .mobile-status-row .countdown {
+    font-size: 12px;
+  }
+  .mobile-status-row .status-line {
+    font-size: 12px;
+  }
+  .mobile-status-row .dot {
+    width: 7px;
+    height: 7px;
+  }
+  .controls {
+    padding: 0;
+    gap: 8px;
+  }
+  .stats-outer {
+    margin-bottom: 20px;
+  }
+  .stat {
+    min-width: 76px;
+  }
   /* PC: ティッカー列を少し広げる（sticky/z-index/background は上書きしない） */
-  .sl-table th[data-col="symbol"] { width: 190px; max-width: 190px; }
-  .sl-table td[data-col="symbol"] { width: 190px; max-width: 190px; }
-  .sl-inline-name { max-width: none; }
+  .sl-table th[data-col='symbol'] {
+    width: 190px;
+    max-width: 190px;
+  }
+  .sl-table td[data-col='symbol'] {
+    width: 190px;
+    max-width: 190px;
+  }
+  .sl-inline-name {
+    max-width: none;
+  }
 }
-
 
 /* ══════════════════════════════════════════
    モバイル / レスポンシブ  (iPhone / iPad)
@@ -128,55 +318,144 @@
 
 /* ── タブレット ≤768px ── */
 @media (max-width: 768px) {
-  .modal { padding: 16px; border-radius: 14px; }
-  .chart-stats { gap: 12px; }
+  .modal {
+    padding: 16px;
+    border-radius: 14px;
+  }
+  .chart-stats {
+    gap: 12px;
+  }
 }
 
 /* ── スマートフォン ≤600px：サイズのみ調整 ── */
 @media (max-width: 600px) {
-  body { padding: 10px; padding-top: 0; padding-bottom: max(10px, env(safe-area-inset-bottom)); /* sticky-top を y=0 から開始させる（スクロール前固定） */ }
-  .title { font-size: 22px; }
-  .mobile-refresh-top .refresh-btn { padding: 4px 8px; font-size: 11px; min-height: unset; }
+  body {
+    padding: 10px;
+    padding-top: 0;
+    padding-bottom: max(10px, env(safe-area-inset-bottom)); /* sticky-top を y=0 から開始させる（スクロール前固定） */
+  }
+  .title {
+    font-size: 22px;
+  }
+  .mobile-refresh-top .refresh-btn {
+    padding: 4px 8px;
+    font-size: 11px;
+    min-height: unset;
+  }
   /* モバイル: ボタン高さ統一（refresh-switch=30px枠内でrefresh-btn=28px） */
   .mobile-refresh-top .refresh-switch,
   .mobile-refresh-top .theme-btn,
-  .mobile-refresh-top .csv-btn   { height: 30px; box-sizing: border-box; }
-  .mobile-refresh-top .refresh-btn { height: 28px; box-sizing: border-box; }
-  .mobile-refresh-top .csv-btn   { min-height: unset; }  /* 一般 min-height を無効化 */
-  .mobile-status-row { font-size: 10px; gap: 5px; }
-  .mobile-status-row .countdown { font-size: 10px; }
-  .mobile-status-row .status-line { font-size: 10px; }
-  .mobile-status-row .dot { width: 5px; height: 5px; }
-  .controls { padding: 0; gap: 6px; }
-  .ctrl-label { font-size: 11px; }
-  .period-btn { padding: 5px 9px; font-size: 11px; min-height: 32px; }
-  .pnl-btn { padding: 5px 10px; font-size: 12px; min-height: 32px; white-space: nowrap; flex-shrink: 0; }
-  .csv-btn  { padding: 5px 10px; font-size: 12px; min-height: 32px; white-space: nowrap; flex-shrink: 0; }
-  .btn { padding: 5px 9px; font-size: 12px; min-height: 32px; }
-  .btn-select { font-size: 11px; padding: 5px 6px; }
-  .stats-outer { margin-bottom: 8px; }
+  .mobile-refresh-top .csv-btn {
+    height: 30px;
+    box-sizing: border-box;
+  }
+  .mobile-refresh-top .refresh-btn {
+    height: 28px;
+    box-sizing: border-box;
+  }
+  .mobile-refresh-top .csv-btn {
+    min-height: unset;
+  } /* 一般 min-height を無効化 */
+  .mobile-status-row {
+    font-size: 10px;
+    gap: 5px;
+  }
+  .mobile-status-row .countdown {
+    font-size: 10px;
+  }
+  .mobile-status-row .status-line {
+    font-size: 10px;
+  }
+  .mobile-status-row .dot {
+    width: 5px;
+    height: 5px;
+  }
+  .controls {
+    padding: 0;
+    gap: 6px;
+  }
+  .ctrl-label {
+    font-size: 11px;
+  }
+  .period-btn {
+    padding: 5px 9px;
+    font-size: 11px;
+    min-height: 32px;
+  }
+  .pnl-btn {
+    padding: 5px 10px;
+    font-size: 12px;
+    min-height: 32px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .csv-btn {
+    padding: 5px 10px;
+    font-size: 12px;
+    min-height: 32px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .btn {
+    padding: 5px 9px;
+    font-size: 12px;
+    min-height: 32px;
+  }
+  .btn-select {
+    font-size: 11px;
+    padding: 5px 6px;
+  }
+  .stats-outer {
+    margin-bottom: 8px;
+  }
   /* スマホ：statsコンテナを親幅内に収め内部スクロールを有効化（PC と分離） */
-  .stats { flex: 1; min-width: 0; padding: 8px 10px; font-size: 12px; }
-  .stat { min-width: 72px; }
-  .sl-table { font-size: 11.5px; }
-  .sl-table td, .sl-table th { padding: 5px 7px; }
+  .stats {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+  .stat {
+    min-width: 72px;
+  }
+  .sl-table {
+    font-size: 11.5px;
+  }
+  .sl-table td,
+  .sl-table th {
+    padding: 5px 7px;
+  }
 }
 
 /* ── スマホ横（landscape）≤900px：stats を親幅に合わせて伸長 ── */
 @media (orientation: landscape) and (max-width: 900px) {
-  .stats { flex: 1; min-width: 0; }
+  .stats {
+    flex: 1;
+    min-width: 0;
+  }
 }
 
 /* ── 小型iPhone（≤390px）追加調整 ── */
 @media (max-width: 390px) {
-  body { padding: 8px; padding-top: 0; padding-bottom: max(8px, env(safe-area-inset-bottom)); }
-  .period-btn { padding: 5px 7px; font-size: 10.5px; }
-  .title { font-size: 16px; }
+  body {
+    padding: 8px;
+    padding-top: 0;
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+  .period-btn {
+    padding: 5px 7px;
+    font-size: 10.5px;
+  }
+  .title {
+    font-size: 16px;
+  }
 }
 
 /* ── モーダル：モバイルでフルスクリーン風 ── */
 @media (max-width: 600px) {
-  .modal-overlay { align-items: flex-end; }
+  .modal-overlay {
+    align-items: flex-end;
+  }
   .modal {
     width: 100vw;
     max-height: 92dvh;
@@ -184,16 +463,30 @@
     padding: 16px 14px 24px;
     border-bottom: none;
   }
-  .modal-title { font-size: 16px; }
-  .modal-sym { font-size: 13px; }
-  .range-btn { padding: 5px 10px; font-size: 12px; min-height: 32px; }
-  .range-btns { gap: 4px; }
-  .chart-stats { font-size: 11px; gap: 10px; }
+  .modal-title {
+    font-size: 16px;
+  }
+  .modal-sym {
+    font-size: 13px;
+  }
+  .range-btn {
+    padding: 5px 10px;
+    font-size: 12px;
+    min-height: 32px;
+  }
+  .range-btns {
+    gap: 4px;
+  }
+  .chart-stats {
+    font-size: 11px;
+    gap: 10px;
+  }
   /* モーダル上部にドラッグハンドル風の装飾 */
   .modal::before {
     content: '';
     display: block;
-    width: 40px; height: 4px;
+    width: 40px;
+    height: 4px;
     background: var(--handle);
     border-radius: 2px;
     margin: 0 auto 12px;
@@ -202,10 +495,15 @@
 
 /* ── ツールチップ：モバイルでは大きめに ── */
 @media (max-width: 600px) {
-  .tooltip { font-size: 13px; padding: 10px 12px; max-width: 260px; }
-  .tt-hdr { font-size: 13px; }
+  .tooltip {
+    font-size: 13px;
+    padding: 10px 12px;
+    max-width: 260px;
+  }
+  .tt-hdr {
+    font-size: 13px;
+  }
 }
-
 
 /* ── タブバー ── */
 .tab-bar {
@@ -216,7 +514,7 @@
 }
 .tab-btn {
   flex: 1 1 0;
-  min-width: 0;                /* 5タブでも均等に縮む（テキストはellipsis） */
+  min-width: 0; /* 5タブでも均等に縮む（テキストはellipsis） */
   padding: 9px 3px 7px;
   background: none;
   border: none;
@@ -226,7 +524,9 @@
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
   -webkit-tap-highlight-color: transparent;
   white-space: nowrap;
   overflow: hidden;
@@ -242,48 +542,78 @@
 }
 /* 狭い画面（5タブ）ではフォント・余白を詰める */
 @media (max-width: 420px) {
-  .tab-btn { font-size: 12px; padding: 9px 2px 7px; letter-spacing: -0.02em; }
+  .tab-btn {
+    font-size: 12px;
+    padding: 9px 2px 7px;
+    letter-spacing: -0.02em;
+  }
 }
 
 /* ── タブパネル ── */
-.tab-panel { display: block; }
-.tab-panel[hidden] { display: none; }
+.tab-panel {
+  display: block;
+}
+.tab-panel[hidden] {
+  display: none;
+}
 
 /* ── 週次 Briefing タブ ── */
-#panel-briefing { padding: 0; }
-.bf-wrap { display: flex; flex-direction: column; }
-.bf-msg { padding: 32px 16px; text-align: center; color: var(--text2); font-size: 14px; }
-.bf-msg.bf-err { color: var(--danger); }
-.bf-toolbar {
-  display: flex; align-items: center; justify-content: flex-end;
-  gap: 8px; padding: 8px 12px; background: transparent;
+/* A方式: パネルは単一スクロール（iframe を残り高さにフィット、本体HTMLが内部スクロール） */
+#panel-briefing {
+  padding: 0;
+  overflow: hidden;
 }
-.bf-actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
-.bf-ondemand {
-  display: inline-flex; align-items: center; gap: 5px;
-  font-size: 12.5px; font-weight: 600; text-decoration: none; white-space: nowrap;
-  color: var(--text2); background: transparent; border: 1px solid var(--border);
-  border-radius: 8px; padding: 5px 10px;
-  -webkit-tap-highlight-color: transparent; transition: color 0.15s, border-color 0.15s;
+.bf-wrap {
+  display: flex;
+  flex-direction: column;
 }
-.bf-ondemand:hover { color: var(--accent); border-color: var(--accent); }
-.bf-ic { width: 13px; height: 13px; flex: 0 0 auto; }
+.bf-msg {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--text2);
+  font-size: 14px;
+}
+.bf-msg.bf-err {
+  color: var(--danger);
+}
 .bf-frame {
-  width: 100%; border: none; display: block;
-  min-height: 70vh; background: var(--bg);
+  width: 100%;
+  border: none;
+  display: block;
+  flex: 1 1 auto;
+  background: var(--bg);
 }
-.bf-past { padding: 12px 14px 28px; }
-.bf-past-head { font-size: 12px; font-weight: 700; color: var(--text2); margin-bottom: 6px; letter-spacing: 0.04em; }
-.bf-past-item {
-  display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  padding: 11px 12px; margin-bottom: 6px; border: 1px solid var(--border);
-  border-radius: 10px; background: var(--surface); text-decoration: none;
-  color: var(--text); font-size: 14px;
+/* 過去号プルダウン（薄いバー） */
+.bf-pastbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+  flex: 0 0 auto;
 }
-.bf-past-item:hover { border-color: var(--accent); background: var(--surface2); }
-.bf-past-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.bf-past-date { flex: 0 0 auto; color: var(--text2); font-size: 12px; }
-.bf-none { color: var(--text2); font-size: 13px; padding: 4px 2px; }
+.bf-past-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text2);
+  letter-spacing: 0.04em;
+  flex: 0 0 auto;
+}
+.bf-past-select {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  -webkit-tap-highlight-color: transparent;
+}
+.bf-past-select:hover {
+  border-color: var(--accent);
+}
 
 /* ── シミュレーションバー（ヒートマップパネル内）── 横スクロール可能1行 */
 .sim-bar {
@@ -293,9 +623,11 @@
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   gap: 6px;
-  padding: 8px 0 6px;   /* 左端を他要素と揃える */
+  padding: 8px 0 6px; /* 左端を他要素と揃える */
 }
-.sim-bar::-webkit-scrollbar { display: none; }
+.sim-bar::-webkit-scrollbar {
+  display: none;
+}
 
 /* ══════════════════════════════════════════════
    ウォッチリスト（タブ3）
@@ -329,12 +661,16 @@
   font-size: 16px;
   min-width: 0;
 }
-.wl-search-input::placeholder { color: var(--text2); opacity: 0.6; }
+.wl-search-input::placeholder {
+  color: var(--text2);
+  opacity: 0.6;
+}
 
 /* ── 検索ドロップダウン ── */
 .wl-search-dropdown {
   position: absolute;
-  left: 0; right: 0;
+  left: 0;
+  right: 0;
   top: calc(100% - 2px);
   background: var(--bg);
   border: 1px solid var(--border);
@@ -342,7 +678,7 @@
   z-index: 200;
   max-height: 320px;
   overflow-y: auto;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
 }
 .wl-search-msg {
   padding: 12px 14px;
@@ -359,9 +695,16 @@
   border-bottom: 1px solid var(--border);
   transition: background 0.1s;
 }
-.wl-search-item:last-child { border-bottom: none; }
-.wl-search-item:hover { background: var(--bg2, rgba(128,128,128,0.08)); }
-.wl-search-item.wl-already { opacity: 0.55; cursor: default; }
+.wl-search-item:last-child {
+  border-bottom: none;
+}
+.wl-search-item:hover {
+  background: var(--bg2, rgba(128, 128, 128, 0.08));
+}
+.wl-search-item.wl-already {
+  opacity: 0.55;
+  cursor: default;
+}
 .wl-sym {
   font-size: 13px;
   font-weight: 700;
@@ -413,10 +756,10 @@
   background-image: linear-gradient(
     to right,
     transparent var(--bar-start, 0),
-    rgba(142,142,147,0.16) var(--bar-start, 0),
-    rgba(142,142,147,0.16) var(--bar-edge-start, 0),
-    rgba(142,142,147,0.55) var(--bar-edge-start, 0),
-    rgba(142,142,147,0.55) var(--bar-end, 0),
+    rgba(142, 142, 147, 0.16) var(--bar-start, 0),
+    rgba(142, 142, 147, 0.16) var(--bar-edge-start, 0),
+    rgba(142, 142, 147, 0.55) var(--bar-edge-start, 0),
+    rgba(142, 142, 147, 0.55) var(--bar-end, 0),
     transparent var(--bar-end, 0)
   );
 }
@@ -491,9 +834,16 @@
   flex: none;
 }
 /* 境界線・中央文字色はテーマ変数で指定し、ダーク/ライト切替に追従させる */
-.risk-donut path { stroke: var(--surface); stroke-width: 1.5; }
-.risk-donut-center { fill: var(--text); }
-.risk-donut-center-sub { fill: var(--text2); }
+.risk-donut path {
+  stroke: var(--surface);
+  stroke-width: 1.5;
+}
+.risk-donut-center {
+  fill: var(--text);
+}
+.risk-donut-center-sub {
+  fill: var(--text2);
+}
 .risk-legend {
   list-style: none;
   margin: 0;
@@ -542,13 +892,22 @@
   border: 1px solid var(--border);
   border-radius: 8px;
 }
-.risk-summary-seg { cursor: default; }
-.risk-summary-seg:hover { text-decoration: underline dotted; }
+.risk-summary-seg {
+  cursor: default;
+}
+.risk-summary-seg:hover {
+  text-decoration: underline dotted;
+}
 .risk-source {
   margin-top: 14px;
   font-size: 10px;
   line-height: 1.6;
   color: var(--text3);
 }
-.risk-legend-item { cursor: default; border-radius: 4px; }
-.risk-legend-item:hover { background: var(--surface2); }
+.risk-legend-item {
+  cursor: default;
+  border-radius: 4px;
+}
+.risk-legend-item:hover {
+  background: var(--surface2);
+}
