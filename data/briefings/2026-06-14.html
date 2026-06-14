@@ -42,10 +42,10 @@
   .nav{display:flex;gap:6px;overflow-x:auto;padding:8px 0 0;-webkit-overflow-scrolling:touch;}
   .nav a{flex:0 0 auto;font-size:12px;color:var(--text2);text-decoration:none;
     background:var(--surface2);border:1px solid var(--border);padding:5px 10px;border-radius:999px;}
-  section{margin-top:15px;scroll-margin-top:var(--hdr);}
-  /* セクション見出しもセクション単位で固定 */
+  section{margin-top:20px;scroll-margin-top:var(--hdr);}
+  /* セクション見出しもセクション単位で固定（行前に余白） */
   .sec-title{position:sticky;top:var(--hdr);z-index:10;background:var(--bg);
-    font-size:12.5px;color:var(--text2);letter-spacing:.04em;margin:0 0 7px;padding:5px 2px 5px;font-weight:800;}
+    font-size:12.5px;color:var(--text2);letter-spacing:.04em;margin:0 0 7px;padding:11px 2px 6px;font-weight:800;}
   .sec-title b{color:var(--accent);}
   .card{background:var(--surface);border:1px solid var(--border);border-radius:15px;
     padding:15px;margin-bottom:9px;box-shadow:0 2px 10px rgba(0,0,0,0.04);}
@@ -56,12 +56,13 @@
   .cashline .k{font-size:12.5px;color:var(--text2);} .cashline .v{font-size:16px;font-weight:800;}
   .up{color:var(--up);}.down{color:var(--down);}
   .mkt-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
-  table.mkt{width:100%;border-collapse:collapse;font-size:11.5px;min-width:330px;}
-  table.mkt th{font-size:10px;color:var(--text2);font-weight:700;text-align:right;padding:4px 4px 6px 0;border-bottom:1px solid var(--border);white-space:nowrap;}
-  table.mkt th:first-child{text-align:left;}
-  table.mkt td{padding:7px 4px 7px 0;border-bottom:1px solid var(--border);text-align:right;font-weight:700;white-space:nowrap;}
-  table.mkt td:first-child{text-align:left;font-weight:600;}
-  table.mkt .lv{display:block;font-size:10px;color:var(--text2);font-weight:600;}
+  /* 横スクロール不要に詰める＋データ列は等間隔（table-layout:fixed） */
+  table.mkt{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed;}
+  table.mkt th{font-size:9.5px;color:var(--text2);font-weight:700;text-align:right;padding:4px 2px 6px 0;border-bottom:1px solid var(--border);white-space:nowrap;}
+  table.mkt th:first-child{text-align:left;width:29%;}
+  table.mkt td{padding:6px 2px;border-bottom:1px solid var(--border);text-align:right;font-weight:700;white-space:nowrap;font-size:11px;}
+  table.mkt td:first-child{text-align:left;font-weight:600;white-space:normal;}
+  table.mkt .lv{display:block;font-size:9px;color:var(--text2);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   table.mkt tr:last-child td{border-bottom:none;}
   /* §1 地合い表（列は等間隔: table-layout:fixed） */
   table.perf{width:100%;border-collapse:collapse;font-size:12px;margin-top:12px;table-layout:fixed;}
@@ -152,7 +153,7 @@
           <div class="mv"><span>高所（S&amp;P7,431）</span><span class="down">予想超え</span></div>
         </div>
       </div>
-      <div class="insight"><span class="ilabel">💡 Claudeのインサイト：</span>週末は市場クローズ。最大の新材料は<b>米イラン和平案（14項目・ホルムズ30日内再開・凍結資産$24B解除）が本日(日)ジュネーブで署名の可能性</b>＝原油低下・リスクオンの芽。ただし<b>2日後の6/16 BOJ利上げがほぼ完全織込</b>＝ドル円160の今、円高転換が最大の波乱要因。半導体の過大分は整理済みで現金厚め＝<b>急落時の弾込め</b>に動きやすい構え。能動的に動くより材料待ちが優位。</div>
+      <div class="insight"><span class="ilabel">💡 インサイト：</span>週末は市場クローズ。最大の新材料は<b>米イラン和平案（14項目・ホルムズ30日内再開・凍結資産$24B解除）が本日(日)ジュネーブで署名の可能性</b>＝原油低下・リスクオンの芽。ただし<b>2日後の6/16 BOJ利上げがほぼ完全織込</b>＝ドル円160の今、円高転換が最大の波乱要因。半導体の過大分は整理済みで現金厚め＝<b>急落時の弾込め</b>に動きやすい構え。能動的に動くより材料待ちが優位。</div>
       <div class="note">※総資産・現預金・キャッシュ比率は stats バー／Exposure で確認。週末クローズのため騰落は金曜終値ベース。</div>
     </div>
   </section>
@@ -170,14 +171,15 @@
           <tr><td>S&amp;P500<span class="lv">7,431</span></td><td class="down">-0.7%</td><td class="up">+1%</td><td class="up">+8%</td><td class="up">+17%</td><td class="up">+28%</td></tr>
           <tr><td>Nasdaq100<span class="lv">25,889</span></td><td class="down">-1%</td><td class="up">+1%</td><td class="up">+9%</td><td class="up">+22%</td><td class="up">+36%</td></tr>
           <tr><td>ハンセン<span class="lv">PER≈14.2</span></td><td class="down">-1%</td><td class="down">-1%</td><td class="down">-3%</td><td class="up">+3%</td><td class="up">+8%</td></tr>
+          <tr><td>米CPI<span class="lv">前年比 4.2%</span></td><td class="tk">—</td><td class="up">4.0%</td><td class="up">3.6%</td><td>3.1%</td><td>3.4%</td></tr>
           <tr><td>米10年債<span class="lv">≈4.55%</span></td><td class="up">+5bp</td><td class="up">+3bp</td><td class="down">-5bp</td><td class="up">+12bp</td><td class="up">+18bp</td></tr>
           <tr><td>ドル円<span class="lv">現在 160.6</span></td><td class="up">159.5</td><td class="up">157.8</td><td class="up">155.5</td><td class="up">152.6</td><td class="up">150.1</td></tr>
           <tr><td>VIX<span class="lv">現在 17.7</span></td><td class="down">21.0</td><td class="down">20.1</td><td class="down">18.6</td><td class="up">17.4</td><td class="down">19.9</td></tr>
         </tbody>
       </table>
       </div>
-      <div class="insight"><span class="ilabel">💡 Claudeのインサイト：</span>①<b>CPI+4.2%でも株はV字＝楽観が根強い</b>。S&amp;P 7,431はじっちゃま年末予想7,000を超える高所。②<b>ドル円160.6＝4月以来の円安</b>。米国株＋米ドル現金に追い風だが、<b>6/16-17 日銀会合＝円高転換の最大トリガー</b>（あと2日）。③和平署名なら原油低下でインフレ圧力が一服＝リスクオン余地。VIX17.7に戻り楽観支配＝週中の急落を一瞬で忘れた状態こそ警戒。</div>
-      <div class="note">※週末クローズのため指数は金曜終値据置。各期間は概算（指数は騰落%、債券bp、ドル円・VIXは実数値＝色は現在への騰落方向）。</div>
+      <div class="insight"><span class="ilabel">💡 インサイト：</span>①<b>CPI+4.2%でも株はV字＝楽観が根強い</b>。S&amp;P 7,431はじっちゃま年末予想7,000を超える高所。②<b>ドル円160.6＝4月以来の円安</b>。米国株＋米ドル現金に追い風だが、<b>6/16-17 日銀会合＝円高転換の最大トリガー</b>（あと2日）。③和平署名なら原油低下でインフレ圧力が一服＝リスクオン余地。VIX17.7に戻り楽観支配＝週中の急落を一瞬で忘れた状態こそ警戒。</div>
+      <div class="note">※週末クローズのため指数は金曜終値据置。各期間は概算（指数は騰落%、債券bp、ドル円・VIX・米CPIは各時点の実数値。米CPIは前年比の各時点読み）。</div>
     </div>
   </section>
 
@@ -188,7 +190,7 @@
       <div class="flag"><div><b>ゴールド（保険）</b><div class="tk">GLDM ¥43.4M＝下げても安心して持てるコア。減らさない・追加もしない</div></div><span class="lab mid">保険コア</span></div>
       <div class="flag"><div><b>米国株偏重＋円安160</b><div class="tk">米国株・ETF ¥184M＝最大カテゴリ／円安は追い風だが日銀で円高転換リスク</div></div><span class="lab mid">35%</span></div>
       <div class="flag"><div><b>現預金 ¥73.6M（≈13%）</b><div class="tk">生活防衛¥20Mを除く投資用≈¥53.6M＝押し目の弾。ポリシー目標12-13%にピッタリ</div></div><span class="lab ok">適正</span></div>
-      <div class="insight"><span class="ilabel">💡 Claudeのインサイト（売り発議）：</span>半導体はPF最大の塊。地合いが崩れる兆候が出たら<b>過大分から先に軽くする</b>のが筋（現状は整理済み＆様子見）。現金比率13%＝ポリシー通りで、和平リスクオンでも追いかけず、<b>BOJ後の押し目に向けて弾を温存</b>するのが妥当。</div>
+      <div class="insight"><span class="ilabel">💡 インサイト（売り発議）：</span>半導体はPF最大の塊。地合いが崩れる兆候が出たら<b>過大分から先に軽くする</b>のが筋（現状は整理済み＆様子見）。現金比率13%＝ポリシー通りで、和平リスクオンでも追いかけず、<b>BOJ後の押し目に向けて弾を温存</b>するのが妥当。</div>
     </div>
   </section>
 
@@ -203,17 +205,30 @@
       <div class="flag"><div><b>eMAXIS Slim 全世界 ¥61.9M</b><div class="tk">市場平均PER＝コア妥当水準（PF最大の単一保有）</div></div><span class="lab ok">妥当</span></div>
 
       <div class="subh"><svg class="subh-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="2.6"/></svg> ウォッチリスト採点</div>
-      <div class="mkt-wrap">
       <table class="wl">
-        <thead><tr><th>銘柄</th><th>現PER</th><th>%タイル</th><th>判定</th><th>前回比</th></tr></thead>
+        <thead><tr><th>銘柄</th><th>現PER</th><th>%タイル</th><th>判定</th></tr></thead>
         <tbody>
-          <tr><td>2800.HK<span class="nm">ハンセン</span></td><td>13.5</td><td class="up">75%</td><td>🔴 割高</td><td class="tk">新規</td></tr>
-          <tr><td>ASHR<span class="nm">CSI300</span></td><td>14.7</td><td>62%</td><td>🟡 中立</td><td class="tk">新規</td></tr>
-          <tr><td>3033.HK<span class="nm">ハンセンTECH</span></td><td>18.7</td><td>50%</td><td>⚪ 保留</td><td class="tk">新規(履歴薄)</td></tr>
+          <tr><td>VEA<span class="nm">先進国ex-US</span></td><td>14.0</td><td class="down">30%</td><td>🟢 割安</td></tr>
+          <tr><td>VGK<span class="nm">欧州株</span></td><td>14.4</td><td>40%</td><td>🟡 中立</td></tr>
+          <tr><td>XLV<span class="nm">ヘルスケア</span></td><td>24.8</td><td>50%</td><td>🟡 中立</td></tr>
+          <tr><td>6016.T<span class="nm">日本舶用エンジン</span></td><td>13.0</td><td>60%</td><td>🟡 中立</td></tr>
+          <tr><td>ASHR<span class="nm">CSI300</span></td><td>14.7</td><td>62%</td><td>🟡 中立</td></tr>
+          <tr><td>DTCR<span class="nm">データセンター</span></td><td>28.0</td><td>45%</td><td>⚪ 保留(低信頼)</td></tr>
+          <tr><td>3033.HK<span class="nm">ハンセンTECH</span></td><td>18.7</td><td>50%</td><td>⚪ 保留(履歴薄)</td></tr>
+          <tr><td>XLF<span class="nm">米金融</span></td><td>17.6</td><td class="up">70%</td><td>🔴 割高</td></tr>
+          <tr><td>2800.HK<span class="nm">ハンセン</span></td><td>13.5</td><td class="up">75%</td><td>🔴 割高</td></tr>
+          <tr><td>XLP<span class="nm">生活必需</span></td><td>25.8</td><td class="up">75%</td><td>🔴 割高</td></tr>
+          <tr><td>PANW<span class="nm">サイバー</span></td><td>68.5</td><td class="up">75%</td><td>🔴 割高</td></tr>
+          <tr><td>6301.T<span class="nm">コマツ</span></td><td>18.3</td><td class="up">75%</td><td>🔴 割高</td></tr>
+          <tr><td>VT<span class="nm">全世界株</span></td><td>23.1</td><td class="up">80%</td><td>🔴 割高</td></tr>
+          <tr><td>1306.T<span class="nm">TOPIX</span></td><td>18.6</td><td class="up">80%</td><td>🔴 割高</td></tr>
+          <tr><td>LITE<span class="nm">光通信</span></td><td>55</td><td class="up">85%</td><td>🔴 割高</td></tr>
+          <tr><td>SMH<span class="nm">半導体</span></td><td>41.8</td><td class="up">90%</td><td>🔴 割高</td></tr>
+          <tr><td>CRWD<span class="nm">サイバー(予想)</span></td><td>145</td><td class="up">90%</td><td>🔴 割高</td></tr>
         </tbody>
       </table>
-      </div>
-      <div class="insight"><span class="ilabel">💡 Claudeのインサイト（ウォッチ採点）：</span>初回採点。<b>3銘柄とも自前のヒストリカルPERバンドの中〜上位＝割安ゾーン外</b>で、買い発議なし。中国株ラリーで歴史的にはむしろ高い側（ハンセン75%タイル）＝「割安だから買う」局面ではない。中国はカントリーリスクで小さく、ハンセンTECHは履歴薄で保留。<b>各銘柄が自前バンドの下位（割安タイル）に来たら発議</b>——週次で監視継続。</div>
+      <div class="note">採点不能(12)：⚪保留＝NLR(原子力・構成変更) / UFO(宇宙) / 200A.T(日経半導体ETF) / 285A.T(キオクシア・市況株) / 513A.T(防衛Tech・新規)＝いずれも履歴薄。⚪NM(赤字)＝CBRS(Cerebras) / RKLB(Rocket Lab) / RDW(Redwire)。債券=PER非該当＝TLT(利回4.9%) / VGIT(3.8%) / JPST(4.0%) / SHV(3.5%)。</div>
+      <div class="insight"><span class="ilabel">💡 インサイト（ウォッチ採点）：</span>ウォッチ29銘柄を採点（数値が出せた17銘柄＝上表）。<b>割安は VEA(先進国ex-US, 30%タイル)のみ</b>、中立が VGK/XLV/6016/ASHR。残りは自前バンドの上位＝<b>割高ゾーンで買い妙味は薄い</b>。SMH(90%)・CRWD/LITE(85-90%)・VT(80%)・日本株(TOPIX80%/コマツ75%) はいずれも歴史的高値圏。中国はカントリーリスクで小さく。<b>各銘柄が自前バンドの下位（割安タイル）に来たら発議</b>——週次で監視継続。</div>
     </div>
   </section>
 
@@ -228,7 +243,7 @@
         <div class="claim">チョークポイント重視＝<b>光通信(LITE)・AI=核兵器(CRWD/PANW/PLTR)・SpaceX</b>。Gemini3.0ショックでNvidia全売却→<b>Alphabet最大ポジ</b>（垂直統合のGoogleが構造的勝者）。中国は素材/レアアースの安全保障視点。</div></div>
       <div class="ment"><div class="who">藤沢数希</div>
         <div class="claim">逆張りの<b>中国株強気が最大ポジ</b>（ハンセンPER10倍は地政学ディスカウントで割安）。多極化で<b>金☆ビットコイン☆タワマン</b>。AIは<b>「生成AIに堀なし・ハード(NVIDIA/TSMC/メモリ)が儲かる」</b>。「貧乏人が投資しても無意味＝人的資本が先」。</div></div>
-      <div class="insight"><span class="ilabel">💡 Claudeのインサイト：</span>4者の対立点は<b>中国</b>（じっちゃま弱気⇔藤沢最強気⇔ゆな中間）。共通解は<b>「NVDA以外の周辺＝光通信/電力/サイバー/宇宙」へ重心シフト＋高所警戒</b>。保有は半導体に厚く電力・サイバーが薄め＝その穴は<b>ETF（XLU電力・CIBRサイバー）</b>で素直に埋まる。藤沢の<b>「作る側＝NVIDIA/TSMC/メモリが儲かる」</b>はSMH／日経半導体の保有を補強する。</div>
+      <div class="insight"><span class="ilabel">💡 インサイト：</span>4者の対立点は<b>中国</b>（じっちゃま弱気⇔藤沢最強気⇔ゆな中間）。共通解は<b>「NVDA以外の周辺＝光通信/電力/サイバー/宇宙」へ重心シフト＋高所警戒</b>。保有は半導体に厚く電力・サイバーが薄め＝その穴は<b>ETF（XLU電力・CIBRサイバー）</b>で素直に埋まる。藤沢の<b>「作る側＝NVIDIA/TSMC/メモリが儲かる」</b>はSMH／日経半導体の保有を補強する。</div>
     </div>
   </section>
 
@@ -252,7 +267,7 @@
       <div class="ev"><div class="d">6/18(木)<span class="us">米 6/17</span></div><div>米 小売売上高・住宅指標</div></div>
       <div class="ev"><div class="d">6/19(金)</div><div>日本 5月 全国CPI（朝8:30）</div></div>
       <div class="ev"><div class="d">継続</div><div>SpaceX上場後の値動き（初日+19%の持続性）／OpenAI・Anthropic(9月)IPO前哨</div></div>
-      <div class="insight"><span class="ilabel">💡 Claudeのインサイト：</span>2大材料は<b>①6/14 和平署名（リスクオン）②6/17 日銀利上げ（円高）</b>で方向が逆。米国株＋米ドル現金には日銀が逆風。黄信号＆高所ゆえ、急落時の買い候補（NLR・XLU電力・相対割安な日本株・SpaceX第1弾）を弾込めして待つ局面。能動的に動くより材料待ちが優位。</div>
+      <div class="insight"><span class="ilabel">💡 インサイト：</span>2大材料は<b>①6/14 和平署名（リスクオン）②6/17 日銀利上げ（円高）</b>で方向が逆。米国株＋米ドル現金には日銀が逆風。黄信号＆高所ゆえ、急落時の買い候補（NLR・XLU電力・相対割安な日本株・SpaceX第1弾）を弾込めして待つ局面。能動的に動くより材料待ちが優位。</div>
       <div class="note">※日付は日本時間。米国時間のイベントは下段に「米 ◯/◯」を併記。正確な発表時刻は要カレンダー照合。</div>
     </div>
   </section>
