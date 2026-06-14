@@ -19,14 +19,13 @@
 
 ### Step 1: MF を読む
 `https://moneyforward.com/bs/portfolio` を開く。`include.categories` に挙がったカテゴリの**銘柄ごと**に、次を読み取る:
-- 金融機関/口座名（どの口座の資産か）
-- カテゴリ
-- 銘柄名 / コードまたはティッカー
-- 保有数（口数）
-- 取得単価（平均）
-- 現在値 / 基準価額
-- **評価額（時価・円）** ← 最重要
-- 通貨
+- 金融機関/口座名（→ `institution`。どの口座の資産か）
+- カテゴリ（→ `cat`）
+- 銘柄名（→ `name`）/ コードまたはティッカー（→ `ySymbol`・証券のみ）
+- 取得単価（平均）（→ `avgCost`・証券のみ・取れなければ省略）
+- 現在値 / 基準価額（→ `price`・証券のみ・取れなければ省略）
+- **評価額（時価・円）（→ `value`）** ← 最重要
+- 通貨（→ `cur`）
 
 ### Step 2: 除外を適用
 - `exclude.accounts` のいずれかに**部分一致**する口座の資産は**すべて捨てる**。
@@ -38,29 +37,35 @@
 - 日本株/ETF（4桁コード or .T）→ cat `"日本株・ETF"`, ySymbol `"<コード>.T"`
 - 米国株/ETF → cat `"米国株・ETF"`, ySymbol = ティッカー
 - 投信→`"投資信託"` / 債券→`"債券"` / 年金→`"年金"` / 暗号資産→`"暗号資産"` / 預金・現金→`"現金・預金"` / FX・商品先物→`"FX・商品先物"` / その他→`"その他"`
-- `cash.includeInPositions` が true の場合、預金・現金も1件=1レコードで入れる（shares=金額、price=1、value=金額、cur=通貨）。
+- `cash.includeInPositions` が true の場合、預金・現金も1件=1レコードで入れる（`cat="現金・預金"`, `value=金額`, `cur=通貨`。`ySymbol`/`avgCost`/`price` は付けない）。
 
-出力 JSON 形（これを丸ごと mf-holdings.json の中身にする）:
+出力 JSON 形（これを丸ごと mf-holdings.json の中身にする・正規スキーマ v4）:
 ```json
 {
-  "asOf": "<実行時刻 ISO8601>",
-  "source": "moneyforward/claude-for-chrome",
-  "configVersion": 1,
+  "asOf": "<実行日 例 2026-06-14>",
   "totals": {
     "mfNetWorth": <MF総資産(画面表示)>,
     "imported": <Σ取り込みvalue>,
-    "excludedAccounts": <Σ除外口座の評価額>
+    "excludedAccounts": ["<除外した口座/金融機関名>", "..."]
   },
   "holdings": [
-    { "account": "SBI証券", "cat": "米国株・ETF", "name": "アップル", "symbol": "AAPL", "ySymbol": "AAPL", "shares": 186, "avgCost": 208.92, "price": 308.33, "value": 9072672, "cur": "USD" }
+    { "institution": "マネックス証券", "cat": "米国株・ETF", "name": "アップル", "ySymbol": "AAPL", "avgCost": 208.92, "price": 308.33, "value": 9072672, "cur": "USD", "asOf": "2026-06-14" },
+    { "institution": "三井住友銀行", "cat": "現金・預金", "name": "円普通預金 JPY", "value": 32747, "cur": "JPY", "asOf": "2026-06-14" }
   ]
 }
 ```
-数値はカンマ・通貨記号を除いた数値のみ。不明項目は 0。
+スキーマ規約（`mf-import-config.json` の `schema` が正本）:
+- **必須フィールド**: `institution` / `cat` / `name` / `value` / `cur` / `asOf`。
+- **証券のみ任意**: `ySymbol`（日本株/ETF=`<コード>.T`、米国=ティッカー）/ `avgCost` / `price`。現金・暗号資産は省略可。
+- `totals.excludedAccounts` は**除外口座名の配列**（額の合計ではない）。
+- 旧版にあった top の `source` / `configVersion`、holding の `account`(→`institution`に改名)・`symbol`・`shares`・`costPrice`・`currentPrice`・`currency` は**廃止**。
+- 数値はカンマ・通貨記号を除いた数値のみ。不明な任意項目は省略（0埋めしない）。
+- ★フロント `src/networth.js` が読むのは `holdings[].cat` / `holdings[].cur` / `holdings[].value` / `totals.imported` / `asOf` の5つ。ここは名前変更・欠落させないこと。
 
 ### Step 4: チェックサム（合わなければ中止）
 `checksum.enabled` が true のとき:
-- `imported` ≈ `mfNetWorth − excludedAccounts` を **±`tolerancePct`%** で確認。
+- `imported` == **Σ(holdings.value)** を厳密一致で確認（`totals.imported` は取り込んだ評価額の合計そのもの）。
+- `imported` ≈ `mfNetWorth − Σ(除外口座のMF表示額)` を **±`tolerancePct`%** で確認。
 - さらに口座ごとに Σ(その口座の holdings.value) ≈ MF のその口座合計表示 を確認。
 - **1つでも外れたらコミットしない。** どの口座/カテゴリで何円ズレたかを報告して停止する。
 
