@@ -250,40 +250,28 @@
 .tab-panel[hidden] { display: none; }
 
 /* ── 週次 Briefing タブ ── */
-#panel-briefing { padding: 0; }
+/* A方式: パネルは単一スクロール（iframe を残り高さにフィット、本体HTMLが内部スクロール） */
+#panel-briefing { padding: 0; overflow: hidden; }
 .bf-wrap { display: flex; flex-direction: column; }
 .bf-msg { padding: 32px 16px; text-align: center; color: var(--text2); font-size: 14px; }
 .bf-msg.bf-err { color: var(--danger); }
-.bf-toolbar {
-  display: flex; align-items: center; justify-content: flex-end;
-  gap: 8px; padding: 8px 12px; background: transparent;
-}
-.bf-actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
-.bf-ondemand {
-  display: inline-flex; align-items: center; gap: 5px;
-  font-size: 12.5px; font-weight: 600; text-decoration: none; white-space: nowrap;
-  color: var(--text2); background: transparent; border: 1px solid var(--border);
-  border-radius: 8px; padding: 5px 10px;
-  -webkit-tap-highlight-color: transparent; transition: color 0.15s, border-color 0.15s;
-}
-.bf-ondemand:hover { color: var(--accent); border-color: var(--accent); }
-.bf-ic { width: 13px; height: 13px; flex: 0 0 auto; }
 .bf-frame {
   width: 100%; border: none; display: block;
-  min-height: 70vh; background: var(--bg);
+  flex: 1 1 auto; background: var(--bg);
 }
-.bf-past { padding: 12px 14px 28px; }
-.bf-past-head { font-size: 12px; font-weight: 700; color: var(--text2); margin-bottom: 6px; letter-spacing: 0.04em; }
-.bf-past-item {
-  display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  padding: 11px 12px; margin-bottom: 6px; border: 1px solid var(--border);
-  border-radius: 10px; background: var(--surface); text-decoration: none;
-  color: var(--text); font-size: 14px;
+/* 過去号プルダウン（薄いバー） */
+.bf-pastbar {
+  display: flex; align-items: center; gap: 8px; flex: 0 0 auto;
+  padding: 7px 12px; border-top: 1px solid var(--border); background: var(--bg);
 }
-.bf-past-item:hover { border-color: var(--accent); background: var(--surface2); }
-.bf-past-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.bf-past-date { flex: 0 0 auto; color: var(--text2); font-size: 12px; }
-.bf-none { color: var(--text2); font-size: 13px; padding: 4px 2px; }
+.bf-past-label { flex: 0 0 auto; font-size: 11px; font-weight: 700; color: var(--text2); letter-spacing: 0.04em; }
+.bf-past-select {
+  flex: 1 1 auto; min-width: 0;
+  font-size: 13px; color: var(--text); background: var(--surface);
+  border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px;
+  -webkit-tap-highlight-color: transparent;
+}
+.bf-past-select:hover { border-color: var(--accent); }
 
 /* ── シミュレーションバー（ヒートマップパネル内）── 横スクロール可能1行 */
 .sim-bar {
