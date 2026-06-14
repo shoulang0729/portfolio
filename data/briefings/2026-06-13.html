@@ -42,10 +42,10 @@
   .nav{display:flex;gap:6px;overflow-x:auto;padding:8px 0 0;-webkit-overflow-scrolling:touch;}
   .nav a{flex:0 0 auto;font-size:12px;color:var(--text2);text-decoration:none;
     background:var(--surface2);border:1px solid var(--border);padding:5px 10px;border-radius:999px;}
-  section{margin-top:15px;scroll-margin-top:var(--hdr);}
-  /* セクション見出しもセクション単位で固定 */
+  section{margin-top:20px;scroll-margin-top:var(--hdr);}
+  /* セクション見出しもセクション単位で固定（行前に余白） */
   .sec-title{position:sticky;top:var(--hdr);z-index:10;background:var(--bg);
-    font-size:12.5px;color:var(--text2);letter-spacing:.04em;margin:0 0 7px;padding:5px 2px 5px;font-weight:800;}
+    font-size:12.5px;color:var(--text2);letter-spacing:.04em;margin:0 0 7px;padding:11px 2px 6px;font-weight:800;}
   .sec-title b{color:var(--accent);}
   .card{background:var(--surface);border:1px solid var(--border);border-radius:15px;
     padding:15px;margin-bottom:9px;box-shadow:0 2px 10px rgba(0,0,0,0.04);}
@@ -56,12 +56,13 @@
   .cashline .k{font-size:12.5px;color:var(--text2);} .cashline .v{font-size:16px;font-weight:800;}
   .up{color:var(--up);}.down{color:var(--down);}
   .mkt-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
-  table.mkt{width:100%;border-collapse:collapse;font-size:11.5px;min-width:330px;}
-  table.mkt th{font-size:10px;color:var(--text2);font-weight:700;text-align:right;padding:4px 4px 6px 0;border-bottom:1px solid var(--border);white-space:nowrap;}
-  table.mkt th:first-child{text-align:left;}
-  table.mkt td{padding:7px 4px 7px 0;border-bottom:1px solid var(--border);text-align:right;font-weight:700;white-space:nowrap;}
-  table.mkt td:first-child{text-align:left;font-weight:600;}
-  table.mkt .lv{display:block;font-size:10px;color:var(--text2);font-weight:600;}
+  /* 横スクロール不要に詰める＋データ列は等間隔（table-layout:fixed） */
+  table.mkt{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed;}
+  table.mkt th{font-size:9.5px;color:var(--text2);font-weight:700;text-align:right;padding:4px 2px 6px 0;border-bottom:1px solid var(--border);white-space:nowrap;}
+  table.mkt th:first-child{text-align:left;width:29%;}
+  table.mkt td{padding:6px 2px;border-bottom:1px solid var(--border);text-align:right;font-weight:700;white-space:nowrap;font-size:11px;}
+  table.mkt td:first-child{text-align:left;font-weight:600;white-space:normal;}
+  table.mkt .lv{display:block;font-size:9px;color:var(--text2);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   table.mkt tr:last-child td{border-bottom:none;}
   /* §1 運用資産の期間騰落 */
   /* 月〜金を等間隔（table-layout:fixed） */
@@ -145,7 +146,7 @@
           <div class="mv"><span>GLDM 金</span><span class="down">軟調</span></div>
         </div>
       </div>
-      <div class="insight"><span class="ilabel">💡 Claudeのインサイト：</span>今週は<b>水曜にCPI+4.2%（3年ぶり高水準）＋米イラン軍事衝突で急落 → 木金に和平期待＋SpaceX上場でV字回復</b>。半導体の過大分は整理済みで現金厚め＝乱高下の影響は限定的だった。投資用現金は押し目の弾になり、最大の使い道は <b>AI電力（NLR・電力ETF）</b>。</div>
+      <div class="insight"><span class="ilabel">💡 インサイト：</span>今週は<b>水曜にCPI+4.2%（3年ぶり高水準）＋米イラン軍事衝突で急落 → 木金に和平期待＋SpaceX上場でV字回復</b>。半導体の過大分は整理済みで現金厚め＝乱高下の影響は限定的だった。投資用現金は押し目の弾になり、最大の使い道は <b>AI電力（NLR・電力ETF）</b>。</div>
       <div class="note">※総資産・現預金・キャッシュ比率は stats バー／Exposure で確認。今週の地合い・主役は概算。</div>
     </div>
   </section>
@@ -169,7 +170,7 @@
         </tbody>
       </table>
       </div>
-      <div class="insight"><span class="ilabel">💡 Claudeのインサイト：</span>①<b>CPI+4.2%でも株はV字＝楽観が根強い</b>。S&amp;P 7,431はじっちゃま年末予想7,000を超える高所。②<b>ドル円160.6＝4月以来の円安</b>。米国株＋米ドル現金に追い風だが、来週<b>6/16-17 日銀会合＝円高転換の最大トリガー</b>。③VIX17.7に戻り楽観支配＝週中の急落を一瞬で忘れた状態こそ警戒。</div>
+      <div class="insight"><span class="ilabel">💡 インサイト：</span>①<b>CPI+4.2%でも株はV字＝楽観が根強い</b>。S&amp;P 7,431はじっちゃま年末予想7,000を超える高所。②<b>ドル円160.6＝4月以来の円安</b>。米国株＋米ドル現金に追い風だが、来週<b>6/16-17 日銀会合＝円高転換の最大トリガー</b>。③VIX17.7に戻り楽観支配＝週中の急落を一瞬で忘れた状態こそ警戒。</div>
       <div class="note">※各期間は取得時点の概算（株価指数は騰落%、債券はbp、ドル円・VIXは各時点の実数値＝色は現在への騰落方向）。今週は乱高下のため1週はネット変化が小さい。</div>
     </div>
   </section>
@@ -181,7 +182,7 @@
       <div class="flag"><div><b>ゴールド（保険）</b><div class="tk">GLDM＝下げても安心して持てるコア。減らさない・追加もしない</div></div><span class="lab mid">保険コア</span></div>
       <div class="flag"><div><b>米国株偏重＋円安160</b><div class="tk">米国株比率が最大／円安は追い風だが日銀で円高転換リスク</div></div><span class="lab mid">35%</span></div>
       <div class="flag"><div><b>SLV 銀・URA（テーマ枠）</b><div class="tk">SLV＝電化テーマ(太陽光/電子/EV/半導体)、保険ではない／URA＝AI電力テーマ。どちらも含み損益で動かさない</div></div><span class="lab mid">テーマ・据置</span></div>
-      <div class="insight"><span class="ilabel">💡 Claudeのインサイト（売り発議）：</span>半導体はPF最大の塊。地合いが崩れる兆候が出たら<b>サイズが過大になった分から先に軽くする</b>のが筋（現状は整理済み＆様子見）。SLV/URAは「保険か否か」ではなく<b>電化・AI電力テーマとしてサイズが妥当か</b>で評価するのが妥当。</div>
+      <div class="insight"><span class="ilabel">💡 インサイト（売り発議）：</span>半導体はPF最大の塊。地合いが崩れる兆候が出たら<b>サイズが過大になった分から先に軽くする</b>のが筋（現状は整理済み＆様子見）。SLV/URAは「保険か否か」ではなく<b>電化・AI電力テーマとしてサイズが妥当か</b>で評価するのが妥当。</div>
     </div>
   </section>
 
@@ -198,7 +199,7 @@
       <div class="flag"><div><b>XLU 電力ETF</b><div class="tk">PER21.9倍・配当2.67%＝高所のわりに妥当。マネックス取扱✅。AI電力をETFで取る本命</div></div><span class="lab ok">妥当・割安待ち</span></div>
       <div class="flag"><div><b>CIBR サイバーETF</b><div class="tk">PER33.5倍＝構造的に高PER。マネックス取扱✅。押し目待ち</div></div><span class="lab hi">割高・監視</span></div>
       <div class="flag"><div><b>CRWD（数値訂正）</b><div class="tk">$658.79・予想PER128倍（旧記録"$380/78倍"は誤り）＝全く安くない</div></div><span class="lab hi">割高・据置</span></div>
-      <div class="insight"><span class="ilabel">💡 Claudeのインサイト：</span>日本株「割安」は<b>対米の相対</b>であって歴史比では高値圏（誤読注意）。<b>セクターをETFで取る</b>なら電力=XLU・サイバー=CIBR・材料=XLBが選択肢（いずれもマネックス取扱確認済）。XLUは妥当バリュエーション＋AI電力追い風で「割安が来たら買う」本命。</div>
+      <div class="insight"><span class="ilabel">💡 インサイト：</span>日本株「割安」は<b>対米の相対</b>であって歴史比では高値圏（誤読注意）。<b>セクターをETFで取る</b>なら電力=XLU・サイバー=CIBR・材料=XLBが選択肢（いずれもマネックス取扱確認済）。XLUは妥当バリュエーション＋AI電力追い風で「割安が来たら買う」本命。</div>
     </div>
   </section>
 
@@ -213,7 +214,7 @@
         <div class="claim">サプライチェーンのチョークポイント重視＝<b>光通信(LITE)・AI=核兵器(CRWD/PANW/PLTR)・SpaceX</b>。SpaceX S-1分析では「全力投資せず超長期で一部保有、初日20-30%まで・PF5-10%以内」。</div></div>
       <div class="ment"><div class="who">藤沢数希</div>
         <div class="claim">持論を<b>「AIバブルは弾ける→まだ膨張する」へ転換</b>（第733号）。ハイスケ4社の2026 CapExは<b>110兆円超</b>＝EPSが伸びてP/Eが上がらず<b>バブルは延命</b>。<b>作る側（NVIDIA/TSMC/キオクシア等メモリ）は本物のキャッシュ利益</b>＝日本メモリ（キオクシア＝PERまだ一桁）は恩恵側（第734号）。崩壊の引き金はOpenAI次第だが孫が逃げない限り当面継続。金は多極化＝<b>「ゆるやかな金本位制」</b>で続伸（中銀が金買い）。</div></div>
-      <div class="insight"><span class="ilabel">💡 Claudeのインサイト：</span>4者に共通するのは<b>「NVDA以外の周辺＝光通信/電力/サイバー/宇宙＋メモリ」への重心シフト＋高所警戒</b>。保有は半導体に厚く電力・サイバーが薄め＝その穴は<b>XLU（電力）・CIBR（サイバー）</b>で埋まる。藤沢の<b>「作る側＝メモリは本物の利益」</b>はSMH／日経半導体の保有を補強する。</div>
+      <div class="insight"><span class="ilabel">💡 インサイト：</span>4者に共通するのは<b>「NVDA以外の周辺＝光通信/電力/サイバー/宇宙＋メモリ」への重心シフト＋高所警戒</b>。保有は半導体に厚く電力・サイバーが薄め＝その穴は<b>XLU（電力）・CIBR（サイバー）</b>で埋まる。藤沢の<b>「作る側＝メモリは本物の利益」</b>はSMH／日経半導体の保有を補強する。</div>
     </div>
   </section>
 
@@ -236,7 +237,7 @@
       <div class="ev"><div class="d">6/19(金)</div><div>日本 5月 全国CPI（朝8:30）</div></div>
       <div class="ev"><div class="d">6/18(木)<span class="us">米 6/17</span></div><div>米 小売売上高・住宅指標</div></div>
       <div class="ev"><div class="d">継続</div><div>SpaceX上場後の値動き（初日+19%の持続性）／米イラン和平交渉の行方／OpenAI(9月)・Anthropic(9月)IPO前哨</div></div>
-      <div class="insight"><span class="ilabel">💡 Claudeのインサイト：</span>最大の波乱は<b>6/17 日銀利上げ→円高</b>（米国株＋米ドル現金に逆風、ドル円160は反転リスク大）。黄信号＆乱高下後ゆえ、急落時の買い候補（NLR・XLU電力ETF・相対割安な日本株・SpaceX第1弾）を弾込めして待つ局面。能動的に動くより材料待ちが優位。</div>
+      <div class="insight"><span class="ilabel">💡 インサイト：</span>最大の波乱は<b>6/17 日銀利上げ→円高</b>（米国株＋米ドル現金に逆風、ドル円160は反転リスク大）。黄信号＆乱高下後ゆえ、急落時の買い候補（NLR・XLU電力ETF・相対割安な日本株・SpaceX第1弾）を弾込めして待つ局面。能動的に動くより材料待ちが優位。</div>
       <div class="note">※日付は日本時間。米国時間のイベントは下段に「米 ◯/◯」を併記。正確な発表時刻は要カレンダー照合。</div>
     </div>
   </section>
