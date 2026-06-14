@@ -2,6 +2,8 @@
 
 MulmoClaude を頭脳とした投資運用システムの設計。本リポジトリ（portfolioアプリ）が担う部分を中心にまとめる。運用の本体は MulmoClaude Wiki `investment-system-architecture.md` を参照。
 
+> 📊 全体像を1枚で俯瞰する図 → [investment-architecture.md](./investment-architecture.md)（アーキテクチャ図＋凡例＋データフロー）
+
 ## 3本柱
 
 | 柱 | 内容 | 本repoの担当 |

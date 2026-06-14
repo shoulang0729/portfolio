@@ -1,0 +1,98 @@
+digraph InvestmentSystem {
+  rankdir=LR;
+  bgcolor="#faf7f3";
+  graph [fontname="Noto Sans JP", fontsize=13, labelloc="t",
+         label="Toshio 投資システム アーキテクチャ（2026-06 全体図）", fontcolor="#3a3a3a"];
+  node  [fontname="Noto Sans JP", fontsize=10, shape=box, style="rounded,filled",
+         color="#d8cfc6", fillcolor="#ffffff", fontcolor="#2a2a2a", margin="0.14,0.08"];
+  edge  [fontname="Noto Sans JP", fontsize=8, color="#9b8f84", fontcolor="#7a6f64"];
+
+  // ───────── 外部データソース ─────────
+  subgraph cluster_src {
+    label="外部データソース"; style="rounded,filled"; fillcolor="#f0e9e1"; color="#d8cfc6"; fontcolor="#6b5d50";
+    MF        [label="Money Forward\n（全資産・口座）"];
+    NOTEAPI   [label="note API + Cookie\n（じっちゃま/ゆな/藤沢）"];
+    GMAIL     [label="Gmail / mag2\n（メルマガ全文）"];
+    WEBSRCH   [label="WebSearch\n（マクロ/PER/カレンダー）"];
+    BIGDATA   [label="Bigdata.com MCP\n（企業ファンダ）"];
+  }
+
+  // ───────── 中枢：MulmoClaude ─────────
+  subgraph cluster_brain {
+    label="MulmoClaude（中枢＝唯一の全体把握）"; style="rounded,filled"; fillcolor="#f5e7df"; color="#cc785c"; fontcolor="#a85638";
+    MULMO   [label="MulmoClaude\n壁打ち・生成・PM判断", fillcolor="#cc785c", fontcolor="#ffffff", color="#a85638"];
+    WIKI    [label="Wiki\nmh-*/lib-*/ゆな/藤沢\n★investment-watchlist 台帳", shape=folder, fillcolor="#fbeee7"];
+    MEMORY  [label="Memory\nfact / reference", shape=folder, fillcolor="#fbeee7"];
+    SKILLS  [label="Skills\nbriefing-weekly\nlife-is-beautiful-ingest", fillcolor="#fbeee7"];
+    SCHED   [label="Scheduler\nconfig/scheduler/tasks.json", fillcolor="#fbeee7"];
+  }
+
+  // ───────── 運び屋 ─────────
+  CHROME [label="Claude for Chrome\n（ログイン済ブラウザ＝運び屋）", fillcolor="#eef3ee", color="#bcd0bc"];
+
+  // ───────── portfolio repo ─────────
+  subgraph cluster_repo {
+    label="github/portfolio リポジトリ"; style="rounded,filled"; fillcolor="#e9eef3"; color="#bcc9d6"; fontcolor="#4f6075";
+    MFH    [label="data/mf-holdings.json\n（保有実値）", shape=note, fillcolor="#ffffff"];
+    POS    [label="data/positions.json\n（ライブ証券）", shape=note, fillcolor="#ffffff"];
+    BRIEF  [label="data/briefings/*.html\n＋ index.json", shape=note, fillcolor="#ffffff"];
+    CI     [label="GitHub Actions\ntests / e2e / build-dist / Pages", fillcolor="#dde6ef"];
+  }
+
+  // ───────── Cloudflare Worker ─────────
+  subgraph cluster_worker {
+    label="Cloudflare Worker（プロキシ＋KV）"; style="rounded,filled"; fillcolor="#efe9f3"; color="#cabcd6"; fontcolor="#5f4f75";
+    WORKER  [label="Worker\n/finnhub /yahoo /forex\n/watchlist /positions /snapshot"];
+    KVW     [label="KV: watchlist\n★各銘柄 valuation 採点", shape=cylinder, fillcolor="#ffffff"];
+    KVP     [label="KV: positions / pin", shape=cylinder, fillcolor="#ffffff"];
+    CRON    [label="Cron 6h\n価格キャッシュ"];
+  }
+
+  // ───────── アプリ ─────────
+  subgraph cluster_app {
+    label="アプリ（GitHub Pages PWA・スマホ）"; style="rounded,filled"; fillcolor="#e9f3ee"; color="#bcd6c6"; fontcolor="#4f7560";
+    APP   [label="Portfolio Heatmap App"];
+    TABS  [label="タブ: Heatmap / Historical /\nWatchlist（★PER採点）/ Briefing"];
+  }
+
+  // ───────── 窓口 ─────────
+  TG     [label="Telegram bot\n@toshio_claude_bot", fillcolor="#eef1f5", color="#c2cad6"];
+  WIKIUI [label="Wiki UI（/wiki）", fillcolor="#eef1f5", color="#c2cad6"];
+
+  // ═══════ データフロー ═══════
+  MF      -> CHROME [label="2FA手動"];
+  CHROME  -> MFH    [label="スナップショット"];
+  NOTEAPI -> MULMO  [label="蒸留"];
+  GMAIL   -> MULMO  [label="蒸留"];
+  BIGDATA -> MULMO;
+  WEBSRCH -> MULMO;
+
+  MULMO -> WIKI   [dir=both];
+  MULMO -> MEMORY [dir=both];
+  MULMO -> SKILLS;
+  SCHED -> SKILLS [label="土曜/毎日 起動"];
+
+  WIKI -> KVW [label="①追加時 同期(PUT)", color="#cc785c", fontcolor="#a85638"];
+  KVW  -> WIKI [label="②週次 再採点 書戻し", color="#cc785c", fontcolor="#a85638"];
+
+  SKILLS -> WEBSRCH [label="マクロ取得", style=dashed];
+  SKILLS -> KVW     [label="再採点(GET→PUT)", color="#cc785c", style=dashed];
+  SKILLS -> BRIEF   [label="HTML生成→commit/push"];
+  MFH    -> SKILLS  [label="保有読込"];
+
+  CI    -> APP   [label="dist build / deploy"];
+  BRIEF -> TABS  [label="Briefingタブ iframe"];
+
+  APP    -> WORKER [label="価格/為替/watchlist 取得", dir=both];
+  WORKER -> KVW;
+  WORKER -> KVP;
+  CRON   -> WORKER;
+  WORKER -> POS  [label="KV→Git同期", style=dashed];
+  WORKER -> MFH  [label="snapshot", style=dashed];
+  MFH    -> APP  [label="総資産表示"];
+  POS    -> APP  [label="値動き表示"];
+  APP    -> TABS;
+
+  TG     -> MULMO [label="スマホ壁打ち", dir=both];
+  WIKIUI -> WIKI  [dir=both];
+}
