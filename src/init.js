@@ -8,6 +8,8 @@
 import { state } from './state.js';
 import { renderHeatmap } from './heatmap.js';
 import { renderStockList, applyStockBars } from './stock-list.js';
+import { renderWatchlist } from './watchlist.js';
+import { loadValuations } from './valuations.js';
 import { loadChart } from './chart.js';
 import { updateListHeight, updateWatchlistHeight } from './render.js';
 import { setupSwipeNav } from './swipe.js';
@@ -19,6 +21,13 @@ export function setupEventListeners(applyThemeFn) {
   }
 
   setupSwipeNav();
+
+  // PER採点ストア（data/valuations.json）を読み込み、保有テーブル/ウォッチを再描画。
+  // 失敗してもセルは「–」になるだけで他機能には影響しない。
+  loadValuations().then(() => {
+    renderStockList();
+    renderWatchlist();
+  });
 
   let _resizeRaf = null;
   window.addEventListener('resize', () => {
