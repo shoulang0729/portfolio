@@ -1,6 +1,11 @@
 {
-  "updated": "2026-06-13",
+  "updated": "2026-06-14",
   "issues": [
+    {
+      "date": "2026-06-14",
+      "title": "Briefing 2026/06/14",
+      "path": "data/briefings/2026-06-14.html"
+    },
     {
       "date": "2026-06-13",
       "title": "Briefing 2026/06/13",
