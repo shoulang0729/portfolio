@@ -67,6 +67,14 @@
 .sl-th-sub { display: block; font-size: 9px; font-weight: 400; color: var(--text2);
   text-transform: none; letter-spacing: 0; margin-top: 1px; }
 
+/* ウォッチリスト PER採点セル（valuation の表示。色は status 絵文字で表現） */
+.wl-per-cell { text-align: center; white-space: nowrap; }
+.wl-per-cell.wl-per-empty { color: var(--text3); }
+.wl-per-tile { display: block; font-size: 12px; font-weight: 600; color: var(--text); }
+.wl-per-unit { font-size: 9px; font-weight: 400; color: var(--text2); margin-left: 1px; }
+.wl-per-status { display: block; font-size: 10px; color: var(--text2); margin-top: 1px; }
+.wl-per-label { margin-left: 2px; }
+
 /* ══════════════════════════════════════════
    ヘッダー右列コンポーネント
    ══════════════════════════════════════════ */
