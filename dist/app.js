@@ -2755,7 +2755,39 @@ function validateWatchlistItem(obj) {
   if (typeof obj.cur !== "string" || !obj.cur.trim()) {
     throw new Error("Watchlist item.cur is required (non-empty string)");
   }
+  if (obj.valuation !== void 0 && obj.valuation !== null) {
+    validateWatchlistValuation(obj.valuation);
+  }
   return obj;
+}
+var WATCHLIST_VALUATION_STATUSES = ["cheap", "fair", "rich", "hold"];
+function validateWatchlistValuation(v) {
+  if (!v || typeof v !== "object") {
+    throw new Error("Watchlist valuation must be an object");
+  }
+  for (const f of ["perCurrent", "bandLow", "bandHigh", "percentile"]) {
+    if (typeof v[f] !== "number" || !isFinite(v[f])) {
+      throw new Error(`Watchlist valuation.${f} must be a finite number`);
+    }
+  }
+  if (v.percentile < 0 || v.percentile > 100) {
+    throw new Error("Watchlist valuation.percentile must be between 0 and 100");
+  }
+  if (v.bandMedian !== void 0 && v.bandMedian !== null) {
+    if (typeof v.bandMedian !== "number" || !isFinite(v.bandMedian)) {
+      throw new Error("Watchlist valuation.bandMedian must be null or a finite number");
+    }
+  }
+  if (typeof v.status !== "string" || !WATCHLIST_VALUATION_STATUSES.includes(v.status)) {
+    throw new Error(`Watchlist valuation.status must be one of: ${WATCHLIST_VALUATION_STATUSES.join(", ")}`);
+  }
+  if (typeof v.asOf !== "string" || !v.asOf.trim()) {
+    throw new Error("Watchlist valuation.asOf is required (ISO date string)");
+  }
+  if (v.note !== void 0 && v.note !== null && typeof v.note !== "string") {
+    throw new Error("Watchlist valuation.note must be a string, null, or undefined");
+  }
+  return v;
 }
 
 // src/watchlist.js
@@ -2988,6 +3020,25 @@ function wlGetPct(item, periodId) {
   if (periodId === "1d") return state.watchlistPrices[item.symbol]?.dayPct ?? null;
   return getHistoricalChangePct(item.symbol, periodId);
 }
+var WL_VAL_STATUS = {
+  cheap: { icon: "\u{1F7E2}", label: "\u5272\u5B89" },
+  fair: { icon: "\u{1F7E1}", label: "\u4E2D\u7ACB" },
+  rich: { icon: "\u{1F534}", label: "\u5272\u9AD8" },
+  hold: { icon: "\u26AA", label: "\u4FDD\u7559" }
+};
+function wlValuationCell(item) {
+  const v = item.valuation;
+  if (!v) return '<td class="wl-per-cell wl-per-empty" data-col="per">\u2013</td>';
+  const s = WL_VAL_STATUS[v.status] || WL_VAL_STATUS.hold;
+  const pct = Math.round(v.percentile);
+  const per = isFinite(v.perCurrent) ? v.perCurrent.toFixed(1) : "\u2013";
+  const band = `${v.bandLow}\u2013${v.bandHigh}${v.bandMedian != null ? ` \u4E2D\u592E${v.bandMedian}` : ""}`;
+  const title = `PER ${per} \uFF0F \u30D0\u30F3\u30C9 ${band} \uFF0F ${pct}%ile \uFF0F ${v.asOf}${v.note ? ` \uFF0F ${v.note}` : ""}`;
+  return `<td class="wl-per-cell" data-col="per" title="${escapeHTML(title)}">
+      <span class="wl-per-tile">${pct}<span class="wl-per-unit">%ile</span></span>
+      <span class="wl-per-status">${s.icon}<span class="wl-per-label">${s.label}</span></span>
+    </td>`;
+}
 function renderWatchlist() {
   const panel = document.getElementById("panel-watchlist");
   if (panel?.hidden) return;
@@ -3011,7 +3062,10 @@ function renderWatchlist() {
       vb = b.exchange ?? "";
       return dir * va.localeCompare(vb);
     }
-    if (col === "price") {
+    if (col === "per") {
+      va = a.valuation?.percentile ?? -Infinity;
+      vb = b.valuation?.percentile ?? -Infinity;
+    } else if (col === "price") {
       va = state.watchlistPrices[a.symbol]?.price ?? -Infinity;
       vb = state.watchlistPrices[b.symbol]?.price ?? -Infinity;
     } else {
@@ -3033,6 +3087,7 @@ function renderWatchlist() {
       <td data-col="symbol" class="sl-sym">${symEsc}<span class="sl-inline-name">${nameEsc}</span></td>
       <td class="wl-market-cell"><span class="wl-type-badge">${exEsc}</span></td>
       <td class="wl-price-cell">${priceStr}</td>
+      ${wlValuationCell(item)}
       ${periodCells}
       <td class="wl-del-cell">
         <button class="wl-del-btn" data-action="removeFromWatchlist" data-arg="${escapeHTML(item.symbol)}" title="\u30A6\u30A9\u30C3\u30C1\u30EA\u30B9\u30C8\u304B\u3089\u524A\u9664">\xD7</button>
@@ -3044,6 +3099,7 @@ function renderWatchlist() {
       ${th('\u30C6\u30A3\u30C3\u30AB\u30FC<br><span class="sl-th-sub">\u9298\u67C4\u540D</span>', "symbol")}
       ${th("\u5E02\u5834", "market", "center")}
       ${th("\u73FE\u5728\u5024", "price")}
+      ${th('PER\u63A1\u70B9<br><span class="sl-th-sub">%ile</span>', "per", "center")}
       ${makePeriodHeaderCells(state.wlSortCol, state.wlSortDir, "wlSort")}
       <th></th>
     </tr></thead>
