@@ -83,7 +83,7 @@ describe('state.js', () => {
         'autoSec',
         'currentPos',
         'currentRange',
-        'statsVisible',
+        'statsMasked',
         'themeMode',
         'listSortCol',
         'listSortDir',
@@ -109,7 +109,7 @@ describe('state.js', () => {
       expect(typeof state.historicalCache).toBe('object');
       expect(state.fetchingRanges instanceof Set).toBe(true);
       expect(typeof state.historicalAttempted).toBe('object');
-      expect(typeof state.statsVisible).toBe('boolean');
+      expect(typeof state.statsMasked).toBe('boolean');
       expect(typeof state.slDetailVisible).toBe('boolean');
       expect(typeof state.activeTab).toBe('string');
       expect(Array.isArray(state.watchlist)).toBe(true);
