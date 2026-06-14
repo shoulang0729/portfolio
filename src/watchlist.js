@@ -12,6 +12,7 @@ import { escapeHTML, makeTh, getHistoricalChangePct, fmtPrice, _tableSort, makeP
 import { fetchViaProxy, fetchLivePrice, fetchAllHistorical, setStatus } from './data.js';
 import { WORKER_URL } from './config.js';
 import { validateWatchlistItem } from './schema.js';
+import { getValuation, valuationCellHTML } from './valuations.js';
 
 // ══════════════════════════════════════════════
 // STORAGE
@@ -336,25 +337,11 @@ function wlGetPct(item, periodId) {
 
 /** ウォッチリストテーブルを描画 */
 // ── PER採点セル ──
-// item.valuation（PM が採点時に書き込む値）を表示するだけ。アプリはライブ計算しない。
-const WL_VAL_STATUS = {
-  cheap: { icon: '🟢', label: '割安' },
-  fair:  { icon: '🟡', label: '中立' },
-  rich:  { icon: '🔴', label: '割高' },
-  hold:  { icon: '⚪', label: '保留' },
-};
+// 単一ストア data/valuations.json（symbol→valuation）を優先参照し、無ければ
+// KV item.valuation にフォールバック。保有テーブルと同じ採点を共有（重複計算なし）。
 function wlValuationCell(item) {
-  const v = item.valuation;
-  if (!v) return '<td class="wl-per-cell wl-per-empty" data-col="per">–</td>';
-  const s    = WL_VAL_STATUS[v.status] || WL_VAL_STATUS.hold;
-  const pct  = Math.round(v.percentile);
-  const per  = isFinite(v.perCurrent) ? v.perCurrent.toFixed(1) : '–';
-  const band = `${v.bandLow}–${v.bandHigh}${v.bandMedian != null ? ` 中央${v.bandMedian}` : ''}`;
-  const title = `PER ${per} ／ バンド ${band} ／ ${pct}%ile ／ ${v.asOf}${v.note ? ` ／ ${v.note}` : ''}`;
-  return `<td class="wl-per-cell" data-col="per" title="${escapeHTML(title)}">
-      <span class="wl-per-tile">${pct}<span class="wl-per-unit">%ile</span></span>
-      <span class="wl-per-status">${s.icon}<span class="wl-per-label">${s.label}</span></span>
-    </td>`;
+  const v = getValuation(item.symbol) || item.valuation || null;
+  return valuationCellHTML(v);
 }
 
 export function renderWatchlist() {
@@ -382,8 +369,8 @@ export function renderWatchlist() {
       return dir * va.localeCompare(vb);
     }
     if (col === 'per') {
-      va = a.valuation?.percentile ?? -Infinity;
-      vb = b.valuation?.percentile ?? -Infinity;
+      va = (getValuation(a.symbol) || a.valuation)?.percentile ?? -Infinity;
+      vb = (getValuation(b.symbol) || b.valuation)?.percentile ?? -Infinity;
     } else if (col === 'price') {
       va = state.watchlistPrices[a.symbol]?.price ?? -Infinity;
       vb = state.watchlistPrices[b.symbol]?.price ?? -Infinity;
