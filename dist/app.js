@@ -489,8 +489,8 @@ var state = {
   autoSec: 0,
   currentPos: null,
   currentRange: "3m",
-  statsVisible: false,
-  // 起動時はデフォルト非表示
+  statsMasked: localStorage.getItem("hm-stats-masked") !== "0",
+  // 金額マスク状態（既定=マスク・目アイコンで解除）。'0'=解除を永続化
   themeMode: localStorage.getItem("hm-theme") || "auto",
   listSortCol: "1d",
   // 銘柄リストのデフォルトソート列
@@ -1335,6 +1335,8 @@ var fmtJPY = (v) => {
   return `${m.toFixed(1)}\u4E07`;
 };
 var fmtJPYFull = (v) => `${(v >= 0 ? "+" : "") + Math.round(v).toLocaleString()}\u5186`;
+var fmtYen = (v) => `\xA5${Math.round(v || 0).toLocaleString()}`;
+var maskAmount = (s) => String(s).replace(/[0-9]/g, "*");
 var fmtPct = (v) => `${v.toFixed(1)}%`;
 var fmtPrice = (v, cur) => {
   if (v == null) return "\u2015";
@@ -1491,6 +1493,19 @@ function calcPortfolioPeriodPct(periodId) {
     totalWeight += p.value;
   });
   return totalWeight > 0 ? weightedSum / totalWeight : null;
+}
+function trackedSymbolCount(positionsList, watchlist) {
+  const norm = (s) => String(s || "").trim().toUpperCase();
+  const set = /* @__PURE__ */ new Set();
+  (positionsList || []).forEach((p) => {
+    const key = norm(p.ySymbol || p.symbol);
+    if (key) set.add(key);
+  });
+  (watchlist || []).forEach((w) => {
+    const key = norm(w.symbol);
+    if (key) set.add(key);
+  });
+  return set.size;
 }
 
 // src/data-helpers.js
@@ -2126,7 +2141,8 @@ async function refreshPrices() {
   if (n > 0) {
     const now = /* @__PURE__ */ new Date();
     const ts2 = now.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
-    const msg = failedCount > 0 ? `\u30E9\u30A4\u30D6\u4FA1\u683C: ${n}/${total}\u9298\u67C4 \u66F4\u65B0\uFF08${fmtErrDetail()}\uFF09 ${ts2}` : `${n}\u9298\u67C4 \u6700\u7D42\u66F4\u65B0: ${ts2}`;
+    const trackedCount = trackedSymbolCount(positions, state.watchlist);
+    const msg = failedCount > 0 ? `\u30E9\u30A4\u30D6\u4FA1\u683C: ${n}/${total}\u9298\u67C4 \u66F4\u65B0\uFF08${fmtErrDetail()}\uFF09 ${ts2}` : `${trackedCount}\u9298\u67C4 \u6700\u7D42\u66F4\u65B0: ${ts2}`;
     state.lastUpdateText = msg;
     setStatus(msg, failedCount > 0 ? "yellow" : "green");
     document.dispatchEvent(new CustomEvent("hm:prices-updated"));
@@ -3162,13 +3178,14 @@ function _sum(pred) {
 function getMfTotals() {
   if (!_mf || !_mf.holdings) return null;
   const imported = _mf.totals && _mf.totals.imported || _sum(() => true);
+  const netWorth = _mf.totals && _mf.totals.mfNetWorth || imported;
   const cash = _sum((x) => x.cat === "\u73FE\u91D1\u30FB\u9810\u91D1");
   const crypto2 = _sum((x) => x.cat === "\u6697\u53F7\u8CC7\u7523");
   const securities = imported - cash - crypto2;
   const dryPowder = Math.max(0, cash - EMERGENCY_FUND);
   const investable = imported - EMERGENCY_FUND;
   const cashRatio = investable > 0 ? dryPowder / investable * 100 : 0;
-  return { imported, cash, crypto: crypto2, securities, dryPowder, cashRatio, emergencyFund: EMERGENCY_FUND, asOf: _mf.asOf };
+  return { netWorth, imported, cash, crypto: crypto2, securities, dryPowder, cashRatio, emergencyFund: EMERGENCY_FUND, asOf: _mf.asOf };
 }
 function getMfManualAssets() {
   if (!_mf || !_mf.holdings) return null;
@@ -3188,38 +3205,30 @@ function getMfSources() {
 
 // src/render.js
 function renderStats() {
-  const totalValue = positions.reduce((s, p) => s + (p.value || 0), 0);
-  const totalPnl = positions.reduce((s, p) => s + (p.pnl || 0), 0);
-  const totalCost = totalValue - totalPnl;
-  const pnlPct = totalCost > 0 ? totalPnl / totalCost * 100 : 0;
   const mf = getMfTotals();
-  const grandTotal = mf ? mf.imported : totalValue;
-  const mfTag = mf ? '<span style="display:block;font-size:9px;font-weight:400;color:var(--text2);opacity:0.6;text-transform:none;letter-spacing:0;">MF\u5B9F\u5024</span>' : "";
-  let html = `<div class="stat">
-    <span class="stat-label">\u904B\u7528\u8CC7\u7523\u7DCF\u984D${mfTag}</span>
-    <span class="stat-value stat-fg">${fmtJPYInt(grandTotal)}</span>
-  </div>`;
+  const liveTotal = positions.reduce((s, p) => s + (p.value || 0), 0);
+  const masked = state.statsMasked;
+  const amt = (v) => masked ? maskAmount(fmtYen(v)) : fmtYen(v);
+  const mfTag = '<span class="stat-src">MF\u5B9F\u5024</span>';
+  let html = "";
   if (mf) {
-    const dryMan = `\xA5${Math.round(mf.dryPowder / 1e4).toLocaleString()}\u4E07`;
     html += `<div class="stat">
+      <span class="stat-label">\u8CC7\u7523\u7DCF\u984D${mfTag}</span>
+      <span class="stat-value stat-fg">${amt(mf.netWorth)}</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">\u904B\u7528\u8CC7\u7523\u7DCF\u984D${mfTag}</span>
+      <span class="stat-value stat-fg">${amt(mf.imported)}</span>
+    </div>
+    <div class="stat">
       <span class="stat-label">\u6295\u8CC7\u7528\u30AD\u30E3\u30C3\u30B7\u30E5</span>
-      <span class="stat-value stat-fg">${dryMan}</span>
+      <span class="stat-value stat-fg">${amt(mf.dryPowder)}</span>
       <span class="stat-sub stat-fg">${mf.cashRatio.toFixed(1)}%</span>
     </div>`;
-  }
-  html += `<div class="stat">
-    <span class="stat-label">\u542B\u307F\u640D\u76CA</span>
-    <span class="stat-value ${sgn(totalPnl)}">${fmtJPYInt(totalPnl)}</span>
-    <span class="stat-sub ${sgn(pnlPct)}">${fmtPctInt(pnlPct)}</span>
-  </div>`;
-  for (const p of PERIODS) {
-    const pct = calcPortfolioPeriodPct(p.id);
-    const amt = pct !== null ? totalValue * pct / 100 : null;
-    const cls = pct !== null ? sgn(pct) : "neu";
+  } else {
     html += `<div class="stat">
-      <span class="stat-label">${p.statsLabel}</span>
-      <span class="stat-value ${cls}">${amt !== null ? fmtJPYInt(amt) : "\u2015"}</span>
-      <span class="stat-sub ${cls}">${pct !== null ? fmtPctInt(pct) : "\u2015"}</span>
+      <span class="stat-label">\u904B\u7528\u8CC7\u7523\u7DCF\u984D</span>
+      <span class="stat-value stat-fg">${amt(liveTotal)}</span>
     </div>`;
   }
   document.getElementById("stats").innerHTML = html;
@@ -5579,13 +5588,16 @@ async function refreshNow() {
 window.refreshNow = refreshNow;
 setPasskeySuccessCallback(_showChangePinButton);
 function toggleStats() {
-  state.statsVisible = !state.statsVisible;
-  const stats = document.getElementById("stats");
-  if (stats) stats.style.display = state.statsVisible ? "" : "none";
+  state.statsMasked = !state.statsMasked;
+  try {
+    localStorage.setItem("hm-stats-masked", state.statsMasked ? "1" : "0");
+  } catch {
+  }
+  renderStats();
   const eye = document.getElementById("stats-eye");
-  if (eye) eye.classList.toggle("hidden", !state.statsVisible);
+  if (eye) eye.classList.toggle("hidden", state.statsMasked);
   const eyeSlash = document.getElementById("eye-slash");
-  if (eyeSlash) eyeSlash.style.display = state.statsVisible ? "none" : "";
+  if (eyeSlash) eyeSlash.style.display = state.statsMasked ? "" : "none";
   requestAnimationFrame(updateActiveTableHeight);
 }
 function applyTheme() {
@@ -5900,12 +5912,10 @@ function init() {
   renderStats();
   loadMfHoldings().then(() => renderStats()).catch(() => {
   });
-  const _stats = document.getElementById("stats");
-  if (_stats) _stats.style.display = state.statsVisible ? "" : "none";
   const _eye = document.getElementById("stats-eye");
-  if (_eye) _eye.classList.toggle("hidden", !state.statsVisible);
+  if (_eye) _eye.classList.toggle("hidden", state.statsMasked);
   const _eyeSlash = document.getElementById("eye-slash");
-  if (_eyeSlash) _eyeSlash.style.display = state.statsVisible ? "none" : "";
+  if (_eyeSlash) _eyeSlash.style.display = state.statsMasked ? "" : "none";
   updateSlColStyle();
   const _slEye = document.getElementById("sl-eye-btn");
   if (_slEye) _slEye.classList.toggle("hidden", !state.slDetailVisible);
