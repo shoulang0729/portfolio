@@ -1,6 +1,6 @@
 {
-  "version": 3,
-  "updatedAt": "2026-06-13",
+  "version": 4,
+  "updatedAt": "2026-06-14",
   "purpose": "Claude for Chrome が MoneyForward (moneyforward.com/bs/portfolio) から data/mf-holdings.json を更新する際の取り込みルール。Chrome は取り込み前に必ず本ファイル(raw)を読み、ここに書かれたルールだけに従うこと。",
   "source": "https://moneyforward.com/bs/portfolio",
   "include": {
@@ -45,10 +45,38 @@
     "その他・事業性資産": "その他",
     "note": "株式(現物)は市場で日米を判定する。日本株/ETF(4桁コード or .T) → 日本株・ETF / ySymbol=\"<code>.T\"。米国株/ETF → 米国株・ETF / ySymbol=ティッカー。"
   },
+  "schema": {
+    "note": "★data/mf-holdings.json の正規スキーマ(v4 で確定)。Chrome はこの形でファイル全体を出力する。フロントの src/networth.js は holdings[].cat / holdings[].cur / holdings[].value / totals.imported / asOf の5つだけを読む(=load-bearing。これらは必須・名前変更不可)。それ以外は人間/将来ツール向けの付加情報。",
+    "top": {
+      "asOf": "実行時刻 ISO8601 (例 2026-06-14)",
+      "totals": "下記 totals 形",
+      "holdings": "下記 holding レコードの配列"
+    },
+    "totals": {
+      "mfNetWorth": "number — MF画面の総資産表示",
+      "imported": "number — Σ(holdings.value)。取り込んだ評価額の合計",
+      "excludedAccounts": "string[] — 除外した口座/金融機関名の配列(額ではなく名前のリスト)"
+    },
+    "holding": {
+      "required": {
+        "institution": "string — 金融機関/口座名(どの口座の資産か)",
+        "cat": "string — categoryToCat 後の分類(現金・預金 / 米国株・ETF 等)",
+        "name": "string — 銘柄名/預金名",
+        "value": "number — 評価額(時価・円)。カンマ・通貨記号を除いた数値のみ",
+        "cur": "string — 通貨(JPY/USD 等)",
+        "asOf": "string — そのレコードの取得日(通常 top.asOf と同じ)"
+      },
+      "optionalForSecurities": {
+        "ySymbol": "string — Yahoo用シンボル(日本株/ETF=<code>.T, 米国=ティッカー)。証券のみ",
+        "avgCost": "number — 取得単価(平均)。証券のみ・不明は省略",
+        "price": "number — 現在値/基準価額。証券のみ・不明は省略"
+      }
+    }
+  },
   "checksum": {
     "enabled": true,
     "tolerancePct": 1.0,
-    "rule": "取込対象の各口座(SMBC信託/マネックス証券/bitFlyer/ひふみ投信/三井住友銀行/十六銀行/三菱UFJ銀行/岐阜信用金庫/陽太子どもNISA/恒太子どもNISA)ごとに Σ(その口座のholdings.value) ≈ MFのその口座の合計表示 を ±1% で確認。さらに imported合計 ≈ 525,770,578 付近(v3基準・2026/06。資産変動で動く)を目安に確認。大きく外れたら除外漏れ/読み取りミスを疑う。",
+    "rule": "(1) totals.imported == Σ(holdings.value) を厳密一致で確認。(2) 取込対象の各口座(SMBC信託/マネックス証券/bitFlyer/ひふみ投信/三井住友銀行/十六銀行/三菱UFJ銀行/岐阜信用金庫/陽太子どもNISA/恒太子どもNISA)ごとに Σ(その口座のholdings.value) ≈ MFのその口座の合計表示 を ±1% で確認。(3) mfNetWorth − Σ(除外口座のMF表示額) ≈ imported を ±1% で確認。参考値: imported ≈ 524,345,245(2026-06-14基準。資産変動で動く)。大きく外れたら除外漏れ/読み取りミスを疑う。",
     "onMismatch": "data/mf-holdings.json をコミットせず中止し、どの口座で何円ズレたかを報告する。"
   },
   "commit": {
