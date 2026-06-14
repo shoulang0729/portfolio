@@ -95,7 +95,44 @@ export function validateWatchlistItem(obj) {
     throw new Error('Watchlist item.cur is required (non-empty string)');
   }
 
+  // valuation は任意。PM(MulmoClaude)が採点時に書き込む「銘柄自身のヒストリカルPER採点」。
+  // アプリはライブ計算せず、この値を表示するだけ。
+  if (obj.valuation !== undefined && obj.valuation !== null) {
+    validateWatchlistValuation(obj.valuation);
+  }
+
   return obj;
+}
+
+const WATCHLIST_VALUATION_STATUSES = ['cheap', 'fair', 'rich', 'hold'];
+
+export function validateWatchlistValuation(v) {
+  if (!v || typeof v !== 'object') {
+    throw new Error('Watchlist valuation must be an object');
+  }
+  for (const f of ['perCurrent', 'bandLow', 'bandHigh', 'percentile']) {
+    if (typeof v[f] !== 'number' || !isFinite(v[f])) {
+      throw new Error(`Watchlist valuation.${f} must be a finite number`);
+    }
+  }
+  if (v.percentile < 0 || v.percentile > 100) {
+    throw new Error('Watchlist valuation.percentile must be between 0 and 100');
+  }
+  if (v.bandMedian !== undefined && v.bandMedian !== null) {
+    if (typeof v.bandMedian !== 'number' || !isFinite(v.bandMedian)) {
+      throw new Error('Watchlist valuation.bandMedian must be null or a finite number');
+    }
+  }
+  if (typeof v.status !== 'string' || !WATCHLIST_VALUATION_STATUSES.includes(v.status)) {
+    throw new Error(`Watchlist valuation.status must be one of: ${WATCHLIST_VALUATION_STATUSES.join(', ')}`);
+  }
+  if (typeof v.asOf !== 'string' || !v.asOf.trim()) {
+    throw new Error('Watchlist valuation.asOf is required (ISO date string)');
+  }
+  if (v.note !== undefined && v.note !== null && typeof v.note !== 'string') {
+    throw new Error('Watchlist valuation.note must be a string, null, or undefined');
+  }
+  return v;
 }
 
 export function validateSnapshot(obj) {
