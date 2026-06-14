@@ -12,6 +12,7 @@ import { fetchWithTimeout, batchWithRetry } from './data-helpers.js';
 import { fetchForexRate } from './forex.js';
 import { setStatus, flashPriceChanges, renderProviderHealth } from './ui-status.js';
 import { setHistoricalEntry } from './historical-cache.js';
+import { trackedSymbolCount } from './utils.js';
 // eslint-disable-next-line no-unused-vars
 import { toFinnhubSymbol, fetchFinnhubQuote, fetchFinnhubCandles } from './data-finnhub.js';
 // eslint-disable-next-line no-unused-vars
@@ -318,9 +319,11 @@ async function refreshPrices() {
   if (n > 0) {
     const now = new Date();
     const ts2 = now.toLocaleTimeString('ja-JP', { hour:'2-digit', minute:'2-digit' });
+    // 「最終更新」前の銘柄数 ＝ 追跡ティッカーのユニーク数（保有数＋ウォッチ数−重複数）。
+    const trackedCount = trackedSymbolCount(positions, state.watchlist);
     const msg = failedCount > 0
       ? `ライブ価格: ${n}/${total}銘柄 更新（${fmtErrDetail()}） ${ts2}`
-      : `${n}銘柄 最終更新: ${ts2}`;
+      : `${trackedCount}銘柄 最終更新: ${ts2}`;
     state.lastUpdateText = msg;  // 履歴データ取得後に復元できるよう保存
     setStatus(msg, failedCount > 0 ? 'yellow' : 'green');
     document.dispatchEvent(new CustomEvent('hm:prices-updated'));

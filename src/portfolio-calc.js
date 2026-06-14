@@ -61,4 +61,26 @@ function calcPortfolioPeriodPct(periodId) {
   return totalWeight > 0 ? weightedSum / totalWeight : null;
 }
 
-export { getHistoricalChangePct, getDisplayPct, calcPortfolioPeriodPct };
+/**
+ * 追跡中ティッカーのユニーク数 ＝ 保有数 ＋ ウォッチ数 − 重複数。
+ * 保有は ySymbol（無ければ symbol）、ウォッチは symbol を Yahoo 形式キーとして
+ * 大文字化・トリムして重複排除する。
+ * @param {Array<{ySymbol?: string, symbol?: string}>} positionsList  保有銘柄
+ * @param {Array<{symbol?: string}>} watchlist  ウォッチリスト
+ * @returns {number}
+ */
+function trackedSymbolCount(positionsList, watchlist) {
+  const norm = s => String(s || '').trim().toUpperCase();
+  const set = new Set();
+  (positionsList || []).forEach(p => {
+    const key = norm(p.ySymbol || p.symbol);
+    if (key) set.add(key);
+  });
+  (watchlist || []).forEach(w => {
+    const key = norm(w.symbol);
+    if (key) set.add(key);
+  });
+  return set.size;
+}
+
+export { getHistoricalChangePct, getDisplayPct, calcPortfolioPeriodPct, trackedSymbolCount };

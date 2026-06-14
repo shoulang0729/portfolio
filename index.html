@@ -24,10 +24,10 @@
 
 <!-- スタイルシート -->
 
-<link rel="stylesheet" href="assets/01-base.css?v=20260614C">
-<link rel="stylesheet" href="assets/02-tables.css?v=20260614C">
-<link rel="stylesheet" href="assets/03-misc.css?v=20260614C">
-<link rel="stylesheet" href="assets/04-auth.css?v=20260614C">
+<link rel="stylesheet" href="assets/01-base.css?v=20260614D">
+<link rel="stylesheet" href="assets/02-tables.css?v=20260614D">
+<link rel="stylesheet" href="assets/03-misc.css?v=20260614D">
+<link rel="stylesheet" href="assets/04-auth.css?v=20260614D">
 
 <!-- assets/05-ai-tab.css は src/_disabled/05-ai-tab.css に移動（AIタブ無効化中）-->
 <!-- 銘柄リスト列表示制御（JS が動的に書き込む） -->
@@ -155,7 +155,7 @@
 </div>
 
 <div class="stats-outer">
-  <button class="eye-btn" id="stats-eye" data-action="toggleStats" title="統計の表示／非表示">
+  <button class="eye-btn" id="stats-eye" data-action="toggleStats" title="金額の表示／マスク" aria-label="金額を表示またはマスク">
     <svg width="18" height="14" viewBox="0 0 18 14" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M9 1C5 1 1.5 4 1 7c.5 3 3.5 6 8 6s7.5-3 8-6c-.5-3-4-6-8-6z" stroke="currentColor" stroke-width="1.5" fill="none"/>
       <circle cx="9" cy="7" r="2.5" stroke="currentColor" stroke-width="1.5" fill="none"/>
@@ -318,14 +318,14 @@
 
 <!-- ES Module エントリーポイント（全ファイルを import する単一スクリプト） -->
 
-<script type="module" src="dist/app.js?v=20260614C"></script>
+<script type="module" src="dist/app.js?v=20260614D"></script>
 
 
 <!-- PWA Service Worker 登録 -->
 <script>
 if ('serviceWorker' in navigator) {
 
-navigator.serviceWorker.register('./sw.js?v=20260614C').catch(() => {});
+navigator.serviceWorker.register('./sw.js?v=20260614D').catch(() => {});
 
 }
 </script>
