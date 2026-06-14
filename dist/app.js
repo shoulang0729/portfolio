@@ -2141,6 +2141,50 @@ async function refreshPrices() {
   }
 }
 
+// src/valuations.js
+var VAL_URL = "data/valuations.json";
+var _vals = {};
+var _loaded = false;
+var VAL_STATUS = {
+  cheap: { icon: "\u{1F7E2}", label: "\u5272\u5B89" },
+  fair: { icon: "\u{1F7E1}", label: "\u4E2D\u7ACB" },
+  rich: { icon: "\u{1F534}", label: "\u5272\u9AD8" },
+  hold: { icon: "\u26AA", label: "\u4FDD\u7559" }
+};
+async function loadValuations() {
+  try {
+    const r = await fetch(`${VAL_URL}?_=${Date.now()}`);
+    if (!r.ok) throw new Error(`val ${r.status}`);
+    const j = await r.json();
+    _vals = j && j.valuations || {};
+    _loaded = true;
+  } catch {
+    _vals = {};
+  }
+  return _vals;
+}
+function getValuation(ySymbol) {
+  return ySymbol ? _vals[ySymbol] || null : null;
+}
+function valuationPercentile(ySymbol) {
+  const v = getValuation(ySymbol);
+  return v && v.percentile != null && isFinite(v.percentile) ? v.percentile : null;
+}
+function valuationCellHTML(v, dataCol = "per") {
+  if (!v) return `<td class="wl-per-cell wl-per-empty" data-col="${dataCol}">\u2013</td>`;
+  const s = VAL_STATUS[v.status] || VAL_STATUS.hold;
+  const hasPct = v.percentile != null && isFinite(v.percentile);
+  const per = v.perCurrent != null && isFinite(v.perCurrent) ? Number(v.perCurrent).toFixed(1) : "\u2013";
+  const band = v.bandLow != null && v.bandHigh != null ? `${v.bandLow}\u2013${v.bandHigh}${v.bandMedian != null ? ` \u4E2D\u592E${v.bandMedian}` : ""}` : "\u2014";
+  const pctTxt = hasPct ? `${Math.round(v.percentile)}%ile` : "\u2014";
+  const title = `PER ${per} \uFF0F \u30D0\u30F3\u30C9 ${band} \uFF0F ${pctTxt} \uFF0F ${v.asOf || ""}${v.note ? ` \uFF0F ${v.note}` : ""}`;
+  const tile = hasPct ? `${Math.round(v.percentile)}<span class="wl-per-unit">%ile</span>` : '<span class="wl-per-unit">\u2014</span>';
+  return `<td class="wl-per-cell" data-col="${dataCol}" title="${escapeHTML(title)}">
+      <span class="wl-per-tile">${tile}</span>
+      <span class="wl-per-status">${s.icon}<span class="wl-per-label">${s.label}</span></span>
+    </td>`;
+}
+
 // src/stock-list.js
 function updateSlColStyle() {
   const el = document.getElementById("sl-col-style");
@@ -2195,6 +2239,9 @@ function renderStockList() {
     } else if (state.listSortCol === "price") {
       va = a.price;
       vb = b.price;
+    } else if (state.listSortCol === "per") {
+      va = valuationPercentile(a.ySymbol);
+      vb = valuationPercentile(b.ySymbol);
     } else if (state.listSortCol === "shares") {
       va = a.shares;
       vb = b.shares;
@@ -2233,6 +2280,7 @@ function renderStockList() {
       <td data-col="shares">${sharesStr}</td>
       <td data-col="avgCost">${costStr}</td>
       <td data-col="price">${priceStr}</td>
+      ${valuationCellHTML(getValuation(p.ySymbol))}
       ${periodCells}
       <td data-col="pnl" class="${pnlAmtCls}">${pnlStr}</td>
       <td data-col="pnlPct" class="sl-pct-cell" ${pnlPctBg ? `style="background:${pnlPctBg};color:${pnlPctFg}"` : ""}>${pnlPctStr}</td>
@@ -2246,6 +2294,7 @@ function renderStockList() {
       ${th("\u4FDD\u6709\u6570", "shares")}
       ${th("\u53D6\u5F97\u5358\u4FA1", "avgCost")}
       ${th("\u73FE\u5728\u5024", "price")}
+      ${th("PER\u63A1\u70B9", "per", "center")}
       ${makePeriodHeaderCells(state.listSortCol, state.listSortDir, "slSort")}
       ${th("\u542B\u307F\u640D\u76CA", "pnl")}
       ${th("\u640D\u76CA\u7387", "pnlPct", "center")}
@@ -3020,24 +3069,9 @@ function wlGetPct(item, periodId) {
   if (periodId === "1d") return state.watchlistPrices[item.symbol]?.dayPct ?? null;
   return getHistoricalChangePct(item.symbol, periodId);
 }
-var WL_VAL_STATUS = {
-  cheap: { icon: "\u{1F7E2}", label: "\u5272\u5B89" },
-  fair: { icon: "\u{1F7E1}", label: "\u4E2D\u7ACB" },
-  rich: { icon: "\u{1F534}", label: "\u5272\u9AD8" },
-  hold: { icon: "\u26AA", label: "\u4FDD\u7559" }
-};
 function wlValuationCell(item) {
-  const v = item.valuation;
-  if (!v) return '<td class="wl-per-cell wl-per-empty" data-col="per">\u2013</td>';
-  const s = WL_VAL_STATUS[v.status] || WL_VAL_STATUS.hold;
-  const pct = Math.round(v.percentile);
-  const per = isFinite(v.perCurrent) ? v.perCurrent.toFixed(1) : "\u2013";
-  const band = `${v.bandLow}\u2013${v.bandHigh}${v.bandMedian != null ? ` \u4E2D\u592E${v.bandMedian}` : ""}`;
-  const title = `PER ${per} \uFF0F \u30D0\u30F3\u30C9 ${band} \uFF0F ${pct}%ile \uFF0F ${v.asOf}${v.note ? ` \uFF0F ${v.note}` : ""}`;
-  return `<td class="wl-per-cell" data-col="per" title="${escapeHTML(title)}">
-      <span class="wl-per-tile">${pct}<span class="wl-per-unit">%ile</span></span>
-      <span class="wl-per-status">${s.icon}<span class="wl-per-label">${s.label}</span></span>
-    </td>`;
+  const v = getValuation(item.symbol) || item.valuation || null;
+  return valuationCellHTML(v);
 }
 function renderWatchlist() {
   const panel = document.getElementById("panel-watchlist");
@@ -3063,8 +3097,8 @@ function renderWatchlist() {
       return dir * va.localeCompare(vb);
     }
     if (col === "per") {
-      va = a.valuation?.percentile ?? -Infinity;
-      vb = b.valuation?.percentile ?? -Infinity;
+      va = (getValuation(a.symbol) || a.valuation)?.percentile ?? -Infinity;
+      vb = (getValuation(b.symbol) || b.valuation)?.percentile ?? -Infinity;
     } else if (col === "price") {
       va = state.watchlistPrices[a.symbol]?.price ?? -Infinity;
       vb = state.watchlistPrices[b.symbol]?.price ?? -Infinity;
@@ -4169,7 +4203,7 @@ function showSymbolTip(ev, title, symbols) {
 }
 
 // src/briefing.js
-var _loaded = false;
+var _loaded2 = false;
 var _frame = null;
 var _themeObserver = null;
 var _resizeFit = false;
@@ -4205,7 +4239,7 @@ function _ensureResizeFit() {
 function renderBriefing(force = false) {
   const panel = document.getElementById("panel-briefing");
   if (!panel) return;
-  if (_loaded && !force) return;
+  if (_loaded2 && !force) return;
   panel.innerHTML = '<div class="bf-msg">\u8AAD\u307F\u8FBC\u307F\u4E2D\u2026</div>';
   fetch(`data/briefings/index.json?_=${Date.now()}`).then((r) => {
     if (!r.ok) throw new Error(`index ${r.status}`);
@@ -4236,7 +4270,7 @@ function renderBriefing(force = false) {
         if (_frame) _frame.src = `${sel.value}?_=${Date.now()}`;
       });
     }
-    _loaded = true;
+    _loaded2 = true;
   }).catch(() => {
     panel.innerHTML = '<div class="bf-msg bf-err">Briefing \u306E\u8AAD\u307F\u8FBC\u307F\u306B\u5931\u6557\u3057\u307E\u3057\u305F\u3002</div>';
   });
@@ -4398,6 +4432,10 @@ function setupEventListeners(applyThemeFn) {
     return;
   }
   setupSwipeNav();
+  loadValuations().then(() => {
+    renderStockList();
+    renderWatchlist();
+  });
   let _resizeRaf = null;
   window.addEventListener("resize", () => {
     if (_resizeRaf) cancelAnimationFrame(_resizeRaf);
