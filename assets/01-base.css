@@ -193,6 +193,7 @@ body {
 .neg { color: var(--neg); }  /* マイナス=緑 */
 .neu { color: var(--text2); }
 .stat-fg { color: var(--text); }  /* stats バーの白文字（#309） */
+.stat-src { display: block; font-size: 9px; font-weight: 400; color: var(--text2); opacity: 0.6; text-transform: none; letter-spacing: 0; }  /* MF実値タグ */
 
 /* ── Period / Refresh switch ── */
 .period-switch, .refresh-switch {

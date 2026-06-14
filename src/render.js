@@ -5,9 +5,9 @@
 // renderStats / 歴史データ取得後の描画連鎖を担当
 // ══════════════════════════════════════════════════════════════
 
-import { positions, PERIODS } from './positions.js';
+import { positions } from './positions.js';
 import { state } from './state.js';
-import { fmtJPYInt, fmtPctInt, sgn, calcPortfolioPeriodPct } from './utils.js';
+import { fmtYen, maskAmount } from './utils.js';
 import { renderHeatmap } from './heatmap.js';
 import { renderStockList } from './stock-list.js';
 import { renderWatchlist } from './watchlist.js';
@@ -16,52 +16,70 @@ import { setStatus } from './ui-status.js';
 import { getMfTotals } from './networth.js';
 
 /**
- * Stats バー（資産総額・含み損益・期間パフォーマンス）の再描画
+ * Stats バー（資産総額・運用資産総額・投資用キャッシュ）の再描画。
+ * 金額は1円単位（カンマ区切り）。state.statsMasked が true のときは金額を
+ * マネーフォワード式に *** マスクするが、投資用キャッシュ比率（%）は常に表示する。
  * @returns {void}
  */
 export function renderStats() {
-  const totalValue = positions.reduce((s, p) => s + (p.value || 0), 0); // ライブ証券（期間PFの基準）
-  const totalPnl   = positions.reduce((s, p) => s + (p.pnl   || 0), 0);
-
-  const totalCost  = totalValue - totalPnl;
-  const pnlPct     = totalCost > 0 ? totalPnl / totalCost * 100 : 0;
-
-  // 資産総額は Money Forward 実値（mf-holdings）。未ロードならライブ証券合計にフォールバック
+  // 資産総額・運用資産総額は Money Forward 実値（mf-holdings）。
+  // 未ロード時はライブ証券合計にフォールバック。
   const mf = getMfTotals();
-  const grandTotal = mf ? mf.imported : totalValue;
+  const liveTotal = positions.reduce((s, p) => s + (p.value || 0), 0);
 
-  const mfTag = mf ? '<span style="display:block;font-size:9px;font-weight:400;color:var(--text2);opacity:0.6;text-transform:none;letter-spacing:0;">MF実値</span>' : '';
-  let html = `<div class="stat">
-    <span class="stat-label">運用資産総額${mfTag}</span>
-    <span class="stat-value stat-fg">${fmtJPYInt(grandTotal)}</span>
-  </div>`;
+  const masked = state.statsMasked;
+  /** 金額セル: マスク時は数字を *** に置換（カンマ・¥は残す） */
+  const amt = v => (masked ? maskAmount(fmtYen(v)) : fmtYen(v));
 
+  const mfTag = '<span class="stat-src">MF実値</span>';
+
+  let html = '';
   if (mf) {
-    // 投資用キャッシュ: 金額（万単位）→ 改行 → 比率（%）。文字は白（#309）
-    const dryMan = `¥${Math.round(mf.dryPowder / 1e4).toLocaleString()}万`;
+    // 資産総額 ＝ MF 純資産（mfNetWorth）。運用資産総額 ＝ 取込資産（imported・現状通り）。
     html += `<div class="stat">
+      <span class="stat-label">資産総額${mfTag}</span>
+      <span class="stat-value stat-fg">${amt(mf.netWorth)}</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">運用資産総額${mfTag}</span>
+      <span class="stat-value stat-fg">${amt(mf.imported)}</span>
+    </div>
+    <div class="stat">
       <span class="stat-label">投資用キャッシュ</span>
-      <span class="stat-value stat-fg">${dryMan}</span>
+      <span class="stat-value stat-fg">${amt(mf.dryPowder)}</span>
       <span class="stat-sub stat-fg">${mf.cashRatio.toFixed(1)}%</span>
+    </div>`;
+  } else {
+    // MF 未ロード時のフォールバック（ライブ証券合計のみ）
+    html += `<div class="stat">
+      <span class="stat-label">運用資産総額</span>
+      <span class="stat-value stat-fg">${amt(liveTotal)}</span>
     </div>`;
   }
 
+  // ── 一旦非表示（含み損益・期間パフォーマンス列）。復活はこのブロックのコメント解除＋
+  //    render.js 冒頭 import に { fmtJPYInt, fmtPctInt, sgn, calcPortfolioPeriodPct } と
+  //    positions.js の PERIODS を戻す。 ──
+  /*
+  const totalPnl  = positions.reduce((s, p) => s + (p.pnl || 0), 0);
+  const totalCost = liveTotal - totalPnl;
+  const pnlPct    = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0;
   html += `<div class="stat">
     <span class="stat-label">含み損益</span>
     <span class="stat-value ${sgn(totalPnl)}">${fmtJPYInt(totalPnl)}</span>
     <span class="stat-sub ${sgn(pnlPct)}">${fmtPctInt(pnlPct)}</span>
   </div>`;
-
   for (const p of PERIODS) {
     const pct = calcPortfolioPeriodPct(p.id);
-    const amt = pct !== null ? totalValue * pct / 100 : null;
+    const pamt = pct !== null ? (liveTotal * pct) / 100 : null;
     const cls = pct !== null ? sgn(pct) : 'neu';
     html += `<div class="stat">
       <span class="stat-label">${p.statsLabel}</span>
-      <span class="stat-value ${cls}">${amt !== null ? fmtJPYInt(amt) : '―'}</span>
+      <span class="stat-value ${cls}">${pamt !== null ? fmtJPYInt(pamt) : '―'}</span>
       <span class="stat-sub ${cls}">${pct !== null ? fmtPctInt(pct) : '―'}</span>
     </div>`;
   }
+  */
 
   document.getElementById('stats').innerHTML = html;
 }

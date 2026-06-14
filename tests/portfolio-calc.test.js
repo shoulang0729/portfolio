@@ -15,7 +15,25 @@ vi.mock('../src/positions.js', () => ({
 
 import { state } from '../src/state.js';
 import { positions } from '../src/positions.js';
-import { getHistoricalChangePct, getDisplayPct, calcPortfolioPeriodPct } from '../src/portfolio-calc.js';
+import { getHistoricalChangePct, getDisplayPct, calcPortfolioPeriodPct, trackedSymbolCount } from '../src/portfolio-calc.js';
+
+describe('trackedSymbolCount', () => {
+  it('counts holdings + watchlist minus overlap', () => {
+    const holds = [{ ySymbol: '1306.T' }, { ySymbol: 'AAPL' }, { ySymbol: '0700.HK' }];
+    const watch = [{ symbol: 'AAPL' }, { symbol: 'NVDA' }]; // AAPL overlaps
+    // 保有3 + ウォッチ2 - 重複1 = 4
+    expect(trackedSymbolCount(holds, watch)).toBe(4);
+  });
+  it('normalizes case/whitespace and falls back to symbol when ySymbol missing', () => {
+    const holds = [{ symbol: '1306' }, { ySymbol: ' aapl ' }];
+    const watch = [{ symbol: 'AAPL' }]; // same as holding after normalize
+    expect(trackedSymbolCount(holds, watch)).toBe(2);
+  });
+  it('ignores empty/missing symbols and handles undefined args', () => {
+    expect(trackedSymbolCount([{ ySymbol: '' }, {}], [{ symbol: null }])).toBe(0);
+    expect(trackedSymbolCount(undefined, undefined)).toBe(0);
+  });
+});
 
 beforeEach(() => {
   state.historicalCache = {};

@@ -30,7 +30,7 @@
  * @property {number} autoSec
  * @property {*} currentPos
  * @property {string} currentRange
- * @property {boolean} statsVisible
+ * @property {boolean} statsMasked
  * @property {string} themeMode
  * @property {string} listSortCol
  * @property {'asc'|'desc'} listSortDir
@@ -103,7 +103,7 @@ const state = {
   autoSec:          0,
   currentPos:       null,
   currentRange:     '3m',
-  statsVisible:     false,  // 起動時はデフォルト非表示
+  statsMasked:      localStorage.getItem('hm-stats-masked') !== '0',  // 金額マスク状態（既定=マスク・目アイコンで解除）。'0'=解除を永続化
   themeMode:        localStorage.getItem('hm-theme') || 'auto',
   listSortCol:      '1d',       // 銘柄リストのデフォルトソート列
   listSortDir:      'desc',

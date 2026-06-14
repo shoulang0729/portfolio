@@ -52,13 +52,14 @@ setPasskeySuccessCallback(_showChangePinButton);
 // STATS BAR
 // ══════════════════════════════════════════════
 function toggleStats() {
-  state.statsVisible = !state.statsVisible;
-  const stats = document.getElementById('stats');
-  if (stats) stats.style.display = state.statsVisible ? '' : 'none';
+  // 金額のみマスク/解除をトグル（バー自体は常に表示・比率は常時表示）。
+  state.statsMasked = !state.statsMasked;
+  try { localStorage.setItem('hm-stats-masked', state.statsMasked ? '1' : '0'); } catch { /* quota 超過は無視 */ }
+  renderStats();  // マスク状態を反映して金額セルを再描画
   const eye = document.getElementById('stats-eye');
-  if (eye) eye.classList.toggle('hidden', !state.statsVisible);
+  if (eye) eye.classList.toggle('hidden', state.statsMasked);
   const eyeSlash = document.getElementById('eye-slash');
-  if (eyeSlash) eyeSlash.style.display = state.statsVisible ? 'none' : '';
+  if (eyeSlash) eyeSlash.style.display = state.statsMasked ? '' : 'none';
 
   // stats-outer の高さ変化に合わせて表示中テーブルの高さを再計算
   requestAnimationFrame(updateActiveTableHeight);
@@ -450,14 +451,11 @@ function init() {
   // Money Forward 実値（mf-holdings）を読み込み、資産総額・キャッシュ比率に反映（非同期・失敗時はライブ証券にフォールバック）
   loadMfHoldings().then(() => renderStats()).catch(() => {});
 
-  // stats の初期表示状態を DOM に反映（state.statsVisible = false → 非表示）
-  const _stats = document.getElementById('stats');
-  if (_stats) _stats.style.display = state.statsVisible ? '' : 'none';
+  // stats バーは常に表示。目アイコンは金額マスク状態（state.statsMasked）を反映。
   const _eye = document.getElementById('stats-eye');
-
-  if (_eye) _eye.classList.toggle('hidden', !state.statsVisible);
+  if (_eye) _eye.classList.toggle('hidden', state.statsMasked);
   const _eyeSlash = document.getElementById('eye-slash');
-  if (_eyeSlash) _eyeSlash.style.display = state.statsVisible ? 'none' : '';
+  if (_eyeSlash) _eyeSlash.style.display = state.statsMasked ? '' : 'none';
 
   // 銘柄リスト詳細列の初期表示状態を DOM に反映（state.slDetailVisible = false → 非表示）
   updateSlColStyle();
