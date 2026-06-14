@@ -4172,7 +4172,7 @@ function showSymbolTip(ev, title, symbols) {
 var _loaded = false;
 var _frame = null;
 var _themeObserver = null;
-var TG_ONDEMAND_URL = `https://t.me/toshio_claude_bot?text=${encodeURIComponent("Briefing\u3092\u4ECA\u3059\u3050\u4F5C\u3063\u3066")}`;
+var _resizeFit = false;
 function _syncFrameTheme() {
   if (!_frame) return;
   try {
@@ -4189,6 +4189,19 @@ function _ensureThemeObserver() {
   _themeObserver = new MutationObserver(_syncFrameTheme);
   _themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 }
+function _fitFrame() {
+  if (!_frame) return;
+  const top = _frame.getBoundingClientRect().top;
+  const bar = _frame.parentElement?.querySelector(".bf-pastbar");
+  const barH = bar instanceof HTMLElement ? bar.offsetHeight : 0;
+  const h = Math.max(360, Math.round(window.innerHeight - top - barH));
+  _frame.style.height = `${h}px`;
+}
+function _ensureResizeFit() {
+  if (_resizeFit) return;
+  _resizeFit = true;
+  window.addEventListener("resize", _fitFrame);
+}
 function renderBriefing(force = false) {
   const panel = document.getElementById("panel-briefing");
   if (!panel) return;
@@ -4204,22 +4217,24 @@ function renderBriefing(force = false) {
       return;
     }
     const latest = issues[0];
-    const past = issues.slice(1);
-    const pastHtml = past.length ? past.map((p) => `<a class="bf-past-item" href="${p.path}" target="_blank" rel="noopener"><span class="bf-past-name">${_esc(p.title)}</span><span class="bf-past-date">${_esc(p.date)}</span></a>`).join("") : '<div class="bf-none">\u904E\u53BB\u53F7\u306F\u307E\u3060\u3042\u308A\u307E\u305B\u3093</div>';
-    const sparkle = '<svg class="bf-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.5z"/></svg>';
-    panel.innerHTML = `<div class="bf-wrap"><div class="bf-toolbar"><span class="bf-actions"><a class="bf-ondemand" href="${TG_ONDEMAND_URL}" target="_blank" rel="noopener">${sparkle}\u4ECA\u3059\u3050\u751F\u6210</a></span></div><iframe class="bf-frame" src="${latest.path}?_=${Date.now()}" title="${_esc(latest.title)}" loading="lazy"></iframe><div class="bf-past"><div class="bf-past-head">\u904E\u53BB\u306E Briefing</div>${pastHtml}</div></div>`;
+    const options = issues.map((p, i) => `<option value="${_esc(p.path)}"${i === 0 ? " selected" : ""}>${_esc(p.title)}</option>`).join("");
+    panel.innerHTML = `<div class="bf-wrap"><iframe class="bf-frame" src="${latest.path}?_=${Date.now()}" title="${_esc(latest.title)}" loading="lazy"></iframe><div class="bf-pastbar"><label class="bf-past-label" for="bf-past-sel">\u904E\u53BB\u53F7</label><select id="bf-past-sel" class="bf-past-select" aria-label="\u904E\u53BB\u306E Briefing \u3092\u9078\u629E">${options}</select></div></div>`;
     _frame = /** @type {HTMLIFrameElement|null} */
     panel.querySelector(".bf-frame");
     if (_frame) {
       _frame.addEventListener("load", () => {
         _syncFrameTheme();
-        try {
-          const h = _frame?.contentWindow?.document?.body?.scrollHeight;
-          if (h) _frame.style.height = `${h + 24}px`;
-        } catch {
-        }
+        _fitFrame();
       });
       _ensureThemeObserver();
+      _ensureResizeFit();
+      _fitFrame();
+    }
+    const sel = panel.querySelector(".bf-past-select");
+    if (sel instanceof HTMLSelectElement) {
+      sel.addEventListener("change", () => {
+        if (_frame) _frame.src = `${sel.value}?_=${Date.now()}`;
+      });
     }
     _loaded = true;
   }).catch(() => {
@@ -4230,7 +4245,10 @@ function reloadBriefing() {
   renderBriefing(true);
 }
 function _esc(s) {
-  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] || c);
+  return String(s).replace(
+    /[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] || c
+  );
 }
 
 // src/tabs.js
