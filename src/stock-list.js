@@ -10,6 +10,7 @@
 import { state, SL_DETAIL_COLS } from './state.js';
 import { positions, PERIOD_IDS } from './positions.js';
 import { escapeHTML, makeTh, getColor, getCellTextColor, getHistoricalChangePct, fmtJPYInt, fmtPctInt, fmtPrice, fmtShares, _tableSort, makePeriodCells, makePeriodHeaderCells } from './utils.js';
+import { getValuation, valuationPercentile, valuationCellHTML } from './valuations.js';
 
 // ══════════════════════════════════════════════
 // STOCK LIST
@@ -76,6 +77,8 @@ function renderStockList() {
       va = a.value; vb = b.value;
     } else if (state.listSortCol === 'price') {
       va = a.price; vb = b.price;
+    } else if (state.listSortCol === 'per') {
+      va = valuationPercentile(a.ySymbol); vb = valuationPercentile(b.ySymbol);
     } else if (state.listSortCol === 'shares') {
       va = a.shares; vb = b.shares;
     } else if (state.listSortCol === 'avgCost') {
@@ -123,6 +126,7 @@ function renderStockList() {
       <td data-col="shares">${sharesStr}</td>
       <td data-col="avgCost">${costStr}</td>
       <td data-col="price">${priceStr}</td>
+      ${valuationCellHTML(getValuation(p.ySymbol))}
       ${periodCells}
       <td data-col="pnl" class="${pnlAmtCls}">${pnlStr}</td>
       <td data-col="pnlPct" class="sl-pct-cell" ${pnlPctBg ? `style="background:${pnlPctBg};color:${pnlPctFg}"` : ''}>${pnlPctStr}</td>
@@ -137,6 +141,7 @@ function renderStockList() {
       ${th('保有数','shares')}
       ${th('取得単価','avgCost')}
       ${th('現在値','price')}
+      ${th('PER採点','per','center')}
       ${makePeriodHeaderCells(state.listSortCol, state.listSortDir, 'slSort')}
       ${th('含み損益','pnl')}
       ${th('損益率','pnlPct','center')}

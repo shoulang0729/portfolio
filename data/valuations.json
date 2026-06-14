@@ -1,0 +1,367 @@
+{
+ "updated": "2026-06-14",
+ "note": "PER採点の単一ストア(symbol→valuation)。保有テーブル・ウォッチリスト・Briefingが共有参照。保有∪ウォッチを和集合で1回採点(重複計算なし)。%タイルは概算。PER非該当(金GLDM/銀SLV/債券JPST,SHV)は本ストアに含めず=アプリは'–'表示。",
+ "asOf": "2026-06-14",
+ "valuations": {
+  "VEA": {
+   "perCurrent": 14.03,
+   "bandLow": 12,
+   "bandHigh": 19,
+   "bandMedian": 15,
+   "percentile": 30,
+   "status": "cheap",
+   "note": "先進国ex-US。5年平均下回り。出典worldperatio/EAFE",
+   "asOf": "2026-06-14"
+  },
+  "VGK": {
+   "perCurrent": 14.35,
+   "bandLow": 12,
+   "bandHigh": 18,
+   "bandMedian": 14.5,
+   "percentile": 40,
+   "status": "fair",
+   "note": "欧州株。中位やや下。出典Investing",
+   "asOf": "2026-06-14"
+  },
+  "6016.T": {
+   "perCurrent": 13,
+   "bandLow": 3.1,
+   "bandHigh": 26,
+   "bandMedian": 10,
+   "percentile": 60,
+   "status": "fair",
+   "note": "舶用エンジン小型。レンジ内やや上。低流動。出典irbank",
+   "asOf": "2026-06-14"
+  },
+  "SMH": {
+   "perCurrent": 41.81,
+   "bandLow": 18,
+   "bandHigh": 45,
+   "bandMedian": 26,
+   "percentile": 90,
+   "status": "rich",
+   "note": "半導体ETF。TTM加重PER高位(AI需要)。出典Yahoo/CSIMarket・概算バンド",
+   "asOf": "2026-06-14"
+  },
+  "6301.T": {
+   "perCurrent": 18.3,
+   "bandLow": 7,
+   "bandHigh": 62.5,
+   "bandMedian": 14.5,
+   "percentile": 75,
+   "status": "rich",
+   "note": "コマツ。常用域9-18の上。出典irbank",
+   "asOf": "2026-06-14"
+  },
+  "1306.T": {
+   "perCurrent": 18.6,
+   "bandLow": 12,
+   "bandHigh": 21,
+   "bandMedian": 14.5,
+   "percentile": 80,
+   "status": "rich",
+   "note": "TOPIX ETF。予想PER 10年平均14.5の上(最高値圏)。出典いちよし/日経",
+   "asOf": "2026-06-14"
+  },
+  "VT": {
+   "perCurrent": 23.12,
+   "bandLow": 15,
+   "bandHigh": 25,
+   "bandMedian": 19,
+   "percentile": 80,
+   "status": "rich",
+   "note": "全世界株。バンド上位。出典etfdb/ACWI概算",
+   "asOf": "2026-06-14"
+  },
+  "XLF": {
+   "perCurrent": 17.6,
+   "bandLow": 11,
+   "bandHigh": 19,
+   "bandMedian": 15,
+   "percentile": 70,
+   "status": "rich",
+   "note": "金融。歴史比やや上限寄り。出典Yahoo/Investing・概算",
+   "asOf": "2026-06-14"
+  },
+  "XLV": {
+   "perCurrent": 24.81,
+   "bandLow": 20.23,
+   "bandHigh": 28.99,
+   "bandMedian": 24.5,
+   "percentile": 50,
+   "status": "fair",
+   "note": "ヘルスケア。5年レンジ中央付近。出典worldperatio",
+   "asOf": "2026-06-14"
+  },
+  "XLP": {
+   "perCurrent": 25.83,
+   "bandLow": 17,
+   "bandHigh": 27,
+   "bandMedian": 23.4,
+   "percentile": 75,
+   "status": "rich",
+   "note": "生活必需。中央値23.4超。出典GuruFocus/SA",
+   "asOf": "2026-06-14"
+  },
+  "DTCR": {
+   "perCurrent": 28,
+   "bandLow": 20,
+   "bandHigh": 45,
+   "bandMedian": 30,
+   "percentile": 45,
+   "status": "hold",
+   "note": "データセンター。REIT偏重で履歴薄・低信頼。出典Investing",
+   "asOf": "2026-06-14"
+  },
+  "LITE": {
+   "perCurrent": 55,
+   "bandLow": 17,
+   "bandHigh": 60,
+   "bandMedian": 29.6,
+   "percentile": 85,
+   "status": "rich",
+   "note": "光通信。5年平均約30の大幅上。出典GuruFocus",
+   "asOf": "2026-06-14"
+  },
+  "CRWD": {
+   "perCurrent": 145,
+   "bandLow": 60,
+   "bandHigh": 160,
+   "bandMedian": 95,
+   "percentile": 90,
+   "status": "rich",
+   "note": "サイバー。予想PER約141-148で上端。GAAP赤字。出典public.com",
+   "asOf": "2026-06-14"
+  },
+  "PANW": {
+   "perCurrent": 68.5,
+   "bandLow": 37.7,
+   "bandHigh": 110,
+   "bandMedian": 60,
+   "percentile": 75,
+   "status": "rich",
+   "note": "サイバー首位。実績PERバンド上方。出典stockanalysis",
+   "asOf": "2026-06-14"
+  },
+  "2800.HK": {
+   "perCurrent": 13.5,
+   "bandLow": 6.7,
+   "bandHigh": 24.2,
+   "bandMedian": 10.2,
+   "percentile": 75,
+   "status": "rich",
+   "asOf": "2026-06-14",
+   "note": "標準域8.8-12.4の上限超・中央値10.2超。中国株ラリーで歴史的に高い側=見送り"
+  },
+  "ASHR": {
+   "perCurrent": 14.7,
+   "bandLow": 8.1,
+   "bandHigh": 54.9,
+   "bandMedian": 13.2,
+   "percentile": 62,
+   "status": "fair",
+   "asOf": "2026-06-14",
+   "note": "標準域11.4-14の上端・中央値13.2超。本丸A株だが今は割安ではない"
+  },
+  "3033.HK": {
+   "perCurrent": 18.7,
+   "bandLow": 15,
+   "bandHigh": 60,
+   "bandMedian": null,
+   "percentile": 50,
+   "status": "hold",
+   "asOf": "2026-06-14",
+   "note": "指数が2020年設定で履歴薄・%タイル信頼度低。週次で正式PER系列を整備予定"
+  },
+  "AAPL": {
+   "perCurrent": 35.1,
+   "bandLow": 24,
+   "bandHigh": 38,
+   "bandMedian": 29.8,
+   "percentile": 78,
+   "status": "rich",
+   "note": "5年平均29.8・現値35。出典fullratio",
+   "asOf": "2026-06-14"
+  },
+  "AMZN": {
+   "perCurrent": 28.1,
+   "bandLow": 24.5,
+   "bandHigh": 80,
+   "bandMedian": 57.7,
+   "percentile": 5,
+   "status": "cheap",
+   "note": "利益率改善でPER正常化・5年下限近辺。出典financecharts",
+   "asOf": "2026-06-14"
+  },
+  "GOOGL": {
+   "perCurrent": 27.2,
+   "bandLow": 17.1,
+   "bandHigh": 33,
+   "bandMedian": 23,
+   "percentile": 72,
+   "status": "rich",
+   "note": "5年平均23・現値27。出典fullratio",
+   "asOf": "2026-06-14"
+  },
+  "MSFT": {
+   "perCurrent": 23.3,
+   "bandLow": 22.1,
+   "bandHigh": 45,
+   "bandMedian": 32.8,
+   "percentile": 6,
+   "status": "cheap",
+   "note": "5年下限近辺・財務最良級。出典fullratio",
+   "asOf": "2026-06-14"
+  },
+  "TSLA": {
+   "perCurrent": 373,
+   "bandLow": 30.6,
+   "bandHigh": 940.9,
+   "bandMedian": 210.8,
+   "percentile": 70,
+   "status": "rich",
+   "note": "PER振れ大・5年平均210。信頼度低。出典GuruFocus",
+   "asOf": "2026-06-14"
+  },
+  "COPX": {
+   "perCurrent": 22.35,
+   "bandLow": 8,
+   "bandHigh": 30,
+   "bandMedian": 16,
+   "percentile": 70,
+   "status": "fair",
+   "note": "銅鉱山・市況でPER乱高下(分子分母とも)。出典stockanalysis",
+   "asOf": "2026-06-14"
+  },
+  "ILF": {
+   "perCurrent": 12.83,
+   "bandLow": 8,
+   "bandHigh": 18,
+   "bandMedian": 12,
+   "percentile": 50,
+   "status": "fair",
+   "note": "中南米・構造割安。資源/通貨で変動。出典etfdb",
+   "asOf": "2026-06-14"
+  },
+  "REMX": {
+   "perCurrent": null,
+   "bandLow": null,
+   "bandHigh": null,
+   "bandMedian": null,
+   "percentile": null,
+   "status": "hold",
+   "note": "レアアース鉱山・赤字混在でPER NM。代替PSR。出典stockanalysis",
+   "asOf": "2026-06-14"
+  },
+  "SHLD": {
+   "perCurrent": 33.1,
+   "bandLow": 22,
+   "bandHigh": 35,
+   "bandMedian": 28,
+   "percentile": 85,
+   "status": "rich",
+   "note": "防衛・2023設定で履歴短・上限圏。出典stockanalysis",
+   "asOf": "2026-06-14"
+  },
+  "XLE": {
+   "perCurrent": 12.56,
+   "bandLow": 7,
+   "bandHigh": 25,
+   "bandMedian": 13,
+   "percentile": 45,
+   "status": "fair",
+   "note": "エネルギー・市況循環で中央付近。出典Investing",
+   "asOf": "2026-06-14"
+  },
+  "PLTR": {
+   "perCurrent": 217.05,
+   "bandLow": 130,
+   "bandHigh": 387,
+   "bandMedian": 271,
+   "percentile": 35,
+   "status": "rich",
+   "note": "実績PER217(予想90+)。自前バンド中下位だが絶対水準は極端=rich。出典financecharts",
+   "asOf": "2026-06-14"
+  },
+  "1615.T": {
+   "perCurrent": 17.8,
+   "bandLow": 7,
+   "bandHigh": 18,
+   "bandMedian": 11,
+   "percentile": 88,
+   "status": "rich",
+   "note": "銀行業指数で代替。★銀行PERは利益サイクルと逆相関(低PER=利益ピーク)。金利正常化で再評価・上限圏。出典kabulab/JPX",
+   "asOf": "2026-06-14"
+  },
+  "1629.T": {
+   "perCurrent": 14.1,
+   "bandLow": 6,
+   "bandHigh": 14.5,
+   "bandMedian": 9,
+   "percentile": 90,
+   "status": "rich",
+   "note": "商社・卸売指数で代替。歴史的低PER業種の再評価で上限圏。資源市況で変動。出典kabulab/JPX",
+   "asOf": "2026-06-14"
+  },
+  "8050.T": {
+   "perCurrent": 24.88,
+   "bandLow": 5.75,
+   "bandHigh": 36.26,
+   "bandMedian": 15.8,
+   "percentile": 63,
+   "status": "fair",
+   "note": "セイコーG・予想PER25。中央値超で上方フェア。出典irbank",
+   "asOf": "2026-06-14"
+  },
+  "9983.T": {
+   "perCurrent": 51.48,
+   "bandLow": 15.4,
+   "bandHigh": 107.57,
+   "bandMedian": 35,
+   "percentile": 78,
+   "status": "rich",
+   "note": "ファストリ・恒常的高PER。自己バンド上位だがレンジ内。出典irbank",
+   "asOf": "2026-06-14"
+  },
+  "ACWI": {
+   "perCurrent": 23.77,
+   "bandLow": 14,
+   "bandHigh": 26,
+   "bandMedian": 18.5,
+   "percentile": 85,
+   "status": "rich",
+   "note": "全世界株(オルカンproxy)。trailing上端近辺(fwd18は妥当寄り)。出典MSCI公式",
+   "asOf": "2026-06-14"
+  },
+  "1477.T": {
+   "perCurrent": 18.36,
+   "bandLow": 12.5,
+   "bandHigh": 20,
+   "bandMedian": 15,
+   "percentile": 70,
+   "status": "fair",
+   "note": "日本小型株(ひふみマイクロproxy)。中上位・fwd15.6なら妥当。出典MSCI公式",
+   "asOf": "2026-06-14"
+  },
+  "2516.T": {
+   "perCurrent": 33.1,
+   "bandLow": 32.9,
+   "bandHigh": 46,
+   "bandMedian": 38,
+   "percentile": null,
+   "status": "hold",
+   "note": "グロース250(ひふみXO proxy)。赤字混在でPER不安定・NM化しやすく分位採点不適。直近は12ヶ月下端付近。出典stock-marketdata",
+   "asOf": "2026-06-14"
+  },
+  "200A.T": {
+   "perCurrent": 41.3,
+   "bandLow": null,
+   "bandHigh": null,
+   "bandMedian": null,
+   "percentile": null,
+   "status": "hold",
+   "note": "日経半導体ETF。2024設定で履歴薄・分位採点不適(NM化しやすい)。水準自体は日経平均比で突出して高い。出典stockanalysis",
+   "asOf": "2026-06-14"
+  }
+ }
+}

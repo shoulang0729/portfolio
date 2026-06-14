@@ -74,6 +74,8 @@
 .wl-per-unit { font-size: 9px; font-weight: 400; color: var(--text2); margin-left: 1px; }
 .wl-per-status { display: block; font-size: 10px; color: var(--text2); margin-top: 1px; }
 .wl-per-label { margin-left: 2px; }
+/* 保有テーブル（Historical Heatmap）の PER採点列。ウォッチと同じ wl-per-* を流用 */
+.sl-table th[data-col='per'], .sl-table td[data-col='per'] { width: 66px; min-width: 66px; text-align: center; }
 
 /* ══════════════════════════════════════════
    ヘッダー右列コンポーネント
