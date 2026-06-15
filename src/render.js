@@ -33,27 +33,29 @@ export function renderStats() {
 
   const mfTag = '<span class="stat-src">MF実値</span>';
 
+  // マネーフォワード式カード: 運用資産総額を主役（hero）、資産総額・投資用キャッシュをサブ行に。
+  // 横スクロールなし・親幅に収まる。
   let html = '';
   if (mf) {
-    // 資産総額 ＝ MF 純資産（mfNetWorth）。運用資産総額 ＝ 取込資産（imported・現状通り）。
-    html += `<div class="stat">
-      <span class="stat-label">資産総額${mfTag}</span>
-      <span class="stat-value stat-fg">${amt(mf.netWorth)}</span>
+    html += `<div class="stat-hero">
+      <span class="stat-hero-label">運用資産総額${mfTag}</span>
+      <span class="stat-hero-value stat-fg">${amt(mf.imported)}</span>
     </div>
-    <div class="stat">
-      <span class="stat-label">運用資産総額${mfTag}</span>
-      <span class="stat-value stat-fg">${amt(mf.imported)}</span>
-    </div>
-    <div class="stat">
-      <span class="stat-label">投資用キャッシュ</span>
-      <span class="stat-value stat-fg">${amt(mf.dryPowder)}</span>
-      <span class="stat-sub stat-fg">${mf.cashRatio.toFixed(1)}%</span>
+    <div class="stat-subrow">
+      <div class="stat-sub-item">
+        <span class="stat-sub-label">資産総額</span>
+        <span class="stat-sub-value stat-fg">${amt(mf.netWorth)}</span>
+      </div>
+      <div class="stat-sub-item">
+        <span class="stat-sub-label">投資用キャッシュ</span>
+        <span class="stat-sub-value stat-fg">${amt(mf.dryPowder)}<span class="stat-sub-pct">${mf.cashRatio.toFixed(1)}%</span></span>
+      </div>
     </div>`;
   } else {
     // MF 未ロード時のフォールバック（ライブ証券合計のみ）
-    html += `<div class="stat">
-      <span class="stat-label">運用資産総額</span>
-      <span class="stat-value stat-fg">${amt(liveTotal)}</span>
+    html += `<div class="stat-hero">
+      <span class="stat-hero-label">運用資産総額</span>
+      <span class="stat-hero-value stat-fg">${amt(liveTotal)}</span>
     </div>`;
   }
 
