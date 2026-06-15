@@ -411,6 +411,10 @@ describe('worker/src/index.js helpers', () => {
   });
 
   describe('PIN hash update semantics', () => {
+    async function handleAuthPinHashStatusLike(kvStore) {
+      return { status: 200, body: { ok: true, configured: kvStore.has('auth:pin-hash') } };
+    }
+
     async function handleAuthPinHashLike(body, kvStore) {
       const { oldHash, newHash } = body;
       if (!newHash) return { status: 400, body: { error: 'newHash が必要です' } };
@@ -449,6 +453,17 @@ describe('worker/src/index.js helpers', () => {
 
       expect(result).toEqual({ status: 200, body: { ok: true, mode: 'created' } });
       expect(kvStore.get('auth:pin-hash')).toBe('hash-new');
+    });
+
+    it('PINハッシュ値を返さず設定状態だけ確認できる', async () => {
+      expect(await handleAuthPinHashStatusLike(new Map())).toEqual({
+        status: 200,
+        body: { ok: true, configured: false },
+      });
+      expect(await handleAuthPinHashStatusLike(new Map([['auth:pin-hash', 'hash-existing']]))).toEqual({
+        status: 200,
+        body: { ok: true, configured: true },
+      });
     });
   });
 });
