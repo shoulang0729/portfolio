@@ -1103,10 +1103,20 @@ var _pc = {
   // 1=現在PIN確認 2=新PIN入力 3=新PIN確認
   input: "",
   newPin: "",
-  submitTimer: null
+  submitTimer: null,
+  mode: "change"
+  // change | setup | recover
 };
 var _pcStepLabel = ["", "\u73FE\u5728\u306EPIN", "\u65B0\u3057\u3044PIN\uFF086\u6841\uFF09", "\u65B0\u3057\u3044PIN\uFF08\u78BA\u8A8D\uFF09"];
 var _pcStepHint = ["", "\u8A8D\u8A3C\u306E\u305F\u3081\u73FE\u5728\u306EPIN\u3092\u5165\u529B", "\u65B0\u3057\u30446\u6841\u306EPIN\u3092\u5165\u529B", "\u540C\u3058PIN\u3092\u3082\u3046\u4E00\u5EA6\u5165\u529B"];
+var _pcRecoverStepLabel = ["", "\u73FE\u5728\u306EPIN", "\u65E2\u5B58PIN\uFF086\u6841\uFF09", "\u65E2\u5B58PIN\uFF08\u78BA\u8A8D\uFF09"];
+var _pcRecoverStepHint = ["", "\u8A8D\u8A3C\u306E\u305F\u3081\u73FE\u5728\u306EPIN\u3092\u5165\u529B", "\u30B5\u30FC\u30D0\u30FC\u306B\u4FDD\u5B58\u6E08\u307F\u306EPIN\u3092\u5165\u529B", "\u540C\u3058PIN\u3092\u3082\u3046\u4E00\u5EA6\u5165\u529B"];
+function _pcLabelForStep(step) {
+  return (_pc.mode === "recover" ? _pcRecoverStepLabel : _pcStepLabel)[step];
+}
+function _pcHintForStep(step) {
+  return (_pc.mode === "recover" ? _pcRecoverStepHint : _pcStepHint)[step];
+}
 function _pcUpdateDots() {
   document.querySelectorAll("#pc-dots .pin-dot").forEach((d, i) => d.classList.toggle("filled", i < _pc.input.length));
 }
@@ -1114,8 +1124,8 @@ function _pcSetTitle() {
   const lbl = document.getElementById("pc-step-label");
   const hint = document.getElementById("pc-step-hint");
   const prog = document.querySelectorAll("#pc-progress .pc-prog-dot");
-  if (lbl) lbl.textContent = _pcStepLabel[_pc.step];
-  if (hint) hint.textContent = _pcStepHint[_pc.step];
+  if (lbl) lbl.textContent = _pcLabelForStep(_pc.step);
+  if (hint) hint.textContent = _pcHintForStep(_pc.step);
   prog.forEach((d, i) => d.classList.toggle("active", i < _pc.step));
 }
 function _pcShowError(msg) {
@@ -1161,10 +1171,45 @@ function _pcSuccess() {
   const lbl = document.getElementById("pc-step-label");
   const hint = document.getElementById("pc-step-hint");
   if (lbl) lbl.textContent = "\u2705 \u5909\u66F4\u5B8C\u4E86";
-  if (hint) hint.textContent = "\u65B0\u3057\u3044PIN\u304C\u4FDD\u5B58\u3055\u308C\u307E\u3057\u305F";
+  if (hint) hint.textContent = _pc.mode === "recover" ? "\u65E2\u5B58PIN\u3067\u30ED\u30B0\u30A4\u30F3\u3057\u307E\u3057\u305F" : "\u65B0\u3057\u3044PIN\u304C\u4FDD\u5B58\u3055\u308C\u307E\u3057\u305F";
   document.querySelectorAll("#pc-dots .pin-dot").forEach((d) => d.classList.add("filled"));
   _pcSetKeypadEnabled(false);
   setTimeout(() => closePinChange(), 1800);
+}
+async function _pinHashSyncErrorMessage(res) {
+  let detail = "";
+  try {
+    const body = await res.clone().json();
+    detail = body?.error || body?.message || "";
+  } catch {
+    detail = await res.text().catch(() => "");
+  }
+  if (detail) return detail;
+  if (res.status === 401) return "\u65E2\u5B58\u306EPIN\u3068\u4E00\u81F4\u3057\u307E\u305B\u3093";
+  return `\u30B5\u30FC\u30D0\u30FC\u540C\u671F\u306B\u5931\u6557\u3057\u307E\u3057\u305F\uFF08${res.status}\uFF09`;
+}
+async function _loadServerPinConfigured() {
+  const res = await fetch(`${WORKER_URL}/auth/pin-hash`, { method: "GET", cache: "no-store" });
+  if (!res.ok) throw new Error(`server ${res.status}`);
+  const body = await res.json();
+  return !!body.configured;
+}
+async function _initInitialPinMode() {
+  const title = document.getElementById("pc-title");
+  const hint = document.getElementById("pc-step-hint");
+  _pcSetKeypadEnabled(false);
+  if (hint) hint.textContent = "PIN\u72B6\u614B\u3092\u78BA\u8A8D\u4E2D...";
+  try {
+    const configured = await _loadServerPinConfigured();
+    _pc.mode = configured ? "recover" : "setup";
+    if (title) title.textContent = configured ? "PIN\u5FA9\u65E7" : "\u521D\u56DEPIN\u8A2D\u5B9A";
+    _pcSetTitle();
+    _pcHideError();
+    _pcSetKeypadEnabled(true);
+  } catch (e) {
+    console.warn("[auth] PIN status check failed:", e);
+    _pcShowError("PIN\u72B6\u614B\u306E\u78BA\u8A8D\u306B\u5931\u6557\u3057\u307E\u3057\u305F\u3002\u518D\u8AAD\u307F\u8FBC\u307F\u3057\u3066\u304F\u3060\u3055\u3044\u3002");
+  }
 }
 function pcKeyPress(n) {
   if (_pc.submitTimer) return;
@@ -1225,10 +1270,10 @@ async function _pcSubmit() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(prevHash ? { oldHash: prevHash, newHash } : { newHash })
       });
-      if (!res.ok) throw new Error(`server ${res.status}`);
+      if (!res.ok) throw new Error(await _pinHashSyncErrorMessage(res));
     } catch (e) {
       console.warn("[auth] PIN hash sync to Worker failed:", e);
-      _pcShowError("\u30B5\u30FC\u30D0\u30FC\u540C\u671F\u306B\u5931\u6557\u3057\u307E\u3057\u305F\u3002\u518D\u5EA6\u304A\u8A66\u3057\u304F\u3060\u3055\u3044\u3002");
+      _pcShowError(e?.message || "\u30B5\u30FC\u30D0\u30FC\u540C\u671F\u306B\u5931\u6557\u3057\u307E\u3057\u305F\u3002\u518D\u5EA6\u304A\u8A66\u3057\u304F\u3060\u3055\u3044\u3002");
       _pcSetKeypadEnabled(true);
       return;
     }
@@ -1245,6 +1290,7 @@ function openInitialPinSetup() {
     clearTimeout(_pc.submitTimer);
     _pc.submitTimer = null;
   }
+  _pc.mode = "setup";
   _pc.step = 2;
   _pc.input = "";
   _pc.newPin = "";
@@ -1253,7 +1299,7 @@ function openInitialPinSetup() {
   ov.innerHTML = `
     <div class="pin-card pc-card">
       <div class="pc-header">
-        <span class="pc-title">\u521D\u56DEPIN\u8A2D\u5B9A</span>
+        <span class="pc-title" id="pc-title">PIN\u78BA\u8A8D\u4E2D</span>
       </div>
 
       <div class="pc-progress" id="pc-progress">
@@ -1262,8 +1308,8 @@ function openInitialPinSetup() {
         <span class="pc-prog-dot active"></span>
       </div>
 
-      <div class="pin-subtitle" id="pc-step-label">${_pcStepLabel[2]}</div>
-      <div class="pc-hint" id="pc-step-hint">\u521D\u56DE\u5229\u7528\u306E\u305F\u3081\u65B0\u3057\u30446\u6841PIN\u3092\u8A2D\u5B9A</div>
+      <div class="pin-subtitle" id="pc-step-label">${_pcLabelForStep(2)}</div>
+      <div class="pc-hint" id="pc-step-hint">PIN\u72B6\u614B\u3092\u78BA\u8A8D\u4E2D...</div>
 
       <div class="pin-dots" id="pc-dots">
         <span class="pin-dot"></span><span class="pin-dot"></span>
@@ -1285,6 +1331,7 @@ function openInitialPinSetup() {
     ov.style.opacity = "1";
     _trapFocus(ov);
   }));
+  _initInitialPinMode();
 }
 function openPinChange() {
   if (document.getElementById("pc-overlay")) return;
@@ -1292,6 +1339,7 @@ function openPinChange() {
     clearTimeout(_pc.submitTimer);
     _pc.submitTimer = null;
   }
+  _pc.mode = "change";
   _pc.step = 1;
   _pc.input = "";
   _pc.newPin = "";

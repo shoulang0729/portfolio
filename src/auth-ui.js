@@ -224,10 +224,21 @@ const _pc = {
   input:   '',
   newPin:  '',
   submitTimer: null,
+  mode: 'change', // change | setup | recover
 };
 
 const _pcStepLabel = ['', '現在のPIN', '新しいPIN（6桁）', '新しいPIN（確認）'];
 const _pcStepHint  = ['', '認証のため現在のPINを入力', '新しい6桁のPINを入力', '同じPINをもう一度入力'];
+const _pcRecoverStepLabel = ['', '現在のPIN', '既存PIN（6桁）', '既存PIN（確認）'];
+const _pcRecoverStepHint  = ['', '認証のため現在のPINを入力', 'サーバーに保存済みのPINを入力', '同じPINをもう一度入力'];
+
+function _pcLabelForStep(step) {
+  return (_pc.mode === 'recover' ? _pcRecoverStepLabel : _pcStepLabel)[step];
+}
+
+function _pcHintForStep(step) {
+  return (_pc.mode === 'recover' ? _pcRecoverStepHint : _pcStepHint)[step];
+}
 
 function _pcUpdateDots() {
   document.querySelectorAll('#pc-dots .pin-dot').forEach((d, i) =>
@@ -237,8 +248,8 @@ function _pcSetTitle() {
   const lbl  = document.getElementById('pc-step-label');
   const hint = document.getElementById('pc-step-hint');
   const prog = document.querySelectorAll('#pc-progress .pc-prog-dot');
-  if (lbl)  lbl.textContent  = _pcStepLabel[_pc.step];
-  if (hint) hint.textContent = _pcStepHint[_pc.step];
+  if (lbl)  lbl.textContent  = _pcLabelForStep(_pc.step);
+  if (hint) hint.textContent = _pcHintForStep(_pc.step);
   prog.forEach((d, i) => d.classList.toggle('active', i < _pc.step));
 }
 function _pcShowError(msg) {
@@ -272,10 +283,48 @@ function _pcSuccess() {
   const lbl  = document.getElementById('pc-step-label');
   const hint = document.getElementById('pc-step-hint');
   if (lbl)  lbl.textContent  = '✅ 変更完了';
-  if (hint) hint.textContent = '新しいPINが保存されました';
+  if (hint) hint.textContent = _pc.mode === 'recover' ? '既存PINでログインしました' : '新しいPINが保存されました';
   document.querySelectorAll('#pc-dots .pin-dot').forEach(d => d.classList.add('filled'));
   _pcSetKeypadEnabled(false);
   setTimeout(() => closePinChange(), 1800);
+}
+
+async function _pinHashSyncErrorMessage(res) {
+  let detail = '';
+  try {
+    const body = await res.clone().json();
+    detail = body?.error || body?.message || '';
+  } catch {
+    detail = await res.text().catch(() => '');
+  }
+  if (detail) return detail;
+  if (res.status === 401) return '既存のPINと一致しません';
+  return `サーバー同期に失敗しました（${res.status}）`;
+}
+
+async function _loadServerPinConfigured() {
+  const res = await fetch(`${WORKER_URL}/auth/pin-hash`, { method: 'GET', cache: 'no-store' });
+  if (!res.ok) throw new Error(`server ${res.status}`);
+  const body = await res.json();
+  return !!body.configured;
+}
+
+async function _initInitialPinMode() {
+  const title = document.getElementById('pc-title');
+  const hint = document.getElementById('pc-step-hint');
+  _pcSetKeypadEnabled(false);
+  if (hint) hint.textContent = 'PIN状態を確認中...';
+  try {
+    const configured = await _loadServerPinConfigured();
+    _pc.mode = configured ? 'recover' : 'setup';
+    if (title) title.textContent = configured ? 'PIN復旧' : '初回PIN設定';
+    _pcSetTitle();
+    _pcHideError();
+    _pcSetKeypadEnabled(true);
+  } catch (e) {
+    console.warn('[auth] PIN status check failed:', e);
+    _pcShowError('PIN状態の確認に失敗しました。再読み込みしてください。');
+  }
 }
 
 // PIN 変更キーパッドのグローバルハンドラ
@@ -332,10 +381,10 @@ async function _pcSubmit() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(prevHash ? { oldHash: prevHash, newHash } : { newHash }),
       });
-      if (!res.ok) throw new Error(`server ${res.status}`);
+      if (!res.ok) throw new Error(await _pinHashSyncErrorMessage(res));
     } catch (e) {
       console.warn('[auth] PIN hash sync to Worker failed:', e);
-      _pcShowError('サーバー同期に失敗しました。再度お試しください。');
+      _pcShowError(e?.message || 'サーバー同期に失敗しました。再度お試しください。');
       _pcSetKeypadEnabled(true);
       return;
     }
@@ -350,14 +399,14 @@ async function _pcSubmit() {
 function openInitialPinSetup() {
   if (document.getElementById('pc-overlay')) return;
   if (_pc.submitTimer) { clearTimeout(_pc.submitTimer); _pc.submitTimer = null; }
-  _pc.step = 2; _pc.input = ''; _pc.newPin = '';
+  _pc.mode = 'setup'; _pc.step = 2; _pc.input = ''; _pc.newPin = '';
 
   const ov = document.createElement('div');
   ov.id = 'pc-overlay';
   ov.innerHTML = `
     <div class="pin-card pc-card">
       <div class="pc-header">
-        <span class="pc-title">初回PIN設定</span>
+        <span class="pc-title" id="pc-title">PIN確認中</span>
       </div>
 
       <div class="pc-progress" id="pc-progress">
@@ -366,8 +415,8 @@ function openInitialPinSetup() {
         <span class="pc-prog-dot active"></span>
       </div>
 
-      <div class="pin-subtitle" id="pc-step-label">${_pcStepLabel[2]}</div>
-      <div class="pc-hint" id="pc-step-hint">初回利用のため新しい6桁PINを設定</div>
+      <div class="pin-subtitle" id="pc-step-label">${_pcLabelForStep(2)}</div>
+      <div class="pc-hint" id="pc-step-hint">PIN状態を確認中...</div>
 
       <div class="pin-dots" id="pc-dots">
         <span class="pin-dot"></span><span class="pin-dot"></span>
@@ -388,13 +437,14 @@ function openInitialPinSetup() {
   }, { signal: ac.signal });
 
   requestAnimationFrame(() => requestAnimationFrame(() => { ov.style.opacity = '1'; _trapFocus(ov); }));
+  _initInitialPinMode();
 }
 
 // ── PIN 変更ダイアログを開く ──
 function openPinChange() {
   if (document.getElementById('pc-overlay')) return;
   if (_pc.submitTimer) { clearTimeout(_pc.submitTimer); _pc.submitTimer = null; }
-  _pc.step = 1; _pc.input = ''; _pc.newPin = '';
+  _pc.mode = 'change'; _pc.step = 1; _pc.input = ''; _pc.newPin = '';
 
   const ov = document.createElement('div');
   ov.id = 'pc-overlay';

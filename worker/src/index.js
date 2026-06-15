@@ -14,6 +14,7 @@
 //   PUT  /watchlist                     ウォッチリスト保存（KV）
 //   GET  /positions                     保有銘柄取得（KV・非公開）
 //   PUT  /positions                     保有銘柄保存（KV・PIN認証必須）
+//   GET  /auth/pin-hash                 PIN 設定状態確認（ハッシュ値は返さない）
 //   PUT  /auth/pin-hash                 PIN ハッシュ更新/端末復旧（KV）
 //   GET  /prices/cache                  Cron キャッシュ価格取得（KV）
 //   POST /notion/save                   AI相談結果をNotion DBに保存
@@ -1074,8 +1075,14 @@ async function _syncPositionsToGithub(positions, env) {
 
 // ── PIN ハッシュ更新 ──────────────────────────────────────────
 async function handleAuthPinHash(request, env, origin) {
-  if (request.method !== 'PUT') return errRes('PUT のみ許可', 405, origin);
   if (!env.KV) return errRes('KV 未設定', 500, origin);
+
+  if (request.method === 'GET') {
+    const storedHash = await env.KV.get('auth:pin-hash');
+    return jsonRes({ ok: true, configured: !!storedHash }, 200, origin);
+  }
+
+  if (request.method !== 'PUT') return errRes('GET/PUT のみ許可', 405, origin);
 
   let body;
   try { body = await request.json(); } catch { return errRes('JSON 不正', 400, origin); }
