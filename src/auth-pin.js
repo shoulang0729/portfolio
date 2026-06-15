@@ -1,15 +1,13 @@
 // ══════════════════════════════════════════════════════════════
 // auth-pin.js  ―  PIN 認証ロジック（状態・ハッシュ・ロックアウト）
 //
-// ■ デフォルト PIN: 123456  / リセット: localStorage.removeItem('hm-pin-hash')
+// ■ 初回起動時に PIN を設定 / リセット: localStorage.removeItem('hm-pin-hash')
 // UI（キーパッド・ダイアログ）は src/auth-ui.js に分離。
 // 暗号化（AES-GCM 鍵導出）は src/auth-crypto.js に分離。
 //
 // このファイルは "依存元" ─ 他の auth-*.js より先に読込む。
 // ══════════════════════════════════════════════════════════════
 
-// ── ハードコードされたデフォルト PIN ハッシュ（SHA-256 of "123456"）──
-const AUTH_PIN_HASH     = '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92';
 // 旧4桁デフォルトハッシュ（SHA-256 of "1234"）: 6桁移行時に自動クリアするため保持
 const _AUTH_PIN_HASH_4DIG = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
 const AUTH_SESSION_KEY  = 'hm-auth-v1';
@@ -29,7 +27,7 @@ const AUTH_LOCK_SEC     = 300;
 
 // ── 有効な PIN ハッシュ（localStorage 優先） ──
 function _getActivePinHash() {
-  return localStorage.getItem(AUTH_LS_HASH_KEY) || AUTH_PIN_HASH;
+  return localStorage.getItem(AUTH_LS_HASH_KEY);
 }
 
 // ── 共有 internal state（auth-crypto / auth-passkey / auth-ui から参照） ──
@@ -86,4 +84,4 @@ function _saveLockout() {
   }
 }());
 
-export { AUTH_PIN_HASH, AUTH_SESSION_KEY, AUTH_LS_HASH_KEY, AUTH_LOCKOUT_KEY, AUTH_PIN_LEN, AUTH_MAX_FAIL, AUTH_LOCK_SEC, _auth, _getActivePinHash, _hashPin, _isLocked, _lockRemain, _formatLockRemain, _saveLockout, isAuthenticated };
+export { AUTH_SESSION_KEY, AUTH_LS_HASH_KEY, AUTH_LOCKOUT_KEY, AUTH_PIN_LEN, AUTH_MAX_FAIL, AUTH_LOCK_SEC, _auth, _getActivePinHash, _hashPin, _isLocked, _lockRemain, _formatLockRemain, _saveLockout, isAuthenticated };

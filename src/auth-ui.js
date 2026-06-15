@@ -2,13 +2,13 @@
 // auth-ui.js  ―  PIN ログイン / PIN 変更ダイアログ UI
 //
 // 依存: auth-pin.js (_auth, AUTH_*, _hashPin, isAuthenticated, _isLocked, _lockRemain),
-//       auth-crypto.js (_deriveEncKey, _restoreEncKey, _AUTH_ENC_SS),
+//       auth-crypto.js (_deriveEncKey, _restoreEncKey),
 //       data.js (WORKER_URL)
 // 注: authenticatePasskey は window に登録されるため直接 import しない（循環回避）
 // ══════════════════════════════════════════════════════════════
 
 import { _auth, AUTH_PIN_LEN, AUTH_MAX_FAIL, AUTH_LOCK_SEC, AUTH_SESSION_KEY, AUTH_LS_HASH_KEY, _getActivePinHash, _hashPin, _isLocked, _lockRemain, _formatLockRemain, _saveLockout, isAuthenticated } from './auth-pin.js';
-import { _AUTH_ENC_SS, _deriveEncKey, _restoreEncKey } from './auth-crypto.js';
+import { _deriveEncKey, _restoreEncKey } from './auth-crypto.js';
 import { WORKER_URL } from './config.js';
 
 // ── フォーカストラップ（PIN オーバーレイがキーボードフォーカスを保持する） ──
@@ -85,9 +85,17 @@ function authBackspace() {
 // ── PIN 照合 ──
 async function _submitPin() {
   _setKeypadEnabled(false);
+  const activeHash = _getActivePinHash();
+  if (!activeHash) {
+    _auth.input = '';
+    _updateDots();
+    _showError('初回PIN設定を完了してください');
+    _setKeypadEnabled(true);
+    return;
+  }
   const hash = await _hashPin(_auth.input);
 
-  if (hash === _getActivePinHash()) {
+  if (hash === activeHash) {
     _auth.fails = 0;
     sessionStorage.setItem(AUTH_SESSION_KEY, '1');
     await _deriveEncKey(_auth.input);
@@ -296,7 +304,7 @@ async function _pcSubmit() {
       const res = await fetch(`${WORKER_URL}/auth/pin-hash`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ oldHash: prevHash, newHash }),
+        body: JSON.stringify(prevHash ? { oldHash: prevHash, newHash } : { newHash }),
       });
       if (!res.ok) throw new Error(`server ${res.status}`);
     } catch (e) {
@@ -306,8 +314,53 @@ async function _pcSubmit() {
       return;
     }
     localStorage.setItem(AUTH_LS_HASH_KEY, newHash);
+    sessionStorage.setItem(AUTH_SESSION_KEY, '1');
+    await _deriveEncKey(_pc.newPin);
+    _showChangePinButton();
     _pcSuccess();
   }
+}
+
+function openInitialPinSetup() {
+  if (document.getElementById('pc-overlay')) return;
+  _pc.step = 2; _pc.input = ''; _pc.newPin = '';
+
+  const ov = document.createElement('div');
+  ov.id = 'pc-overlay';
+  ov.innerHTML = `
+    <div class="pin-card pc-card">
+      <div class="pc-header">
+        <span class="pc-title">初回PIN設定</span>
+      </div>
+
+      <div class="pc-progress" id="pc-progress">
+        <span class="pc-prog-dot active"></span>
+        <span class="pc-prog-line"></span>
+        <span class="pc-prog-dot active"></span>
+      </div>
+
+      <div class="pin-subtitle" id="pc-step-label">${_pcStepLabel[2]}</div>
+      <div class="pc-hint" id="pc-step-hint">初回利用のため新しい6桁PINを設定</div>
+
+      <div class="pin-dots" id="pc-dots">
+        <span class="pin-dot"></span><span class="pin-dot"></span>
+        <span class="pin-dot"></span><span class="pin-dot"></span>
+        <span class="pin-dot"></span><span class="pin-dot"></span>
+      </div>
+      <div class="pin-error" id="pc-error"></div>
+
+      ${_pinKeypadHTML('pcKeyPress', 'pcBackspace')}
+    </div>`;
+  document.body.appendChild(ov);
+
+  const ac = new AbortController();
+  ov._kbAbort = ac;
+  document.addEventListener('keydown', e => {
+    if (e.key >= '0' && e.key <= '9') pcKeyPress(e.key);
+    else if (e.key === 'Backspace') pcBackspace();
+  }, { signal: ac.signal });
+
+  requestAnimationFrame(() => requestAnimationFrame(() => { ov.style.opacity = '1'; _trapFocus(ov); }));
 }
 
 // ── PIN 変更ダイアログを開く ──
@@ -382,19 +435,18 @@ function _showChangePinButton() {
 // ══════════════════════════════════════════════
 (function initAuth() {
   if (isAuthenticated()) {
-    // enc鍵がsessionStorageにある場合のみスキップ。なければPINを再入力させる
-    if (sessionStorage.getItem(_AUTH_ENC_SS)) {
-      _restoreEncKey().then(() => {
-        if (document.readyState === 'loading') {
-          document.addEventListener('DOMContentLoaded', _showChangePinButton);
-        } else {
-          _showChangePinButton();
-        }
-      });
-      return;
-    }
-    // auth tokenはあるがenc鍵がない → クリアしてPINを再入力させる
+    _restoreEncKey();
     sessionStorage.removeItem(AUTH_SESSION_KEY);
+  }
+
+  if (!_getActivePinHash()) {
+    document.body.style.overflow = 'hidden';
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', openInitialPinSetup);
+    } else {
+      openInitialPinSetup();
+    }
+    return;
   }
 
   document.body.style.overflow = 'hidden';

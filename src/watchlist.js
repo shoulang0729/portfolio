@@ -57,8 +57,55 @@ async function _loadWatchlistFromWorker() {
     } else if (state.watchlist.length > 0) {
       // 初期シード: KV が空でローカルにデータがある → ローカルを KV に push
       _syncWatchlistToWorker();
+    } else {
+      await _restoreWatchlistFromSnapshot();
     }
   } catch { /* localStorageをそのまま使用 */ }
+}
+
+async function _restoreWatchlistFromSnapshot() {
+  try {
+    const res = await fetch('data/portfolio-snapshot.json', { cache: 'no-store' });
+    if (!res.ok) return false;
+    const snapshot = await res.json();
+    if (!Array.isArray(snapshot.watchlist) || snapshot.watchlist.length === 0) return false;
+    const restored = [];
+    const seen = new Set();
+    for (const item of snapshot.watchlist) {
+      const symbol = String(item?.symbol || '').trim();
+      if (!symbol || seen.has(symbol)) continue;
+      const exchange = wlDetectMarket(symbol, '');
+      const normalized = {
+        symbol,
+        name: String(item?.name || symbol),
+        exchange,
+        type: _snapshotWatchlistType(symbol, item?.name),
+        cur: item?.cur || (exchange === '東証' ? 'JPY' : exchange === '香港' ? 'HKD' : 'USD'),
+      };
+      try {
+        restored.push(validateWatchlistItem(normalized));
+        seen.add(symbol);
+      } catch (e) {
+        console.warn('[watchlist] snapshot restore skipped:', symbol, e.message);
+      }
+    }
+    if (restored.length === 0) return false;
+    state.watchlist = restored;
+    localStorage.setItem('hm-watchlist', JSON.stringify(restored));
+    _syncWatchlistToWorker();
+    setStatus(`ウォッチリストをスナップショットから復元しました（${restored.length}件）`, 'green');
+    return true;
+  } catch (e) {
+    console.warn('[watchlist] snapshot restore failed:', e);
+    return false;
+  }
+}
+
+function _snapshotWatchlistType(symbol, name) {
+  const text = `${symbol} ${name || ''}`.toUpperCase();
+  if (text.includes('ETF') || text.includes('上場投信') || text.includes('上場投資信託')) return 'ETF';
+  if (text.endsWith('=X')) return 'CURRENCY';
+  return '株';
 }
 
 function addToWatchlist(item) {
@@ -424,4 +471,4 @@ export function renderWatchlist() {
   </table>`;
 }
 
-export { saveWatchlist, _loadWatchlistFromWorker, addToWatchlist, removeFromWatchlist, wlSort, onWatchlistSearch, wlSelectItem, fetchWatchlistData };
+export { saveWatchlist, _loadWatchlistFromWorker, _restoreWatchlistFromSnapshot, addToWatchlist, removeFromWatchlist, wlSort, onWatchlistSearch, wlSelectItem, fetchWatchlistData };

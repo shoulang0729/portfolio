@@ -7,7 +7,6 @@
 import { WORKER_URL } from './config.js';
 import { fetchWithTimeout } from './data.js';
 import { positions } from './positions.js';
-import { AUTH_PIN_HASH as DEFAULT_PIN_HASH } from './auth-pin.js';
 import { validatePosition } from './schema.js';
 
 async function loadPositionsFromKV() {
@@ -34,8 +33,8 @@ async function loadPositionsFromKV() {
 
 async function savePositionsToKV(newPositions, pinHashOverride) {
   const pinHash = pinHashOverride
-    || localStorage.getItem('hm-pin-hash')
-    || DEFAULT_PIN_HASH;
+    || localStorage.getItem('hm-pin-hash');
+  if (!pinHash) throw new Error('PINが未設定です。初回PIN設定を完了してください。');
   const res = await fetchWithTimeout(`${WORKER_URL}/positions`, 30000, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', 'X-Pin-Hash': pinHash },

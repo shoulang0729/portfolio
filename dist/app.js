@@ -530,7 +530,6 @@ var state = {
 };
 
 // src/auth-pin.js
-var AUTH_PIN_HASH = "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92";
 var _AUTH_PIN_HASH_4DIG = "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4";
 var AUTH_SESSION_KEY = "hm-auth-v1";
 var AUTH_LS_HASH_KEY = "hm-pin-hash";
@@ -546,7 +545,7 @@ var AUTH_LOCK_SEC = 300;
   }
 })();
 function _getActivePinHash() {
-  return localStorage.getItem(AUTH_LS_HASH_KEY) || AUTH_PIN_HASH;
+  return localStorage.getItem(AUTH_LS_HASH_KEY);
 }
 var _auth = {
   input: "",
@@ -599,48 +598,6 @@ function _saveLockout() {
     localStorage.removeItem(AUTH_LOCKOUT_KEY);
   }
 })();
-
-// src/auth-crypto.js
-var _AUTH_ENC_SALT = "hm-ai-keys-v1";
-var _AUTH_ENC_SS = "hm-enc-key-v1";
-async function _deriveEncKey(pin) {
-  const keyMat = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(pin),
-    "PBKDF2",
-    false,
-    ["deriveKey"]
-  );
-  _auth.encKey = await crypto.subtle.deriveKey(
-    {
-      name: "PBKDF2",
-      salt: new TextEncoder().encode(_AUTH_ENC_SALT),
-      iterations: 1e5,
-      hash: "SHA-256"
-    },
-    keyMat,
-    { name: "AES-GCM", length: 256 },
-    true,
-    ["encrypt", "decrypt"]
-  );
-  const exported = await crypto.subtle.exportKey("raw", _auth.encKey);
-  sessionStorage.setItem(
-    _AUTH_ENC_SS,
-    btoa(String.fromCharCode(...new Uint8Array(exported)))
-  );
-}
-async function _restoreEncKey() {
-  const stored = sessionStorage.getItem(_AUTH_ENC_SS);
-  if (!stored) return;
-  const bytes = Uint8Array.from(atob(stored), (c) => c.charCodeAt(0));
-  _auth.encKey = await crypto.subtle.importKey(
-    "raw",
-    bytes,
-    { name: "AES-GCM" },
-    false,
-    ["encrypt", "decrypt"]
-  );
-}
 
 // src/config.js
 var WORKER_URL = "https://portfolio-proxy.shoulang.workers.dev";
@@ -890,7 +847,6 @@ async function authenticatePasskey() {
       }
       const rawKey = crypto.getRandomValues(new Uint8Array(32));
       _auth.encKey = await crypto.subtle.importKey("raw", rawKey, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
-      sessionStorage.setItem(_AUTH_ENC_SS, btoa(String.fromCharCode(...rawKey)));
       _auth.fails = 0;
       const ov = document.getElementById("pin-overlay");
       if (ov) {
@@ -917,6 +873,38 @@ async function authenticatePasskey() {
       }
     }
   }
+}
+
+// src/auth-crypto.js
+var _AUTH_ENC_SALT = "hm-ai-keys-v1";
+var _AUTH_ENC_SS = "hm-enc-key-v1";
+async function _deriveEncKey(pin) {
+  const keyMat = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(pin),
+    "PBKDF2",
+    false,
+    ["deriveKey"]
+  );
+  _auth.encKey = await crypto.subtle.deriveKey(
+    {
+      name: "PBKDF2",
+      salt: new TextEncoder().encode(_AUTH_ENC_SALT),
+      iterations: 1e5,
+      hash: "SHA-256"
+    },
+    keyMat,
+    { name: "AES-GCM", length: 256 },
+    true,
+    ["encrypt", "decrypt"]
+  );
+}
+async function _restoreEncKey() {
+  try {
+    sessionStorage.removeItem(_AUTH_ENC_SS);
+  } catch {
+  }
+  return false;
 }
 
 // src/auth-ui.js
@@ -987,8 +975,16 @@ function authBackspace() {
 }
 async function _submitPin() {
   _setKeypadEnabled(false);
+  const activeHash = _getActivePinHash();
+  if (!activeHash) {
+    _auth.input = "";
+    _updateDots();
+    _showError("\u521D\u56DEPIN\u8A2D\u5B9A\u3092\u5B8C\u4E86\u3057\u3066\u304F\u3060\u3055\u3044");
+    _setKeypadEnabled(true);
+    return;
+  }
   const hash = await _hashPin(_auth.input);
-  if (hash === _getActivePinHash()) {
+  if (hash === activeHash) {
     _auth.fails = 0;
     sessionStorage.setItem(AUTH_SESSION_KEY, "1");
     await _deriveEncKey(_auth.input);
@@ -1212,7 +1208,7 @@ async function _pcSubmit() {
       const res = await fetch(`${WORKER_URL}/auth/pin-hash`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ oldHash: prevHash, newHash })
+        body: JSON.stringify(prevHash ? { oldHash: prevHash, newHash } : { newHash })
       });
       if (!res.ok) throw new Error(`server ${res.status}`);
     } catch (e) {
@@ -1224,8 +1220,54 @@ async function _pcSubmit() {
       return;
     }
     localStorage.setItem(AUTH_LS_HASH_KEY, newHash);
+    sessionStorage.setItem(AUTH_SESSION_KEY, "1");
+    await _deriveEncKey(_pc.newPin);
+    _showChangePinButton();
     _pcSuccess();
   }
+}
+function openInitialPinSetup() {
+  if (document.getElementById("pc-overlay")) return;
+  _pc.step = 2;
+  _pc.input = "";
+  _pc.newPin = "";
+  const ov = document.createElement("div");
+  ov.id = "pc-overlay";
+  ov.innerHTML = `
+    <div class="pin-card pc-card">
+      <div class="pc-header">
+        <span class="pc-title">\u521D\u56DEPIN\u8A2D\u5B9A</span>
+      </div>
+
+      <div class="pc-progress" id="pc-progress">
+        <span class="pc-prog-dot active"></span>
+        <span class="pc-prog-line"></span>
+        <span class="pc-prog-dot active"></span>
+      </div>
+
+      <div class="pin-subtitle" id="pc-step-label">${_pcStepLabel[2]}</div>
+      <div class="pc-hint" id="pc-step-hint">\u521D\u56DE\u5229\u7528\u306E\u305F\u3081\u65B0\u3057\u30446\u6841PIN\u3092\u8A2D\u5B9A</div>
+
+      <div class="pin-dots" id="pc-dots">
+        <span class="pin-dot"></span><span class="pin-dot"></span>
+        <span class="pin-dot"></span><span class="pin-dot"></span>
+        <span class="pin-dot"></span><span class="pin-dot"></span>
+      </div>
+      <div class="pin-error" id="pc-error"></div>
+
+      ${_pinKeypadHTML("pcKeyPress", "pcBackspace")}
+    </div>`;
+  document.body.appendChild(ov);
+  const ac = new AbortController();
+  ov._kbAbort = ac;
+  document.addEventListener("keydown", (e) => {
+    if (e.key >= "0" && e.key <= "9") pcKeyPress(e.key);
+    else if (e.key === "Backspace") pcBackspace();
+  }, { signal: ac.signal });
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    ov.style.opacity = "1";
+    _trapFocus(ov);
+  }));
 }
 function openPinChange() {
   if (document.getElementById("pc-overlay")) return;
@@ -1295,17 +1337,17 @@ function _showChangePinButton() {
 }
 (function initAuth() {
   if (isAuthenticated()) {
-    if (sessionStorage.getItem(_AUTH_ENC_SS)) {
-      _restoreEncKey().then(() => {
-        if (document.readyState === "loading") {
-          document.addEventListener("DOMContentLoaded", _showChangePinButton);
-        } else {
-          _showChangePinButton();
-        }
-      });
-      return;
-    }
+    _restoreEncKey();
     sessionStorage.removeItem(AUTH_SESSION_KEY);
+  }
+  if (!_getActivePinHash()) {
+    document.body.style.overflow = "hidden";
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", openInitialPinSetup);
+    } else {
+      openInitialPinSetup();
+    }
+    return;
   }
   document.body.style.overflow = "hidden";
   const ov = _buildPinScreen();
@@ -2892,9 +2934,54 @@ async function _loadWatchlistFromWorker() {
       }
     } else if (state.watchlist.length > 0) {
       _syncWatchlistToWorker();
+    } else {
+      await _restoreWatchlistFromSnapshot();
     }
   } catch {
   }
+}
+async function _restoreWatchlistFromSnapshot() {
+  try {
+    const res = await fetch("data/portfolio-snapshot.json", { cache: "no-store" });
+    if (!res.ok) return false;
+    const snapshot = await res.json();
+    if (!Array.isArray(snapshot.watchlist) || snapshot.watchlist.length === 0) return false;
+    const restored = [];
+    const seen = /* @__PURE__ */ new Set();
+    for (const item of snapshot.watchlist) {
+      const symbol = String(item?.symbol || "").trim();
+      if (!symbol || seen.has(symbol)) continue;
+      const exchange = wlDetectMarket(symbol, "");
+      const normalized = {
+        symbol,
+        name: String(item?.name || symbol),
+        exchange,
+        type: _snapshotWatchlistType(symbol, item?.name),
+        cur: item?.cur || (exchange === "\u6771\u8A3C" ? "JPY" : exchange === "\u9999\u6E2F" ? "HKD" : "USD")
+      };
+      try {
+        restored.push(validateWatchlistItem(normalized));
+        seen.add(symbol);
+      } catch (e) {
+        console.warn("[watchlist] snapshot restore skipped:", symbol, e.message);
+      }
+    }
+    if (restored.length === 0) return false;
+    state.watchlist = restored;
+    localStorage.setItem("hm-watchlist", JSON.stringify(restored));
+    _syncWatchlistToWorker();
+    setStatus(`\u30A6\u30A9\u30C3\u30C1\u30EA\u30B9\u30C8\u3092\u30B9\u30CA\u30C3\u30D7\u30B7\u30E7\u30C3\u30C8\u304B\u3089\u5FA9\u5143\u3057\u307E\u3057\u305F\uFF08${restored.length}\u4EF6\uFF09`, "green");
+    return true;
+  } catch (e) {
+    console.warn("[watchlist] snapshot restore failed:", e);
+    return false;
+  }
+}
+function _snapshotWatchlistType(symbol, name) {
+  const text = `${symbol} ${name || ""}`.toUpperCase();
+  if (text.includes("ETF") || text.includes("\u4E0A\u5834\u6295\u4FE1") || text.includes("\u4E0A\u5834\u6295\u8CC7\u4FE1\u8A17")) return "ETF";
+  if (text.endsWith("=X")) return "CURRENCY";
+  return "\u682A";
 }
 function addToWatchlist(item) {
   try {
@@ -4261,10 +4348,41 @@ function renderBriefing(force = false) {
       return;
     }
     const latest = issues[0];
-    const options = issues.map((p, i) => `<option value="${_esc(p.path)}"${i === 0 ? " selected" : ""}>${_esc(p.title)}</option>`).join("");
-    panel.innerHTML = `<div class="bf-wrap"><iframe class="bf-frame" src="${latest.path}?_=${Date.now()}" title="${_esc(latest.title)}" loading="lazy"></iframe><div class="bf-pastbar"><label class="bf-past-label" for="bf-past-sel">\u904E\u53BB\u53F7</label><select id="bf-past-sel" class="bf-past-select" aria-label="\u904E\u53BB\u306E Briefing \u3092\u9078\u629E">${options}</select></div></div>`;
-    _frame = /** @type {HTMLIFrameElement|null} */
-    panel.querySelector(".bf-frame");
+    const latestUrl = _briefingUrl(latest.path);
+    if (!latestUrl) throw new Error("invalid briefing path");
+    panel.textContent = "";
+    const wrap = document.createElement("div");
+    wrap.className = "bf-wrap";
+    const frame = document.createElement("iframe");
+    frame.className = "bf-frame";
+    frame.src = _withCacheBust(latestUrl);
+    frame.title = String(latest.title || "Briefing");
+    frame.loading = "lazy";
+    frame.sandbox = "allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox";
+    wrap.appendChild(frame);
+    const pastbar = document.createElement("div");
+    pastbar.className = "bf-pastbar";
+    const label = document.createElement("label");
+    label.className = "bf-past-label";
+    label.htmlFor = "bf-past-sel";
+    label.textContent = "\u904E\u53BB\u53F7";
+    const select = document.createElement("select");
+    select.id = "bf-past-sel";
+    select.className = "bf-past-select";
+    select.setAttribute("aria-label", "\u904E\u53BB\u306E Briefing \u3092\u9078\u629E");
+    for (const [i, issue] of issues.entries()) {
+      const url = _briefingUrl(issue.path);
+      if (!url) continue;
+      const opt = document.createElement("option");
+      opt.value = url.pathname.replace(/^\//, "");
+      opt.textContent = String(issue.title || issue.date || opt.value);
+      opt.selected = i === 0;
+      select.appendChild(opt);
+    }
+    pastbar.append(label, select);
+    wrap.appendChild(pastbar);
+    panel.appendChild(wrap);
+    _frame = frame;
     if (_frame) {
       _frame.addEventListener("load", () => {
         _syncFrameTheme();
@@ -4274,10 +4392,10 @@ function renderBriefing(force = false) {
       _ensureResizeFit();
       _fitFrame();
     }
-    const sel = panel.querySelector(".bf-past-select");
-    if (sel instanceof HTMLSelectElement) {
-      sel.addEventListener("change", () => {
-        if (_frame) _frame.src = `${sel.value}?_=${Date.now()}`;
+    if (select instanceof HTMLSelectElement) {
+      select.addEventListener("change", () => {
+        const url = _briefingUrl(select.value);
+        if (_frame && url) _frame.src = _withCacheBust(url);
       });
     }
     _loaded2 = true;
@@ -4288,11 +4406,21 @@ function renderBriefing(force = false) {
 function reloadBriefing() {
   renderBriefing(true);
 }
-function _esc(s) {
-  return String(s).replace(
-    /[&<>"']/g,
-    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] || c
-  );
+function _briefingUrl(path) {
+  try {
+    const url = new URL(String(path || ""), location.origin);
+    if (url.origin !== location.origin) return null;
+    if (!url.pathname.startsWith("/data/briefings/")) return null;
+    if (!url.pathname.endsWith(".html")) return null;
+    return url;
+  } catch {
+    return null;
+  }
+}
+function _withCacheBust(url) {
+  const next = new URL(url.href);
+  next.searchParams.set("_", String(Date.now()));
+  return next.pathname.replace(/^\//, "") + next.search;
 }
 
 // src/tabs.js
@@ -4501,7 +4629,8 @@ async function loadPositionsFromKV() {
   }
 }
 async function savePositionsToKV(newPositions, pinHashOverride) {
-  const pinHash = pinHashOverride || localStorage.getItem("hm-pin-hash") || AUTH_PIN_HASH;
+  const pinHash = pinHashOverride || localStorage.getItem("hm-pin-hash");
+  if (!pinHash) throw new Error("PIN\u304C\u672A\u8A2D\u5B9A\u3067\u3059\u3002\u521D\u56DEPIN\u8A2D\u5B9A\u3092\u5B8C\u4E86\u3057\u3066\u304F\u3060\u3055\u3044\u3002");
   const res = await fetchWithTimeout(`${WORKER_URL}/positions`, 3e4, {
     method: "PUT",
     headers: { "Content-Type": "application/json", "X-Pin-Hash": pinHash },

@@ -3,12 +3,11 @@
 //
 // RP ID = location.hostname（shoulang0729.github.io / localhost）
 // 依存: auth-pin.js (_auth, AUTH_SESSION_KEY),
-//       auth-crypto.js (_AUTH_ENC_SS),
+//       auth-crypto.js (セッション鍵),
 //       auth-ui.js (_showChangePinButton) ← コールバックで解消
 // ══════════════════════════════════════════════════════════════
 
 import { _auth, AUTH_SESSION_KEY, _getActivePinHash } from './auth-pin.js';
-import { _AUTH_ENC_SS } from './auth-crypto.js';
 import { WORKER_URL } from './config.js';
 import { showAlert } from './modal.js';
 
@@ -106,7 +105,6 @@ export async function authenticatePasskey() {
       // パスキー認証時はランダムなセッション鍵を生成（PIN を経由しないため）
       const rawKey = crypto.getRandomValues(new Uint8Array(32));
       _auth.encKey = await crypto.subtle.importKey('raw', rawKey, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
-      sessionStorage.setItem(_AUTH_ENC_SS, btoa(String.fromCharCode(...rawKey)));
       _auth.fails = 0;
       const ov = document.getElementById('pin-overlay');
       if (ov) { ov.style.opacity = '0'; setTimeout(() => { ov.remove(); document.body.style.overflow = ''; }, 380); }
