@@ -506,7 +506,7 @@ function _computePortfolioPerf(positionsWithPerf, totalValue) {
 
 // スナップショットを data/portfolio-snapshot.json として GitHub に push
 async function _pushSnapshotToGithub(snapshot, env) {
-  if (!env.GITHUB_TOKEN) { console.log('[snapshot push] GITHUB_TOKEN 未設定'); return; }
+  if (!env.GITHUB_TOKEN) return;
   const owner = 'shoulang0729';
   const repo  = 'portfolio';
   const path  = 'data/portfolio-snapshot.json';
@@ -540,7 +540,6 @@ async function _pushSnapshotToGithub(snapshot, env) {
     console.warn(`[snapshot push] HTTP ${putRes.status}: ${t.slice(0, 200)}`);
     return;
   }
-  console.log(`[snapshot push] pushed snapshot (${snapshot.positions?.length} positions, source=${snapshot.source}) to ${path}`);
 }
 
 // ── AI モデル一覧（各プロバイダーの /v1/models を集約・1時間KVキャッシュ）─
@@ -955,15 +954,13 @@ async function handleNotionSave(request, env, origin) {
 // ── 保有銘柄（KV・非公開）────────────────────────────────────
 // GET: 許可オリジンからのみ取得可能
 // PUT: 許可オリジンかつ X-Pin-Hash ヘッダーによる PIN 認証が必要
-// SHA-256("123456") — フロントの src/auth-pin.js:AUTH_PIN_HASH と同期させる
-const DEFAULT_PIN_HASH = '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92';
-
 // X-Pin-Hash ヘッダーを KV の保存ハッシュと照合する。
 // OK なら null、NG なら errRes を返す（呼び出し側でそのまま return する）。
 async function verifyPinHash(request, env, origin) {
   const pinHash = request.headers.get('X-Pin-Hash');
   if (!pinHash) return errRes('認証が必要です（X-Pin-Hash）', 401, origin);
-  const storedHash = await env.KV.get('auth:pin-hash') || DEFAULT_PIN_HASH;
+  const storedHash = await env.KV.get('auth:pin-hash');
+  if (!storedHash) return errRes('PIN初期設定が必要です', 428, origin);
   if (pinHash !== storedHash) return errRes('PIN認証失敗', 401, origin);
   return null;
 }
@@ -1024,10 +1021,7 @@ async function handlePositions(request, env, origin, ctx) {
 // 必要 Secret: GITHUB_TOKEN（Classic PAT で repo スコープ）
 // ══════════════════════════════════════════════════════════════
 async function _syncPositionsToGithub(positions, env) {
-  if (!env.GITHUB_TOKEN) {
-    console.log('[github sync] GITHUB_TOKEN 未設定のためスキップ');
-    return;
-  }
+  if (!env.GITHUB_TOKEN) return;
   const owner  = 'shoulang0729';
   const repo   = 'portfolio';
   const path   = 'data/positions.json';
@@ -1076,7 +1070,6 @@ async function _syncPositionsToGithub(positions, env) {
     console.warn(`[github sync] HTTP ${putRes.status}: ${errText.slice(0, 300)}`);
     return;
   }
-  console.log(`[github sync] pushed ${positions.length} items to ${owner}/${repo}/${path}`);
 }
 
 // ── PIN ハッシュ更新 ──────────────────────────────────────────
@@ -1087,10 +1080,11 @@ async function handleAuthPinHash(request, env, origin) {
   let body;
   try { body = await request.json(); } catch { return errRes('JSON 不正', 400, origin); }
   const { oldHash, newHash } = body;
-  if (!oldHash || !newHash) return errRes('oldHash/newHash が必要です', 400, origin);
+  if (!newHash) return errRes('newHash が必要です', 400, origin);
 
-  const storedHash = await env.KV.get('auth:pin-hash') || DEFAULT_PIN_HASH;
-  if (oldHash !== storedHash) return errRes('現在のPIN認証失敗', 401, origin);
+  const storedHash = await env.KV.get('auth:pin-hash');
+  if (storedHash && oldHash !== storedHash) return errRes('現在のPIN認証失敗', 401, origin);
+  if (!storedHash && oldHash) return errRes('初回PIN設定では oldHash は不要です', 400, origin);
 
   await env.KV.put('auth:pin-hash', newHash);
   return jsonRes({ ok: true }, 200, origin);
