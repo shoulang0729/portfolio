@@ -120,9 +120,11 @@
   .sum-row .k{display:inline-block;color:var(--accent);font-weight:800;font-size:11px;margin-right:7px;
     background:var(--surface2);border-radius:5px;padding:1px 7px;}
   /* マスクトグル */
-  .masked .maskable{filter:blur(8px);pointer-events:none;user-select:none;}
-  #mask-btn{background:none;border:none;cursor:pointer;padding:4px 2px;color:var(--text2);flex:0 0 auto;line-height:0;margin-top:1px;}
-  #mask-btn:hover{color:var(--accent);}
+  .maskable{position:relative;display:inline-block;}
+  .masked .maskable{color:transparent;text-shadow:none;pointer-events:none;user-select:none;filter:none;}
+  .masked .maskable::after{content:"";position:absolute;left:0;right:0;top:50%;height:.72em;transform:translateY(-50%);border-radius:999px;background:linear-gradient(90deg,var(--surface2),var(--surface3));}
+  #mask-btn{background:var(--surface2);border:1px solid var(--border);border-radius:999px;cursor:pointer;width:34px;height:30px;display:inline-flex;align-items:center;justify-content:center;color:var(--text2);flex:0 0 auto;line-height:0;margin-top:1px;}
+  #mask-btn:hover{color:var(--accent);background:var(--surface3);}
 </style>
 </head>
 <body>
@@ -143,16 +145,16 @@
 
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
-        <div class="total maskable">¥568,500,000<small>資産総額（Money Forward実値・2026-06-14）</small></div>
+        <div class="total"><span class="maskable">¥568,511,033</span><small>資産総額（Money Forward実値・2026-06-14）</small></div>
         <button id="mask-btn" onclick="toggleMask()" title="金額の表示切替" aria-label="金額の表示切替">
           <svg id="eye-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="2.6"/></svg>
           <svg id="eye-closed" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
         </button>
       </div>
       <div class="cashline" style="align-items:flex-end;">
-        <div style="display:flex;flex-direction:column;gap:3px;"><span class="k">現預金</span><span class="v maskable">¥73,600,000</span></div>
-        <div style="display:flex;flex-direction:column;gap:3px;"><span class="k">投資用キャッシュ</span><span class="v maskable">¥53,600,000</span></div>
-        <div style="display:flex;flex-direction:column;gap:3px;"><span class="k">キャッシュ比率</span><span class="v">≈13%</span></div>
+        <div style="display:flex;flex-direction:column;gap:3px;"><span class="k">運用資産</span><span class="v maskable">¥524,345,245</span></div>
+        <div style="display:flex;flex-direction:column;gap:3px;"><span class="k">投資用キャッシュ</span><span class="v maskable">¥53,617,047</span></div>
+        <div style="display:flex;flex-direction:column;gap:3px;"><span class="k">キャッシュ比率</span><span class="v">10.2%</span></div>
       </div>
     </div>
 
@@ -232,7 +234,7 @@
       <div class="flag"><div><b>半導体テーマ集中</b><div class="tk">SMH ¥39.7M ＋ 日経半導体200A ¥32.2M ＝ PF最大の塊（先々週に過大分を整理済み）。自前PER%タイル SMH 90＝歴史的高値圏</div></div><span class="lab hi">最大サイズ</span></div>
       <div class="flag"><div><b>ゴールド（保険）</b><div class="tk">GLDM ¥43.4M＝下げても安心して持てるコア。減らさない・追加もしない（PER非該当）</div></div><span class="lab mid">保険コア</span></div>
       <div class="flag"><div><b>米国株偏重＋円安160</b><div class="tk">米国株・ETF ¥184M＝最大カテゴリ／円安は追い風だが日銀で円高転換リスク</div></div><span class="lab mid">35%</span></div>
-      <div class="flag"><div><b>現預金 ¥73.6M（≈13%）</b><div class="tk">生活防衛¥20Mを除く投資用≈¥53.6M＝押し目の弾。ポリシー目標12-13%にピッタリ</div></div><span class="lab ok">適正</span></div>
+      <div class="flag"><div><b>投資用キャッシュ ¥53,617,047（10.2%）</b><div class="tk">現預金¥73,617,047から生活防衛¥20,000,000を除外。比率は投資用キャッシュ÷運用資産¥524,345,245。</div></div><span class="lab ok">適正</span></div>
     </div>
   </section>
 
