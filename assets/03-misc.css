@@ -62,6 +62,7 @@
   display: flex; align-items: stretch; justify-content: center;
   opacity: 0;
   transition: opacity 0.38s ease;
+  touch-action: manipulation;
 }
 
 .pin-card {
@@ -75,6 +76,7 @@
   width: 100%;
   max-width: 380px;  /* タブレット以上でキーパッドが巨大化するのを防ぐ */
   gap: 0;
+  touch-action: manipulation;
 }
 
 .pin-lock-icon {
@@ -106,6 +108,7 @@
   justify-content: center;
   transition: background 0.12s;
   margin-bottom: 18px;
+  touch-action: manipulation;
 }
 .pin-passkey-btn:hover { background: var(--surface3); }
 .pin-passkey-btn:active { background: var(--surface3); transform: scale(0.98); }
@@ -178,6 +181,7 @@
   transition: background 0.1s, transform 0.08s, border-color 0.1s;
   -webkit-tap-highlight-color: transparent;
   user-select: none; -webkit-user-select: none;
+  touch-action: manipulation;
   width: 100%;
 }
 .pin-key:hover  { background: var(--surface3); border-color: var(--border); }
