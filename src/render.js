@@ -7,7 +7,7 @@
 
 import { positions } from './positions.js';
 import { state } from './state.js';
-import { fmtYen } from './utils.js';
+import { fmtYen, maskAmount } from './utils.js';
 import { renderHeatmap } from './heatmap.js';
 import { renderStockList } from './stock-list.js';
 import { renderWatchlist } from './watchlist.js';
@@ -18,7 +18,7 @@ import { getMfTotals } from './networth.js';
 /**
  * Stats バー（資産総額・運用資産総額・投資用キャッシュ）の再描画。
  * 金額は1円単位（カンマ区切り）。state.statsMasked が true のときは金額を
- * マネーフォワード風のマスクバーにするが、投資用キャッシュ比率（%）は常に表示する。
+ * マネーフォワード風に *** マスクするが、投資用キャッシュ比率（%）は常に表示する。
  * @returns {void}
  */
 export function renderStats() {
@@ -28,11 +28,8 @@ export function renderStats() {
   const liveTotal = positions.reduce((s, p) => s + (p.value || 0), 0);
 
   const masked = state.statsMasked;
-  /** 金額セル: マスク時も幅計算用の文字列は保持し、見た目だけバーに置換 */
-  const amt = v => {
-    const value = fmtYen(v);
-    return masked ? `<span class="mf-mask" aria-label="金額非表示">${value}</span>` : value;
-  };
+  /** 金額セル: マスク時は数字を *** に置換（カンマ・¥は残す） */
+  const amt = v => (masked ? maskAmount(fmtYen(v)) : fmtYen(v));
 
   const mfTag = '<span class="stat-src">MF実値</span>';
 
