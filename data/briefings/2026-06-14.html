@@ -120,9 +120,7 @@
   .sum-row .k{display:inline-block;color:var(--accent);font-weight:800;font-size:11px;margin-right:7px;
     background:var(--surface2);border-radius:5px;padding:1px 7px;}
   /* マスクトグル */
-  .maskable{position:relative;display:inline-block;}
-  .masked .maskable{color:transparent;text-shadow:none;pointer-events:none;user-select:none;filter:none;}
-  .masked .maskable::after{content:"";position:absolute;left:0;right:0;top:50%;height:.72em;transform:translateY(-50%);border-radius:999px;background:linear-gradient(90deg,var(--surface2),var(--surface3));}
+  .maskable{display:inline-block;user-select:none;}
   #mask-btn{background:var(--surface2);border:1px solid var(--border);border-radius:999px;cursor:pointer;width:34px;height:30px;display:inline-flex;align-items:center;justify-content:center;color:var(--text2);flex:0 0 auto;line-height:0;margin-top:1px;}
   #mask-btn:hover{color:var(--accent);background:var(--surface3);}
 </style>
@@ -329,6 +327,10 @@
 <script>
 function toggleMask(){
   var masked=document.body.classList.toggle('masked');
+  document.querySelectorAll('.maskable').forEach(function(el){
+    if(!el.dataset.raw) el.dataset.raw=el.textContent;
+    el.textContent=masked ? el.dataset.raw.replace(/[0-9]/g,'*') : el.dataset.raw;
+  });
   document.getElementById('eye-open').style.display=masked?'none':'';
   document.getElementById('eye-closed').style.display=masked?'':'none';
 }

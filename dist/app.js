@@ -1451,6 +1451,7 @@ var fmtJPY = (v) => {
 };
 var fmtJPYFull = (v) => `${(v >= 0 ? "+" : "") + Math.round(v).toLocaleString()}\u5186`;
 var fmtYen = (v) => `\xA5${Math.round(v || 0).toLocaleString()}`;
+var maskAmount = (s) => String(s).replace(/[0-9]/g, "*");
 var fmtPct = (v) => `${v.toFixed(1)}%`;
 var fmtPrice = (v, cur) => {
   if (v == null) return "\u2015";
@@ -3366,10 +3367,7 @@ function renderStats() {
   const mf = getMfTotals();
   const liveTotal = positions.reduce((s, p) => s + (p.value || 0), 0);
   const masked = state.statsMasked;
-  const amt = (v) => {
-    const value = fmtYen(v);
-    return masked ? `<span class="mf-mask" aria-label="\u91D1\u984D\u975E\u8868\u793A">${value}</span>` : value;
-  };
+  const amt = (v) => masked ? maskAmount(fmtYen(v)) : fmtYen(v);
   const mfTag = '<span class="stat-src">MF\u5B9F\u5024</span>';
   let html = "";
   if (mf) {
