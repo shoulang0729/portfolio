@@ -2,14 +2,14 @@
 // auth-crypto.js  ―  AES-GCM 暗号化（AI タブの API キー保護）
 //
 // 依存: auth-pin.js (_auth state)
-// PIN から PBKDF2 で AES-256-GCM 鍵を導出し、sessionStorage に保存する。
+// PIN から PBKDF2 で AES-256-GCM 鍵を導出し、セッション中はメモリだけに保持する。
 // ai-tab.js が aiEncrypt / aiDecrypt を直接呼ぶ。
 // ══════════════════════════════════════════════════════════════
 
 import { _auth } from './auth-pin.js';
 
 const _AUTH_ENC_SALT = 'hm-ai-keys-v1';
-const _AUTH_ENC_SS   = 'hm-enc-key-v1'; // sessionStorage キー
+const _AUTH_ENC_SS   = 'hm-enc-key-v1'; // 旧sessionStorageキー（移行用・再保存しない）
 
 /** PIN から AES-256-GCM 鍵を PBKDF2 導出して _auth.encKey にセット */
 async function _deriveEncKey(pin) {
@@ -21,19 +21,12 @@ async function _deriveEncKey(pin) {
       iterations: 100000, hash: 'SHA-256' },
     keyMat, { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']
   );
-  const exported = await crypto.subtle.exportKey('raw', _auth.encKey);
-  sessionStorage.setItem(_AUTH_ENC_SS,
-    btoa(String.fromCharCode(...new Uint8Array(exported))));
 }
 
-/** sessionStorage から鍵を復元（既に認証済みの再読み込み時） */
+/** 旧sessionStorage保存鍵を削除する。鍵の永続復元は行わない。 */
 async function _restoreEncKey() {
-  const stored = sessionStorage.getItem(_AUTH_ENC_SS);
-  if (!stored) return;
-  const bytes = Uint8Array.from(atob(stored), c => c.charCodeAt(0));
-  _auth.encKey = await crypto.subtle.importKey(
-    'raw', bytes, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']
-  );
+  try { sessionStorage.removeItem(_AUTH_ENC_SS); } catch {}
+  return false;
 }
 
 /** 平文を AES-GCM で暗号化して Base64 文字列を返す */

@@ -80,14 +80,46 @@ export function renderBriefing(force = false) {
         return;
       }
       const latest = issues[0];
-      // 過去号は新しい順のプルダウンに収納（最新号を selected）。選択で iframe を差し替え。
-      const options = issues
-        .map((p, i) => `<option value="${_esc(p.path)}"${i === 0 ? ' selected' : ''}>${_esc(p.title)}</option>`)
-        .join('');
-      panel.innerHTML = `<div class="bf-wrap"><iframe class="bf-frame" src="${latest.path}?_=${Date.now()}" title="${_esc(latest.title)}" loading="lazy"></iframe><div class="bf-pastbar"><label class="bf-past-label" for="bf-past-sel">過去号</label><select id="bf-past-sel" class="bf-past-select" aria-label="過去の Briefing を選択">${options}</select></div></div>`;
+      const latestUrl = _briefingUrl(latest.path);
+      if (!latestUrl) throw new Error('invalid briefing path');
+
+      panel.textContent = '';
+      const wrap = document.createElement('div');
+      wrap.className = 'bf-wrap';
+
+      const frame = document.createElement('iframe');
+      frame.className = 'bf-frame';
+      frame.src = _withCacheBust(latestUrl);
+      frame.title = String(latest.title || 'Briefing');
+      frame.loading = 'lazy';
+      frame.sandbox = 'allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox';
+      wrap.appendChild(frame);
+
+      const pastbar = document.createElement('div');
+      pastbar.className = 'bf-pastbar';
+      const label = document.createElement('label');
+      label.className = 'bf-past-label';
+      label.htmlFor = 'bf-past-sel';
+      label.textContent = '過去号';
+      const select = document.createElement('select');
+      select.id = 'bf-past-sel';
+      select.className = 'bf-past-select';
+      select.setAttribute('aria-label', '過去の Briefing を選択');
+      for (const [i, issue] of issues.entries()) {
+        const url = _briefingUrl(issue.path);
+        if (!url) continue;
+        const opt = document.createElement('option');
+        opt.value = url.pathname.replace(/^\//, '');
+        opt.textContent = String(issue.title || issue.date || opt.value);
+        opt.selected = i === 0;
+        select.appendChild(opt);
+      }
+      pastbar.append(label, select);
+      wrap.appendChild(pastbar);
+      panel.appendChild(wrap);
 
       // 同一オリジン: iframe を残り高さにフィット（枠内1スクロール）＋テーマ伝搬
-      _frame = /** @type {HTMLIFrameElement|null} */ (panel.querySelector('.bf-frame'));
+      _frame = frame;
       if (_frame) {
         _frame.addEventListener('load', () => {
           _syncFrameTheme();
@@ -97,10 +129,10 @@ export function renderBriefing(force = false) {
         _ensureResizeFit();
         _fitFrame();
       }
-      const sel = panel.querySelector('.bf-past-select');
-      if (sel instanceof HTMLSelectElement) {
-        sel.addEventListener('change', () => {
-          if (_frame) _frame.src = `${sel.value}?_=${Date.now()}`;
+      if (select instanceof HTMLSelectElement) {
+        select.addEventListener('change', () => {
+          const url = _briefingUrl(select.value);
+          if (_frame && url) _frame.src = _withCacheBust(url);
         });
       }
       _loaded = true;
@@ -115,13 +147,20 @@ export function reloadBriefing() {
   renderBriefing(true);
 }
 
-/**
- * @param {string} s
- * @returns {string}
- */
-function _esc(s) {
-  return String(s).replace(
-    /[&<>"']/g,
-    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] || c
-  );
+function _briefingUrl(path) {
+  try {
+    const url = new URL(String(path || ''), location.origin);
+    if (url.origin !== location.origin) return null;
+    if (!url.pathname.startsWith('/data/briefings/')) return null;
+    if (!url.pathname.endsWith('.html')) return null;
+    return url;
+  } catch {
+    return null;
+  }
+}
+
+function _withCacheBust(url) {
+  const next = new URL(url.href);
+  next.searchParams.set('_', String(Date.now()));
+  return next.pathname.replace(/^\//, '') + next.search;
 }
