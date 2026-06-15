@@ -194,14 +194,6 @@ body {
 .stat-sub-label { font-size: 10px; color: var(--text2); letter-spacing: 0.3px; }
 .stat-sub-value { font-size: 15px; font-weight: 600; white-space: nowrap; }
 .stat-sub-pct { font-size: 12px; font-weight: 600; color: var(--text2); margin-left: 5px; }
-.mf-mask {
-  position: relative; display: inline-block; color: transparent; text-shadow: none; user-select: none;
-}
-.mf-mask::after {
-  content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 0.72em;
-  transform: translateY(-50%); border-radius: 999px;
-  background: linear-gradient(90deg, var(--surface2), var(--surface3));
-}
 
 .pos { color: var(--pos); }  /* プラス=赤（日本株市場慣例） */
 .neg { color: var(--neg); }  /* マイナス=緑 */
