@@ -954,7 +954,17 @@ function _shake(type) {
   el.classList.add(type);
   if (type === "shake") setTimeout(() => el.classList.remove("shake"), 500);
 }
+var _authSubmitTimer = null;
+function _queueAuthSubmit() {
+  if (_authSubmitTimer) return;
+  _setKeypadEnabled(false);
+  _authSubmitTimer = setTimeout(() => {
+    _authSubmitTimer = null;
+    _submitPin();
+  }, 180);
+}
 function authKeyPress(n) {
+  if (_authSubmitTimer) return;
   if (_isLocked()) {
     _showError(_lockRemainMessage());
     return;
@@ -963,9 +973,10 @@ function authKeyPress(n) {
   _auth.input += n;
   _updateDots();
   _hideError();
-  if (_auth.input.length === AUTH_PIN_LEN) _submitPin();
+  if (_auth.input.length === AUTH_PIN_LEN) _queueAuthSubmit();
 }
 function authBackspace() {
+  if (_authSubmitTimer) return;
   if (_isLocked()) return;
   if (_auth.input.length > 0) {
     _auth.input = _auth.input.slice(0, -1);
@@ -1091,7 +1102,8 @@ var _pc = {
   step: 0,
   // 1=現在PIN確認 2=新PIN入力 3=新PIN確認
   input: "",
-  newPin: ""
+  newPin: "",
+  submitTimer: null
 };
 var _pcStepLabel = ["", "\u73FE\u5728\u306EPIN", "\u65B0\u3057\u3044PIN\uFF086\u6841\uFF09", "\u65B0\u3057\u3044PIN\uFF08\u78BA\u8A8D\uFF09"];
 var _pcStepHint = ["", "\u8A8D\u8A3C\u306E\u305F\u3081\u73FE\u5728\u306EPIN\u3092\u5165\u529B", "\u65B0\u3057\u30446\u6841\u306EPIN\u3092\u5165\u529B", "\u540C\u3058PIN\u3092\u3082\u3046\u4E00\u5EA6\u5165\u529B"];
@@ -1128,6 +1140,19 @@ function _pcShake() {
   el.classList.add("shake");
   setTimeout(() => el.classList.remove("shake"), 500);
 }
+function _pcSetKeypadEnabled(on) {
+  document.querySelectorAll("#pc-overlay .pin-key").forEach((b) => {
+    b.disabled = !on;
+  });
+}
+function _pcQueueSubmit() {
+  if (_pc.submitTimer) return;
+  _pcSetKeypadEnabled(false);
+  _pc.submitTimer = setTimeout(() => {
+    _pc.submitTimer = null;
+    _pcSubmit();
+  }, 180);
+}
 function _pcSuccess() {
   const el = document.getElementById("pc-dots");
   if (el) {
@@ -1138,19 +1163,19 @@ function _pcSuccess() {
   if (lbl) lbl.textContent = "\u2705 \u5909\u66F4\u5B8C\u4E86";
   if (hint) hint.textContent = "\u65B0\u3057\u3044PIN\u304C\u4FDD\u5B58\u3055\u308C\u307E\u3057\u305F";
   document.querySelectorAll("#pc-dots .pin-dot").forEach((d) => d.classList.add("filled"));
-  document.querySelectorAll("#pc-overlay .pin-key").forEach((b) => {
-    b.disabled = true;
-  });
+  _pcSetKeypadEnabled(false);
   setTimeout(() => closePinChange(), 1800);
 }
 function pcKeyPress(n) {
+  if (_pc.submitTimer) return;
   if (_pc.input.length >= AUTH_PIN_LEN) return;
   _pc.input += n;
   _pcUpdateDots();
   _pcHideError();
-  if (_pc.input.length === AUTH_PIN_LEN) _pcSubmit();
+  if (_pc.input.length === AUTH_PIN_LEN) _pcQueueSubmit();
 }
 function pcBackspace() {
+  if (_pc.submitTimer) return;
   if (_pc.input.length > 0) {
     _pc.input = _pc.input.slice(0, -1);
     _pcUpdateDots();
@@ -1158,9 +1183,7 @@ function pcBackspace() {
   }
 }
 async function _pcSubmit() {
-  document.querySelectorAll("#pc-overlay .pin-key").forEach((b) => {
-    b.disabled = true;
-  });
+  _pcSetKeypadEnabled(false);
   const hash = await _hashPin(_pc.input);
   if (_pc.step === 1) {
     if (hash !== _getActivePinHash()) {
@@ -1168,9 +1191,7 @@ async function _pcSubmit() {
       _pcUpdateDots();
       _pcShake();
       _pcShowError("PIN\u304C\u9055\u3044\u307E\u3059");
-      document.querySelectorAll("#pc-overlay .pin-key").forEach((b) => {
-        b.disabled = false;
-      });
+      _pcSetKeypadEnabled(true);
       return;
     }
     _pc.step = 2;
@@ -1178,9 +1199,7 @@ async function _pcSubmit() {
     _pcUpdateDots();
     _pcSetTitle();
     _pcHideError();
-    document.querySelectorAll("#pc-overlay .pin-key").forEach((b) => {
-      b.disabled = false;
-    });
+    _pcSetKeypadEnabled(true);
   } else if (_pc.step === 2) {
     _pc.newPin = _pc.input;
     _pc.step = 3;
@@ -1188,18 +1207,14 @@ async function _pcSubmit() {
     _pcUpdateDots();
     _pcSetTitle();
     _pcHideError();
-    document.querySelectorAll("#pc-overlay .pin-key").forEach((b) => {
-      b.disabled = false;
-    });
+    _pcSetKeypadEnabled(true);
   } else if (_pc.step === 3) {
     if (_pc.input !== _pc.newPin) {
       _pc.input = "";
       _pcUpdateDots();
       _pcShake();
       _pcShowError("PIN\u304C\u4E00\u81F4\u3057\u307E\u305B\u3093");
-      document.querySelectorAll("#pc-overlay .pin-key").forEach((b) => {
-        b.disabled = false;
-      });
+      _pcSetKeypadEnabled(true);
       return;
     }
     const prevHash = _getActivePinHash();
@@ -1214,9 +1229,7 @@ async function _pcSubmit() {
     } catch (e) {
       console.warn("[auth] PIN hash sync to Worker failed:", e);
       _pcShowError("\u30B5\u30FC\u30D0\u30FC\u540C\u671F\u306B\u5931\u6557\u3057\u307E\u3057\u305F\u3002\u518D\u5EA6\u304A\u8A66\u3057\u304F\u3060\u3055\u3044\u3002");
-      document.querySelectorAll("#pc-overlay .pin-key").forEach((b) => {
-        b.disabled = false;
-      });
+      _pcSetKeypadEnabled(true);
       return;
     }
     localStorage.setItem(AUTH_LS_HASH_KEY, newHash);
@@ -1228,6 +1241,10 @@ async function _pcSubmit() {
 }
 function openInitialPinSetup() {
   if (document.getElementById("pc-overlay")) return;
+  if (_pc.submitTimer) {
+    clearTimeout(_pc.submitTimer);
+    _pc.submitTimer = null;
+  }
   _pc.step = 2;
   _pc.input = "";
   _pc.newPin = "";
@@ -1271,6 +1288,10 @@ function openInitialPinSetup() {
 }
 function openPinChange() {
   if (document.getElementById("pc-overlay")) return;
+  if (_pc.submitTimer) {
+    clearTimeout(_pc.submitTimer);
+    _pc.submitTimer = null;
+  }
   _pc.step = 1;
   _pc.input = "";
   _pc.newPin = "";
@@ -1318,6 +1339,10 @@ function openPinChange() {
 function closePinChange() {
   const ov = document.getElementById("pc-overlay");
   if (!ov) return;
+  if (_pc.submitTimer) {
+    clearTimeout(_pc.submitTimer);
+    _pc.submitTimer = null;
+  }
   if (ov._kbAbort) ov._kbAbort.abort();
   ov.style.opacity = "0";
   setTimeout(() => ov.remove(), 350);
