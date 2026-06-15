@@ -409,4 +409,46 @@ describe('worker/src/index.js helpers', () => {
       expect(result['Access-Control-Max-Age']).toBe('86400');
     });
   });
+
+  describe('PIN hash update semantics', () => {
+    async function handleAuthPinHashLike(body, kvStore) {
+      const { oldHash, newHash } = body;
+      if (!newHash) return { status: 400, body: { error: 'newHash が必要です' } };
+
+      const storedHash = kvStore.get('auth:pin-hash') || null;
+      if (storedHash && !oldHash) {
+        if (newHash === storedHash) return { status: 200, body: { ok: true, mode: 'verified' } };
+        return { status: 401, body: { error: '既存のPINと一致しません' } };
+      }
+      if (storedHash && oldHash !== storedHash) return { status: 401, body: { error: '現在のPIN認証失敗' } };
+      if (!storedHash && oldHash) return { status: 400, body: { error: '初回PIN設定では oldHash は不要です' } };
+
+      kvStore.set('auth:pin-hash', newHash);
+      return { status: 200, body: { ok: true, mode: storedHash ? 'updated' : 'created' } };
+    }
+
+    it('サーバPIN既存かつ端末PIN未保存でも一致すれば復旧ログインできる', async () => {
+      const kvStore = new Map([['auth:pin-hash', 'hash-existing']]);
+      const result = await handleAuthPinHashLike({ newHash: 'hash-existing' }, kvStore);
+
+      expect(result).toEqual({ status: 200, body: { ok: true, mode: 'verified' } });
+      expect(kvStore.get('auth:pin-hash')).toBe('hash-existing');
+    });
+
+    it('サーバPIN既存かつ端末PIN未保存で不一致なら拒否する', async () => {
+      const kvStore = new Map([['auth:pin-hash', 'hash-existing']]);
+      const result = await handleAuthPinHashLike({ newHash: 'hash-other' }, kvStore);
+
+      expect(result.status).toBe(401);
+      expect(kvStore.get('auth:pin-hash')).toBe('hash-existing');
+    });
+
+    it('初回PIN未設定なら newHash を保存する', async () => {
+      const kvStore = new Map();
+      const result = await handleAuthPinHashLike({ newHash: 'hash-new' }, kvStore);
+
+      expect(result).toEqual({ status: 200, body: { ok: true, mode: 'created' } });
+      expect(kvStore.get('auth:pin-hash')).toBe('hash-new');
+    });
+  });
 });

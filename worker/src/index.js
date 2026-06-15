@@ -14,7 +14,7 @@
 //   PUT  /watchlist                     ウォッチリスト保存（KV）
 //   GET  /positions                     保有銘柄取得（KV・非公開）
 //   PUT  /positions                     保有銘柄保存（KV・PIN認証必須）
-//   PUT  /auth/pin-hash                 PIN ハッシュ更新（KV）
+//   PUT  /auth/pin-hash                 PIN ハッシュ更新/端末復旧（KV）
 //   GET  /prices/cache                  Cron キャッシュ価格取得（KV）
 //   POST /notion/save                   AI相談結果をNotion DBに保存
 //   GET  /auth/challenge                パスキー認証チャレンジ生成
@@ -1083,11 +1083,15 @@ async function handleAuthPinHash(request, env, origin) {
   if (!newHash) return errRes('newHash が必要です', 400, origin);
 
   const storedHash = await env.KV.get('auth:pin-hash');
+  if (storedHash && !oldHash) {
+    if (newHash === storedHash) return jsonRes({ ok: true, mode: 'verified' }, 200, origin);
+    return errRes('既存のPINと一致しません', 401, origin);
+  }
   if (storedHash && oldHash !== storedHash) return errRes('現在のPIN認証失敗', 401, origin);
   if (!storedHash && oldHash) return errRes('初回PIN設定では oldHash は不要です', 400, origin);
 
   await env.KV.put('auth:pin-hash', newHash);
-  return jsonRes({ ok: true }, 200, origin);
+  return jsonRes({ ok: true, mode: storedHash ? 'updated' : 'created' }, 200, origin);
 }
 
 // ── ETF 構成銘柄（look-through・KV キャッシュ）─────────────────
