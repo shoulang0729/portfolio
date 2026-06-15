@@ -1451,7 +1451,6 @@ var fmtJPY = (v) => {
 };
 var fmtJPYFull = (v) => `${(v >= 0 ? "+" : "") + Math.round(v).toLocaleString()}\u5186`;
 var fmtYen = (v) => `\xA5${Math.round(v || 0).toLocaleString()}`;
-var maskAmount = (s) => String(s).replace(/[0-9]/g, "*");
 var fmtPct = (v) => `${v.toFixed(1)}%`;
 var fmtPrice = (v, cur) => {
   if (v == null) return "\u2015";
@@ -3343,8 +3342,7 @@ function getMfTotals() {
   const crypto2 = _sum((x) => x.cat === "\u6697\u53F7\u8CC7\u7523");
   const securities = imported - cash - crypto2;
   const dryPowder = Math.max(0, cash - EMERGENCY_FUND);
-  const investable = imported - EMERGENCY_FUND;
-  const cashRatio = investable > 0 ? dryPowder / investable * 100 : 0;
+  const cashRatio = imported > 0 ? dryPowder / imported * 100 : 0;
   return { netWorth, imported, cash, crypto: crypto2, securities, dryPowder, cashRatio, emergencyFund: EMERGENCY_FUND, asOf: _mf.asOf };
 }
 function getMfManualAssets() {
@@ -3368,7 +3366,10 @@ function renderStats() {
   const mf = getMfTotals();
   const liveTotal = positions.reduce((s, p) => s + (p.value || 0), 0);
   const masked = state.statsMasked;
-  const amt = (v) => masked ? maskAmount(fmtYen(v)) : fmtYen(v);
+  const amt = (v) => {
+    const value = fmtYen(v);
+    return masked ? `<span class="mf-mask" aria-label="\u91D1\u984D\u975E\u8868\u793A">${value}</span>` : value;
+  };
   const mfTag = '<span class="stat-src">MF\u5B9F\u5024</span>';
   let html = "";
   if (mf) {

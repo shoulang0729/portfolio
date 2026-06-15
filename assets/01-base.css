@@ -167,12 +167,13 @@ body {
 .stats-outer { position: relative; margin-bottom: 20px; }
 .eye-btn {  /* カード右上の金額マスク切替 */
   position: absolute; top: 10px; right: 10px; z-index: 1;
-  background: none; border: none; border-radius: 6px;
-  color: var(--text2); cursor: pointer; padding: 4px; line-height: 0;
-  transition: color 0.15s; display: flex; align-items: center;
+  width: 32px; height: 28px; justify-content: center;
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 999px;
+  color: var(--text2); cursor: pointer; padding: 0; line-height: 0;
+  transition: background 0.15s, border-color 0.15s, color 0.15s; display: flex; align-items: center;
 }
-.eye-btn:hover { color: var(--text); }
-.eye-btn.hidden { opacity: 0.5; }  /* マスク中でも操作できるよう薄く残す */
+.eye-btn:hover { color: var(--text); background: var(--surface3); }
+.eye-btn.hidden { color: var(--accent); border-color: var(--accent); }
 
 .stats {
   display: block; background: var(--surface);
@@ -193,6 +194,14 @@ body {
 .stat-sub-label { font-size: 10px; color: var(--text2); letter-spacing: 0.3px; }
 .stat-sub-value { font-size: 15px; font-weight: 600; white-space: nowrap; }
 .stat-sub-pct { font-size: 12px; font-weight: 600; color: var(--text2); margin-left: 5px; }
+.mf-mask {
+  position: relative; display: inline-block; color: transparent; text-shadow: none; user-select: none;
+}
+.mf-mask::after {
+  content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 0.72em;
+  transform: translateY(-50%); border-radius: 999px;
+  background: linear-gradient(90deg, var(--surface2), var(--surface3));
+}
 
 .pos { color: var(--pos); }  /* プラス=赤（日本株市場慣例） */
 .neg { color: var(--neg); }  /* マイナス=緑 */
