@@ -3212,23 +3212,24 @@ function renderStats() {
   const mfTag = '<span class="stat-src">MF\u5B9F\u5024</span>';
   let html = "";
   if (mf) {
-    html += `<div class="stat">
-      <span class="stat-label">\u8CC7\u7523\u7DCF\u984D${mfTag}</span>
-      <span class="stat-value stat-fg">${amt(mf.netWorth)}</span>
+    html += `<div class="stat-hero">
+      <span class="stat-hero-label">\u904B\u7528\u8CC7\u7523\u7DCF\u984D${mfTag}</span>
+      <span class="stat-hero-value stat-fg">${amt(mf.imported)}</span>
     </div>
-    <div class="stat">
-      <span class="stat-label">\u904B\u7528\u8CC7\u7523\u7DCF\u984D${mfTag}</span>
-      <span class="stat-value stat-fg">${amt(mf.imported)}</span>
-    </div>
-    <div class="stat">
-      <span class="stat-label">\u6295\u8CC7\u7528\u30AD\u30E3\u30C3\u30B7\u30E5</span>
-      <span class="stat-value stat-fg">${amt(mf.dryPowder)}</span>
-      <span class="stat-sub stat-fg">${mf.cashRatio.toFixed(1)}%</span>
+    <div class="stat-subrow">
+      <div class="stat-sub-item">
+        <span class="stat-sub-label">\u8CC7\u7523\u7DCF\u984D</span>
+        <span class="stat-sub-value stat-fg">${amt(mf.netWorth)}</span>
+      </div>
+      <div class="stat-sub-item">
+        <span class="stat-sub-label">\u6295\u8CC7\u7528\u30AD\u30E3\u30C3\u30B7\u30E5</span>
+        <span class="stat-sub-value stat-fg">${amt(mf.dryPowder)}<span class="stat-sub-pct">${mf.cashRatio.toFixed(1)}%</span></span>
+      </div>
     </div>`;
   } else {
-    html += `<div class="stat">
-      <span class="stat-label">\u904B\u7528\u8CC7\u7523\u7DCF\u984D</span>
-      <span class="stat-value stat-fg">${amt(liveTotal)}</span>
+    html += `<div class="stat-hero">
+      <span class="stat-hero-label">\u904B\u7528\u8CC7\u7523\u7DCF\u984D</span>
+      <span class="stat-hero-value stat-fg">${amt(liveTotal)}</span>
     </div>`;
   }
   document.getElementById("stats").innerHTML = html;
