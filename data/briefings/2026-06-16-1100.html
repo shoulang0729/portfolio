@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Briefing — 2026/06/16 11:00</title>
+<style>
+  /* 色は日本株市場慣例＝プラス赤 / マイナス緑（アプリと統一） */
+  :root{
+    --bg:#f7f2ee;--surface:#ffffff;--surface2:#f0e9e3;--surface3:#e8ddd7;
+    --border:#d4c8c0;--text:#1c1714;--text2:#78695f;--accent:#cc785c;
+    --up:#FF3B30;--down:#34C759;--stance:#b9822e;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{--bg:#1c1917;--surface:#27211e;--surface2:#322b28;--surface3:#2e2722;
+      --border:#48403b;--text:#f5f0ec;--text2:#b3a79e;--accent:#e08a6a;
+      --up:#FF453A;--down:#30D158;--stance:#e6b566;}
+  }
+  html[data-theme="light"]{--bg:#f7f2ee;--surface:#ffffff;--surface2:#f0e9e3;--surface3:#e8ddd7;
+    --border:#d4c8c0;--text:#1c1714;--text2:#78695f;--accent:#cc785c;--up:#FF3B30;--down:#34C759;--stance:#b9822e;}
+  html[data-theme="dark"]{--bg:#1c1917;--surface:#27211e;--surface2:#322b28;--surface3:#2e2722;
+    --border:#48403b;--text:#f5f0ec;--text2:#b3a79e;--accent:#e08a6a;--up:#FF453A;--down:#30D158;--stance:#e6b566;}
+  *{box-sizing:border-box;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent;}
+  html{scroll-behavior:smooth;}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
+    line-height:1.6;font-size:16px;padding-bottom:30px;--hdr:74px;}
+  .wrap{max-width:560px;margin:0 auto;padding:0 14px;}
+  /* 固定ヘッダ: 日付(左)+今すぐ生成(右) → セクション移動nav まで sticky */
+  header{position:sticky;top:0;z-index:20;background:var(--bg);
+    padding:8px 14px 6px;border-bottom:1px solid var(--border);}
+  .head-row{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:24px;}
+  h1{font-size:22px;margin:0 0 2px;font-weight:800;letter-spacing:.03em;}
+  .date{color:var(--text2);font-size:12.5px;}
+  .ondemand{display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;
+    font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;
+    color:var(--text2);border:1px solid var(--border);border-radius:8px;padding:4px 10px;}
+  .ondemand:hover{color:var(--accent);border-color:var(--accent);}
+  .ondemand svg{width:13px;height:13px;}
+  .stance{font-weight:800;color:var(--stance);}
+  .trend-stance{font-size:14.5px;font-weight:800;margin-bottom:10px;padding-bottom:9px;border-bottom:1px solid var(--border);}
+  .nav{display:flex;gap:6px;overflow-x:auto;padding:8px 0 0;-webkit-overflow-scrolling:touch;}
+  .nav a{flex:0 0 auto;font-size:12px;color:var(--text2);text-decoration:none;
+    background:var(--surface2);border:1px solid var(--border);padding:5px 10px;border-radius:999px;}
+  section{margin-top:20px;scroll-margin-top:var(--hdr);}
+  /* セクション見出しもセクション単位で固定（行前に余白） */
+  .sec-title{position:sticky;top:var(--hdr);z-index:10;background:var(--bg);
+    font-size:12.5px;color:var(--text2);letter-spacing:.04em;margin:0 0 7px;padding:11px 2px 6px;font-weight:800;}
+  .sec-title b{color:var(--accent);}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:15px;
+    padding:15px;margin-bottom:9px;box-shadow:0 2px 10px rgba(0,0,0,0.04);}
+  .total{font-size:29px;font-weight:800;letter-spacing:-.01em;}
+  .total small{font-size:13px;color:var(--text2);font-weight:600;display:block;margin-top:2px;}
+  .cashline{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-top:12px;
+    padding-top:11px;border-top:1px solid var(--border);}
+  .cashline .k{font-size:12.5px;color:var(--text2);} .cashline .v{font-size:16px;font-weight:800;}
+  .up{color:var(--up);}.down{color:var(--down);}
+  .mkt-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  /* 横スクロール不要に詰める＋データ列は等間隔（table-layout:fixed） */
+  table.mkt{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed;}
+  table.mkt th{font-size:9.5px;color:var(--text2);font-weight:700;text-align:right;padding:4px 2px 6px 0;border-bottom:1px solid var(--border);white-space:nowrap;}
+  table.mkt th:first-child{text-align:left;width:29%;}
+  table.mkt td{padding:6px 2px;border-bottom:1px solid var(--border);text-align:right;font-weight:700;white-space:nowrap;font-size:11px;}
+  table.mkt td:first-child{text-align:left;font-weight:600;white-space:normal;}
+  table.mkt .lv{display:block;font-size:9px;color:var(--text2);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  table.mkt tr:last-child td{border-bottom:none;}
+  /* §1 地合い表（列は等間隔: table-layout:fixed） */
+  table.perf{width:100%;border-collapse:collapse;font-size:12px;margin-top:12px;table-layout:fixed;}
+  table.perf th{font-size:10px;color:var(--text2);font-weight:700;text-align:right;padding:4px 3px 5px 0;border-bottom:1px solid var(--border);}
+  table.perf th:first-child{text-align:left;width:34%;}
+  table.perf td{padding:7px 3px 0;text-align:right;font-weight:800;font-size:11.5px;white-space:normal;word-break:break-word;}
+  table.perf td:first-child{text-align:left;font-weight:700;color:var(--text2);font-size:12px;}
+  .vfen{display:block;font-size:9.5px;color:var(--text2);font-weight:600;line-height:1.2;}
+  /* §1 追い風/向かい風（左右→上下スタック） */
+  .movers{display:block;margin-top:13px;padding-top:11px;border-top:1px solid var(--border);}
+  .mv-col{min-width:0;}
+  .mv-col + .mv-col{margin-top:11px;padding-top:11px;border-top:1px solid var(--border);}
+  .mv-h{font-size:11px;font-weight:800;margin-bottom:5px;letter-spacing:.02em;}
+  .mv-h.up{color:var(--up);} .mv-h.down{color:var(--down);}
+  .mv{display:flex;justify-content:space-between;gap:6px;font-size:12.5px;padding:3px 0;}
+  .mv span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .mv span:last-child{font-weight:800;flex:0 0 auto;}
+  .ment{border-left:3px solid var(--accent);padding:2px 0 2px 11px;margin:11px 0;}
+  .ment .who{font-weight:800;font-size:14px;color:var(--accent);}
+  .ment .claim{font-size:14.5px;}
+  .subh{font-size:11.5px;font-weight:800;color:var(--text2);margin:10px 0 2px;letter-spacing:.03em;}
+  .subh-ic{width:12px;height:12px;vertical-align:-1px;}
+  .flag{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);}
+  .flag:last-child{border-bottom:none;}
+  .flag > div:first-child{flex:1;min-width:0;}
+  .flag .tk{line-height:1.55;}
+  .lab{font-size:12px;padding:1px 8px;border-radius:6px;font-weight:800;align-self:flex-start;white-space:nowrap;}
+  .lab.hi{background:rgba(255,59,48,0.15);color:var(--up);}
+  .lab.ok{background:rgba(52,199,89,0.16);color:var(--down);}
+  .lab.mid{background:rgba(204,120,92,0.18);color:var(--accent);}
+  /* §4 ウォッチリスト採点サブ表 */
+  table.wl{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px;}
+  table.wl th{font-size:10px;color:var(--text2);font-weight:700;text-align:right;padding:4px 4px 6px 0;border-bottom:1px solid var(--border);white-space:nowrap;}
+  table.wl th:first-child{text-align:left;}
+  table.wl td{padding:7px 4px;border-bottom:1px solid var(--border);text-align:right;font-weight:700;white-space:nowrap;}
+  table.wl td:first-child{text-align:left;font-weight:700;}
+  table.wl tr:last-child td{border-bottom:none;}
+  table.wl .nm{display:block;font-size:10px;color:var(--text2);font-weight:600;}
+  .act{display:flex;gap:9px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);}
+  .act:last-child{border-bottom:none;} .dot{flex:0 0 auto;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-top:9px;}
+  .insight{background:var(--surface2);border-left:3px solid var(--accent);border-radius:0 10px 10px 0;
+    padding:10px 13px;margin-top:9px;font-size:14px;color:var(--text);}
+  .insight .ilabel{font-weight:800;color:var(--accent);}
+  .ev{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);}
+  .ev:last-child{border-bottom:none;}
+  .ev .d{font-weight:800;color:var(--text);font-size:13px;flex:0 0 84px;line-height:1.3;}
+  .ev .d .us{display:block;font-size:10.5px;color:var(--text2);font-weight:700;}
+  .tk{color:var(--text2);font-size:11.5px;}
+  .note{font-size:11px;color:var(--text2);margin-top:6px;}
+  .foot{color:var(--text2);font-size:11.5px;text-align:center;margin-top:20px;line-height:1.6;}
+  /* §1 今週のまとめ サマリーカード */
+  .sum-h{font-size:13px;font-weight:800;margin-bottom:8px;letter-spacing:.02em;}
+  .sum-row{font-size:13.5px;line-height:1.55;padding:7px 0;border-bottom:1px solid var(--border);}
+  .sum-row:last-child{border-bottom:none;}
+  .sum-row .k{display:inline-block;color:var(--accent);font-weight:800;font-size:11px;margin-right:7px;
+    background:var(--surface2);border-radius:5px;padding:1px 7px;}
+  /* マスクトグル */
+  .maskable{display:inline-block;user-select:none;}
+  #mask-btn{background:var(--surface2);border:1px solid var(--border);border-radius:999px;cursor:pointer;width:34px;height:30px;display:inline-flex;align-items:center;justify-content:center;color:var(--text2);flex:0 0 auto;line-height:0;margin-top:1px;}
+  #mask-btn:hover{color:var(--accent);background:var(--surface3);}
+</style>
+</head>
+<body>
+<header>
+  <div class="head-row">
+    <span class="date">2026/06/16（火）11:00 ※手動生成</span>
+    <a class="ondemand" href="https://t.me/toshio_claude_bot?text=Briefing%E3%82%92%E4%BB%8A%E3%81%99%E3%81%90%E4%BD%9C%E3%81%A3%E3%81%A6" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.5z"/></svg>今すぐ生成</a>
+  </div>
+  <div class="nav">
+    <a href="#s1">サマリ</a><a href="#s2">トレンド</a><a href="#s3">マクロ</a>
+    <a href="#s4">ヘルス</a><a href="#s5">トリガー</a><a href="#s6">メンター</a><a href="#s7">PER</a>
+  </div>
+</header>
+<div class="wrap">
+
+  <section id="s1">
+    <div class="sec-title"><b>1</b> サマリ</div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+        <div class="total"><span class="maskable">¥568,511,033</span><small>資産総額（Money Forward実値・2026-06-14）</small></div>
+        <button id="mask-btn" onclick="toggleMask()" title="金額の表示切替" aria-label="金額の表示切替">
+          <svg id="eye-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="2.6"/></svg>
+          <svg id="eye-closed" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+        </button>
+      </div>
+      <div class="cashline" style="align-items:flex-end;">
+        <div style="display:flex;flex-direction:column;gap:3px;"><span class="k">運用資産</span><span class="v maskable">¥524,345,245</span></div>
+        <div style="display:flex;flex-direction:column;gap:3px;"><span class="k">投資用キャッシュ</span><span class="v maskable">¥53,617,047</span></div>
+        <div style="display:flex;flex-direction:column;gap:3px;"><span class="k">キャッシュ比率</span><span class="v">10.2%</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="sum-h">今週のまとめ</div>
+      <div class="sum-row"><b class="k">地合い</b>⚠ 黄信号（最高値更新の高所警戒）。<b>米イラン和平成立（6/20発効・ホルムズ再開）でリスクオン</b>→月曜S&amp;P +1.65%で<b>最高値7,554</b>、原油急落。じっちゃま年末予想7,000を大きく超過。<b>本日〜明日のBOJ利上げ(1.0%)が最大の波乱要因</b>。</div>
+      <div class="sum-row"><b class="k">PER</b>保有の割安側＝<b>AMZN 5・MSFT 6%タイル</b>（利益正常化）。割高側＝SMH 90／商社1629 90／銀行1615 88／オルカン85／TOPIX80。ウォッチの割安は<b>VEA(先進国ex-US 30%)のみ</b>。</div>
+      <div class="sum-row"><b class="k">メンター</b>共通解＝<b>NVDA周辺（光通信/電力/サイバー/宇宙）へ重心＋高所警戒</b>。中国は3者で割れる（弱気⇔最強気⇔中間）。</div>
+      <div class="sum-row"><b class="k">ヘルス</b>半導体がPF最大の塊（過大分は整理済み）。ゴールド¥43.4M＝保険コア。米国株偏重＋円安160で日銀リスク。</div>
+      <div class="sum-row"><b class="k">アクション</b><b>本日のBOJ利上げ(1.0%)通過後の押し目に弾込め</b>。NLR買付可否確認／XLU割安待ち／AMZN $245で第1弾／SpaceX落ち着き待ち。和平で上げた直後＝高所なので追いかけ買いはしない。ウォッチは割安はVEAのみ＝静観、割安タイル接近で発議。</div>
+    </div>
+  </section>
+
+  <section id="s2">
+    <div class="sec-title"><b>2</b> トレンド</div>
+    <div class="card">
+      <div class="subh">今週（6/16 火 時点）</div>
+      <div class="trend-stance"><span class="stance">⚠ 黄信号（和平で最高値更新・高所警戒／BOJ当日）</span></div>
+      <table class="perf">
+        <thead><tr><th>地合い</th><th>月(6/15)</th><th>水準</th></tr></thead>
+        <tbody>
+          <tr><td>S&amp;P500<span class="vfen">（和平で最高値）</span></td><td class="up">+1.65%</td><td class="up">7,554</td></tr>
+          <tr><td>原油WTI<span class="vfen">（ホルムズ再開）</span></td><td class="down">急落</td><td class="down">リスクオフ解消</td></tr>
+        </tbody>
+      </table>
+      <div class="movers">
+        <div class="mv-col">
+          <div class="mv-h up">追い風 ▲</div>
+          <div class="mv"><span>米イラン和平成立</span><span class="up">6/20発効</span></div>
+          <div class="mv"><span>S&amp;P500</span><span class="up">最高値7,554</span></div>
+          <div class="mv"><span>原油急落</span><span class="up">インフレ緩和</span></div>
+        </div>
+        <div class="mv-col">
+          <div class="mv-h down">向かい風 ▼</div>
+          <div class="mv"><span>BOJ利上げ1.0%</span><span class="down">本日・円高</span></div>
+          <div class="mv"><span>高所（最高値）</span><span class="down">過熱警戒</span></div>
+          <div class="mv"><span>米CPI+4.2%</span><span class="down">高止まり</span></div>
+        </div>
+      </div>
+      <div class="subh" style="margin-top:14px;padding-top:13px;border-top:1px solid var(--border);">来週の注目イベント</div>
+      <div class="ev"><div class="d">6/16(火)–17(水)</div><div><b>日銀 金融政策決定会合（本日〜明日）</b> → <b>0.75%→1.0%利上げが94%織込</b>。結果は17日午後。ドル円159の今、円高転換・キャリー巻き戻しの起点。終端金利2%・年内あと2回観測</div></div>
+      <div class="ev"><div class="d">6/19(金)</div><div>日本 5月 全国CPI（朝8:30）／<b>米イラン和平 正式署名（ジュネーブ）</b></div></div>
+      <div class="ev"><div class="d">6/20(土)</div><div><b>和平 発効・ホルムズ海峡再開</b></div></div>
+      <div class="ev"><div class="d">継続</div><div>SpaceX上場後の値動き／OpenAI・Anthropic(9月)IPO前哨</div></div>
+      <div class="note">※日付は日本時間。米国時間のイベントは「米 ◯/◯」を併記。正確な発表時刻は要カレンダー照合。</div>
+    </div>
+  </section>
+
+  <section id="s3">
+    <div class="sec-title"><b>3</b> マクロ</div>
+    <div class="card">
+      <div class="mkt-wrap">
+      <table class="mkt">
+        <thead><tr><th>指標</th><th>1週</th><th>1月</th><th>3月</th><th>6月</th><th>1年</th></tr></thead>
+        <tbody>
+          <tr><td>日経平均<span class="lv">66,020</span></td><td class="up">+1%</td><td class="up">+2%</td><td class="up">+7%</td><td class="up">+20%</td><td class="up">+38%</td></tr>
+          <tr><td>TOPIX</td><td class="up">+0.8%</td><td class="up">+1%</td><td class="up">+5%</td><td class="up">+15%</td><td class="up">+28%</td></tr>
+          <tr><td>ダウ平均<span class="lv">51,202</span></td><td class="down">-0.5%</td><td class="up">+1%</td><td class="up">+4%</td><td class="up">+10%</td><td class="up">+16%</td></tr>
+          <tr><td>S&amp;P500<span class="lv">7,554 最高値</span></td><td class="up">+1.7%</td><td class="up">+3%</td><td class="up">+10%</td><td class="up">+19%</td><td class="up">+30%</td></tr>
+          <tr><td>Nasdaq100<span class="lv">≈26,200</span></td><td class="up">+1.2%</td><td class="up">+2%</td><td class="up">+10%</td><td class="up">+23%</td><td class="up">+37%</td></tr>
+          <tr><td>ハンセン<span class="lv">PER≈14.2</span></td><td class="up">+1%</td><td class="down">-1%</td><td class="down">-2%</td><td class="up">+4%</td><td class="up">+8%</td></tr>
+          <tr><td>米CPI<span class="lv">前年比 4.2%</span></td><td class="tk">—</td><td class="up">4.0%</td><td class="up">3.6%</td><td>3.1%</td><td>3.4%</td></tr>
+          <tr><td>米10年債<span class="lv">≈4.50%</span></td><td class="down">-5bp</td><td class="up">+2bp</td><td class="down">-8bp</td><td class="up">+8bp</td><td class="up">+15bp</td></tr>
+          <tr><td>ドル円<span class="lv">現在 159.0</span></td><td class="down">160.6</td><td class="up">157.8</td><td class="up">155.5</td><td class="up">152.6</td><td class="up">150.1</td></tr>
+          <tr><td>VIX<span class="lv">現在 ≈16</span></td><td class="down">17.7</td><td class="down">20.1</td><td class="down">18.6</td><td class="down">17.4</td><td class="down">19.9</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="note">※和平成立で月曜リスクオン→S&amp;P最高値・原油急落・ドル円159へ小幅円高。各期間は概算（指数は騰落%、債券bp、ドル円・VIX・米CPIは実数値。米CPIは前年比の各時点読み）。インサイトは§1 サマリに集約。</div>
+    </div>
+  </section>
+
+  <section id="s4">
+    <div class="sec-title"><b>4</b> ヘルスチェック</div>
+    <div class="card">
+      <div class="flag"><div><b>半導体テーマ集中</b><div class="tk">SMH ¥39.7M ＋ 日経半導体200A ¥32.2M ＝ PF最大の塊（先々週に過大分を整理済み）。自前PER%タイル SMH 90＝歴史的高値圏</div></div><span class="lab hi">最大サイズ</span></div>
+      <div class="flag"><div><b>ゴールド（保険）</b><div class="tk">GLDM ¥43.4M＝下げても安心して持てるコア。減らさない・追加もしない（PER非該当）</div></div><span class="lab mid">保険コア</span></div>
+      <div class="flag"><div><b>米国株偏重＋円安160</b><div class="tk">米国株・ETF ¥184M＝最大カテゴリ／円安は追い風だが日銀で円高転換リスク</div></div><span class="lab mid">35%</span></div>
+      <div class="flag"><div><b>投資用キャッシュ ¥53,617,047（10.2%）</b><div class="tk">現預金¥73,617,047から生活防衛¥20,000,000を除外。比率は投資用キャッシュ÷運用資産¥524,345,245。</div></div><span class="lab ok">適正</span></div>
+    </div>
+  </section>
+
+  <section id="s5">
+    <div class="sec-title"><b>5</b> トリガー＆アクション</div>
+    <div class="card">
+      <div class="act"><span class="dot"></span><div><b>NLR（原子力・ウランETF）</b>：マネックスUS銘柄リストに存在確認 → 銘柄ページで<b>買付可否を要確認</b>。買えれば AI電力の本丸として最優先で着手</div></div>
+      <div class="act"><span class="dot"></span><div><b>XLU 電力ETF</b>：取扱✅・PER21.9倍。AI電力をETFで取る本命。<b>割安が来たら買う</b>（黄信号でも割安なら可）</div></div>
+      <div class="act"><span class="dot"></span><div><b>SpaceX(SPCX)</b>：初日$160.95(+19%)で<b>初日見送り完了</b> → 落ち着き確認後に3段階（$15K→$20K→$15K）</div></div>
+      <div class="act"><span class="dot"></span><div><b>AMZN $245</b>：現$245.73で第1指値タッチ済・自前PER5%タイル＝割安。日銀・CPI通過後、$245近辺で第1弾$15K（第2指値$220控え）</div></div>
+      <div class="act"><span class="dot"></span><div><b>GOOGL買い戻し</b>：現$360＝売値と同値・ATH overhang残でエッジ無。<b>$330割れ or ATM増資完了(〜9月)</b>で適正サイズへ戻す</div></div>
+      <div class="act"><span class="dot"></span><div><b>ウォッチリスト</b>：割安は VEA(30%タイル)のみ・中国指数は全て割高ゾーン＝<b>静観</b>。各銘柄が自前バンド下位（割安タイル）に来たら発議（週次採点で監視）</div></div>
+    </div>
+  </section>
+
+  <section id="s6">
+    <div class="sec-title"><b>6</b> メンターの主な主張</div>
+    <div class="card">
+      <div class="ment"><div class="who">じっちゃま（広瀬隆雄）</div>
+        <div class="claim">年末ターゲット S&amp;P 7,000 / ドル円153 / 10年債4.50%（数値据置）。相場観は<b>「黄信号」</b>＝「設備投資ブームは必ず暴落で終わる」。CPI+4.2%＋イラン衝突でも株はV字＝「AIは本物でも株式投資として成功するかは別」。中国は一貫して弱気（投資不可能論）。</div></div>
+      <div class="ment"><div class="who">中島聡</div>
+        <div class="claim">AIの本命ボトルネックは「電力・配線不足」。次の主役は送電・冷却・SMR。<b>Google</b>はGemini(MAU6.5億)＋サブスク＋TPUで企業価値維持。最大の欠落「AI電力」を取りに行く。</div></div>
+      <div class="ment"><div class="who">ゆな先生</div>
+        <div class="claim">チョークポイント重視＝<b>光通信(LITE)・AI=核兵器(CRWD/PANW/PLTR)・SpaceX</b>。Gemini3.0ショックでNvidia全売却→<b>Alphabet最大ポジ</b>（垂直統合のGoogleが構造的勝者）。中国は素材/レアアースの安全保障視点。</div></div>
+      <div class="ment"><div class="who">藤沢数希</div>
+        <div class="claim">逆張りの<b>中国株強気が最大ポジ</b>（ハンセンPER10倍は地政学ディスカウントで割安）。多極化で<b>金☆ビットコイン☆タワマン</b>。AIは<b>「生成AIに堀なし・ハード(NVIDIA/TSMC/メモリ)が儲かる」</b>。「貧乏人が投資しても無意味＝人的資本が先」。</div></div>
+    </div>
+  </section>
+
+  <section id="s7">
+    <div class="sec-title"><b>7</b> PERアナリシス</div>
+    <div class="card">
+      <div class="subh">保有銘柄（自前ヒストリカルPER%タイル・割安→割高）</div>
+      <div class="mkt-wrap">
+      <table class="wl">
+        <thead><tr><th>銘柄</th><th>現PER</th><th>%タイル</th><th>判定</th></tr></thead>
+        <tbody>
+          <tr><td>AMZN<span class="nm">アマゾン</span></td><td>28.1</td><td class="down">5%</td><td>🟢 割安</td></tr>
+          <tr><td>MSFT<span class="nm">マイクロソフト</span></td><td>23.3</td><td class="down">6%</td><td>🟢 割安</td></tr>
+          <tr><td>PLTR<span class="nm">パランティア</span></td><td>217</td><td class="down">35%</td><td>🔴 絶対値高</td></tr>
+          <tr><td>XLE<span class="nm">米エネルギー</span></td><td>12.6</td><td>45%</td><td>🟡 中立</td></tr>
+          <tr><td>ILF<span class="nm">中南米40</span></td><td>12.8</td><td>50%</td><td>🟡 中立</td></tr>
+          <tr><td>8050.T<span class="nm">セイコーG</span></td><td>24.9</td><td>63%</td><td>🟡 中立</td></tr>
+          <tr><td>COPX<span class="nm">銅鉱業</span></td><td>22.4</td><td class="up">70%</td><td>🟡 中立</td></tr>
+          <tr><td>1477.T<span class="nm">ひふみマイクロ</span></td><td>18.4</td><td class="up">70%</td><td>🟡 中立</td></tr>
+          <tr><td>TSLA<span class="nm">テスラ</span></td><td>373</td><td class="up">70%</td><td>🔴 割高</td></tr>
+          <tr><td>GOOGL<span class="nm">アルファベット</span></td><td>27.2</td><td class="up">72%</td><td>🔴 割高</td></tr>
+          <tr><td>6301.T<span class="nm">コマツ</span></td><td>18.3</td><td class="up">75%</td><td>🔴 割高</td></tr>
+          <tr><td>AAPL<span class="nm">アップル</span></td><td>35.1</td><td class="up">78%</td><td>🔴 割高</td></tr>
+          <tr><td>9983.T<span class="nm">ファストリ</span></td><td>51.5</td><td class="up">78%</td><td>🔴 割高</td></tr>
+          <tr><td>1306.T<span class="nm">TOPIX</span></td><td>18.6</td><td class="up">80%</td><td>🔴 高値圏</td></tr>
+          <tr><td>SHLD<span class="nm">防衛テック</span></td><td>33.1</td><td class="up">85%</td><td>🔴 割高</td></tr>
+          <tr><td>ACWI<span class="nm">オルカン</span></td><td>23.8</td><td class="up">85%</td><td>🔴 やや割高</td></tr>
+          <tr><td>1615.T<span class="nm">東証銀行</span></td><td>17.8</td><td class="up">88%</td><td>🔴 サイクル天井</td></tr>
+          <tr><td>SMH<span class="nm">半導体</span></td><td>41.8</td><td class="up">90%</td><td>🔴 割高</td></tr>
+          <tr><td>1629.T<span class="nm">商社・卸売</span></td><td>14.1</td><td class="up">90%</td><td>🔴 割高</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="note">保有の採点不能：⚪保留＝200A.T(日経半導体ETF・履歴薄) / 2516.T(ひふみクロス) / REMX(レアアース鉱業・NM)。PER非該当＝GLDM(金) / SLV(銀) / JPST・SHV(債券)。アプリ「Historical Heatmap」のPER採点列に全銘柄表示。</div>
+
+      <div class="subh" style="margin-top:14px;"><svg class="subh-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="2.6"/></svg> ウォッチリスト採点（割安→割高）</div>
+      <div class="mkt-wrap">
+      <table class="wl">
+        <thead><tr><th>銘柄</th><th>現PER</th><th>%タイル</th><th>判定</th></tr></thead>
+        <tbody>
+          <tr><td>VEA<span class="nm">先進国ex-US</span></td><td>14.0</td><td class="down">30%</td><td>🟢 割安</td></tr>
+          <tr><td>VGK<span class="nm">欧州株</span></td><td>14.4</td><td>40%</td><td>🟡 中立</td></tr>
+          <tr><td>DTCR<span class="nm">データセンター</span></td><td>28.0</td><td>45%</td><td>⚪ 保留(低信頼)</td></tr>
+          <tr><td>XLV<span class="nm">ヘルスケア</span></td><td>24.8</td><td>50%</td><td>🟡 中立</td></tr>
+          <tr><td>3033.HK<span class="nm">ハンセンTECH</span></td><td>18.7</td><td>50%</td><td>⚪ 保留(履歴薄)</td></tr>
+          <tr><td>ASHR<span class="nm">CSI300</span></td><td>14.7</td><td>62%</td><td>🟡 中立</td></tr>
+          <tr><td>XLF<span class="nm">米金融</span></td><td>17.6</td><td class="up">70%</td><td>🔴 割高</td></tr>
+          <tr><td>2800.HK<span class="nm">ハンセン</span></td><td>13.5</td><td class="up">75%</td><td>🔴 割高</td></tr>
+          <tr><td>XLP<span class="nm">生活必需</span></td><td>25.8</td><td class="up">75%</td><td>🔴 割高</td></tr>
+          <tr><td>PANW<span class="nm">サイバー</span></td><td>68.5</td><td class="up">75%</td><td>🔴 割高</td></tr>
+          <tr><td>VT<span class="nm">全世界株</span></td><td>23.1</td><td class="up">80%</td><td>🔴 割高</td></tr>
+          <tr><td>LITE<span class="nm">光通信</span></td><td>55</td><td class="up">85%</td><td>🔴 割高</td></tr>
+          <tr><td>CRWD<span class="nm">サイバー(予想)</span></td><td>145</td><td class="up">90%</td><td>🔴 割高</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="note">ウォッチ採点不能：⚪履歴薄＝NLR(原子力・構成変更) / 513A.T(防衛Tech新規) / 285A.T(キオクシア・市況株) / UFO(宇宙)。⚪NM(赤字)＝CBRS(Cerebras) / RKLB(Rocket Lab) / RDW(Redwire)。債券=PER非該当＝TLT / VGIT。<br>保有∪ウォッチを単一ストア data/valuations.json で共有採点（重複計算なし・1シンボル1回）。※採点 asOf 2026-06-14（直近2営業日の上昇で%タイルは小幅上振れの可能性・次回スイープで更新）。</div>
+    </div>
+  </section>
+
+  <div class="foot">
+    ソース：保有=Money Forward実値(mf-holdings.json, asOf 2026-06-14) / 採点=valuations.json(asOf 2026-06-14) / じっちゃま(mh-*) / 中島聡(lib-*) / ゆな先生(yuna-investment) / 藤沢数希(fujisawa-finance) / ウォッチリスト(investment-watchlist＋KV) / 投資ToDo・哲学 / WebSearch(2026-06-15〜16: 米イラン和平・BOJ利上げ)<br>
+    生成：MulmoClaude（手動・2026-06-16 11:00 CST）。投資助言ではなく壁打ち材料です。
+  </div>
+</div>
+<script>
+function toggleMask(){
+  var masked=document.body.classList.toggle('masked');
+  document.querySelectorAll('.maskable').forEach(function(el){
+    if(!el.dataset.raw) el.dataset.raw=el.textContent;
+    el.textContent=masked ? el.dataset.raw.replace(/[0-9]/g,'*') : el.dataset.raw;
+  });
+  document.getElementById('eye-open').style.display=masked?'none':'';
+  document.getElementById('eye-closed').style.display=masked?'':'none';
+}
+</script>
+</body>
+</html>
