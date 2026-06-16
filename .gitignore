@@ -27,3 +27,6 @@ test-results/
 
 # Claude Code worktrees
 .claude/worktrees/
+
+# Claude Code output logs (contains API keys/tokens)
+output.txt

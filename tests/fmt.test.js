@@ -1,7 +1,30 @@
 // Tests for pure formatter functions in src/fmt.js
 
 import { describe, it, expect } from 'vitest';
-import { fmtJPYInt, fmtPctInt, fmtShares, escapeHTML, getColor as getColorFn } from '../src/fmt.js';
+import { fmtJPYInt, fmtPctInt, fmtShares, escapeHTML, getColor as getColorFn, fmtYen, maskAmount } from '../src/fmt.js';
+
+// ── fmtYen（1円単位・カンマ区切り・¥前置） ──────────────────────────
+describe('fmtYen', () => {
+  it('formats whole yen with thousands separators', () => {
+    expect(fmtYen(524345245)).toBe('¥524,345,245');
+    expect(fmtYen(0)).toBe('¥0');
+    expect(fmtYen(1000)).toBe('¥1,000');
+  });
+  it('rounds and handles null/undefined safely', () => {
+    expect(fmtYen(1234.6)).toBe('¥1,235');
+    expect(fmtYen(null)).toBe('¥0');
+    expect(fmtYen(undefined)).toBe('¥0');
+  });
+});
+
+// ── maskAmount（数字のみ * 置換） ──────────────────────────────────
+describe('maskAmount', () => {
+  it('masks digits but keeps separators and symbols', () => {
+    expect(maskAmount('¥524,345,245')).toBe('¥***,***,***');
+    expect(maskAmount('¥0')).toBe('¥*');
+    expect(maskAmount('10.6%')).toBe('**.*%');
+  });
+});
 
 // ── fmtJPYInt ──────────────────────────────────────────────────────
 describe('fmtJPYInt', () => {

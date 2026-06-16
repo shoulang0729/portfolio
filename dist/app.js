@@ -489,8 +489,8 @@ var state = {
   autoSec: 0,
   currentPos: null,
   currentRange: "3m",
-  statsVisible: false,
-  // 起動時はデフォルト非表示
+  statsMasked: localStorage.getItem("hm-stats-masked") !== "0",
+  // 金額マスク状態（既定=マスク・目アイコンで解除）。'0'=解除を永続化
   themeMode: localStorage.getItem("hm-theme") || "auto",
   listSortCol: "1d",
   // 銘柄リストのデフォルトソート列
@@ -530,7 +530,6 @@ var state = {
 };
 
 // src/auth-pin.js
-var AUTH_PIN_HASH = "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92";
 var _AUTH_PIN_HASH_4DIG = "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4";
 var AUTH_SESSION_KEY = "hm-auth-v1";
 var AUTH_LS_HASH_KEY = "hm-pin-hash";
@@ -546,7 +545,7 @@ var AUTH_LOCK_SEC = 300;
   }
 })();
 function _getActivePinHash() {
-  return localStorage.getItem(AUTH_LS_HASH_KEY) || AUTH_PIN_HASH;
+  return localStorage.getItem(AUTH_LS_HASH_KEY);
 }
 var _auth = {
   input: "",
@@ -599,48 +598,6 @@ function _saveLockout() {
     localStorage.removeItem(AUTH_LOCKOUT_KEY);
   }
 })();
-
-// src/auth-crypto.js
-var _AUTH_ENC_SALT = "hm-ai-keys-v1";
-var _AUTH_ENC_SS = "hm-enc-key-v1";
-async function _deriveEncKey(pin) {
-  const keyMat = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(pin),
-    "PBKDF2",
-    false,
-    ["deriveKey"]
-  );
-  _auth.encKey = await crypto.subtle.deriveKey(
-    {
-      name: "PBKDF2",
-      salt: new TextEncoder().encode(_AUTH_ENC_SALT),
-      iterations: 1e5,
-      hash: "SHA-256"
-    },
-    keyMat,
-    { name: "AES-GCM", length: 256 },
-    true,
-    ["encrypt", "decrypt"]
-  );
-  const exported = await crypto.subtle.exportKey("raw", _auth.encKey);
-  sessionStorage.setItem(
-    _AUTH_ENC_SS,
-    btoa(String.fromCharCode(...new Uint8Array(exported)))
-  );
-}
-async function _restoreEncKey() {
-  const stored = sessionStorage.getItem(_AUTH_ENC_SS);
-  if (!stored) return;
-  const bytes = Uint8Array.from(atob(stored), (c) => c.charCodeAt(0));
-  _auth.encKey = await crypto.subtle.importKey(
-    "raw",
-    bytes,
-    { name: "AES-GCM" },
-    false,
-    ["encrypt", "decrypt"]
-  );
-}
 
 // src/config.js
 var WORKER_URL = "https://portfolio-proxy.shoulang.workers.dev";
@@ -890,7 +847,6 @@ async function authenticatePasskey() {
       }
       const rawKey = crypto.getRandomValues(new Uint8Array(32));
       _auth.encKey = await crypto.subtle.importKey("raw", rawKey, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
-      sessionStorage.setItem(_AUTH_ENC_SS, btoa(String.fromCharCode(...rawKey)));
       _auth.fails = 0;
       const ov = document.getElementById("pin-overlay");
       if (ov) {
@@ -917,6 +873,38 @@ async function authenticatePasskey() {
       }
     }
   }
+}
+
+// src/auth-crypto.js
+var _AUTH_ENC_SALT = "hm-ai-keys-v1";
+var _AUTH_ENC_SS = "hm-enc-key-v1";
+async function _deriveEncKey(pin) {
+  const keyMat = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(pin),
+    "PBKDF2",
+    false,
+    ["deriveKey"]
+  );
+  _auth.encKey = await crypto.subtle.deriveKey(
+    {
+      name: "PBKDF2",
+      salt: new TextEncoder().encode(_AUTH_ENC_SALT),
+      iterations: 1e5,
+      hash: "SHA-256"
+    },
+    keyMat,
+    { name: "AES-GCM", length: 256 },
+    true,
+    ["encrypt", "decrypt"]
+  );
+}
+async function _restoreEncKey() {
+  try {
+    sessionStorage.removeItem(_AUTH_ENC_SS);
+  } catch {
+  }
+  return false;
 }
 
 // src/auth-ui.js
@@ -966,7 +954,17 @@ function _shake(type) {
   el.classList.add(type);
   if (type === "shake") setTimeout(() => el.classList.remove("shake"), 500);
 }
+var _authSubmitTimer = null;
+function _queueAuthSubmit() {
+  if (_authSubmitTimer) return;
+  _setKeypadEnabled(false);
+  _authSubmitTimer = setTimeout(() => {
+    _authSubmitTimer = null;
+    _submitPin();
+  }, 180);
+}
 function authKeyPress(n) {
+  if (_authSubmitTimer) return;
   if (_isLocked()) {
     _showError(_lockRemainMessage());
     return;
@@ -975,9 +973,10 @@ function authKeyPress(n) {
   _auth.input += n;
   _updateDots();
   _hideError();
-  if (_auth.input.length === AUTH_PIN_LEN) _submitPin();
+  if (_auth.input.length === AUTH_PIN_LEN) _queueAuthSubmit();
 }
 function authBackspace() {
+  if (_authSubmitTimer) return;
   if (_isLocked()) return;
   if (_auth.input.length > 0) {
     _auth.input = _auth.input.slice(0, -1);
@@ -987,8 +986,16 @@ function authBackspace() {
 }
 async function _submitPin() {
   _setKeypadEnabled(false);
+  const activeHash = _getActivePinHash();
+  if (!activeHash) {
+    _auth.input = "";
+    _updateDots();
+    _showError("\u521D\u56DEPIN\u8A2D\u5B9A\u3092\u5B8C\u4E86\u3057\u3066\u304F\u3060\u3055\u3044");
+    _setKeypadEnabled(true);
+    return;
+  }
   const hash = await _hashPin(_auth.input);
-  if (hash === _getActivePinHash()) {
+  if (hash === activeHash) {
     _auth.fails = 0;
     sessionStorage.setItem(AUTH_SESSION_KEY, "1");
     await _deriveEncKey(_auth.input);
@@ -1095,10 +1102,21 @@ var _pc = {
   step: 0,
   // 1=現在PIN確認 2=新PIN入力 3=新PIN確認
   input: "",
-  newPin: ""
+  newPin: "",
+  submitTimer: null,
+  mode: "change"
+  // change | setup | recover
 };
 var _pcStepLabel = ["", "\u73FE\u5728\u306EPIN", "\u65B0\u3057\u3044PIN\uFF086\u6841\uFF09", "\u65B0\u3057\u3044PIN\uFF08\u78BA\u8A8D\uFF09"];
 var _pcStepHint = ["", "\u8A8D\u8A3C\u306E\u305F\u3081\u73FE\u5728\u306EPIN\u3092\u5165\u529B", "\u65B0\u3057\u30446\u6841\u306EPIN\u3092\u5165\u529B", "\u540C\u3058PIN\u3092\u3082\u3046\u4E00\u5EA6\u5165\u529B"];
+var _pcRecoverStepLabel = ["", "\u73FE\u5728\u306EPIN", "\u65E2\u5B58PIN\uFF086\u6841\uFF09", "\u65E2\u5B58PIN\uFF08\u78BA\u8A8D\uFF09"];
+var _pcRecoverStepHint = ["", "\u8A8D\u8A3C\u306E\u305F\u3081\u73FE\u5728\u306EPIN\u3092\u5165\u529B", "\u30B5\u30FC\u30D0\u30FC\u306B\u4FDD\u5B58\u6E08\u307F\u306EPIN\u3092\u5165\u529B", "\u540C\u3058PIN\u3092\u3082\u3046\u4E00\u5EA6\u5165\u529B"];
+function _pcLabelForStep(step) {
+  return (_pc.mode === "recover" ? _pcRecoverStepLabel : _pcStepLabel)[step];
+}
+function _pcHintForStep(step) {
+  return (_pc.mode === "recover" ? _pcRecoverStepHint : _pcStepHint)[step];
+}
 function _pcUpdateDots() {
   document.querySelectorAll("#pc-dots .pin-dot").forEach((d, i) => d.classList.toggle("filled", i < _pc.input.length));
 }
@@ -1106,8 +1124,8 @@ function _pcSetTitle() {
   const lbl = document.getElementById("pc-step-label");
   const hint = document.getElementById("pc-step-hint");
   const prog = document.querySelectorAll("#pc-progress .pc-prog-dot");
-  if (lbl) lbl.textContent = _pcStepLabel[_pc.step];
-  if (hint) hint.textContent = _pcStepHint[_pc.step];
+  if (lbl) lbl.textContent = _pcLabelForStep(_pc.step);
+  if (hint) hint.textContent = _pcHintForStep(_pc.step);
   prog.forEach((d, i) => d.classList.toggle("active", i < _pc.step));
 }
 function _pcShowError(msg) {
@@ -1132,6 +1150,19 @@ function _pcShake() {
   el.classList.add("shake");
   setTimeout(() => el.classList.remove("shake"), 500);
 }
+function _pcSetKeypadEnabled(on) {
+  document.querySelectorAll("#pc-overlay .pin-key").forEach((b) => {
+    b.disabled = !on;
+  });
+}
+function _pcQueueSubmit() {
+  if (_pc.submitTimer) return;
+  _pcSetKeypadEnabled(false);
+  _pc.submitTimer = setTimeout(() => {
+    _pc.submitTimer = null;
+    _pcSubmit();
+  }, 180);
+}
 function _pcSuccess() {
   const el = document.getElementById("pc-dots");
   if (el) {
@@ -1140,21 +1171,56 @@ function _pcSuccess() {
   const lbl = document.getElementById("pc-step-label");
   const hint = document.getElementById("pc-step-hint");
   if (lbl) lbl.textContent = "\u2705 \u5909\u66F4\u5B8C\u4E86";
-  if (hint) hint.textContent = "\u65B0\u3057\u3044PIN\u304C\u4FDD\u5B58\u3055\u308C\u307E\u3057\u305F";
+  if (hint) hint.textContent = _pc.mode === "recover" ? "\u65E2\u5B58PIN\u3067\u30ED\u30B0\u30A4\u30F3\u3057\u307E\u3057\u305F" : "\u65B0\u3057\u3044PIN\u304C\u4FDD\u5B58\u3055\u308C\u307E\u3057\u305F";
   document.querySelectorAll("#pc-dots .pin-dot").forEach((d) => d.classList.add("filled"));
-  document.querySelectorAll("#pc-overlay .pin-key").forEach((b) => {
-    b.disabled = true;
-  });
+  _pcSetKeypadEnabled(false);
   setTimeout(() => closePinChange(), 1800);
 }
+async function _pinHashSyncErrorMessage(res) {
+  let detail = "";
+  try {
+    const body = await res.clone().json();
+    detail = body?.error || body?.message || "";
+  } catch {
+    detail = await res.text().catch(() => "");
+  }
+  if (detail) return detail;
+  if (res.status === 401) return "\u65E2\u5B58\u306EPIN\u3068\u4E00\u81F4\u3057\u307E\u305B\u3093";
+  return `\u30B5\u30FC\u30D0\u30FC\u540C\u671F\u306B\u5931\u6557\u3057\u307E\u3057\u305F\uFF08${res.status}\uFF09`;
+}
+async function _loadServerPinConfigured() {
+  const res = await fetch(`${WORKER_URL}/auth/pin-hash`, { method: "GET", cache: "no-store" });
+  if (!res.ok) throw new Error(`server ${res.status}`);
+  const body = await res.json();
+  return !!body.configured;
+}
+async function _initInitialPinMode() {
+  const title = document.getElementById("pc-title");
+  const hint = document.getElementById("pc-step-hint");
+  _pcSetKeypadEnabled(false);
+  if (hint) hint.textContent = "PIN\u72B6\u614B\u3092\u78BA\u8A8D\u4E2D...";
+  try {
+    const configured = await _loadServerPinConfigured();
+    _pc.mode = configured ? "recover" : "setup";
+    if (title) title.textContent = configured ? "PIN\u5FA9\u65E7" : "\u521D\u56DEPIN\u8A2D\u5B9A";
+    _pcSetTitle();
+    _pcHideError();
+    _pcSetKeypadEnabled(true);
+  } catch (e) {
+    console.warn("[auth] PIN status check failed:", e);
+    _pcShowError("PIN\u72B6\u614B\u306E\u78BA\u8A8D\u306B\u5931\u6557\u3057\u307E\u3057\u305F\u3002\u518D\u8AAD\u307F\u8FBC\u307F\u3057\u3066\u304F\u3060\u3055\u3044\u3002");
+  }
+}
 function pcKeyPress(n) {
+  if (_pc.submitTimer) return;
   if (_pc.input.length >= AUTH_PIN_LEN) return;
   _pc.input += n;
   _pcUpdateDots();
   _pcHideError();
-  if (_pc.input.length === AUTH_PIN_LEN) _pcSubmit();
+  if (_pc.input.length === AUTH_PIN_LEN) _pcQueueSubmit();
 }
 function pcBackspace() {
+  if (_pc.submitTimer) return;
   if (_pc.input.length > 0) {
     _pc.input = _pc.input.slice(0, -1);
     _pcUpdateDots();
@@ -1162,9 +1228,7 @@ function pcBackspace() {
   }
 }
 async function _pcSubmit() {
-  document.querySelectorAll("#pc-overlay .pin-key").forEach((b) => {
-    b.disabled = true;
-  });
+  _pcSetKeypadEnabled(false);
   const hash = await _hashPin(_pc.input);
   if (_pc.step === 1) {
     if (hash !== _getActivePinHash()) {
@@ -1172,9 +1236,7 @@ async function _pcSubmit() {
       _pcUpdateDots();
       _pcShake();
       _pcShowError("PIN\u304C\u9055\u3044\u307E\u3059");
-      document.querySelectorAll("#pc-overlay .pin-key").forEach((b) => {
-        b.disabled = false;
-      });
+      _pcSetKeypadEnabled(true);
       return;
     }
     _pc.step = 2;
@@ -1182,9 +1244,7 @@ async function _pcSubmit() {
     _pcUpdateDots();
     _pcSetTitle();
     _pcHideError();
-    document.querySelectorAll("#pc-overlay .pin-key").forEach((b) => {
-      b.disabled = false;
-    });
+    _pcSetKeypadEnabled(true);
   } else if (_pc.step === 2) {
     _pc.newPin = _pc.input;
     _pc.step = 3;
@@ -1192,18 +1252,14 @@ async function _pcSubmit() {
     _pcUpdateDots();
     _pcSetTitle();
     _pcHideError();
-    document.querySelectorAll("#pc-overlay .pin-key").forEach((b) => {
-      b.disabled = false;
-    });
+    _pcSetKeypadEnabled(true);
   } else if (_pc.step === 3) {
     if (_pc.input !== _pc.newPin) {
       _pc.input = "";
       _pcUpdateDots();
       _pcShake();
       _pcShowError("PIN\u304C\u4E00\u81F4\u3057\u307E\u305B\u3093");
-      document.querySelectorAll("#pc-overlay .pin-key").forEach((b) => {
-        b.disabled = false;
-      });
+      _pcSetKeypadEnabled(true);
       return;
     }
     const prevHash = _getActivePinHash();
@@ -1212,23 +1268,78 @@ async function _pcSubmit() {
       const res = await fetch(`${WORKER_URL}/auth/pin-hash`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ oldHash: prevHash, newHash })
+        body: JSON.stringify(prevHash ? { oldHash: prevHash, newHash } : { newHash })
       });
-      if (!res.ok) throw new Error(`server ${res.status}`);
+      if (!res.ok) throw new Error(await _pinHashSyncErrorMessage(res));
     } catch (e) {
       console.warn("[auth] PIN hash sync to Worker failed:", e);
-      _pcShowError("\u30B5\u30FC\u30D0\u30FC\u540C\u671F\u306B\u5931\u6557\u3057\u307E\u3057\u305F\u3002\u518D\u5EA6\u304A\u8A66\u3057\u304F\u3060\u3055\u3044\u3002");
-      document.querySelectorAll("#pc-overlay .pin-key").forEach((b) => {
-        b.disabled = false;
-      });
+      _pcShowError(e?.message || "\u30B5\u30FC\u30D0\u30FC\u540C\u671F\u306B\u5931\u6557\u3057\u307E\u3057\u305F\u3002\u518D\u5EA6\u304A\u8A66\u3057\u304F\u3060\u3055\u3044\u3002");
+      _pcSetKeypadEnabled(true);
       return;
     }
     localStorage.setItem(AUTH_LS_HASH_KEY, newHash);
+    sessionStorage.setItem(AUTH_SESSION_KEY, "1");
+    await _deriveEncKey(_pc.newPin);
+    _showChangePinButton();
     _pcSuccess();
   }
 }
+function openInitialPinSetup() {
+  if (document.getElementById("pc-overlay")) return;
+  if (_pc.submitTimer) {
+    clearTimeout(_pc.submitTimer);
+    _pc.submitTimer = null;
+  }
+  _pc.mode = "setup";
+  _pc.step = 2;
+  _pc.input = "";
+  _pc.newPin = "";
+  const ov = document.createElement("div");
+  ov.id = "pc-overlay";
+  ov.innerHTML = `
+    <div class="pin-card pc-card">
+      <div class="pc-header">
+        <span class="pc-title" id="pc-title">PIN\u78BA\u8A8D\u4E2D</span>
+      </div>
+
+      <div class="pc-progress" id="pc-progress">
+        <span class="pc-prog-dot active"></span>
+        <span class="pc-prog-line"></span>
+        <span class="pc-prog-dot active"></span>
+      </div>
+
+      <div class="pin-subtitle" id="pc-step-label">${_pcLabelForStep(2)}</div>
+      <div class="pc-hint" id="pc-step-hint">PIN\u72B6\u614B\u3092\u78BA\u8A8D\u4E2D...</div>
+
+      <div class="pin-dots" id="pc-dots">
+        <span class="pin-dot"></span><span class="pin-dot"></span>
+        <span class="pin-dot"></span><span class="pin-dot"></span>
+        <span class="pin-dot"></span><span class="pin-dot"></span>
+      </div>
+      <div class="pin-error" id="pc-error"></div>
+
+      ${_pinKeypadHTML("pcKeyPress", "pcBackspace")}
+    </div>`;
+  document.body.appendChild(ov);
+  const ac = new AbortController();
+  ov._kbAbort = ac;
+  document.addEventListener("keydown", (e) => {
+    if (e.key >= "0" && e.key <= "9") pcKeyPress(e.key);
+    else if (e.key === "Backspace") pcBackspace();
+  }, { signal: ac.signal });
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    ov.style.opacity = "1";
+    _trapFocus(ov);
+  }));
+  _initInitialPinMode();
+}
 function openPinChange() {
   if (document.getElementById("pc-overlay")) return;
+  if (_pc.submitTimer) {
+    clearTimeout(_pc.submitTimer);
+    _pc.submitTimer = null;
+  }
+  _pc.mode = "change";
   _pc.step = 1;
   _pc.input = "";
   _pc.newPin = "";
@@ -1276,6 +1387,10 @@ function openPinChange() {
 function closePinChange() {
   const ov = document.getElementById("pc-overlay");
   if (!ov) return;
+  if (_pc.submitTimer) {
+    clearTimeout(_pc.submitTimer);
+    _pc.submitTimer = null;
+  }
   if (ov._kbAbort) ov._kbAbort.abort();
   ov.style.opacity = "0";
   setTimeout(() => ov.remove(), 350);
@@ -1295,17 +1410,18 @@ function _showChangePinButton() {
 }
 (function initAuth() {
   if (isAuthenticated()) {
-    if (sessionStorage.getItem(_AUTH_ENC_SS)) {
-      _restoreEncKey().then(() => {
-        if (document.readyState === "loading") {
-          document.addEventListener("DOMContentLoaded", _showChangePinButton);
-        } else {
-          _showChangePinButton();
-        }
-      });
-      return;
-    }
+    _restoreEncKey();
     sessionStorage.removeItem(AUTH_SESSION_KEY);
+    return;
+  }
+  if (!_getActivePinHash()) {
+    document.body.style.overflow = "hidden";
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", openInitialPinSetup);
+    } else {
+      openInitialPinSetup();
+    }
+    return;
   }
   document.body.style.overflow = "hidden";
   const ov = _buildPinScreen();
@@ -1335,6 +1451,8 @@ var fmtJPY = (v) => {
   return `${m.toFixed(1)}\u4E07`;
 };
 var fmtJPYFull = (v) => `${(v >= 0 ? "+" : "") + Math.round(v).toLocaleString()}\u5186`;
+var fmtYen = (v) => `\xA5${Math.round(v || 0).toLocaleString()}`;
+var maskAmount = (s) => String(s).replace(/[0-9]/g, "*");
 var fmtPct = (v) => `${v.toFixed(1)}%`;
 var fmtPrice = (v, cur) => {
   if (v == null) return "\u2015";
@@ -1491,6 +1609,19 @@ function calcPortfolioPeriodPct(periodId) {
     totalWeight += p.value;
   });
   return totalWeight > 0 ? weightedSum / totalWeight : null;
+}
+function trackedSymbolCount(positionsList, watchlist) {
+  const norm = (s) => String(s || "").trim().toUpperCase();
+  const set = /* @__PURE__ */ new Set();
+  (positionsList || []).forEach((p) => {
+    const key = norm(p.ySymbol || p.symbol);
+    if (key) set.add(key);
+  });
+  (watchlist || []).forEach((w) => {
+    const key = norm(w.symbol);
+    if (key) set.add(key);
+  });
+  return set.size;
 }
 
 // src/data-helpers.js
@@ -2126,7 +2257,8 @@ async function refreshPrices() {
   if (n > 0) {
     const now = /* @__PURE__ */ new Date();
     const ts2 = now.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
-    const msg = failedCount > 0 ? `\u30E9\u30A4\u30D6\u4FA1\u683C: ${n}/${total}\u9298\u67C4 \u66F4\u65B0\uFF08${fmtErrDetail()}\uFF09 ${ts2}` : `${n}\u9298\u67C4 \u6700\u7D42\u66F4\u65B0: ${ts2}`;
+    const trackedCount = trackedSymbolCount(positions, state.watchlist);
+    const msg = failedCount > 0 ? `\u30E9\u30A4\u30D6\u4FA1\u683C: ${n}/${total}\u9298\u67C4 \u66F4\u65B0\uFF08${fmtErrDetail()}\uFF09 ${ts2}` : `${trackedCount}\u9298\u67C4 \u6700\u7D42\u66F4\u65B0: ${ts2}`;
     state.lastUpdateText = msg;
     setStatus(msg, failedCount > 0 ? "yellow" : "green");
     document.dispatchEvent(new CustomEvent("hm:prices-updated"));
@@ -2139,6 +2271,50 @@ async function refreshPrices() {
     setStatus(`\u30E9\u30A4\u30D6\u4FA1\u683C\u53D6\u5F97\u5931\u6557: 0/${total}\u9298\u67C4\uFF08${fmtErrDetail()}\uFF09`, "red");
     renderProviderHealth();
   }
+}
+
+// src/valuations.js
+var VAL_URL = "data/valuations.json";
+var _vals = {};
+var _loaded = false;
+var VAL_STATUS = {
+  cheap: { icon: "\u{1F7E2}", label: "\u5272\u5B89" },
+  fair: { icon: "\u{1F7E1}", label: "\u4E2D\u7ACB" },
+  rich: { icon: "\u{1F534}", label: "\u5272\u9AD8" },
+  hold: { icon: "\u26AA", label: "\u4FDD\u7559" }
+};
+async function loadValuations() {
+  try {
+    const r = await fetch(`${VAL_URL}?_=${Date.now()}`);
+    if (!r.ok) throw new Error(`val ${r.status}`);
+    const j = await r.json();
+    _vals = j && j.valuations || {};
+    _loaded = true;
+  } catch {
+    _vals = {};
+  }
+  return _vals;
+}
+function getValuation(ySymbol) {
+  return ySymbol ? _vals[ySymbol] || null : null;
+}
+function valuationPercentile(ySymbol) {
+  const v = getValuation(ySymbol);
+  return v && v.percentile != null && isFinite(v.percentile) ? v.percentile : null;
+}
+function valuationCellHTML(v, dataCol = "per") {
+  if (!v) return `<td class="wl-per-cell wl-per-empty" data-col="${dataCol}">\u2013</td>`;
+  const s = VAL_STATUS[v.status] || VAL_STATUS.hold;
+  const hasPct = v.percentile != null && isFinite(v.percentile);
+  const per = v.perCurrent != null && isFinite(v.perCurrent) ? Number(v.perCurrent).toFixed(1) : "\u2013";
+  const band = v.bandLow != null && v.bandHigh != null ? `${v.bandLow}\u2013${v.bandHigh}${v.bandMedian != null ? ` \u4E2D\u592E${v.bandMedian}` : ""}` : "\u2014";
+  const pctTxt = hasPct ? `${Math.round(v.percentile)}%ile` : "\u2014";
+  const title = `PER ${per} \uFF0F \u30D0\u30F3\u30C9 ${band} \uFF0F ${pctTxt} \uFF0F ${v.asOf || ""}${v.note ? ` \uFF0F ${v.note}` : ""}`;
+  const tile = hasPct ? `${Math.round(v.percentile)}<span class="wl-per-unit">%ile</span>` : '<span class="wl-per-unit">\u2014</span>';
+  return `<td class="wl-per-cell" data-col="${dataCol}" title="${escapeHTML(title)}">
+      <span class="wl-per-tile">${tile}</span>
+      <span class="wl-per-status">${s.icon}<span class="wl-per-label">${s.label}</span></span>
+    </td>`;
 }
 
 // src/stock-list.js
@@ -2195,6 +2371,9 @@ function renderStockList() {
     } else if (state.listSortCol === "price") {
       va = a.price;
       vb = b.price;
+    } else if (state.listSortCol === "per") {
+      va = valuationPercentile(a.ySymbol);
+      vb = valuationPercentile(b.ySymbol);
     } else if (state.listSortCol === "shares") {
       va = a.shares;
       vb = b.shares;
@@ -2233,6 +2412,7 @@ function renderStockList() {
       <td data-col="shares">${sharesStr}</td>
       <td data-col="avgCost">${costStr}</td>
       <td data-col="price">${priceStr}</td>
+      ${valuationCellHTML(getValuation(p.ySymbol))}
       ${periodCells}
       <td data-col="pnl" class="${pnlAmtCls}">${pnlStr}</td>
       <td data-col="pnlPct" class="sl-pct-cell" ${pnlPctBg ? `style="background:${pnlPctBg};color:${pnlPctFg}"` : ""}>${pnlPctStr}</td>
@@ -2246,6 +2426,7 @@ function renderStockList() {
       ${th("\u4FDD\u6709\u6570", "shares")}
       ${th("\u53D6\u5F97\u5358\u4FA1", "avgCost")}
       ${th("\u73FE\u5728\u5024", "price")}
+      ${th("PER\u63A1\u70B9", "per", "center")}
       ${makePeriodHeaderCells(state.listSortCol, state.listSortDir, "slSort")}
       ${th("\u542B\u307F\u640D\u76CA", "pnl")}
       ${th("\u640D\u76CA\u7387", "pnlPct", "center")}
@@ -2827,9 +3008,54 @@ async function _loadWatchlistFromWorker() {
       }
     } else if (state.watchlist.length > 0) {
       _syncWatchlistToWorker();
+    } else {
+      await _restoreWatchlistFromSnapshot();
     }
   } catch {
   }
+}
+async function _restoreWatchlistFromSnapshot() {
+  try {
+    const res = await fetch("data/portfolio-snapshot.json", { cache: "no-store" });
+    if (!res.ok) return false;
+    const snapshot = await res.json();
+    if (!Array.isArray(snapshot.watchlist) || snapshot.watchlist.length === 0) return false;
+    const restored = [];
+    const seen = /* @__PURE__ */ new Set();
+    for (const item of snapshot.watchlist) {
+      const symbol = String(item?.symbol || "").trim();
+      if (!symbol || seen.has(symbol)) continue;
+      const exchange = wlDetectMarket(symbol, "");
+      const normalized = {
+        symbol,
+        name: String(item?.name || symbol),
+        exchange,
+        type: _snapshotWatchlistType(symbol, item?.name),
+        cur: item?.cur || (exchange === "\u6771\u8A3C" ? "JPY" : exchange === "\u9999\u6E2F" ? "HKD" : "USD")
+      };
+      try {
+        restored.push(validateWatchlistItem(normalized));
+        seen.add(symbol);
+      } catch (e) {
+        console.warn("[watchlist] snapshot restore skipped:", symbol, e.message);
+      }
+    }
+    if (restored.length === 0) return false;
+    state.watchlist = restored;
+    localStorage.setItem("hm-watchlist", JSON.stringify(restored));
+    _syncWatchlistToWorker();
+    setStatus(`\u30A6\u30A9\u30C3\u30C1\u30EA\u30B9\u30C8\u3092\u30B9\u30CA\u30C3\u30D7\u30B7\u30E7\u30C3\u30C8\u304B\u3089\u5FA9\u5143\u3057\u307E\u3057\u305F\uFF08${restored.length}\u4EF6\uFF09`, "green");
+    return true;
+  } catch (e) {
+    console.warn("[watchlist] snapshot restore failed:", e);
+    return false;
+  }
+}
+function _snapshotWatchlistType(symbol, name) {
+  const text = `${symbol} ${name || ""}`.toUpperCase();
+  if (text.includes("ETF") || text.includes("\u4E0A\u5834\u6295\u4FE1") || text.includes("\u4E0A\u5834\u6295\u8CC7\u4FE1\u8A17")) return "ETF";
+  if (text.endsWith("=X")) return "CURRENCY";
+  return "\u682A";
 }
 function addToWatchlist(item) {
   try {
@@ -3020,24 +3246,9 @@ function wlGetPct(item, periodId) {
   if (periodId === "1d") return state.watchlistPrices[item.symbol]?.dayPct ?? null;
   return getHistoricalChangePct(item.symbol, periodId);
 }
-var WL_VAL_STATUS = {
-  cheap: { icon: "\u{1F7E2}", label: "\u5272\u5B89" },
-  fair: { icon: "\u{1F7E1}", label: "\u4E2D\u7ACB" },
-  rich: { icon: "\u{1F534}", label: "\u5272\u9AD8" },
-  hold: { icon: "\u26AA", label: "\u4FDD\u7559" }
-};
 function wlValuationCell(item) {
-  const v = item.valuation;
-  if (!v) return '<td class="wl-per-cell wl-per-empty" data-col="per">\u2013</td>';
-  const s = WL_VAL_STATUS[v.status] || WL_VAL_STATUS.hold;
-  const pct = Math.round(v.percentile);
-  const per = isFinite(v.perCurrent) ? v.perCurrent.toFixed(1) : "\u2013";
-  const band = `${v.bandLow}\u2013${v.bandHigh}${v.bandMedian != null ? ` \u4E2D\u592E${v.bandMedian}` : ""}`;
-  const title = `PER ${per} \uFF0F \u30D0\u30F3\u30C9 ${band} \uFF0F ${pct}%ile \uFF0F ${v.asOf}${v.note ? ` \uFF0F ${v.note}` : ""}`;
-  return `<td class="wl-per-cell" data-col="per" title="${escapeHTML(title)}">
-      <span class="wl-per-tile">${pct}<span class="wl-per-unit">%ile</span></span>
-      <span class="wl-per-status">${s.icon}<span class="wl-per-label">${s.label}</span></span>
-    </td>`;
+  const v = getValuation(item.symbol) || item.valuation || null;
+  return valuationCellHTML(v);
 }
 function renderWatchlist() {
   const panel = document.getElementById("panel-watchlist");
@@ -3063,8 +3274,8 @@ function renderWatchlist() {
       return dir * va.localeCompare(vb);
     }
     if (col === "per") {
-      va = a.valuation?.percentile ?? -Infinity;
-      vb = b.valuation?.percentile ?? -Infinity;
+      va = (getValuation(a.symbol) || a.valuation)?.percentile ?? -Infinity;
+      vb = (getValuation(b.symbol) || b.valuation)?.percentile ?? -Infinity;
     } else if (col === "price") {
       va = state.watchlistPrices[a.symbol]?.price ?? -Infinity;
       vb = state.watchlistPrices[b.symbol]?.price ?? -Infinity;
@@ -3128,13 +3339,13 @@ function _sum(pred) {
 function getMfTotals() {
   if (!_mf || !_mf.holdings) return null;
   const imported = _mf.totals && _mf.totals.imported || _sum(() => true);
+  const netWorth = _mf.totals && _mf.totals.mfNetWorth || imported;
   const cash = _sum((x) => x.cat === "\u73FE\u91D1\u30FB\u9810\u91D1");
   const crypto2 = _sum((x) => x.cat === "\u6697\u53F7\u8CC7\u7523");
   const securities = imported - cash - crypto2;
   const dryPowder = Math.max(0, cash - EMERGENCY_FUND);
-  const investable = imported - EMERGENCY_FUND;
-  const cashRatio = investable > 0 ? dryPowder / investable * 100 : 0;
-  return { imported, cash, crypto: crypto2, securities, dryPowder, cashRatio, emergencyFund: EMERGENCY_FUND, asOf: _mf.asOf };
+  const cashRatio = imported > 0 ? dryPowder / imported * 100 : 0;
+  return { netWorth, imported, cash, crypto: crypto2, securities, dryPowder, cashRatio, emergencyFund: EMERGENCY_FUND, asOf: _mf.asOf };
 }
 function getMfManualAssets() {
   if (!_mf || !_mf.holdings) return null;
@@ -3154,38 +3365,31 @@ function getMfSources() {
 
 // src/render.js
 function renderStats() {
-  const totalValue = positions.reduce((s, p) => s + (p.value || 0), 0);
-  const totalPnl = positions.reduce((s, p) => s + (p.pnl || 0), 0);
-  const totalCost = totalValue - totalPnl;
-  const pnlPct = totalCost > 0 ? totalPnl / totalCost * 100 : 0;
   const mf = getMfTotals();
-  const grandTotal = mf ? mf.imported : totalValue;
-  const mfTag = mf ? '<span style="display:block;font-size:9px;font-weight:400;color:var(--text2);opacity:0.6;text-transform:none;letter-spacing:0;">MF\u5B9F\u5024</span>' : "";
-  let html = `<div class="stat">
-    <span class="stat-label">\u904B\u7528\u8CC7\u7523\u7DCF\u984D${mfTag}</span>
-    <span class="stat-value stat-fg">${fmtJPYInt(grandTotal)}</span>
-  </div>`;
+  const liveTotal = positions.reduce((s, p) => s + (p.value || 0), 0);
+  const masked = state.statsMasked;
+  const amt = (v) => masked ? maskAmount(fmtYen(v)) : fmtYen(v);
+  const mfTag = '<span class="stat-src">MF\u5B9F\u5024</span>';
+  let html = "";
   if (mf) {
-    const dryMan = `\xA5${Math.round(mf.dryPowder / 1e4).toLocaleString()}\u4E07`;
-    html += `<div class="stat">
-      <span class="stat-label">\u6295\u8CC7\u7528\u30AD\u30E3\u30C3\u30B7\u30E5</span>
-      <span class="stat-value stat-fg">${dryMan}</span>
-      <span class="stat-sub stat-fg">${mf.cashRatio.toFixed(1)}%</span>
+    html += `<div class="stat-hero">
+      <span class="stat-hero-label">\u904B\u7528\u8CC7\u7523\u7DCF\u984D${mfTag}</span>
+      <span class="stat-hero-value stat-fg">${amt(mf.imported)}</span>
+    </div>
+    <div class="stat-subrow">
+      <div class="stat-sub-item">
+        <span class="stat-sub-label">\u8CC7\u7523\u7DCF\u984D</span>
+        <span class="stat-sub-value stat-fg">${amt(mf.netWorth)}</span>
+      </div>
+      <div class="stat-sub-item">
+        <span class="stat-sub-label">\u6295\u8CC7\u7528\u30AD\u30E3\u30C3\u30B7\u30E5</span>
+        <span class="stat-sub-value stat-fg">${amt(mf.dryPowder)}<span class="stat-sub-pct">${mf.cashRatio.toFixed(1)}%</span></span>
+      </div>
     </div>`;
-  }
-  html += `<div class="stat">
-    <span class="stat-label">\u542B\u307F\u640D\u76CA</span>
-    <span class="stat-value ${sgn(totalPnl)}">${fmtJPYInt(totalPnl)}</span>
-    <span class="stat-sub ${sgn(pnlPct)}">${fmtPctInt(pnlPct)}</span>
-  </div>`;
-  for (const p of PERIODS) {
-    const pct = calcPortfolioPeriodPct(p.id);
-    const amt = pct !== null ? totalValue * pct / 100 : null;
-    const cls = pct !== null ? sgn(pct) : "neu";
-    html += `<div class="stat">
-      <span class="stat-label">${p.statsLabel}</span>
-      <span class="stat-value ${cls}">${amt !== null ? fmtJPYInt(amt) : "\u2015"}</span>
-      <span class="stat-sub ${cls}">${pct !== null ? fmtPctInt(pct) : "\u2015"}</span>
+  } else {
+    html += `<div class="stat-hero">
+      <span class="stat-hero-label">\u904B\u7528\u8CC7\u7523\u7DCF\u984D</span>
+      <span class="stat-hero-value stat-fg">${amt(liveTotal)}</span>
     </div>`;
   }
   document.getElementById("stats").innerHTML = html;
@@ -4169,7 +4373,7 @@ function showSymbolTip(ev, title, symbols) {
 }
 
 // src/briefing.js
-var _loaded = false;
+var _loaded2 = false;
 var _frame = null;
 var _themeObserver = null;
 var _resizeFit = false;
@@ -4205,7 +4409,7 @@ function _ensureResizeFit() {
 function renderBriefing(force = false) {
   const panel = document.getElementById("panel-briefing");
   if (!panel) return;
-  if (_loaded && !force) return;
+  if (_loaded2 && !force) return;
   panel.innerHTML = '<div class="bf-msg">\u8AAD\u307F\u8FBC\u307F\u4E2D\u2026</div>';
   fetch(`data/briefings/index.json?_=${Date.now()}`).then((r) => {
     if (!r.ok) throw new Error(`index ${r.status}`);
@@ -4217,10 +4421,41 @@ function renderBriefing(force = false) {
       return;
     }
     const latest = issues[0];
-    const options = issues.map((p, i) => `<option value="${_esc(p.path)}"${i === 0 ? " selected" : ""}>${_esc(p.title)}</option>`).join("");
-    panel.innerHTML = `<div class="bf-wrap"><iframe class="bf-frame" src="${latest.path}?_=${Date.now()}" title="${_esc(latest.title)}" loading="lazy"></iframe><div class="bf-pastbar"><label class="bf-past-label" for="bf-past-sel">\u904E\u53BB\u53F7</label><select id="bf-past-sel" class="bf-past-select" aria-label="\u904E\u53BB\u306E Briefing \u3092\u9078\u629E">${options}</select></div></div>`;
-    _frame = /** @type {HTMLIFrameElement|null} */
-    panel.querySelector(".bf-frame");
+    const latestUrl = _briefingUrl(latest.path);
+    if (!latestUrl) throw new Error("invalid briefing path");
+    panel.textContent = "";
+    const wrap = document.createElement("div");
+    wrap.className = "bf-wrap";
+    const frame = document.createElement("iframe");
+    frame.className = "bf-frame";
+    frame.src = _withCacheBust(latestUrl);
+    frame.title = String(latest.title || "Briefing");
+    frame.loading = "lazy";
+    frame.sandbox = "allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox";
+    wrap.appendChild(frame);
+    const pastbar = document.createElement("div");
+    pastbar.className = "bf-pastbar";
+    const label = document.createElement("label");
+    label.className = "bf-past-label";
+    label.htmlFor = "bf-past-sel";
+    label.textContent = "\u904E\u53BB\u53F7";
+    const select = document.createElement("select");
+    select.id = "bf-past-sel";
+    select.className = "bf-past-select";
+    select.setAttribute("aria-label", "\u904E\u53BB\u306E Briefing \u3092\u9078\u629E");
+    for (const [i, issue] of issues.entries()) {
+      const url = _briefingUrl(issue.path);
+      if (!url) continue;
+      const opt = document.createElement("option");
+      opt.value = url.pathname.replace(/^\//, "");
+      opt.textContent = String(issue.title || issue.date || opt.value);
+      opt.selected = i === 0;
+      select.appendChild(opt);
+    }
+    pastbar.append(label, select);
+    wrap.appendChild(pastbar);
+    panel.appendChild(wrap);
+    _frame = frame;
     if (_frame) {
       _frame.addEventListener("load", () => {
         _syncFrameTheme();
@@ -4230,13 +4465,13 @@ function renderBriefing(force = false) {
       _ensureResizeFit();
       _fitFrame();
     }
-    const sel = panel.querySelector(".bf-past-select");
-    if (sel instanceof HTMLSelectElement) {
-      sel.addEventListener("change", () => {
-        if (_frame) _frame.src = `${sel.value}?_=${Date.now()}`;
+    if (select instanceof HTMLSelectElement) {
+      select.addEventListener("change", () => {
+        const url = _briefingUrl(select.value);
+        if (_frame && url) _frame.src = _withCacheBust(url);
       });
     }
-    _loaded = true;
+    _loaded2 = true;
   }).catch(() => {
     panel.innerHTML = '<div class="bf-msg bf-err">Briefing \u306E\u8AAD\u307F\u8FBC\u307F\u306B\u5931\u6557\u3057\u307E\u3057\u305F\u3002</div>';
   });
@@ -4244,11 +4479,21 @@ function renderBriefing(force = false) {
 function reloadBriefing() {
   renderBriefing(true);
 }
-function _esc(s) {
-  return String(s).replace(
-    /[&<>"']/g,
-    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] || c
-  );
+function _briefingUrl(path) {
+  try {
+    const url = new URL(String(path || ""), location.origin);
+    if (url.origin !== location.origin) return null;
+    if (!url.pathname.startsWith("/data/briefings/")) return null;
+    if (!url.pathname.endsWith(".html")) return null;
+    return url;
+  } catch {
+    return null;
+  }
+}
+function _withCacheBust(url) {
+  const next = new URL(url.href);
+  next.searchParams.set("_", String(Date.now()));
+  return next.pathname.replace(/^\//, "") + next.search;
 }
 
 // src/tabs.js
@@ -4398,6 +4643,10 @@ function setupEventListeners(applyThemeFn) {
     return;
   }
   setupSwipeNav();
+  loadValuations().then(() => {
+    renderStockList();
+    renderWatchlist();
+  });
   let _resizeRaf = null;
   window.addEventListener("resize", () => {
     if (_resizeRaf) cancelAnimationFrame(_resizeRaf);
@@ -4453,7 +4702,8 @@ async function loadPositionsFromKV() {
   }
 }
 async function savePositionsToKV(newPositions, pinHashOverride) {
-  const pinHash = pinHashOverride || localStorage.getItem("hm-pin-hash") || AUTH_PIN_HASH;
+  const pinHash = pinHashOverride || localStorage.getItem("hm-pin-hash");
+  if (!pinHash) throw new Error("PIN\u304C\u672A\u8A2D\u5B9A\u3067\u3059\u3002\u521D\u56DEPIN\u8A2D\u5B9A\u3092\u5B8C\u4E86\u3057\u3066\u304F\u3060\u3055\u3044\u3002");
   const res = await fetchWithTimeout(`${WORKER_URL}/positions`, 3e4, {
     method: "PUT",
     headers: { "Content-Type": "application/json", "X-Pin-Hash": pinHash },
@@ -4965,7 +5215,7 @@ function _renderImportStep(step, payload) {
       <div class="import-pin-auth">
         <div class="import-pin-msg">\u{1F512} PIN\u8A8D\u8A3C\u306B\u5931\u6557\u3057\u307E\u3057\u305F\u3002PIN\u3092\u5165\u529B\u3057\u3066\u304F\u3060\u3055\u3044\u3002</div>
         <input type="password" id="import-pin-input" class="import-pin-input"
-          inputmode="numeric" maxlength="4" placeholder="\u2022\u2022\u2022\u2022">
+          inputmode="numeric" maxlength="6" placeholder="\u2022\u2022\u2022\u2022\u2022\u2022">
         <div class="import-footer">
           <button class="import-cancel-btn" data-action="closeImportModal">\u30AD\u30E3\u30F3\u30BB\u30EB</button>
           <button class="import-confirm-btn" data-action="_retryWithPin">\u4FDD\u5B58\u3059\u308B \u2192</button>
@@ -5541,13 +5791,16 @@ async function refreshNow() {
 window.refreshNow = refreshNow;
 setPasskeySuccessCallback(_showChangePinButton);
 function toggleStats() {
-  state.statsVisible = !state.statsVisible;
-  const stats = document.getElementById("stats");
-  if (stats) stats.style.display = state.statsVisible ? "" : "none";
+  state.statsMasked = !state.statsMasked;
+  try {
+    localStorage.setItem("hm-stats-masked", state.statsMasked ? "1" : "0");
+  } catch {
+  }
+  renderStats();
   const eye = document.getElementById("stats-eye");
-  if (eye) eye.classList.toggle("hidden", !state.statsVisible);
+  if (eye) eye.classList.toggle("hidden", state.statsMasked);
   const eyeSlash = document.getElementById("eye-slash");
-  if (eyeSlash) eyeSlash.style.display = state.statsVisible ? "none" : "";
+  if (eyeSlash) eyeSlash.style.display = state.statsMasked ? "" : "none";
   requestAnimationFrame(updateActiveTableHeight);
 }
 function applyTheme() {
@@ -5862,12 +6115,10 @@ function init() {
   renderStats();
   loadMfHoldings().then(() => renderStats()).catch(() => {
   });
-  const _stats = document.getElementById("stats");
-  if (_stats) _stats.style.display = state.statsVisible ? "" : "none";
   const _eye = document.getElementById("stats-eye");
-  if (_eye) _eye.classList.toggle("hidden", !state.statsVisible);
+  if (_eye) _eye.classList.toggle("hidden", state.statsMasked);
   const _eyeSlash = document.getElementById("eye-slash");
-  if (_eyeSlash) _eyeSlash.style.display = state.statsVisible ? "none" : "";
+  if (_eyeSlash) _eyeSlash.style.display = state.statsMasked ? "" : "none";
   updateSlColStyle();
   const _slEye = document.getElementById("sl-eye-btn");
   if (_slEye) _slEye.classList.toggle("hidden", !state.slDetailVisible);
