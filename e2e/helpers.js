@@ -54,6 +54,13 @@ export async function stubApis(page) {
     route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
   );
 
+  // data/portfolio-snapshot.json → 空（KV が空のとき watchlist.js が
+  //   _restoreWatchlistFromSnapshot() で実スナップショット(19件)を復元してしまい
+  //   「初期状態でウォッチリストが空」テストが落ちるため、空オブジェクトを返す）
+  await page.route(/\/data\/portfolio-snapshot\.json(\?|$)/, route =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: '{"watchlist":[]}' })
+  );
+
   // Worker /yahoo proxy → Yahoo chart fixture（quoteSummary 含む全リクエスト）
   await page.route(`**/${WORKER}/yahoo**`, route =>
     route.fulfill({

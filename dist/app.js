@@ -1412,6 +1412,7 @@ function _showChangePinButton() {
   if (isAuthenticated()) {
     _restoreEncKey();
     sessionStorage.removeItem(AUTH_SESSION_KEY);
+    return;
   }
   if (!_getActivePinHash()) {
     document.body.style.overflow = "hidden";
