@@ -516,6 +516,7 @@ function _showChangePinButton() {
   if (isAuthenticated()) {
     _restoreEncKey();
     sessionStorage.removeItem(AUTH_SESSION_KEY);
+    return; // 認証済みセッション(enc鍵復元済み)は PIN/設定オーバーレイを出さずスキップ。#356 の refactor で消えた早期returnの復活（毎リロード再ログインのリグレッション修正＋E2Eバイパスの復旧）。
   }
 
   if (!_getActivePinHash()) {
