@@ -109,6 +109,7 @@ async function _submitPin() {
 
   if (hash === activeHash) {
     _auth.fails = 0;
+    _saveLockout();
     sessionStorage.setItem(AUTH_SESSION_KEY, '1');
     await _deriveEncKey(_auth.input);
     _shake('success');
@@ -132,6 +133,7 @@ async function _submitPin() {
     if (_auth.fails >= AUTH_MAX_FAIL) {
       _auth.lockedUntil = Date.now() + AUTH_LOCK_SEC * 1000;
       _saveLockout();
+
       _showError(`${AUTH_MAX_FAIL}回失敗。${_lockRemainMessage(AUTH_LOCK_SEC)}`);
       const _t = setInterval(() => {
         if (!_isLocked()) {
@@ -142,6 +144,7 @@ async function _submitPin() {
         } else { _showError(_lockRemainMessage()); }
       }, 1000);
     } else {
+      _saveLockout();
       _showError(`PINが違います（残り${AUTH_MAX_FAIL - _auth.fails}回）`);
       _setKeypadEnabled(true);
     }

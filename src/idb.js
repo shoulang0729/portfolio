@@ -51,6 +51,7 @@ export function idbGet(db, storeName, key) {
     const tx = db.transaction(storeName, 'readonly');
     const store = tx.objectStore(storeName);
     const req = store.get(key);
+    tx.onabort = () => reject(tx.error || new Error(`idbGet aborted: ${storeName}`));
     req.onerror = () => reject(req.error);
     req.onsuccess = () => resolve(req.result);
   });
@@ -70,6 +71,7 @@ export function idbPut(db, storeName, key, value) {
     const tx = db.transaction(storeName, 'readwrite');
     const store = tx.objectStore(storeName);
     const req = store.put(value, key);
+    tx.onabort = () => reject(tx.error || new Error(`idbPut aborted: ${storeName}`));
     req.onerror = () => reject(req.error);
     tx.oncomplete = () => resolve();
   });
@@ -87,6 +89,7 @@ export function idbClear(db, storeName) {
     const tx = db.transaction(storeName, 'readwrite');
     const store = tx.objectStore(storeName);
     const req = store.clear();
+    tx.onabort = () => reject(tx.error || new Error(`idbClear aborted: ${storeName}`));
     req.onerror = () => reject(req.error);
     tx.oncomplete = () => resolve();
   });
@@ -104,6 +107,7 @@ export function idbGetAll(db, storeName) {
     const tx = db.transaction(storeName, 'readonly');
     const store = tx.objectStore(storeName);
     const req = store.getAll();
+    tx.onabort = () => reject(tx.error || new Error(`idbGetAll aborted: ${storeName}`));
     req.onerror = () => reject(req.error);
     req.onsuccess = () => resolve(req.result);
   });
@@ -122,6 +126,7 @@ export function idbGetAllEntries(db, storeName) {
     const store = tx.objectStore(storeName);
     const req = store.openCursor();
     const entries = [];
+    tx.onabort = () => reject(tx.error || new Error(`idbGetAllEntries aborted: ${storeName}`));
     req.onerror = () => reject(req.error);
     req.onsuccess = () => {
       const cursor = req.result;
