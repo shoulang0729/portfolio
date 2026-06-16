@@ -9,10 +9,7 @@ test.beforeEach(async ({ page }) => {
   await expect(page.locator('#panel-watchlist')).toBeVisible();
 });
 
-// _restoreWatchlistFromSnapshot()（KV空時に snapshot から復元）と競合し、
-// stubApis の snapshot モックが間欠的に効かず復元19件が描画され flaky。
-// 一時 skip（解除条件 = Issue #366）。
-test.skip('初期状態でウォッチリストが空', async ({ page }) => {
+test('初期状態でウォッチリストが空', async ({ page }) => {
   await expect(page.locator('.wl-empty-msg')).toBeVisible();
 });
 
