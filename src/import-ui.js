@@ -170,7 +170,7 @@ function _renderImportStep(step, payload) {
       <div class="import-pin-auth">
         <div class="import-pin-msg">🔒 PIN認証に失敗しました。PINを入力してください。</div>
         <input type="password" id="import-pin-input" class="import-pin-input"
-          inputmode="numeric" maxlength="4" placeholder="••••">
+          inputmode="numeric" maxlength="6" placeholder="••••••">
         <div class="import-footer">
           <button class="import-cancel-btn" data-action="closeImportModal">キャンセル</button>
           <button class="import-confirm-btn" data-action="_retryWithPin">保存する →</button>

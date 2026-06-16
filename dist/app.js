@@ -5215,7 +5215,7 @@ function _renderImportStep(step, payload) {
       <div class="import-pin-auth">
         <div class="import-pin-msg">\u{1F512} PIN\u8A8D\u8A3C\u306B\u5931\u6557\u3057\u307E\u3057\u305F\u3002PIN\u3092\u5165\u529B\u3057\u3066\u304F\u3060\u3055\u3044\u3002</div>
         <input type="password" id="import-pin-input" class="import-pin-input"
-          inputmode="numeric" maxlength="4" placeholder="\u2022\u2022\u2022\u2022">
+          inputmode="numeric" maxlength="6" placeholder="\u2022\u2022\u2022\u2022\u2022\u2022">
         <div class="import-footer">
           <button class="import-cancel-btn" data-action="closeImportModal">\u30AD\u30E3\u30F3\u30BB\u30EB</button>
           <button class="import-confirm-btn" data-action="_retryWithPin">\u4FDD\u5B58\u3059\u308B \u2192</button>
