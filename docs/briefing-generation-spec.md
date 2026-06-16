@@ -8,13 +8,21 @@
 
 ## 0. 出力の基本
 
-- **自己完結のモバイル HTML 1ファイル**。`data/briefings/YYYY-MM-DD.html` に保存し、`data/briefings/index.json` に号を追記（過去号を消さず**蓄積**する）。
+- **自己完結のモバイル HTML 1ファイル**。**生成日時でバージョン管理**し `data/briefings/YYYY-MM-DD-HHMM.html`（CST/UTC+8）に保存。**既存号は上書きしない＝毎回新規ファイル**（ニュースも仕様も変わり続けるので全版を履歴として残す。週次でも上書きしない）。
+  - 版IDの取得: bash `TZ='Asia/Shanghai' date +%Y-%m-%d-%H%M`（ファイル名用）/ `TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M'`（index の date/title 用）。
+  - `index.json` の `issues` 配列の**先頭に新版を追加**（過去号は消さない）。`updated` も版IDに更新。
+    - `date` = `"YYYY-MM-DD HH:MM"`（**固定幅で辞書順＝新しい順にソート可能**。アプリ `src/briefing.js` は date 降順で最新を表示し、過去号プルダウンに全版を出す＝**コード変更不要**）。
+    - `title` = `"Briefing YYYY/MM/DD HH:MM"`（同日複数版を時刻で区別）。
+    - `path` = `"data/briefings/YYYY-MM-DD-HHMM.html"`。
 - アプリ配色トークンを内蔵（`--bg/--surface/--surface2/--border/--text/--text2/--accent/--up/--down/--stance`）。`:root` ＋ `@media (prefers-color-scheme:dark)` ＋ `html[data-theme="light"|"dark"]` の3系統を定義（リファレンス実装の `<style>` をそのまま使う）。
 - 色は**日本市場慣例**：`--up`＝赤（上昇/含み益）、`--down`＝緑（下落/含み損）。
-- `index.json` 例:
+- `index.json` 例（先頭が最新版・過去号を蓄積）:
   ```json
-  { "updated": "YYYY-MM-DD",
-    "issues": [ { "date": "YYYY-MM-DD", "title": "Briefing YYYY/MM/DD", "path": "data/briefings/YYYY-MM-DD.html" } ] }
+  { "updated": "2026-06-14 23:45",
+    "issues": [
+      { "date": "2026-06-14 23:45", "title": "Briefing 2026/06/14 23:45", "path": "data/briefings/2026-06-14-2345.html" },
+      { "date": "2026-06-14 09:30", "title": "Briefing 2026/06/14 09:30", "path": "data/briefings/2026-06-14-0930.html" }
+    ] }
   ```
 
 ## 1. ヘッダー（`<header>`）
@@ -87,4 +95,5 @@
 - [ ] ドル円・VIX が実数値表示（色＝騰落方向）
 - [ ] §7 にウォッチリスト枠あり・見出しに絵文字なし
 - [ ] セクション順/番号/nav が `サマリ / トレンド / マクロ / ヘルス / トリガー / メンター / PER` で一致、`<h1>` なし、`.date` は日付のみ
-- [ ] `index.json` に当号を追記（過去号を消さない）
+- [ ] ファイル名が `YYYY-MM-DD-HHMM.html`（生成日時・CST）＝**既存号を上書きしていない**
+- [ ] `index.json` の先頭に当版を追加（`date`/`title` が `YYYY-MM-DD HH:MM` 形式・過去号を消さない）
