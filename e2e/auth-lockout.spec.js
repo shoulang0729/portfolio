@@ -25,9 +25,12 @@ async function stubApisNoAuth(page) {
   await page.addInitScript(() => {
     sessionStorage.removeItem('hm-auth-v1');
     sessionStorage.removeItem('hm-enc-key-v1');
-    // ロックアウト状態もクリア
+    // ロックアウト状態はクリア
     localStorage.removeItem('hm-lockout');
-    localStorage.removeItem('hm-pin-hash');
+    // PINハッシュは「設定済み」にする（未設定だと #356+ の initAuth が初回設定オーバーレイ
+    // #pc-overlay を出してしまうため）。未認証＋ハッシュ有り → ログイン画面 #pin-overlay が表示され、
+    // 誤PIN入力でロックアウトが成立する。値は実PINと一致しない固定ハッシュ。
+    localStorage.setItem('hm-pin-hash', '0'.repeat(64));
   });
 
   await page.route(/cdn\.bootcdn\.net.*d3|cdnjs\.cloudflare\.com.*d3|cdn\.jsdelivr\.net.*d3/, async route => {
