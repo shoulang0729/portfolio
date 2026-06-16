@@ -10,6 +10,7 @@ export default defineConfig({
     baseURL: 'http://127.0.0.1:5500',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
+    serviceWorkers: 'block',
   },
   webServer: {
     command: 'npx http-server -p 5500 -c-1 --silent',
