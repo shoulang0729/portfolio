@@ -109,6 +109,7 @@ async function _submitPin() {
 
   if (hash === activeHash) {
     _auth.fails = 0;
+    _saveLockout();
     sessionStorage.setItem(AUTH_SESSION_KEY, '1');
     await _deriveEncKey(_auth.input);
     _shake('success');
@@ -128,6 +129,7 @@ async function _submitPin() {
     _auth.input = '';
     _updateDots();
     _shake('shake');
+    _saveLockout();
 
     if (_auth.fails >= AUTH_MAX_FAIL) {
       _auth.lockedUntil = Date.now() + AUTH_LOCK_SEC * 1000;

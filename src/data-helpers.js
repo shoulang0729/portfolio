@@ -6,11 +6,16 @@
  * タイムアウト付き fetch ラッパー
  * @param {string} url
  * @param {number} [ms=7000] タイムアウトミリ秒
+ * @param {RequestInit} [opts={}] fetch オプション（既存 signal がある場合は AbortSignal.any でマージ）
  */
 export function fetchWithTimeout(url, ms = 7000, opts = {}) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), ms);
-  return fetch(url, { signal: ctrl.signal, ...opts }).finally(() => clearTimeout(timer));
+  const { signal: existingSignal, ...restOpts } = opts;
+  const signal = existingSignal && typeof AbortSignal.any === 'function'
+    ? AbortSignal.any([ctrl.signal, existingSignal])
+    : ctrl.signal;
+  return fetch(url, { signal, ...restOpts }).finally(() => clearTimeout(timer));
 }
 
 /** 指定ミリ秒待機する */
@@ -23,7 +28,8 @@ export const sleep = ms => new Promise(r => setTimeout(r, ms));
  * @param {Object} [opts] - オプション
  * @param {number} [opts.batchSize=5] - バッチサイズ
  * @param {number} [opts.batchDelay=300] - バッチ間の待機ms
- * @param {number} [opts.retryDelay=2000] - リトライ前の待機ms
+ * @param {number} [opts.retryDelay=2000] - リトライ基本待機ms（指数バックオフの底）
+ * @param {number} [opts.maxRetries=1] - 最大リトライ回数
  * @param {Function} [opts.isFailed] - 失敗判定関数（default: r => !r）
  * @param {Function} [opts.onProgress] - 進捗コールバック (done, total) => void
  * @returns {Promise<Array>} 全結果
@@ -33,6 +39,7 @@ export async function batchWithRetry(items, fn, opts = {}) {
     batchSize = 5,
     batchDelay = 300,
     retryDelay = 2000,
+    maxRetries = 1,
     isFailed = r => !r,
     onProgress = null,
   } = opts;
@@ -51,13 +58,17 @@ export async function batchWithRetry(items, fn, opts = {}) {
     if (i + batchSize < items.length) await sleep(batchDelay);
   }
 
-  // 失敗したアイテムをリトライ
-  const failedIndices = results.map((r, idx) => isFailed(r, idx) ? idx : -1).filter(idx => idx >= 0);
-  if (failedIndices.length > 0) {
-    await sleep(retryDelay);
+  // 失敗したアイテムを指数バックオフ+ジッターでリトライ
+  let failedIndices = results.map((r, idx) => isFailed(r, idx) ? idx : -1).filter(idx => idx >= 0);
+  for (let attempt = 0; attempt < maxRetries && failedIndices.length > 0; attempt++) {
+    const jitter = Math.random() * retryDelay * 0.5;
+    await sleep(retryDelay * Math.pow(2, attempt) + jitter);
+    const nextFailed = [];
     await Promise.all(failedIndices.map(async idx => {
       results[idx] = await fn(items[idx]);
+      if (isFailed(results[idx], idx)) nextFailed.push(idx);
     }));
+    failedIndices = nextFailed;
   }
 
   return results;

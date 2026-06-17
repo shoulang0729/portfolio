@@ -13,6 +13,7 @@ const _AUTH_PIN_HASH_4DIG = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e1
 const AUTH_SESSION_KEY  = 'hm-auth-v1';
 const AUTH_LS_HASH_KEY  = 'hm-pin-hash';    // localStorage キー
 const AUTH_LOCKOUT_KEY  = 'hm-lockout';     // ロックアウト時刻 localStorage キー
+const AUTH_FAILS_KEY    = 'hm-lockout-fails'; // ロックアウト失敗回数 localStorage キー
 const AUTH_PIN_LEN      = 6;
 const AUTH_MAX_FAIL     = 5;
 const AUTH_LOCK_SEC     = 300;
@@ -69,11 +70,21 @@ function _saveLockout() {
   } else {
     localStorage.removeItem(AUTH_LOCKOUT_KEY);
   }
+  if (_auth.fails > 0) {
+    localStorage.setItem(AUTH_FAILS_KEY, String(_auth.fails));
+  } else {
+    localStorage.removeItem(AUTH_FAILS_KEY);
+  }
 }
 
 // 起動時に localStorage からロックアウト状態を復元
 (function _loadLockout() {
   const stored = localStorage.getItem(AUTH_LOCKOUT_KEY);
+  const storedFails = localStorage.getItem(AUTH_FAILS_KEY);
+  if (storedFails) {
+    const fails = parseInt(storedFails, 10);
+    if (!isNaN(fails) && fails > 0) _auth.fails = fails;
+  }
   if (!stored) return;
   const until = parseInt(stored, 10);
   if (isNaN(until)) { localStorage.removeItem(AUTH_LOCKOUT_KEY); return; }
@@ -81,7 +92,9 @@ function _saveLockout() {
     _auth.lockedUntil = until;
   } else {
     localStorage.removeItem(AUTH_LOCKOUT_KEY);
+    localStorage.removeItem(AUTH_FAILS_KEY);
+    _auth.fails = 0;
   }
 }());
 
-export { AUTH_SESSION_KEY, AUTH_LS_HASH_KEY, AUTH_LOCKOUT_KEY, AUTH_PIN_LEN, AUTH_MAX_FAIL, AUTH_LOCK_SEC, _auth, _getActivePinHash, _hashPin, _isLocked, _lockRemain, _formatLockRemain, _saveLockout, isAuthenticated };
+export { AUTH_SESSION_KEY, AUTH_LS_HASH_KEY, AUTH_LOCKOUT_KEY, AUTH_FAILS_KEY, AUTH_PIN_LEN, AUTH_MAX_FAIL, AUTH_LOCK_SEC, _auth, _getActivePinHash, _hashPin, _isLocked, _lockRemain, _formatLockRemain, _saveLockout, isAuthenticated };
