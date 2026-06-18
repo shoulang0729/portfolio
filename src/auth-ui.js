@@ -142,6 +142,7 @@ async function _submitPin() {
         } else { _showError(_lockRemainMessage()); }
       }, 1000);
     } else {
+      _saveLockout();
       _showError(`PINが違います（残り${AUTH_MAX_FAIL - _auth.fails}回）`);
       _setKeypadEnabled(true);
     }

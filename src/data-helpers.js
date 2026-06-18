@@ -10,7 +10,13 @@
 export function fetchWithTimeout(url, ms = 7000, opts = {}) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), ms);
-  return fetch(url, { signal: ctrl.signal, ...opts }).finally(() => clearTimeout(timer));
+  const { signal: existingSignal, ...restOpts } = opts;
+  const signal = existingSignal
+    ? (typeof AbortSignal.any === 'function'
+      ? AbortSignal.any([ctrl.signal, existingSignal])
+      : ctrl.signal)
+    : ctrl.signal;
+  return fetch(url, { signal, ...restOpts }).finally(() => clearTimeout(timer));
 }
 
 /** 指定ミリ秒待機する */
