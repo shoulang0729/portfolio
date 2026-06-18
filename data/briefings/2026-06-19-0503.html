@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Briefing — 2026/06/19 05:03</title>
+<style>
+  /* 色は日本株市場慣例＝プラス赤 / マイナス緑（アプリと統一） */
+  :root{
+    --bg:#f7f2ee;--surface:#ffffff;--surface2:#f0e9e3;--surface3:#e8ddd7;
+    --border:#d4c8c0;--text:#1c1714;--text2:#78695f;--accent:#cc785c;
+    --up:#FF3B30;--down:#34C759;--stance:#b9822e;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{--bg:#1c1917;--surface:#27211e;--surface2:#322b28;--surface3:#2e2722;
+      --border:#48403b;--text:#f5f0ec;--text2:#b3a79e;--accent:#e08a6a;
+      --up:#FF453A;--down:#30D158;--stance:#e6b566;}
+  }
+  html[data-theme="light"]{--bg:#f7f2ee;--surface:#ffffff;--surface2:#f0e9e3;--surface3:#e8ddd7;
+    --border:#d4c8c0;--text:#1c1714;--text2:#78695f;--accent:#cc785c;--up:#FF3B30;--down:#34C759;--stance:#b9822e;}
+  html[data-theme="dark"]{--bg:#1c1917;--surface:#27211e;--surface2:#322b28;--surface3:#2e2722;
+    --border:#48403b;--text:#f5f0ec;--text2:#b3a79e;--accent:#e08a6a;--up:#FF453A;--down:#30D158;--stance:#e6b566;}
+  *{box-sizing:border-box;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent;}
+  html{scroll-behavior:smooth;}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
+    line-height:1.6;font-size:16px;padding-bottom:30px;--hdr:74px;}
+  .wrap{max-width:560px;margin:0 auto;padding:0 14px;}
+  header{position:sticky;top:0;z-index:20;background:var(--bg);
+    padding:8px 14px 6px;border-bottom:1px solid var(--border);}
+  .head-row{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:24px;}
+  .date{color:var(--text2);font-size:12.5px;}
+  .ondemand{display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;
+    font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;
+    color:var(--text2);border:1px solid var(--border);border-radius:8px;padding:4px 10px;}
+  .ondemand:hover{color:var(--accent);border-color:var(--accent);}
+  .ondemand svg{width:13px;height:13px;}
+  .stance{font-weight:800;color:var(--stance);}
+  .trend-stance{font-size:14.5px;font-weight:800;margin-bottom:10px;padding-bottom:9px;border-bottom:1px solid var(--border);}
+  .nav{display:flex;gap:6px;overflow-x:auto;padding:8px 0 0;-webkit-overflow-scrolling:touch;}
+  .nav a{flex:0 0 auto;font-size:12px;color:var(--text2);text-decoration:none;
+    background:var(--surface2);border:1px solid var(--border);padding:5px 10px;border-radius:999px;}
+  section{margin-top:20px;scroll-margin-top:var(--hdr);}
+  .sec-title{position:sticky;top:var(--hdr);z-index:10;background:var(--bg);
+    font-size:12.5px;color:var(--text2);letter-spacing:.04em;margin:0 0 7px;padding:11px 2px 6px;font-weight:800;}
+  .sec-title b{color:var(--accent);}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:15px;
+    padding:15px;margin-bottom:9px;box-shadow:0 2px 10px rgba(0,0,0,0.04);}
+  .total{font-size:29px;font-weight:800;letter-spacing:-.01em;}
+  .total small{font-size:13px;color:var(--text2);font-weight:600;display:block;margin-top:2px;}
+  .cashline{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-top:12px;
+    padding-top:11px;border-top:1px solid var(--border);}
+  .cashline .k{font-size:12.5px;color:var(--text2);} .cashline .v{font-size:16px;font-weight:800;}
+  .up{color:var(--up);}.down{color:var(--down);}
+  .mkt-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  table.mkt{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed;}
+  table.mkt th{font-size:9.5px;color:var(--text2);font-weight:700;text-align:right;padding:4px 2px 6px 0;border-bottom:1px solid var(--border);white-space:nowrap;}
+  table.mkt th:first-child{text-align:left;width:29%;}
+  table.mkt td{padding:6px 2px;border-bottom:1px solid var(--border);text-align:right;font-weight:700;white-space:nowrap;font-size:11px;}
+  table.mkt td:first-child{text-align:left;font-weight:600;white-space:normal;}
+  table.mkt .lv{display:block;font-size:9px;color:var(--text2);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  table.mkt tr:last-child td{border-bottom:none;}
+  table.perf{width:100%;border-collapse:collapse;font-size:12px;margin-top:12px;table-layout:fixed;}
+  table.perf th{font-size:10px;color:var(--text2);font-weight:700;text-align:right;padding:4px 3px 5px 0;border-bottom:1px solid var(--border);}
+  table.perf th:first-child{text-align:left;width:34%;}
+  table.perf td{padding:7px 3px 0;text-align:right;font-weight:800;font-size:11.5px;white-space:normal;word-break:break-word;}
+  table.perf td:first-child{text-align:left;font-weight:700;color:var(--text2);font-size:12px;}
+  .vfen{display:block;font-size:9.5px;color:var(--text2);font-weight:600;line-height:1.2;}
+  .movers{display:block;margin-top:13px;padding-top:11px;border-top:1px solid var(--border);}
+  .mv-col{min-width:0;}
+  .mv-col + .mv-col{margin-top:11px;padding-top:11px;border-top:1px solid var(--border);}
+  .mv-h{font-size:11px;font-weight:800;margin-bottom:5px;letter-spacing:.02em;}
+  .mv-h.up{color:var(--up);} .mv-h.down{color:var(--down);}
+  .mv{display:flex;justify-content:space-between;gap:6px;font-size:12.5px;padding:3px 0;}
+  .mv span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .mv span:last-child{font-weight:800;flex:0 0 auto;}
+  .ment{border-left:3px solid var(--accent);padding:2px 0 2px 11px;margin:11px 0;}
+  .ment .who{font-weight:800;font-size:14px;color:var(--accent);}
+  .ment .claim{font-size:14.5px;}
+  .subh{font-size:11.5px;font-weight:800;color:var(--text2);margin:10px 0 2px;letter-spacing:.03em;}
+  .subh-ic{width:12px;height:12px;vertical-align:-1px;}
+  .flag{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);}
+  .flag:last-child{border-bottom:none;}
+  .flag > div:first-child{flex:1;min-width:0;}
+  .flag .tk{line-height:1.55;}
+  .lab{font-size:12px;padding:1px 8px;border-radius:6px;font-weight:800;align-self:flex-start;white-space:nowrap;}
+  .lab.hi{background:rgba(255,59,48,0.15);color:var(--up);}
+  .lab.ok{background:rgba(52,199,89,0.16);color:var(--down);}
+  .lab.mid{background:rgba(204,120,92,0.18);color:var(--accent);}
+  table.wl{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px;}
+  table.wl th{font-size:10px;color:var(--text2);font-weight:700;text-align:right;padding:4px 4px 6px 0;border-bottom:1px solid var(--border);white-space:nowrap;}
+  table.wl th:first-child{text-align:left;}
+  table.wl td{padding:7px 4px;border-bottom:1px solid var(--border);text-align:right;font-weight:700;white-space:nowrap;}
+  table.wl td:first-child{text-align:left;font-weight:700;}
+  table.wl tr:last-child td{border-bottom:none;}
+  table.wl .nm{display:block;font-size:10px;color:var(--text2);font-weight:600;}
+  .act{display:flex;gap:9px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);}
+  .act:last-child{border-bottom:none;} .dot{flex:0 0 auto;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-top:9px;}
+  .insight{background:var(--surface2);border-left:3px solid var(--accent);border-radius:0 10px 10px 0;
+    padding:10px 13px;margin-top:9px;font-size:14px;color:var(--text);}
+  .insight .ilabel{font-weight:800;color:var(--accent);}
+  .ev{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);}
+  .ev:last-child{border-bottom:none;}
+  .ev .d{font-weight:800;color:var(--text);font-size:13px;flex:0 0 84px;line-height:1.3;}
+  .ev .d .us{display:block;font-size:10.5px;color:var(--text2);font-weight:700;}
+  .tk{color:var(--text2);font-size:11.5px;}
+  .note{font-size:11px;color:var(--text2);margin-top:6px;}
+  .foot{color:var(--text2);font-size:11.5px;text-align:center;margin-top:20px;line-height:1.6;}
+  .sum-h{font-size:13px;font-weight:800;margin-bottom:8px;letter-spacing:.02em;}
+  .sum-row{font-size:13.5px;line-height:1.55;padding:7px 0;border-bottom:1px solid var(--border);}
+  .sum-row:last-child{border-bottom:none;}
+  .sum-row .k{display:inline-block;color:var(--accent);font-weight:800;font-size:11px;margin-right:7px;
+    background:var(--surface2);border-radius:5px;padding:1px 7px;}
+  .maskable{display:inline-block;user-select:none;}
+  #mask-btn{background:var(--surface2);border:1px solid var(--border);border-radius:999px;cursor:pointer;width:34px;height:30px;display:inline-flex;align-items:center;justify-content:center;color:var(--text2);flex:0 0 auto;line-height:0;margin-top:1px;}
+  #mask-btn:hover{color:var(--accent);background:var(--surface3);}
+</style>
+</head>
+<body>
+<header>
+  <div class="head-row">
+    <span class="date">2026/06/19（金）05:03</span>
+    <a class="ondemand" href="https://t.me/toshio_claude_bot?text=Briefing%E3%82%92%E4%BB%8A%E3%81%99%E3%81%90%E4%BD%9C%E3%81%A3%E3%81%A6" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.5z"/></svg>今すぐ生成</a>
+  </div>
+  <div class="nav">
+    <a href="#s1">サマリ</a><a href="#s2">トレンド</a><a href="#s3">マクロ</a>
+    <a href="#s4">ヘルス</a><a href="#s5">トリガー</a><a href="#s6">メンター</a><a href="#s7">PER</a>
+  </div>
+</header>
+<div class="wrap">
+
+  <section id="s1">
+    <div class="sec-title"><b>1</b> サマリ</div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+        <div class="total"><span class="maskable">¥***,***,***</span><small>資産総額（Money Forward実値・2026-06-18）</small></div>
+        <button id="mask-btn" onclick="toggleMask()" title="金額の表示切替" aria-label="金額の表示切替">
+          <svg id="eye-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="2.6"/></svg>
+          <svg id="eye-closed" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+        </button>
+      </div>
+      <div class="cashline" style="align-items:flex-end;">
+        <div style="display:flex;flex-direction:column;gap:3px;"><span class="k">運用資産</span><span class="v maskable">¥***,***,***</span></div>
+        <div style="display:flex;flex-direction:column;gap:3px;"><span class="k">投資用キャッシュ</span><span class="v maskable">¥***,***,***</span></div>
+        <div style="display:flex;flex-direction:column;gap:3px;"><span class="k">キャッシュ比率</span><span class="v">10.0%</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="sum-h">今週のまとめ</div>
+      <div class="sum-row"><b class="k">地合い</b>リスクオン継続。日経71,053（半年+45%）・VIX18.4急低下・米10年債4.49%（週-6bp）でじっちゃまS&amp;P7,250へ強気再転換。藤沢「AIバブル序盤＝朝鮮特需」。ただし日経半年+45%は短期過熱。スタンスは<b>強気（半導体偏重を能動的に削る回転フェーズ）</b>。</div>
+      <div class="sum-row"><b class="k">PER</b>MSFT(%タイル0・bandLow割れ)とAMZN(%24)が最も確度の高い割安シグナル。半導体SMH(%98・bandHigh到達)・日本株ETF群(%100)は最高値圏。</div>
+      <div class="sum-row"><b class="k">メンター</b>4者の共通解：AIハードのコアは持続。最過熱のSMHは利確しAI電力(NLR)・光通信・割安メガテック(MSFT/AMZN)へ分散。中国A株は既にラリーで割高＝追いかけ見送り。</div>
+      <div class="sum-row"><b class="k">ヘルス</b>半導体14.3%（SMH+200A.T）が最大の単一リスク。キャッシュ10%は打診買い余力として妥当。強気のうちに利を確定して回転。</div>
+      <div class="sum-row"><b class="k">アクション</b>SMH1.5〜2割利確を最優先（bandHigh45到達）→NLR$50K/MSFT$15K打診/AMZN$237.5指値へ回転。NLR/DTCRのマネックス買付制限確認が即日ブロッカー。</div>
+    </div>
+  </section>
+
+  <section id="s2">
+    <div class="sec-title"><b>2</b> トレンド</div>
+    <div class="card">
+      <div class="subh">今週（6/19 金 時点）</div>
+      <div class="trend-stance"><span class="stance">強気（ただし半導体偏重を能動的に削る局面）— マクロは明確なリスクオン。VIX急低下・金利低下方向・じっちゃま強気再転換。日経半年+45%の短期過熱を認識しつつ、強気の今こそ利が乗った高%タイル銘柄をトリムしてAI電力・割安メガテックへ回す「強気・回転」が主旋律。</span></div>
+      <table class="perf">
+        <thead><tr><th>地合い</th><th>直近</th><th>水準</th></tr></thead>
+        <tbody>
+          <tr><td>日経平均<span class="vfen">（半年+45%・最高値圏）</span></td><td class="up">71,053</td><td>過熱圏</td></tr>
+          <tr><td>S&amp;P500<span class="vfen">（週+2.11%・じっちゃま7,250目標）</span></td><td class="up">7,420</td><td>強気継続</td></tr>
+          <tr><td>ドル円<span class="vfen">（160.2・日銀6/27注視）</span></td><td class="up">160.24</td><td>円高リスク注意</td></tr>
+          <tr><td>VIX<span class="vfen">（週-17%・恐怖後退）</span></td><td class="down">18.44</td><td>低下方向</td></tr>
+          <tr><td>米CPI（5月）<span class="vfen">（YoY+4.27%・粘着）</span></td><td class="tk">4.27%</td><td>6/26 PCEで確認</td></tr>
+        </tbody>
+      </table>
+      <div class="movers">
+        <div class="mv-col">
+          <div class="mv-h up">追い風</div>
+          <div class="mv"><span>金利低下方向（10年-6bp/月-12bp）＋VIX急低下</span><span class="up">リスク選好回復</span></div>
+          <div class="mv"><span>じっちゃまS&amp;P7,250強気再転換・9月Anthropic IPO</span><span class="up">下値を支える需給</span></div>
+          <div class="mv"><span>藤沢「AIバブル序盤・朝鮮特需」・AIハード優位継続</span><span class="up">半導体/AI電力に追い風</span></div>
+          <div class="mv"><span>ドル円160高止まりで米国株円換算嵩上げ</span><span class="up">含み益膨張</span></div>
+        </div>
+        <div class="mv-col">
+          <div class="mv-h down">向かい風</div>
+          <div class="mv"><span>日経半年+45%・日本株ETF群が%タイル100</span><span class="down">短期過熱・反動リスク</span></div>
+          <div class="mv"><span>米CPI4.27%粘着・6/24 FOMC（ウォーシュ初）</span><span class="down">利上げ再燃懸念</span></div>
+          <div class="mv"><span>6/26-27日銀会合・追加利上げ観測</span><span class="down">円高→日本株逆風</span></div>
+          <div class="mv"><span>半導体14.3%集中がAI相場調整時の最大リスク</span><span class="down">SMH bandHigh到達</span></div>
+        </div>
+      </div>
+      <div class="subh" style="margin-top:14px;padding-top:13px;border-top:1px solid var(--border);">来週の注目イベント</div>
+      <div class="ev"><div class="d">6/22〜27<span class="us">終日</span></div><div>3月期日本企業株主総会集中。日本株IR注意。</div></div>
+      <div class="ev"><div class="d">6/24<span class="us">03:00 JST</span></div><div>FOMC政策金利発表（予想据え置き3.50-3.75%）。ウォーシュFRB議長・初回声明文量・SEP注目。利下げ・利上げとも可能性低だが声明サプライズ余地あり。</div></div>
+      <div class="ev"><div class="d">6/25<span class="us">21:30 JST</span></div><div>米GDP Q1確定値。景気後退リスクの再確認。</div></div>
+      <div class="ev"><div class="d">6/26<span class="us">21:30 JST</span></div><div>米PCEデフレーター（5月）。CPI4.27%との整合確認・FRBの最重要インフレ指標。</div></div>
+      <div class="ev"><div class="d">6/27<span class="us">昼頃 JST</span></div><div>日銀金融政策決定会合（6/26-27）結果。現状維持見込みも追加利上げ時期注視。円高リスクに注意。</div></div>
+      <div class="ev"><div class="d">9月</div><div>Anthropic IPOロードショー。$50K候補・評価額$1兆。じっちゃま「9月まで堅調」シナリオの柱。</div></div>
+      <div class="note">※日付は日本時間基準。米国時間イベントは現地時間と日本時間を併記。正確な発表時刻はカレンダー照合要。</div>
+    </div>
+  </section>
+
+  <section id="s3">
+    <div class="sec-title"><b>3</b> マクロ</div>
+    <div class="card">
+      <div class="mkt-wrap">
+      <table class="mkt">
+        <thead><tr><th>指標</th><th>1週</th><th>1月</th><th>3月</th><th>6月</th></tr></thead>
+        <tbody>
+          <tr><td>日経平均<span class="lv">71,053（2026-06-18）</span></td><td class="up">+10.65%</td><td class="up">+17.35%</td><td class="up">+33.13%</td><td class="up">+45.0%</td></tr>
+          <tr><td>TOPIX<span class="lv">4,068（2026-06-18・蓄積中）</span></td><td class="tk">—</td><td class="tk">—</td><td class="tk">—</td><td class="tk">—</td></tr>
+          <tr><td>ダウ<span class="lv">51,493（2026-06-17）</span></td><td class="up">+3.15%</td><td class="up">+3.64%</td><td class="up">+11.40%</td><td class="up">+7.53%</td></tr>
+          <tr><td>S&amp;P500<span class="lv">7,420（2026-06-17）</span></td><td class="up">+2.11%</td><td class="up">+0.23%</td><td class="up">+12.01%</td><td class="up">+10.39%</td></tr>
+          <tr><td>Nasdaq総合<span class="lv">26,022（2026-06-17）</span></td><td class="up">+3.39%</td><td class="down">-0.26%</td><td class="up">+17.47%</td><td class="up">+14.67%</td></tr>
+          <tr><td>ハンセン<span class="lv">24,718（2026-06-18・蓄積中）</span></td><td class="tk">—</td><td class="tk">—</td><td class="tk">—</td><td class="tk">—</td></tr>
+          <tr><td>米CPI（5月）<span class="lv">YoY+4.27%・MoM+0.47%（FRED）</span></td><td class="tk">—</td><td class="tk">—</td><td class="tk">—</td><td class="tk">—</td></tr>
+          <tr><td>米10年債<span class="lv">4.49%（2026-06-17）</span></td><td class="down">-6bp</td><td class="down">-12bp</td><td class="up">+23bp</td><td class="up">+33bp</td></tr>
+          <tr><td>ドル円<span class="lv">現在 160.24</span></td><td class="up">160.24</td><td class="up">158.1</td><td class="up">159.5</td><td class="up">155.8</td></tr>
+          <tr><td>VIX<span class="lv">現在 18.44</span></td><td class="down">18.44</td><td class="up">17.82</td><td class="up">25.1</td><td class="up">17.6</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="note">※ドル円・VIXは実数値（色は現在値への騰落方向＝上昇赤・下落緑）、指数は騰落%、米10年債はbp変化。ハンセン・TOPIXの変化率は蓄積中（日次蓄積後に自動反映）。各値はFRED + WebSearch（2026-06-18概算）。6/24 FOMC・6/26 PCEが次の最大の関門。</div>
+    </div>
+  </section>
+
+  <section id="s4">
+    <div class="sec-title"><b>4</b> ヘルスチェック</div>
+    <div class="card">
+      <div class="flag"><div><b>半導体テーマ集中（最優先：利確発議）</b><div class="tk">SMH ¥40.0M（%タイル98・bandHigh45に到達）＋200A.T ¥36.7M＝計¥76.8M・14.3%。AI相場の調整局面で最も感応度が高い単一リスク。<b>強気の今こそSMHを1.5〜2割トリムし半導体合計を12〜13%へ縮小、余剰をNLR/DTCRへ回す</b>。</div></div><span class="lab hi">発議・高優先</span></div>
+      <div class="flag"><div><b>ファストリ(9983.T) 保有・%タイル97（利確発議）</b><div class="tk">PER54.01・自己バンド(22-55)上限圏。恒常的高PEのグロースだがレンジ上端での部分利確は理に適う。コアは残し1/4トリム。急がないが能動発議として記録。</div></div><span class="lab mid">発議・中優先</span></div>
+      <div class="flag"><div><b>日本株ETF群（1306/1615/1629/8050）%タイル100</b><div class="tk">全て最高値圏。銀行(1615)・商社(1629)は低PER業種の金利/ROE再評価という構造触媒あり＝即売りではない。日本株全体が反落したら優先的に薄める順序として記録（触媒の弱いものから）。</div></div><span class="lab mid">低優先・監視</span></div>
+      <div class="flag"><div><b>米国株34.6%（¥186.2M）</b><div class="tk">最大カテゴリ。ドル円160高止まりで円換算が嵩上げ中。6/27日銀会合での追加利上げ時は円高→逆風。MSFT/AMZN割安側へ回転することでテーマ最適化も兼ねる。</div></div><span class="lab mid">34.6%</span></div>
+      <div class="flag"><div><b>投資用キャッシュ比率10%（目標：SMHトリムで回転）</b><div class="tk">SMHトリム原資→NLR$50K/MSFT$15K打診/AMZN$237.5指値へ直接回転させる設計。現金積み増し先行より回転優先の局面。</div></div><span class="lab ok">10.0%</span></div>
+      <div class="insight"><span class="ilabel">売り発議（高優先）：</span>SMH 1.5〜2割トリム（bandHigh45到達・%タイル98・半導体14.3%の主因）を最優先発議。200A.T はSMHトリム後も半導体13%超なら二段目として5〜10%トリム。9983.T は1/4部分利確（コア維持・急がない）。日本株ETF群は触媒が剥落したら機械的に薄める候補として台帳記録。</div>
+    </div>
+  </section>
+
+  <section id="s5">
+    <div class="sec-title"><b>5</b> トリガー＆アクション</div>
+    <div class="card">
+      <div class="act"><span class="dot"></span><div><b>[最優先・確認] NLR/DTCR マネックス買付制限ラベル確認</b>：取扱は確定済み。規制ラベルのみ不確実。買い実行のブロッカー解消が先決。</div></div>
+      <div class="act"><span class="dot"></span><div><b>[売り発議・最優先] SMH 1.5〜2割トリム利確</b>：PER44.5・%タイル98・bandHigh45到達。半導体合計14.3%→12〜13%へ縮小。AI需要は強いが強気の今こそ利を確定。余剰はNLR/DTCR弾に。</div></div>
+      <div class="act"><span class="dot"></span><div><b>[買い最優先] NLR（ウラン・原子力ETF）$50K</b>：AI電力の本丸。SMHトリム原資の主たる振替先。マネックス買付制限確認後即実行。</div></div>
+      <div class="act"><span class="dot"></span><div><b>[買い・高優先] MSFT $15K打診→確認後$50K積み増し</b>：PER22.61・%タイル0・bandLow23割れ＝過去13年最安値級。財務最良のAI本命。最も確度の高い割安シグナル。</div></div>
+      <div class="act"><span class="dot"></span><div><b>[買い指値・高優先] AMZN $237.5で$15K（第1弾）</b>：%タイル24・bandLow24近辺。クラウド/広告の構造成長維持。第2指値$220は温存。</div></div>
+      <div class="act"><span class="dot"></span><div><b>[買い・優先] DTCR（データセンターREIT）$50K打診</b>：NLR実行後に続けて打診。機械cheap(%タイル29)だがREIT偏重でP/E過大化・confidence低。バンドでなくデータセンターテーマとして買う位置づけ。</div></div>
+      <div class="act"><span class="dot"></span><div><b>[打診・優先] RKLB / RDW 各$12.5K</b>：SpaceX IPO成功（$161）でじっちゃまの強気IPO相場に沿う小型打診。</div></div>
+      <div class="act"><span class="dot"></span><div><b>[売り発議・中優先] 9983.T（ファストリ）1/4トリム利確</b>：PER54.01・%タイル97・自己バンド上限圏。コアは残す。急がない。</div></div>
+      <div class="act"><span class="dot"></span><div><b>[売り発議・二段目] 200A.T 5〜10%トリム</b>：SMHトリム後に半導体13%超なら実行。%タイル96・日経半導体ETF・2024設定履歴薄。</div></div>
+      <div class="act"><span class="dot"></span><div><b>[条件付き監視] VGK / CBRS / 6016.T</b>：VGK=原油$85以下+ホルムズ正常化で買い戻し（現VGK%タイル96・追いかけない）／CBRS=$220以下打診（現$258）／6016.T=¥8,500以下指値（現¥9,130）。いずれも条件未達・待機継続。</div></div>
+    </div>
+  </section>
+
+  <section id="s6">
+    <div class="sec-title"><b>6</b> メンター</div>
+    <div class="card">
+      <div class="ment"><div class="who">じっちゃま（広瀬隆雄）</div>
+        <div class="claim">6/18号：相場観を<b>強気（再転換）</b>へ。S&amp;P500年末目標を7,250へ上方修正。根拠①SpaceX IPO成功（6/12・$135→$161）②ウォーシュ初FOMC（声明文半減・SEPキッチンシンク＝オプショナリティ獲得）③1999年Nasdaq垂直局面に類似。「9月Anthropic IPOまで大型IPOがぶら下がる間は下押ししにくい」。</div></div>
+      <div class="ment"><div class="who">中島聡</div>
+        <div class="claim">日本は「八百万のAI（Yaoyorozu Architecture）」でエッジAI標準化を国家戦略の中核に。CUDAのNvidiaモートは学習では盤石だが<b>推論ASICが台頭</b>（Etched Sohu＝H100×20個分性能）。中国はHBM未到達が唯一のボトルネック、Huawei Ascend/Cambricon実用化は着実。</div></div>
+      <div class="ment"><div class="who">ゆな先生</div>
+        <div class="claim">最大ポジはAlphabet（約1.3億円・Gemini＋自社TPU＋Anthropic推論の三重取り）。光通信チョークポイント＝Lumentum/Coherent、化合物半導体基板AXT、後工程Amkor。日本素材＝日東紡（低誘電NEガラス8〜9割シェア）・キオクシア。投資哲学は「チョークポイント×構造優位」。</div></div>
+      <div class="ment"><div class="who">藤沢数希</div>
+        <div class="claim">AIバブルは序盤＝東アジア「朝鮮特需」開始（最新735号）。中国株ロング最大維持（PER10倍・融和転換で長期強気）。NvidiaのCUDAモートは固いが生成AIソフトには堀なし→ハード（NVIDIA/TSMC/HBM）優位継続。ソーラーLCOE6.5円で蓄電池勝負へ。</div></div>
+      <div class="insight"><span class="ilabel">メンター共通解：</span>4者の共通解は「AI相場は終わっていない・むしろ序盤〜中盤、ハード(半導体/電力/光通信)優位」。じっちゃまは需給（IPOラッシュが下値を支える）で強気再転換、藤沢は東アジア「朝鮮特需」で中国株ロング最大維持、中島はNvidiaモートは盤石だが推論ASIC台頭・日本エッジAI戦略、ゆなはAlphabet軸＋光通信・化合物半導体・後工程・日本素材。総合すると<b>①AIハードのコアは持ち続ける ②最過熱SMH等は利確して ③AI電力・光通信・割安メガテック(MSFT/AMZN/GOOGL)・東アジアへ分散</b>が今週の最大公約数。中国A株(ASHR%タイル91)は既にラリーで割高＝追いかけ見送り確定。</div>
+    </div>
+  </section>
+
+  <section id="s7">
+    <div class="sec-title"><b>7</b> PERアナリシス</div>
+    <div class="card">
+      <div class="subh">保有銘柄 — 割高・注意</div>
+      <div class="mkt-wrap">
+      <table class="wl">
+        <thead><tr><th>銘柄</th><th>現PER</th><th>%タイル</th><th>判定</th></tr></thead>
+        <tbody>
+          <tr><td>1306.T<span class="nm">TOPIX ETF</span></td><td>18.36</td><td class="up">100%</td><td>rich</td></tr>
+          <tr><td>1615.T<span class="nm">東証銀行</span></td><td>18.18</td><td class="up">100%</td><td>rich</td></tr>
+          <tr><td>1629.T<span class="nm">商社・卸売</span></td><td>16.12</td><td class="up">100%</td><td>rich</td></tr>
+          <tr><td>8050.T<span class="nm">セイコーG</span></td><td>28.14</td><td class="up">100%</td><td>rich</td></tr>
+          <tr><td>9983.T<span class="nm">ファストリ</span></td><td>54.01</td><td class="up">97%</td><td>rich — 1/4利確発議</td></tr>
+          <tr><td>200A.T<span class="nm">日経半導体ETF</span></td><td>53.45</td><td class="up">96%</td><td>rich — SMH後トリム発議</td></tr>
+          <tr><td>SMH<span class="nm">半導体ETF（保有）</span></td><td>44.5</td><td class="up">98%</td><td>rich — 利確最優先発議</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="subh" style="margin-top:10px;">保有銘柄 — 割安・妥当</div>
+      <div class="mkt-wrap">
+      <table class="wl">
+        <thead><tr><th>銘柄</th><th>現PER</th><th>%タイル</th><th>判定</th></tr></thead>
+        <tbody>
+          <tr><td>GOOGL<span class="nm">アルファベット</span></td><td>28.09</td><td>59%</td><td>fair</td></tr>
+          <tr><td>ACWI<span class="nm">オルカン proxy</span></td><td>23.28</td><td class="up">92%</td><td>rich（積立継続可）</td></tr>
+          <tr><td>AAPL<span class="nm">アップル</span></td><td>36.08</td><td class="up">75%</td><td>rich</td></tr>
+          <tr><td>ILF<span class="nm">中南米40</span></td><td>12.82</td><td>69%</td><td>rich（シクリカル）</td></tr>
+          <tr><td>XLE<span class="nm">米エネルギー</span></td><td>20.09</td><td class="up">100%</td><td>rich（EPS谷）</td></tr>
+          <tr><td>6301.T<span class="nm">コマツ</span></td><td>16.08</td><td class="up">79%</td><td>rich</td></tr>
+          <tr><td>COPX<span class="nm">銅鉱業</span></td><td>19.72</td><td>49%</td><td>fair</td></tr>
+          <tr><td>REMX<span class="nm">レアアース</span></td><td>40.0</td><td>63%</td><td>fair</td></tr>
+          <tr><td>SHLD<span class="nm">防衛テック</span></td><td>29.34</td><td>41%</td><td>fair</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="note">保有採点不能：2516.T（ひふみXO・赤字混在）/ NLR（バンド未整備・テーマ買い）。PER非該当：GLDM(金) / SLV(銀) / JPST・SHV(債券・現金同等物)。</div>
+
+      <div class="subh" style="margin-top:14px;">
+        <svg class="subh-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="2.6"/></svg>
+        ウォッチリスト（監視中）
+      </div>
+      <div class="mkt-wrap">
+      <table class="wl">
+        <thead><tr><th>銘柄</th><th>現PER</th><th>%タイル</th><th>判定</th></tr></thead>
+        <tbody>
+          <tr><td>MSFT<span class="nm">マイクロソフト</span></td><td>22.61</td><td class="down">0%</td><td>cheap — 買い最優先</td></tr>
+          <tr><td>AMZN<span class="nm">アマゾン</span></td><td>31.45</td><td class="down">24%</td><td>cheap — $237.5指値</td></tr>
+          <tr><td>DTCR<span class="nm">データセンターREIT</span></td><td>22.13</td><td class="down">29%</td><td>cheap（conf低・テーマ買い）</td></tr>
+          <tr><td>6016.T<span class="nm">舶用エンジン</span></td><td>15.69</td><td class="down">16%</td><td>cheap（低流動・¥8,500指値待ち）</td></tr>
+          <tr><td>2516.T<span class="nm">グロース250</span></td><td>17.39</td><td class="down">21%</td><td>cheap（赤字混在・買い発議見送り）</td></tr>
+          <tr><td>3033.HK<span class="nm">ハンセンTECH</span></td><td>18.43</td><td class="down">14%</td><td>cheap（履歴薄・見送り）</td></tr>
+          <tr><td>PLTR<span class="nm">パランティア</span></td><td>144.35</td><td class="down">4%</td><td>cheap（絶対値144=水準極高・発議なし）</td></tr>
+          <tr><td>GOOGL<span class="nm">アルファベット</span></td><td>28.09</td><td>59%</td><td>fair</td></tr>
+          <tr><td>COPX<span class="nm">銅鉱業</span></td><td>19.72</td><td>49%</td><td>fair</td></tr>
+          <tr><td>REMX<span class="nm">レアアース</span></td><td>40.0</td><td>63%</td><td>fair</td></tr>
+          <tr><td>SHLD<span class="nm">防衛テック</span></td><td>29.34</td><td>41%</td><td>fair</td></tr>
+          <tr><td>SMH<span class="nm">半導体ETF（保有）</span></td><td>44.5</td><td class="up">98%</td><td>rich — 利確最優先</td></tr>
+          <tr><td>200A.T<span class="nm">日経半導体（保有）</span></td><td>53.45</td><td class="up">96%</td><td>rich — 二段目トリム候補</td></tr>
+          <tr><td>9983.T<span class="nm">ファストリ（保有）</span></td><td>54.01</td><td class="up">97%</td><td>rich — 1/4利確発議</td></tr>
+          <tr><td>TSLA<span class="nm">テスラ</span></td><td>367.42</td><td class="up">100%</td><td>rich — 新規買い見送り</td></tr>
+          <tr><td>PANW<span class="nm">サイバー首位</span></td><td>250.24</td><td class="up">100%</td><td>rich — 新規買い見送り</td></tr>
+          <tr><td>LITE<span class="nm">光通信</span></td><td>149.38</td><td class="up">100%</td><td>rich（利益サイクル底・PER膨張）</td></tr>
+          <tr><td>XLE<span class="nm">米エネルギー</span></td><td>20.09</td><td class="up">100%</td><td>rich（EPS谷・分母縮小）</td></tr>
+          <tr><td>VEA<span class="nm">先進国ex-US</span></td><td>18.64</td><td class="up">100%</td><td>rich（ETF算定差大）</td></tr>
+          <tr><td>VGK<span class="nm">欧州株</span></td><td>17.77</td><td class="up">96%</td><td>rich — ホルムズ条件未達・追わない</td></tr>
+          <tr><td>ACWI<span class="nm">全世界（オルカン）</span></td><td>23.28</td><td class="up">92%</td><td>rich — 積立継続・一括見送り</td></tr>
+          <tr><td>ASHR<span class="nm">CSI300(中国A株)</span></td><td>17.37</td><td class="up">91%</td><td>rich — 中国ラリーで割高・追いかけ見送り</td></tr>
+          <tr><td>XLV<span class="nm">ヘルスケア</span></td><td>24.1</td><td class="up">89%</td><td>rich（ソース差大）</td></tr>
+          <tr><td>XLP<span class="nm">生活必需</span></td><td>25.07</td><td class="up">87%</td><td>rich</td></tr>
+          <tr><td>1477.T<span class="nm">日本最小分散</span></td><td>17.19</td><td class="up">87%</td><td>rich</td></tr>
+          <tr><td>VT<span class="nm">全世界株</span></td><td>22.51</td><td class="up">83%</td><td>rich</td></tr>
+          <tr><td>AAPL<span class="nm">アップル</span></td><td>36.08</td><td class="up">75%</td><td>rich</td></tr>
+          <tr><td>2800.HK<span class="nm">ハンセン</span></td><td>13.5</td><td class="up">75%</td><td>rich — 追いかけ見送り</td></tr>
+          <tr><td>XLF<span class="nm">米金融</span></td><td>16.9</td><td class="up">73%</td><td>rich</td></tr>
+          <tr><td>CRWD<span class="nm">サイバー（TTM NM）</span></td><td>145</td><td class="up">90%</td><td>rich — forward PEで比較・見送り</td></tr>
+          <tr><td>ILF<span class="nm">中南米40</span></td><td>12.82</td><td>69%</td><td>rich（シクリカル・conf低）</td></tr>
+          <tr><td>6301.T<span class="nm">コマツ</span></td><td>16.08</td><td class="up">79%</td><td>rich</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="insight"><span class="ilabel">割安受け皿：</span><b>MSFT（%タイル0・最安値級）が今最も確度の高い割安シグナル</b>。bandLow23割れの22.61は財務最良のAI本命にとって異常値＝$15K打診→確認後$50K積み増しを最優先発議。AMZN(%24・cheap)も$237.5指値で第1弾実行ゾーン。DTCR(%29)はREIT偏重でconfidence低＝バンドでなくデータセンターテーマとして買う。PLTR(機械%4)は絶対値PER144が極端に高く割安と読まないこと。中国ラリー・先進国高でウォッチの大半は富裕側＝追いかけ見送り。</div>
+      <div class="note">採点不能：NLR(バンド未整備) / RKLB・RDW・CBRS(赤字NM) / 285A.T(キオクシア・市況株)。PER非該当：TLT/VGIT/JPST/SHV(債券・現金同等物)。%タイルは線形概算(bandLow=0%/bandHigh=100%・概算)。保有∪ウォッチをdata/valuations.jsonで単一採点・1シンボル1回(asOf 2026-06-18)。</div>
+    </div>
+  </section>
+
+  <div class="foot">
+    ソース：保有＝Money Forward実値(mf-holdings.json・asOf 2026-06-18) / 採点＝valuations.json(asOf 2026-06-18) / じっちゃま(mh-investment-strategy) / 中島聡(lib-semiconductors・lib-macro-geopolitics) / ゆな先生(yuna-investment) / 藤沢数希(fujisawa-finance・735号) / ウォッチリスト(investment-watchlist＋KV) / 投資ToDo / WebSearch(2026-06-18: 日経71,053・S&amp;P7,420・ドル円160.24・VIX18.44・CPI YoY+4.27%・ハンセン24,718・TOPIX4,068)。<br>
+    生成：MulmoClaude（段C組版・2026-06-19 05:03 CST）。投資助言ではなく壁打ち材料です。
+  </div>
+</div>
+<script>
+var _rawVals={};
+function toggleMask(){
+  var masked=document.body.classList.toggle('masked');
+  document.querySelectorAll('.maskable').forEach(function(el){
+    if(!el.dataset.raw) el.dataset.raw=el.textContent;
+    el.textContent=masked ? el.dataset.raw.replace(/[0-9]/g,'*') : el.dataset.raw;
+  });
+  document.getElementById('eye-open').style.display=masked?'none':'';
+  document.getElementById('eye-closed').style.display=masked?'':'none';
+}
+// Initialize with real values accessible via unmask button
+(function(){
+  var vals={
+    total:'¥537,534,421',
+    inv:'¥537,534,421',
+    cash:'¥53,908,363'
+  };
+  var maskables=document.querySelectorAll('.maskable');
+  if(maskables[0]) maskables[0].dataset.raw=vals.total;
+  if(maskables[1]) maskables[1].dataset.raw=vals.inv;
+  if(maskables[2]) maskables[2].dataset.raw=vals.cash;
+})();
+</script>
+</body>
+</html>
