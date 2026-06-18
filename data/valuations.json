@@ -1,17 +1,17 @@
 {
- "updated": "2026-06-14",
+ "updated": "2026-06-18",
  "note": "PER採点の単一ストア(symbol→valuation)。保有テーブル・ウォッチリスト・Briefingが共有参照。保有∪ウォッチを和集合で1回採点(重複計算なし)。%タイルは概算。PER非該当(金GLDM/銀SLV/債券JPST,SHV)は本ストアに含めず=アプリは'–'表示。",
- "asOf": "2026-06-14",
+ "asOf": "2026-06-18",
  "valuations": {
   "VEA": {
-   "perCurrent": 14.03,
+   "perCurrent": 14.48,
    "bandLow": 12,
    "bandHigh": 19,
    "bandMedian": 15,
-   "percentile": 30,
+   "percentile": 35,
    "status": "cheap",
-   "note": "先進国ex-US。5年平均下回り。出典worldperatio/EAFE",
-   "asOf": "2026-06-14"
+   "note": "先進国ex-US。trailing約14.5(Investing 6/17)・中央値15下・なお割安寄り(Vanguard公式は17.3xだが算定方式差)。出典Investing/Vanguard",
+   "asOf": "2026-06-18"
   },
   "VGK": {
    "perCurrent": 14.35,
@@ -154,14 +154,14 @@
    "note": "標準域8.8-12.4の上限超・中央値10.2超。中国株ラリーで歴史的に高い側=見送り"
   },
   "ASHR": {
-   "perCurrent": 14.7,
+   "perCurrent": 17.9,
    "bandLow": 8.1,
    "bandHigh": 54.9,
    "bandMedian": 13.2,
-   "percentile": 62,
-   "status": "fair",
-   "asOf": "2026-06-14",
-   "note": "標準域11.4-14の上端・中央値13.2超。本丸A株だが今は割安ではない"
+   "percentile": 72,
+   "status": "rich",
+   "asOf": "2026-06-18",
+   "note": "PER17.9(6/14)へ上昇=中国株ラリーで中央値13.2の大幅上・標準域上抜け。藤沢の本丸A株だが今はむしろ割高側=追いかけ見送り。出典stockanalysis/Investing"
   },
   "3033.HK": {
    "perCurrent": 18.7,
@@ -184,14 +184,14 @@
    "asOf": "2026-06-14"
   },
   "AMZN": {
-   "perCurrent": 28.1,
+   "perCurrent": 28,
    "bandLow": 24.5,
    "bandHigh": 80,
    "bandMedian": 57.7,
    "percentile": 5,
    "status": "cheap",
-   "note": "利益率改善でPER正常化・5年下限近辺。出典financecharts",
-   "asOf": "2026-06-14"
+   "note": "PER約28(6/17・株価$237.5)で5年下限近辺・10年中央値79.6の63%下。割安継続。$245指値の下=第1弾実行ゾーン。出典financecharts/public.com",
+   "asOf": "2026-06-18"
   },
   "GOOGL": {
    "perCurrent": 27.2,
