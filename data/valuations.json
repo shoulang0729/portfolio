@@ -66,7 +66,9 @@
    "asOf": "2026-06-18",
    "bandBasis": "TTM",
    "bandConfidence": "med",
-   "bandNote": "コマツ。irbank 10年TTM PERレンジ約7.0〜62.5倍だが、極端値(不況期/V字回復)を除いた常用域は概ね9〜18倍。建機シクリカル。アンカー16.08はバンド高値圏(~75%タイル)で従前watchlist判定と整合。"
+   "bandNote": "コマツ。irbank 10年TTM PERレンジ約7.0〜62.5倍だが、極端値(不況期/V字回復)を除いた常用域は概ね9〜18倍。建機シクリカル。アンカー16.08はバンド高値圏(~75%タイル)で従前watchlist判定と整合。",
+   "value": { "perFwd": 15.9, "peg": 2.30, "debtHeavy": true, "cyclical": true },
+   "verdict": { "class": "na", "label": "シクリカル(別物差し)", "drivers": ["cyclical", "利益-14%YoY"] }
   },
   "1306.T": {
    "perCurrent": 18.36,
@@ -235,7 +237,9 @@
    "asOf": "2026-06-18",
    "bandBasis": "TTM",
    "bandConfidence": "high",
-   "bandNote": "10yr TTM range ~11-40 but regime shifted up post-2020; modern band 24-40, 10yr median ~24.5 / 5yr avg ~30.5. Anchor 36.24 sits upper-mid, no issue."
+   "bandNote": "10yr TTM range ~11-40 but regime shifted up post-2020; modern band 24-40, 10yr median ~24.5 / 5yr avg ~30.5. Anchor 36.24 sits upper-mid, no issue.",
+   "value": { "perTrail": 36.1, "perFwd": 32.7, "peg": 2.85, "evEbitda": 27.0, "debtHeavy": false, "targetGapPct": 5 },
+   "verdict": { "class": "rich_real", "label": "本物の割高", "drivers": ["成長で正当化されない高値"] }
   },
   "AMZN": {
    "perCurrent": 31.45,
@@ -248,7 +252,9 @@
    "asOf": "2026-06-18",
    "bandBasis": "TTM",
    "bandConfidence": "med",
-   "bandNote": "Old TTM PEs (50-250) distorted by thin earnings; band reflects post-2022 earnings-normalization regime (recent low ~24.5). Anchor 30.87 lower-mid, fine."
+   "bandNote": "Old TTM PEs (50-250) distorted by thin earnings; band reflects post-2022 earnings-normalization regime (recent low ~24.5). Anchor 30.87 lower-mid, fine.",
+   "value": { "perTrail": null, "perFwd": 29.0, "peg": 1.37, "evEbitda": 17.3, "debtHeavy": true },
+   "verdict": { "class": "cheap_fake", "label": "見せかけの割安(フェア)", "drivers": ["負債/簿外でEV割高", "フェア"] }
   },
   "GOOGL": {
    "perCurrent": 28.09,
@@ -261,7 +267,9 @@
    "asOf": "2026-06-18",
    "bandBasis": "TTM",
    "bandConfidence": "high",
-   "bandNote": "10yr range 17-58, 5yr avg ~24.4, recent low ~17. Anchor 27.7 mid-band, fine."
+   "bandNote": "10yr range 17-58, 5yr avg ~24.4, recent low ~17. Anchor 27.7 mid-band, fine.",
+   "value": { "perTrail": 28.1, "perFwd": 29.4, "peg": 1.83, "evEbitda": 27.7, "debtHeavy": false },
+   "verdict": { "class": "fair", "label": "中立", "drivers": [] }
   },
   "MSFT": {
    "perCurrent": 22.61,
@@ -274,7 +282,9 @@
    "asOf": "2026-06-18",
    "bandBasis": "TTM",
    "bandConfidence": "high",
-   "bandNote": "10yr median ~32.6, range ~22-48. Anchor 22.54 is at/just below band low (near 13yr min ~22.08) - currently cheap vs history."
+   "bandNote": "10yr median ~32.6, range ~22-48. Anchor 22.54 is at/just below band low (near 13yr min ~22.08) - currently cheap vs history.",
+   "value": { "perTrail": 22.6, "perFwd": 20.5, "peg": 1.27, "evEbitda": 15.5, "debtHeavy": false, "targetGapPct": 48 },
+   "verdict": { "class": "cheap_real", "label": "本物の割安", "drivers": ["fwd<trail/負債軽", "本物の割安"] }
   },
   "TSLA": {
    "perCurrent": 367.42,
@@ -287,7 +297,9 @@
    "asOf": "2026-06-18",
    "bandBasis": "TTM",
    "bandConfidence": "low",
-   "bandNote": "Extremely volatile; 6yr range 30-940, 3yr avg ~156. Wide band. Anchor 355.67 above bandHigh - elevated but within historical spikes."
+   "bandNote": "Extremely volatile; 6yr range 30-940, 3yr avg ~156. Wide band. Anchor 355.67 above bandHigh - elevated but within historical spikes.",
+   "value": { "perTrail": 389, "perFwd": 186, "peg": 4.06, "evEbitda": 133, "debtHeavy": false },
+   "verdict": { "class": "rich_real", "label": "本物の割高", "drivers": ["成長で正当化されない高値"] }
   },
   "COPX": {
    "perCurrent": 19.72,
@@ -365,7 +377,9 @@
    "asOf": "2026-06-18",
    "bandBasis": "TTM",
    "bandConfidence": "low",
-   "bandNote": "Only GAAP-profitable since 2023 so short TTM history; range ~130-550, median ~286. Anchor 143.16 near band low."
+   "bandNote": "Only GAAP-profitable since 2023 so short TTM history; range ~130-550, median ~286. Anchor 143.16 near band low.",
+   "value": { "perTrail": 144, "perFwd": 81, "peg": 1.58, "evEbitda": 149, "debtHeavy": false },
+   "verdict": { "class": "rich_fake", "label": "見せかけの割高(売るな)", "drivers": ["%タイルのアヤ", "絶対値高・追わない"] }
   },
   "1615.T": {
    "perCurrent": 18.18,
@@ -404,7 +418,9 @@
    "asOf": "2026-06-18",
    "bandBasis": "TTM",
    "bandConfidence": "low",
-   "bandNote": "セイコーグループ。利益ボラが大きくirbankでは赤字期(マイナスPER)も含むためTTM PERレンジが不安定。黒字期の常用域は概ね12〜20倍。アンカー28.14はバンド上限超=高値圏で、足元の利益減/一過性要因による分母縮小の可能性。理由不確実につきconfidence=low・バンド広め。"
+   "bandNote": "セイコーグループ。利益ボラが大きくirbankでは赤字期(マイナスPER)も含むためTTM PERレンジが不安定。黒字期の常用域は概ね12〜20倍。アンカー28.14はバンド上限超=高値圏で、足元の利益減/一過性要因による分母縮小の可能性。理由不確実につきconfidence=low・バンド広め。",
+   "value": { "perTrail": 11.7, "perFwd": 23.0, "debtHeavy": false },
+   "verdict": { "class": "trap", "label": "罠", "drivers": ["一過性益でfake-cheap"] }
   },
   "9983.T": {
    "perCurrent": 54.01,
@@ -417,7 +433,9 @@
    "asOf": "2026-06-18",
    "bandBasis": "TTM",
    "bandConfidence": "med",
-   "bandNote": "ファーストリテイリング。investing/irbank で2010〜2025のPERレンジは約15.4〜107.6倍と極端に広い高PE常態のグロース株。常用コア域は概ね30〜50倍。アンカー54.01はレンジ高値圏(従前watchlist 75%タイル相当)。高PE常態のためバンドは広めに設定。"
+   "bandNote": "ファーストリテイリング。investing/irbank で2010〜2025のPERレンジは約15.4〜107.6倍と極端に広い高PE常態のグロース株。常用コア域は概ね30〜50倍。アンカー54.01はレンジ高値圏(従前watchlist 75%タイル相当)。高PE常態のためバンドは広めに設定。",
+   "value": { "perTrail": 52.8, "perFwd": 48.9, "peg": 5.26, "debtHeavy": false },
+   "verdict": { "class": "rich_real", "label": "本物の割高", "drivers": ["成長で正当化されない高値"] }
   },
   "ACWI": {
    "perCurrent": 23.28,
