@@ -2302,6 +2302,65 @@ function valuationPercentile(ySymbol) {
   const v = getValuation(ySymbol);
   return v && v.percentile != null && isFinite(v.percentile) ? v.percentile : null;
 }
+function valuationsLoaded() {
+  return _loaded;
+}
+var VERDICT_LABELS = {
+  cheap_real: "\u672C\u7269\u306E\u5272\u5B89",
+  cheap_fake: "\u898B\u305B\u304B\u3051\u306E\u5272\u5B89(\u30D5\u30A7\u30A2)",
+  fair: "\u4E2D\u7ACB",
+  rich_fake: "\u898B\u305B\u304B\u3051\u306E\u5272\u9AD8(\u58F2\u308B\u306A)",
+  rich_real: "\u672C\u7269\u306E\u5272\u9AD8",
+  trap: "\u7F60",
+  na: "\u2014"
+};
+function computeVerdict(v) {
+  const pct = v != null && v.percentile != null ? v.percentile : null;
+  if (pct == null) {
+    return { class: "na", label: VERDICT_LABELS["na"], drivers: [] };
+  }
+  const val = v && v.value || {};
+  if (val.cyclical === true) {
+    return { class: "na", label: "\u30B7\u30AF\u30EA\u30AB\u30EB(\u5225\u7269\u5DEE\u3057)", drivers: ["cyclical"] };
+  }
+  const t = val.perTrail != null ? val.perTrail : null;
+  const f = val.perFwd != null ? val.perFwd : null;
+  const peg = val.peg != null ? val.peg : null;
+  const debtHeavy = !!val.debtHeavy;
+  const rising = t != null && f != null && f <= t * 0.9;
+  const falling = t != null && f != null && f >= t * 1.05;
+  const zone = pct <= 30 ? "cheap" : pct >= 70 ? "rich" : "mid";
+  if (zone === "cheap") {
+    if (falling) {
+      return { class: "trap", label: VERDICT_LABELS["trap"], drivers: ["fwd\u226Btrail", "\u4E00\u904E\u6027/\u6E1B\u76CA"] };
+    }
+    if (f != null && f > 40) {
+      return {
+        class: "rich_fake",
+        label: VERDICT_LABELS["rich_fake"],
+        drivers: ["%\u30BF\u30A4\u30EB\u306E\u30A2\u30E4", "\u7D76\u5BFE\u5024\u9AD8\u30FB\u8FFD\u308F\u306A\u3044"]
+      };
+    }
+    if (debtHeavy) {
+      return { class: "cheap_fake", label: VERDICT_LABELS["cheap_fake"], drivers: ["\u8CA0\u50B5/\u7C3F\u5916\u3067EV\u5272\u9AD8", "\u30D5\u30A7\u30A2"] };
+    }
+    return { class: "cheap_real", label: VERDICT_LABELS["cheap_real"], drivers: ["fwd<trail/\u8CA0\u50B5\u8EFD", "\u672C\u7269\u306E\u5272\u5B89"] };
+  }
+  if (zone === "rich") {
+    if (falling) {
+      return { class: "trap", label: VERDICT_LABELS["trap"], drivers: ["\u4E00\u904E\u6027\u76CA\u3067fake-cheap"] };
+    }
+    if (rising && peg != null && peg < 2) {
+      return {
+        class: "rich_fake",
+        label: VERDICT_LABELS["rich_fake"],
+        drivers: ["\u5229\u76CA\u7206\u767A\u3067\u5272\u9AD8\u306F\u898B\u305B\u304B\u3051", "\u58F2\u308B\u306A"]
+      };
+    }
+    return { class: "rich_real", label: VERDICT_LABELS["rich_real"], drivers: ["\u6210\u9577\u3067\u6B63\u5F53\u5316\u3055\u308C\u306A\u3044\u9AD8\u5024"] };
+  }
+  return { class: "fair", label: VERDICT_LABELS["fair"], drivers: [] };
+}
 function valuationCellHTML(v, dataCol = "per") {
   if (!v) return `<td class="wl-per-cell wl-per-empty" data-col="${dataCol}">\u2013</td>`;
   const s = VAL_STATUS[v.status] || VAL_STATUS.hold;
@@ -4496,6 +4555,183 @@ function _withCacheBust(url) {
   return next.pathname.replace(/^\//, "") + next.search;
 }
 
+// src/target-allocation.js
+var TARGET_ALLOC_URL = "data/target-allocation.json";
+var _cfg = null;
+async function loadTargetAllocation() {
+  try {
+    const r = await fetch(`${TARGET_ALLOC_URL}?_=${Date.now()}`);
+    if (!r.ok) throw new Error(`target-allocation ${r.status}`);
+    _cfg = await r.json();
+  } catch {
+    _cfg = null;
+  }
+  return _cfg;
+}
+function getThemeOf(symbol) {
+  if (!_cfg || !_cfg.themeCaps) return null;
+  for (const [theme, def] of Object.entries(_cfg.themeCaps)) {
+    if (Array.isArray(def.members) && def.members.includes(symbol)) return theme;
+  }
+  return null;
+}
+function getTargetPct(symbol) {
+  if (!_cfg) return null;
+  if (_cfg.override && _cfg.override[symbol] != null) {
+    const ov = _cfg.override[symbol];
+    if (ov.targetPct != null) return ov.targetPct;
+  }
+  const tiers = _cfg.tiers || {};
+  for (const tier of Object.values(tiers)) {
+    if (tier.targets && tier.targets[symbol] != null) return tier.targets[symbol];
+  }
+  const theme = getThemeOf(symbol);
+  if (theme !== null) {
+    const conviction = _cfg.conviction && _cfg.conviction[symbol] || "standard";
+    const pct = _cfg.convictionPct && _cfg.convictionPct[conviction];
+    return pct != null ? pct : null;
+  }
+  return null;
+}
+
+// src/valuation-tab.js
+var _taLoaded = false;
+var _mfLoaded = false;
+async function _ensureData() {
+  const loads = [];
+  if (!_taLoaded) {
+    loads.push(
+      loadTargetAllocation().then(() => {
+        _taLoaded = true;
+      })
+    );
+  }
+  if (!_mfLoaded) {
+    loads.push(
+      loadMfHoldings().then(() => {
+        _mfLoaded = true;
+      })
+    );
+  }
+  if (!valuationsLoaded()) {
+    loads.push(loadValuations());
+  }
+  await Promise.all(loads);
+}
+function fmt1(n) {
+  return n != null && isFinite(n) ? n.toFixed(1) : "\u2014";
+}
+function fmtRaw(n) {
+  return n != null && isFinite(n) ? n.toFixed(1) : "\u2014";
+}
+function chipClass(cls) {
+  return `val-chip vc-${escapeHTML(cls)}`;
+}
+function gapBadge(gap) {
+  if (gap == null) return { text: "\u2014", cls: "gap" };
+  if (gap > 0.5) return { text: `+${fmt1(gap)}%`, cls: "gap over" };
+  if (gap < -0.5) return { text: `${fmt1(gap)}%`, cls: "gap under" };
+  return { text: `\xB1${fmt1(Math.abs(gap))}%`, cls: "gap fit" };
+}
+function sizeBarHTML(currentPct, targetPct) {
+  if (targetPct == null) {
+    return `<span class="val-size"><span class="val-size-label">\u9069\u6B63\u2014</span></span>`;
+  }
+  const scale = 30;
+  const curW = Math.min(100, currentPct / scale * 100);
+  const tgtL = Math.min(100, targetPct / scale * 100);
+  const badge = gapBadge(currentPct - targetPct);
+  return `<span class="val-size">
+    <span class="val-size-label">${fmt1(currentPct)}% \u2192 ${fmt1(targetPct)}%</span>
+    <span class="val-bar" title="\u73FE\u5728 ${fmt1(currentPct)}% vs \u76EE\u6A19 ${fmt1(targetPct)}%">
+      <span class="cur" style="width:${curW.toFixed(1)}%"></span>
+      <span class="tgt" style="left:${tgtL.toFixed(1)}%"></span>
+    </span>
+    <span class="${escapeHTML(badge.cls)}">${escapeHTML(badge.text)}</span>
+  </span>`;
+}
+function rowHTML(p, currentPct, targetPct, gap, verdict, val) {
+  const chipHTML = verdict && verdict.class !== "na" ? `<span class="${chipClass(verdict.class)}" title="${escapeHTML(verdict.drivers.join("\u30FB"))}">${escapeHTML(verdict.label)}</span>` : "";
+  const line1 = `<div class="val-r1">
+    <b class="val-tk">${escapeHTML(p.symbol)}</b>
+    <span class="val-nm">${escapeHTML(p.name)}</span>
+    ${chipHTML}
+  </div>`;
+  const line2 = `<div class="val-r2">${sizeBarHTML(currentPct, targetPct)}</div>`;
+  let line3 = "";
+  if (val) {
+    const v = val.value || {};
+    const pctTxt = val.percentile != null && isFinite(val.percentile) ? `${Math.round(val.percentile)}%ile` : "\u2014";
+    line3 = `<div class="val-met">
+      <span><b>PER</b> ${escapeHTML(fmtRaw(v.perTrail))}\u2192${escapeHTML(fmtRaw(v.perFwd))}</span>
+      <span><b>PEG</b> ${escapeHTML(fmtRaw(v.peg))}</span>
+      <span><b>%\u30BF\u30A4\u30EB</b> ${escapeHTML(pctTxt)}</span>
+    </div>`;
+  }
+  return `<div class="val-row">${line1}${line2}${line3}</div>`;
+}
+async function renderValuationTab() {
+  const wrap = document.getElementById("value-wrap");
+  if (!wrap) return;
+  await _ensureData();
+  const totals = getMfTotals();
+  const denom = totals && totals.imported || positions.reduce((s, p) => s + (p.value || 0), 0);
+  if (denom <= 0 || positions.length === 0) {
+    wrap.innerHTML = '<div class="val-soon">\u30C7\u30FC\u30BF\u6E96\u5099\u4E2D\u3002\u30DE\u30CD\u30D5\u30A9\u53D6\u8FBC\u307E\u305F\u306FCSV\u53D6\u8FBC\u3092\u5B9F\u884C\u3057\u3066\u304F\u3060\u3055\u3044\u3002</div>';
+    return;
+  }
+  const rows = positions.map((p) => {
+    const currentPct = (p.value || 0) / denom * 100;
+    let tkey = null;
+    for (const candidate of [p.ySymbol, p.symbol, p.name]) {
+      if (!candidate) continue;
+      if (getTargetPct(candidate) != null || getThemeOf(candidate) != null) {
+        tkey = candidate;
+        break;
+      }
+    }
+    const targetPct = tkey != null ? getTargetPct(tkey) : null;
+    const gap = targetPct != null ? currentPct - targetPct : null;
+    const val = getValuation(p.ySymbol);
+    const verdict = val ? computeVerdict(val) : null;
+    return { p, currentPct, targetPct, gap, verdict, val, tkey };
+  });
+  rows.sort((a, b) => {
+    if (a.gap == null && b.gap == null) return 0;
+    if (a.gap == null) return 1;
+    if (b.gap == null) return -1;
+    return b.gap - a.gap;
+  });
+  const overCount = rows.filter((r) => r.gap != null && r.gap > 0.5).length;
+  const cheapCount = rows.filter((r) => r.verdict && r.verdict.class === "cheap_real").length;
+  const statsHTML = `<div class="val-stats">
+    <div class="val-stat"><span class="k">\u904E\u5927\u30DD\u30B8</span><span class="v">${overCount}</span></div>
+    <div class="val-stat"><span class="k">\u5272\u5B89\u5019\u88DC</span><span class="v">${cheapCount}</span></div>
+    <div class="val-stat"><span class="k">\u7684\u4E2D\u7387</span><span class="v">\u2014</span></div>
+    <div class="val-stat"><span class="k">\u30C8\u30EA\u30AC\u30FC</span><span class="v">\u2014</span></div>
+  </div>`;
+  const lensHTML = `<div class="val-lens" role="tablist" aria-label="\u30EC\u30F3\u30BA\u9078\u629E">
+    <button class="val-seg on" role="tab" aria-selected="true" data-lens="total">\u7DCF\u5408</button>
+    <button class="val-seg is-soon" role="tab" aria-selected="false" disabled title="Phase 2">\u30D0\u30EA\u30E5</button>
+    <button class="val-seg is-soon" role="tab" aria-selected="false" disabled title="Phase 2">\u54C1\u8CEA</button>
+    <button class="val-seg is-soon" role="tab" aria-selected="false" disabled title="Phase 2">\u30E2\u30E1\u30F3\u30BF\u30E0</button>
+  </div>
+  <div class="val-soon" id="val-soon-note" hidden>\u6E96\u5099\u4E2D\uFF08Phase 2\uFF09</div>`;
+  const rowsHTML = rows.map((r) => rowHTML(r.p, r.currentPct, r.targetPct, r.gap, r.verdict, r.val)).join("");
+  wrap.innerHTML = `${statsHTML + lensHTML}<div class="val-list">${rowsHTML}</div>`;
+  const soonNote = wrap.querySelector("#val-soon-note");
+  wrap.querySelectorAll(".val-seg.is-soon").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (soonNote) {
+        soonNote.hidden = false;
+        setTimeout(() => {
+          if (soonNote) soonNote.hidden = true;
+        }, 2e3);
+      }
+    });
+  });
+}
+
 // src/tabs.js
 function switchTab(name) {
   if (state.activeTab === name) return;
@@ -4508,12 +4744,14 @@ function switchTab(name) {
   const panelList = document.getElementById("panel-list");
   const panelWatchlist = document.getElementById("panel-watchlist");
   const panelRisk = document.getElementById("panel-risk");
+  const panelValue = document.getElementById("panel-value");
   const panelBriefing = document.getElementById("panel-briefing");
   const panelAi = document.getElementById("panel-ai");
   if (panelHeatmap) panelHeatmap.hidden = name !== "heatmap";
   if (panelList) panelList.hidden = name !== "list";
   if (panelWatchlist) panelWatchlist.hidden = name !== "watchlist";
   if (panelRisk) panelRisk.hidden = name !== "risk";
+  if (panelValue) panelValue.hidden = name !== "value";
   if (panelBriefing) panelBriefing.hidden = name !== "briefing";
   if (panelAi) panelAi.hidden = name !== "ai";
   document.querySelectorAll(".tab-btn[data-tab]").forEach((b) => {
@@ -4542,6 +4780,7 @@ function switchTab(name) {
     })();
   }
   if (name === "risk") renderRiskCharts();
+  if (name === "value") renderValuationTab();
   if (name === "briefing") renderBriefing();
 }
 
