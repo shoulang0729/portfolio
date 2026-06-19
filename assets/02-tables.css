@@ -543,3 +543,95 @@
 }
 .risk-legend-item { cursor: default; border-radius: 4px; }
 .risk-legend-item:hover { background: var(--surface2); }
+
+/* ── Value タブ (Phase 1) ── */
+#value-wrap { padding: 10px 12px 40px; }
+
+/* ヘッダー統計カード群 */
+.val-stats { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.val-stat {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 6px 12px; min-width: 64px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+}
+.val-stat .k { font-size: 10px; color: var(--text2); white-space: nowrap; }
+.val-stat .v { font-size: 16px; font-weight: 600; color: var(--text); }
+
+/* レンズ切替ピル（segmented control） */
+.val-lens { display: flex; gap: 4px; margin-bottom: 10px; flex-wrap: wrap; }
+.val-seg {
+  padding: 4px 12px; font-size: 12px; font-weight: 500;
+  border: 1px solid var(--border); border-radius: 20px;
+  background: var(--surface); color: var(--text2);
+  cursor: pointer; transition: background 0.15s;
+}
+.val-seg.on {
+  background: var(--accent); color: #fff; border-color: var(--accent);
+}
+.val-seg.is-soon,
+.val-seg[disabled] {
+  opacity: 0.45; cursor: not-allowed;
+}
+
+/* 準備中ノート */
+.val-soon {
+  font-size: 11px; color: var(--text2);
+  margin-bottom: 8px; padding: 4px 0;
+}
+
+/* 各銘柄行 */
+.val-row {
+  padding: 10px 0; border-bottom: 1px solid var(--border2);
+}
+.val-row:last-child { border-bottom: none; }
+
+/* 行1: シンボル・銘柄名・chip */
+.val-r1 {
+  display: flex; align-items: baseline; flex-wrap: wrap; gap: 5px;
+  margin-bottom: 4px;
+}
+.val-tk { font-size: 13px; font-weight: 700; color: var(--text); }
+.val-nm { font-size: 11px; color: var(--text2); flex: 1; min-width: 0; }
+
+/* バーディクト chip */
+.val-chip {
+  margin-left: auto; font-size: 10px; padding: 2px 6px;
+  border-radius: 4px; white-space: nowrap; font-weight: 500;
+}
+/* 日本市場の慣例: 上昇=赤(--up)=過大、下落=緑(--down)=割安 */
+.vc-cheap_real  { background: rgba(var(--down-rgb, 34,197,94), 0.15); color: var(--down); }
+.vc-cheap_fake  { background: var(--surface2); color: var(--accent); border: 1px solid var(--accent); }
+.vc-fair        { background: var(--surface2); color: var(--text2); }
+.vc-rich_fake   { background: var(--surface2); color: var(--text2); }
+.vc-rich_real   { background: rgba(var(--up-rgb, 239,68,68), 0.15); color: var(--up); }
+.vc-trap        { background: transparent; color: var(--up); border: 1px dashed var(--up); }
+.vc-na          { background: var(--surface2); color: var(--text2); }
+
+/* 行2: サイズバー */
+.val-r2 { margin-bottom: 3px; }
+.val-size { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.val-size-label { font-size: 11px; color: var(--text2); white-space: nowrap; }
+.val-bar {
+  position: relative; height: 6px; width: 100px; max-width: 40vw;
+  background: var(--surface2); border-radius: 3px; overflow: visible; flex-shrink: 0;
+}
+.val-bar .cur {
+  position: absolute; left: 0; top: 0; height: 100%;
+  background: var(--accent); opacity: 0.5; border-radius: 3px;
+}
+.val-bar .tgt {
+  position: absolute; top: -2px; width: 2px; height: 10px;
+  background: var(--text); border-radius: 1px; transform: translateX(-50%);
+}
+.gap { font-size: 11px; font-weight: 600; }
+.gap.over  { color: var(--up); }
+.gap.under { color: var(--down); }
+.gap.fit   { color: var(--text2); }
+
+/* 行3: メトリクス */
+.val-met {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  font-size: 11px; color: var(--text2);
+}
+.val-met b { color: var(--text); font-weight: 500; }
+/* ── /Value タブ ── */
