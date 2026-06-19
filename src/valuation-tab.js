@@ -1,10 +1,9 @@
 // @ts-check
 
 // ══════════════════════════════════════════════════════════════
-// valuation-tab.js  ―  「Value」タブ（総合 lens）の描画
+// valuation-tab.js  ―  「Value」タブ（4レンズ: 総合/バリュ/品質/モメンタム）
 //
-// 保有銘柄を適正サイズ乖離（gap = currentPct - targetPct）降順に並べ、
-// バーディクト chip とサイズバーを表示する Phase 1 実装。
+// 保有銘柄を各レンズの視点で並べ直し、メトリクスを表示する。
 //
 // 依存:
 //   ./positions.js       (positions)
@@ -23,6 +22,9 @@ import { escapeHTML } from './utils.js';
 /** ローカルの once-guard: 並行二重ロードを防ぐ */
 let _taLoaded = false;
 let _mfLoaded = false;
+
+/** 現在アクティブなレンズ */
+let _lens = 'total';
 
 /**
  * データを必要なら読み込む（既ロード済みならスキップ）。
@@ -115,7 +117,82 @@ function sizeBarHTML(currentPct, targetPct) {
 }
 
 /**
- * 1 銘柄分の行 HTML を生成する。
+ * line3 メトリクス HTML を現在のレンズに応じて生成する。
+ * @param {any|null} val  getValuation() の戻り値（null の場合は '—' のみ）
+ * @returns {string}
+ */
+function line3HTML(val) {
+  if (_lens === 'total') {
+    if (!val) return '';
+    const v = val.value || {};
+    const pctTxt = val.percentile != null && isFinite(val.percentile) ? `${Math.round(val.percentile)}%ile` : '—';
+    return `<div class="val-met">
+      <span><b>PER</b> ${escapeHTML(fmtRaw(v.perTrail))}→${escapeHTML(fmtRaw(v.perFwd))}</span>
+      <span><b>PEG</b> ${escapeHTML(fmtRaw(v.peg))}</span>
+      <span><b>%タイル</b> ${escapeHTML(pctTxt)}</span>
+    </div>`;
+  }
+
+  if (_lens === 'value') {
+    if (!val) return '';
+    const v = val.value || {};
+    const pctTxt = val.percentile != null && isFinite(val.percentile) ? `${Math.round(val.percentile)}%ile` : '—';
+    return `<div class="val-met">
+      <span><b>PER</b> ${escapeHTML(fmtRaw(v.perTrail))}→${escapeHTML(fmtRaw(v.perFwd))}</span>
+      <span><b>PEG</b> ${escapeHTML(fmtRaw(v.peg))}</span>
+      <span><b>EV/EBITDA</b> ${escapeHTML(fmtRaw(v.evEbitda))}</span>
+      <span><b>FCF利回り</b> ${escapeHTML(fmtRaw(v.fcfYield))}%</span>
+      <span><b>還元</b> ${escapeHTML(fmtRaw(v.shareholderYield))}%</span>
+      <span><b>%タイル</b> ${escapeHTML(pctTxt)}</span>
+    </div>`;
+  }
+
+  if (_lens === 'quality') {
+    if (!val) return '';
+    const q = val.quality || {};
+    // ROIC vs WACC のカラーキュー
+    const roicNum = q.roic != null && isFinite(q.roic) ? q.roic : null;
+    const waccNum = q.wacc != null && isFinite(q.wacc) ? q.wacc : null;
+    const roicBad = roicNum != null && waccNum != null && roicNum < waccNum;
+    const roicStr = `${escapeHTML(fmtRaw(roicNum))}%`;
+    const waccStr = `${escapeHTML(fmtRaw(waccNum))}%`;
+    const roicMetric = roicBad
+      ? `<span class="val-bad">${roicStr} vs WACC ${waccStr}</span>`
+      : `${roicStr} vs WACC ${waccStr}`;
+    // Altman Z のカラーキュー
+    const zNum = q.altmanZ != null && isFinite(q.altmanZ) ? q.altmanZ : null;
+    const zStr = escapeHTML(fmtRaw(zNum));
+    const zMetric = zNum != null && zNum < 3 ? `<span class="val-warn">${zStr}</span>` : zStr;
+    return `<div class="val-met">
+      <span><b>ROIC</b> ${roicMetric}</span>
+      <span><b>粗利/資産</b> ${escapeHTML(fmtRaw(q.grossProf))}</span>
+      <span><b>FCF変換</b> ${escapeHTML(fmtRaw(q.fcfConv))}</span>
+      <span><b>F</b> ${escapeHTML(fmtRaw(q.fScore))}</span>
+      <span><b>Z</b> ${zMetric}</span>
+      <span><b>Q</b> ${escapeHTML(fmtRaw(q.qScore))}</span>
+    </div>`;
+  }
+
+  if (_lens === 'momentum') {
+    if (!val) return '';
+    const m = val.momentum || {};
+    // priceMom1Y の符号別クラス（日本市場慣例: 上昇=赤=up / 下落=緑=down）
+    const mom1y = m.priceMom1Y != null && isFinite(m.priceMom1Y) ? m.priceMom1Y : null;
+    const mom1yStr = mom1y != null ? (mom1y >= 0 ? `+${fmt1(mom1y)}` : fmt1(mom1y)) : '—';
+    const mom1yCls = mom1y == null ? '' : mom1y >= 0 ? ' class="val-mom-up"' : ' class="val-mom-dn"';
+    return `<div class="val-met">
+      <span><b>改定90d</b> ${escapeHTML(fmtRaw(m.epsRev90d))}%</span>
+      <span><b>1Y</b> <span${mom1yCls}>${escapeHTML(mom1yStr)}%</span></span>
+      <span><b>52週位置</b> ${escapeHTML(fmtRaw(m.pos52w))}%</span>
+      <span><b>対セクター</b> ${escapeHTML(fmtRaw(m.rsVsSector))}%</span>
+    </div>`;
+  }
+
+  return '';
+}
+
+/**
+ * 1 銘柄分の行 HTML を生成する（_lens に応じて line3 を切り替える）。
  * @param {{ symbol:string, name:string, value:number, ySymbol:string, cat:string, cur:string }} p
  * @param {number} currentPct
  * @param {number|null} targetPct
@@ -137,27 +214,91 @@ function rowHTML(p, currentPct, targetPct, gap, verdict, val) {
     ${chipHTML}
   </div>`;
 
-  // line 2: サイズバー
+  // line 2: サイズバー（全レンズ共通）
   const line2 = `<div class="val-r2">${sizeBarHTML(currentPct, targetPct)}</div>`;
 
-  // line 3: メトリクス（バリュエーションがある場合のみ）
-  let line3 = '';
-  if (val) {
-    const v = val.value || {};
-    const pctTxt = val.percentile != null && isFinite(val.percentile) ? `${Math.round(val.percentile)}%ile` : '—';
-    line3 = `<div class="val-met">
-      <span><b>PER</b> ${escapeHTML(fmtRaw(v.perTrail))}→${escapeHTML(fmtRaw(v.perFwd))}</span>
-      <span><b>PEG</b> ${escapeHTML(fmtRaw(v.peg))}</span>
-      <span><b>%タイル</b> ${escapeHTML(pctTxt)}</span>
-    </div>`;
-  }
+  // line 3: レンズ別メトリクス
+  const line3 = line3HTML(val);
 
   return `<div class="val-row">${line1}${line2}${line3}</div>`;
 }
 
 /**
- * Value タブ（総合 lens）を描画する。
- * 保有銘柄をサイズ乖離降順（最も過大保有 → 過小保有 → 乖離不明）に並べ表示する。
+ * 現在の _lens に応じて rows を並び替えて返す（元配列は変更しない）。
+ * @param {Array<{p:any,currentPct:number,targetPct:number|null,gap:number|null,verdict:any,val:any}>} rows
+ * @returns {Array<{p:any,currentPct:number,targetPct:number|null,gap:number|null,verdict:any,val:any}>}
+ */
+function sortedRows(rows) {
+  const copy = rows.slice();
+  if (_lens === 'total') {
+    // gap DESC (null は最後)
+    copy.sort((a, b) => {
+      if (a.gap == null && b.gap == null) return 0;
+      if (a.gap == null) return 1;
+      if (b.gap == null) return -1;
+      return b.gap - a.gap;
+    });
+  } else if (_lens === 'value') {
+    // percentile ASC (cheap first; null last)
+    copy.sort((a, b) => {
+      const pa = a.val && a.val.percentile != null && isFinite(a.val.percentile) ? a.val.percentile : null;
+      const pb = b.val && b.val.percentile != null && isFinite(b.val.percentile) ? b.val.percentile : null;
+      if (pa == null && pb == null) return 0;
+      if (pa == null) return 1;
+      if (pb == null) return -1;
+      return pa - pb;
+    });
+  } else if (_lens === 'quality') {
+    // qScore DESC (null last)
+    copy.sort((a, b) => {
+      const qa =
+        a.val && a.val.quality && a.val.quality.qScore != null && isFinite(a.val.quality.qScore)
+          ? a.val.quality.qScore
+          : null;
+      const qb =
+        b.val && b.val.quality && b.val.quality.qScore != null && isFinite(b.val.quality.qScore)
+          ? b.val.quality.qScore
+          : null;
+      if (qa == null && qb == null) return 0;
+      if (qa == null) return 1;
+      if (qb == null) return -1;
+      return qb - qa;
+    });
+  } else if (_lens === 'momentum') {
+    // priceMom1Y DESC (null last)
+    copy.sort((a, b) => {
+      const ma =
+        a.val && a.val.momentum && a.val.momentum.priceMom1Y != null && isFinite(a.val.momentum.priceMom1Y)
+          ? a.val.momentum.priceMom1Y
+          : null;
+      const mb =
+        b.val && b.val.momentum && b.val.momentum.priceMom1Y != null && isFinite(b.val.momentum.priceMom1Y)
+          ? b.val.momentum.priceMom1Y
+          : null;
+      if (ma == null && mb == null) return 0;
+      if (ma == null) return 1;
+      if (mb == null) return -1;
+      return mb - ma;
+    });
+  }
+  return copy;
+}
+
+/**
+ * レンズごとのキャプション文字列を返す。
+ * @param {string} lens
+ * @returns {string}
+ */
+function lensCap(lens) {
+  if (lens === 'total') return '乖離順｜サイズ過大が上';
+  if (lens === 'value') return '%タイル昇順｜割安が上';
+  if (lens === 'quality') return 'qScore順｜ROIC<WACCは赤・Altman Z<3は注意色';
+  if (lens === 'momentum') return '1Y騰落順';
+  return '';
+}
+
+/**
+ * Value タブを描画する。_lens に応じてソート・メトリクスを切り替える。
  * @returns {Promise<void>}
  */
 export async function renderValuationTab() {
@@ -201,15 +342,7 @@ export async function renderValuationTab() {
     return { p, currentPct, targetPct, gap, verdict, val, tkey };
   });
 
-  // gap DESC (null は最後)
-  rows.sort((a, b) => {
-    if (a.gap == null && b.gap == null) return 0;
-    if (a.gap == null) return 1;
-    if (b.gap == null) return -1;
-    return b.gap - a.gap;
-  });
-
-  // ヘッダー統計
+  // ヘッダー統計（常に総合ベースで計算）
   const overCount = rows.filter((r) => r.gap != null && r.gap > 0.5).length;
   const cheapCount = rows.filter((r) => r.verdict && r.verdict.class === 'cheap_real').length;
 
@@ -220,31 +353,35 @@ export async function renderValuationTab() {
     <div class="val-stat"><span class="k">トリガー</span><span class="v">—</span></div>
   </div>`;
 
-  // レンズ切替ピル（バリュ/品質/モメンタムは Phase 2 以降）
-  const lensHTML = `<div class="val-lens" role="tablist" aria-label="レンズ選択">
-    <button class="val-seg on" role="tab" aria-selected="true" data-lens="total">総合</button>
-    <button class="val-seg is-soon" role="tab" aria-selected="false" disabled title="Phase 2">バリュ</button>
-    <button class="val-seg is-soon" role="tab" aria-selected="false" disabled title="Phase 2">品質</button>
-    <button class="val-seg is-soon" role="tab" aria-selected="false" disabled title="Phase 2">モメンタム</button>
-  </div>
-  <div class="val-soon" id="val-soon-note" hidden>準備中（Phase 2）</div>`;
+  // レンズ切替ピル（4つすべて有効）
+  const lenses = [
+    { key: 'total', label: '総合' },
+    { key: 'value', label: 'バリュ' },
+    { key: 'quality', label: '品質' },
+    { key: 'momentum', label: 'モメンタム' },
+  ];
+  const pillsHTML = lenses
+    .map(
+      (l) =>
+        `<button class="val-seg${_lens === l.key ? ' on' : ''}" role="tab" aria-selected="${_lens === l.key}" data-lens="${escapeHTML(l.key)}">${escapeHTML(l.label)}</button>`
+    )
+    .join('');
+  const lensHTML = `<div class="val-lens" role="tablist" aria-label="レンズ選択">${pillsHTML}</div>
+  <div class="val-lens-cap">${escapeHTML(lensCap(_lens))}</div>`;
 
-  // 全行を結合
-  const rowsHTML = rows.map((r) => rowHTML(r.p, r.currentPct, r.targetPct, r.gap, r.verdict, r.val)).join('');
+  // 現在レンズでソートして行を生成
+  const sorted = sortedRows(rows);
+  const rowsHTML = sorted.map((r) => rowHTML(r.p, r.currentPct, r.targetPct, r.gap, r.verdict, r.val)).join('');
 
-  wrap.innerHTML = `${statsHTML + lensHTML}<div class="val-list">${rowsHTML}</div>`;
+  wrap.innerHTML = `${statsHTML}${lensHTML}<div class="val-list">${rowsHTML}</div>`;
 
-  // Phase 2 ピルのクリックで「準備中」ノート表示（data-action 不使用・CSP 安全な addEventListener）
-  const soonNote = wrap.querySelector('#val-soon-note');
-  wrap.querySelectorAll('.val-seg.is-soon').forEach((btn) => {
+  // ピルのクリックで _lens を更新して再描画（CSP 安全な addEventListener）
+  wrap.querySelectorAll('.val-seg[data-lens]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      if (soonNote) {
-        // @ts-ignore
-        soonNote.hidden = false;
-        setTimeout(() => {
-          if (soonNote) /** @type {HTMLElement} */ (soonNote).hidden = true;
-        }, 2000);
-      }
+      const nextLens = /** @type {HTMLElement} */ (btn).dataset.lens;
+      if (!nextLens || nextLens === _lens) return;
+      _lens = nextLens;
+      renderValuationTab();
     });
   });
 }

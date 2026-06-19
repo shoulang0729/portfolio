@@ -634,4 +634,19 @@
   font-size: 11px; color: var(--text2);
 }
 .val-met b { color: var(--text); font-weight: 500; }
+
+/* レンズキャプション */
+.val-lens-cap {
+  font-size: 10px; color: var(--text3); margin-bottom: 8px; padding: 0 1px;
+}
+
+/* 品質レンズ: ROIC < WACC（上昇色=赤=var(--up)） */
+.val-bad { color: var(--up); font-weight: 600; }
+
+/* 品質レンズ: Altman Z < 3（スタンス色=注意色=var(--stance)） */
+.val-warn { color: var(--stance, var(--accent)); font-weight: 600; }
+
+/* モメンタムレンズ: 上昇=赤(--up) / 下落=緑(--down) 日本市場慣例 */
+.val-mom-up { color: var(--up); font-weight: 600; }
+.val-mom-dn { color: var(--down); font-weight: 600; }
 /* ── /Value タブ ── */
