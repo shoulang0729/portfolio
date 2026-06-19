@@ -4,24 +4,82 @@
   "note": "適正サイズv1。target%=clip(convictionPct[確信度], テーマ上限の取り分)。コア/守りはtargets直接。乖離=現在%−target%。",
   "unitUSD": 50000,
   "probeUSD": 10000,
-  "convictionPct": { "probe": 0.3, "standard": 1.4, "high": 3.0 },
+  "convictionPct": {
+    "probe": 0.3,
+    "standard": 1.4,
+    "high": 3.0
+  },
   "tiers": {
     "core": {
       "rule": "hold/accumulate・トリムしない",
-      "targets": { "オルカン": 11, "ひふみ計": 8, "1306.T": 5, "ILF": 1.5 }
+      "targets": {
+        "オルカン": 11,
+        "ひふみ計": 8,
+        "1306.T": 5,
+        "ILF": 1.5
+      }
     },
-    "defensive": { "rule": "固定", "targets": { "GLDM": 8, "cash": 12.5 } }
+    "defensive": {
+      "rule": "固定",
+      "targets": {
+        "GLDM": 8,
+        "cash": 12.5
+      }
+    }
   },
   "themeCaps": {
-    "semiconductor": { "cap": 13, "members": ["SMH", "200A.T"] },
-    "ai_power": { "cap": 10, "members": ["NLR", "DTCR", "URA"] },
-    "megatech": { "cap": 15, "members": ["MSFT", "AMZN", "AAPL", "GOOGL", "TSLA", "PLTR"] },
-    "japan_theme": { "cap": 10, "members": ["1615.T", "1629.T", "9983.T", "8050.T", "6301.T"] },
-    "commodity_miner": { "cap": 5, "members": ["COPX", "REMX"] },
-    "silver": { "cap": 1.5, "members": ["SLV"] },
-    "space": { "cap": 3, "members": ["SPCX", "RKLB", "RDW"] },
-    "europe": { "cap": 5, "members": ["VGK"] }
+    "semiconductor": {
+      "cap": 13,
+      "members": ["SMH", "200A.T"]
+    },
+    "ai_power": {
+      "cap": 10,
+      "members": ["NLR", "DTCR", "URA"]
+    },
+    "megatech": {
+      "cap": 15,
+      "members": ["MSFT", "AMZN", "AAPL", "GOOGL", "TSLA", "PLTR"]
+    },
+    "japan_theme": {
+      "cap": 10,
+      "members": ["1615.T", "1629.T", "9983.T", "8050.T", "6301.T"]
+    },
+    "commodity_miner": {
+      "cap": 5,
+      "members": ["COPX", "REMX"]
+    },
+    "silver": {
+      "cap": 1.5,
+      "members": ["SLV"]
+    },
+    "space": {
+      "cap": 3,
+      "members": ["SPCX", "RKLB", "RDW"]
+    },
+    "europe": {
+      "cap": 5,
+      "members": ["VGK"]
+    }
   },
-  "conviction": { "MSFT": "high", "AMZN": "standard" },
-  "override": { "GLDM": { "targetPct": 8, "note": "保険・$300K例外・固定" } }
+  "conviction": {
+    "MSFT": "high",
+    "GOOGL": "high",
+    "PLTR": "high",
+    "AMZN": "standard",
+    "AAPL": "standard",
+    "TSLA": "standard",
+    "9983.T": "standard",
+    "8050.T": "standard",
+    "6301.T": "standard",
+    "URA": "standard",
+    "SLV": "standard",
+    "COPX": "standard",
+    "REMX": "standard"
+  },
+  "override": {
+    "GLDM": {
+      "targetPct": 8,
+      "note": "保険・$300K例外・固定"
+    }
+  }
 }
