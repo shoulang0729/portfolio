@@ -4552,6 +4552,7 @@ function computeVerdict(v) {
 // src/valuation-tab.js
 var _taLoaded = false;
 var _mfLoaded = false;
+var _lens = "total";
 async function _ensureData() {
   const loads = [];
   if (!_taLoaded) {
@@ -4605,6 +4606,66 @@ function sizeBarHTML(currentPct, targetPct) {
     <span class="${escapeHTML(badge.cls)}">${escapeHTML(badge.text)}</span>
   </span>`;
 }
+function line3HTML(val) {
+  if (_lens === "total") {
+    if (!val) return "";
+    const v = val.value || {};
+    const pctTxt = val.percentile != null && isFinite(val.percentile) ? `${Math.round(val.percentile)}%ile` : "\u2014";
+    return `<div class="val-met">
+      <span><b>PER</b> ${escapeHTML(fmtRaw(v.perTrail))}\u2192${escapeHTML(fmtRaw(v.perFwd))}</span>
+      <span><b>PEG</b> ${escapeHTML(fmtRaw(v.peg))}</span>
+      <span><b>%\u30BF\u30A4\u30EB</b> ${escapeHTML(pctTxt)}</span>
+    </div>`;
+  }
+  if (_lens === "value") {
+    if (!val) return "";
+    const v = val.value || {};
+    const pctTxt = val.percentile != null && isFinite(val.percentile) ? `${Math.round(val.percentile)}%ile` : "\u2014";
+    return `<div class="val-met">
+      <span><b>PER</b> ${escapeHTML(fmtRaw(v.perTrail))}\u2192${escapeHTML(fmtRaw(v.perFwd))}</span>
+      <span><b>PEG</b> ${escapeHTML(fmtRaw(v.peg))}</span>
+      <span><b>EV/EBITDA</b> ${escapeHTML(fmtRaw(v.evEbitda))}</span>
+      <span><b>FCF\u5229\u56DE\u308A</b> ${escapeHTML(fmtRaw(v.fcfYield))}%</span>
+      <span><b>\u9084\u5143</b> ${escapeHTML(fmtRaw(v.shareholderYield))}%</span>
+      <span><b>%\u30BF\u30A4\u30EB</b> ${escapeHTML(pctTxt)}</span>
+    </div>`;
+  }
+  if (_lens === "quality") {
+    if (!val) return "";
+    const q = val.quality || {};
+    const roicNum = q.roic != null && isFinite(q.roic) ? q.roic : null;
+    const waccNum = q.wacc != null && isFinite(q.wacc) ? q.wacc : null;
+    const roicBad = roicNum != null && waccNum != null && roicNum < waccNum;
+    const roicStr = `${escapeHTML(fmtRaw(roicNum))}%`;
+    const waccStr = `${escapeHTML(fmtRaw(waccNum))}%`;
+    const roicMetric = roicBad ? `<span class="val-bad">${roicStr} vs WACC ${waccStr}</span>` : `${roicStr} vs WACC ${waccStr}`;
+    const zNum = q.altmanZ != null && isFinite(q.altmanZ) ? q.altmanZ : null;
+    const zStr = escapeHTML(fmtRaw(zNum));
+    const zMetric = zNum != null && zNum < 3 ? `<span class="val-warn">${zStr}</span>` : zStr;
+    return `<div class="val-met">
+      <span><b>ROIC</b> ${roicMetric}</span>
+      <span><b>\u7C97\u5229/\u8CC7\u7523</b> ${escapeHTML(fmtRaw(q.grossProf))}</span>
+      <span><b>FCF\u5909\u63DB</b> ${escapeHTML(fmtRaw(q.fcfConv))}</span>
+      <span><b>F</b> ${escapeHTML(fmtRaw(q.fScore))}</span>
+      <span><b>Z</b> ${zMetric}</span>
+      <span><b>Q</b> ${escapeHTML(fmtRaw(q.qScore))}</span>
+    </div>`;
+  }
+  if (_lens === "momentum") {
+    if (!val) return "";
+    const m = val.momentum || {};
+    const mom1y = m.priceMom1Y != null && isFinite(m.priceMom1Y) ? m.priceMom1Y : null;
+    const mom1yStr = mom1y != null ? mom1y >= 0 ? `+${fmt1(mom1y)}` : fmt1(mom1y) : "\u2014";
+    const mom1yCls = mom1y == null ? "" : mom1y >= 0 ? ' class="val-mom-up"' : ' class="val-mom-dn"';
+    return `<div class="val-met">
+      <span><b>\u6539\u5B9A90d</b> ${escapeHTML(fmtRaw(m.epsRev90d))}%</span>
+      <span><b>1Y</b> <span${mom1yCls}>${escapeHTML(mom1yStr)}%</span></span>
+      <span><b>52\u9031\u4F4D\u7F6E</b> ${escapeHTML(fmtRaw(m.pos52w))}%</span>
+      <span><b>\u5BFE\u30BB\u30AF\u30BF\u30FC</b> ${escapeHTML(fmtRaw(m.rsVsSector))}%</span>
+    </div>`;
+  }
+  return "";
+}
 function rowHTML(p, currentPct, targetPct, gap, verdict, val) {
   const chipHTML = verdict && verdict.class !== "na" ? `<span class="${chipClass(verdict.class)}" title="${escapeHTML(verdict.drivers.join("\u30FB"))}">${escapeHTML(verdict.label)}</span>` : "";
   const line1 = `<div class="val-r1">
@@ -4613,17 +4674,54 @@ function rowHTML(p, currentPct, targetPct, gap, verdict, val) {
     ${chipHTML}
   </div>`;
   const line2 = `<div class="val-r2">${sizeBarHTML(currentPct, targetPct)}</div>`;
-  let line3 = "";
-  if (val) {
-    const v = val.value || {};
-    const pctTxt = val.percentile != null && isFinite(val.percentile) ? `${Math.round(val.percentile)}%ile` : "\u2014";
-    line3 = `<div class="val-met">
-      <span><b>PER</b> ${escapeHTML(fmtRaw(v.perTrail))}\u2192${escapeHTML(fmtRaw(v.perFwd))}</span>
-      <span><b>PEG</b> ${escapeHTML(fmtRaw(v.peg))}</span>
-      <span><b>%\u30BF\u30A4\u30EB</b> ${escapeHTML(pctTxt)}</span>
-    </div>`;
-  }
+  const line3 = line3HTML(val);
   return `<div class="val-row">${line1}${line2}${line3}</div>`;
+}
+function sortedRows(rows) {
+  const copy = rows.slice();
+  if (_lens === "total") {
+    copy.sort((a, b) => {
+      if (a.gap == null && b.gap == null) return 0;
+      if (a.gap == null) return 1;
+      if (b.gap == null) return -1;
+      return b.gap - a.gap;
+    });
+  } else if (_lens === "value") {
+    copy.sort((a, b) => {
+      const pa = a.val && a.val.percentile != null && isFinite(a.val.percentile) ? a.val.percentile : null;
+      const pb = b.val && b.val.percentile != null && isFinite(b.val.percentile) ? b.val.percentile : null;
+      if (pa == null && pb == null) return 0;
+      if (pa == null) return 1;
+      if (pb == null) return -1;
+      return pa - pb;
+    });
+  } else if (_lens === "quality") {
+    copy.sort((a, b) => {
+      const qa = a.val && a.val.quality && a.val.quality.qScore != null && isFinite(a.val.quality.qScore) ? a.val.quality.qScore : null;
+      const qb = b.val && b.val.quality && b.val.quality.qScore != null && isFinite(b.val.quality.qScore) ? b.val.quality.qScore : null;
+      if (qa == null && qb == null) return 0;
+      if (qa == null) return 1;
+      if (qb == null) return -1;
+      return qb - qa;
+    });
+  } else if (_lens === "momentum") {
+    copy.sort((a, b) => {
+      const ma = a.val && a.val.momentum && a.val.momentum.priceMom1Y != null && isFinite(a.val.momentum.priceMom1Y) ? a.val.momentum.priceMom1Y : null;
+      const mb = b.val && b.val.momentum && b.val.momentum.priceMom1Y != null && isFinite(b.val.momentum.priceMom1Y) ? b.val.momentum.priceMom1Y : null;
+      if (ma == null && mb == null) return 0;
+      if (ma == null) return 1;
+      if (mb == null) return -1;
+      return mb - ma;
+    });
+  }
+  return copy;
+}
+function lensCap(lens) {
+  if (lens === "total") return "\u4E56\u96E2\u9806\uFF5C\u30B5\u30A4\u30BA\u904E\u5927\u304C\u4E0A";
+  if (lens === "value") return "%\u30BF\u30A4\u30EB\u6607\u9806\uFF5C\u5272\u5B89\u304C\u4E0A";
+  if (lens === "quality") return "qScore\u9806\uFF5CROIC<WACC\u306F\u8D64\u30FBAltman Z<3\u306F\u6CE8\u610F\u8272";
+  if (lens === "momentum") return "1Y\u9A30\u843D\u9806";
+  return "";
 }
 async function renderValuationTab() {
   const wrap = document.getElementById("value-wrap");
@@ -4651,12 +4749,6 @@ async function renderValuationTab() {
     const verdict = val ? computeVerdict(val) : null;
     return { p, currentPct, targetPct, gap, verdict, val, tkey };
   });
-  rows.sort((a, b) => {
-    if (a.gap == null && b.gap == null) return 0;
-    if (a.gap == null) return 1;
-    if (b.gap == null) return -1;
-    return b.gap - a.gap;
-  });
   const overCount = rows.filter((r) => r.gap != null && r.gap > 0.5).length;
   const cheapCount = rows.filter((r) => r.verdict && r.verdict.class === "cheap_real").length;
   const statsHTML = `<div class="val-stats">
@@ -4665,24 +4757,29 @@ async function renderValuationTab() {
     <div class="val-stat"><span class="k">\u7684\u4E2D\u7387</span><span class="v">\u2014</span></div>
     <div class="val-stat"><span class="k">\u30C8\u30EA\u30AC\u30FC</span><span class="v">\u2014</span></div>
   </div>`;
-  const lensHTML = `<div class="val-lens" role="tablist" aria-label="\u30EC\u30F3\u30BA\u9078\u629E">
-    <button class="val-seg on" role="tab" aria-selected="true" data-lens="total">\u7DCF\u5408</button>
-    <button class="val-seg is-soon" role="tab" aria-selected="false" disabled title="Phase 2">\u30D0\u30EA\u30E5</button>
-    <button class="val-seg is-soon" role="tab" aria-selected="false" disabled title="Phase 2">\u54C1\u8CEA</button>
-    <button class="val-seg is-soon" role="tab" aria-selected="false" disabled title="Phase 2">\u30E2\u30E1\u30F3\u30BF\u30E0</button>
-  </div>
-  <div class="val-soon" id="val-soon-note" hidden>\u6E96\u5099\u4E2D\uFF08Phase 2\uFF09</div>`;
-  const rowsHTML = rows.map((r) => rowHTML(r.p, r.currentPct, r.targetPct, r.gap, r.verdict, r.val)).join("");
-  wrap.innerHTML = `${statsHTML + lensHTML}<div class="val-list">${rowsHTML}</div>`;
-  const soonNote = wrap.querySelector("#val-soon-note");
-  wrap.querySelectorAll(".val-seg.is-soon").forEach((btn) => {
+  const lenses = [
+    { key: "total", label: "\u7DCF\u5408" },
+    { key: "value", label: "\u30D0\u30EA\u30E5" },
+    { key: "quality", label: "\u54C1\u8CEA" },
+    { key: "momentum", label: "\u30E2\u30E1\u30F3\u30BF\u30E0" }
+  ];
+  const pillsHTML = lenses.map(
+    (l) => `<button class="val-seg${_lens === l.key ? " on" : ""}" role="tab" aria-selected="${_lens === l.key}" data-lens="${escapeHTML(l.key)}">${escapeHTML(l.label)}</button>`
+  ).join("");
+  const lensHTML = `<div class="val-lens" role="tablist" aria-label="\u30EC\u30F3\u30BA\u9078\u629E">${pillsHTML}</div>
+  <div class="val-lens-cap">${escapeHTML(lensCap(_lens))}</div>`;
+  const sorted = sortedRows(rows);
+  const rowsHTML = sorted.map((r) => rowHTML(r.p, r.currentPct, r.targetPct, r.gap, r.verdict, r.val)).join("");
+  wrap.innerHTML = `${statsHTML}${lensHTML}<div class="val-list">${rowsHTML}</div>`;
+  wrap.querySelectorAll(".val-seg[data-lens]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      if (soonNote) {
-        soonNote.hidden = false;
-        setTimeout(() => {
-          if (soonNote) soonNote.hidden = true;
-        }, 2e3);
-      }
+      const nextLens = (
+        /** @type {HTMLElement} */
+        btn.dataset.lens
+      );
+      if (!nextLens || nextLens === _lens) return;
+      _lens = nextLens;
+      renderValuationTab();
     });
   });
 }
