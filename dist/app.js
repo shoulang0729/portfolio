@@ -2273,109 +2273,6 @@ async function refreshPrices() {
   }
 }
 
-// src/valuations.js
-var VAL_URL = "data/valuations.json";
-var _vals = {};
-var _loaded = false;
-var VAL_STATUS = {
-  cheap: { icon: "\u{1F7E2}", label: "\u5272\u5B89" },
-  fair: { icon: "\u{1F7E1}", label: "\u4E2D\u7ACB" },
-  rich: { icon: "\u{1F534}", label: "\u5272\u9AD8" },
-  hold: { icon: "\u26AA", label: "\u4FDD\u7559" }
-};
-async function loadValuations() {
-  try {
-    const r = await fetch(`${VAL_URL}?_=${Date.now()}`);
-    if (!r.ok) throw new Error(`val ${r.status}`);
-    const j = await r.json();
-    _vals = j && j.valuations || {};
-    _loaded = true;
-  } catch {
-    _vals = {};
-  }
-  return _vals;
-}
-function getValuation(ySymbol) {
-  return ySymbol ? _vals[ySymbol] || null : null;
-}
-function valuationPercentile(ySymbol) {
-  const v = getValuation(ySymbol);
-  return v && v.percentile != null && isFinite(v.percentile) ? v.percentile : null;
-}
-function valuationsLoaded() {
-  return _loaded;
-}
-var VERDICT_LABELS = {
-  cheap_real: "\u672C\u7269\u306E\u5272\u5B89",
-  cheap_fake: "\u898B\u305B\u304B\u3051\u306E\u5272\u5B89(\u30D5\u30A7\u30A2)",
-  fair: "\u4E2D\u7ACB",
-  rich_fake: "\u898B\u305B\u304B\u3051\u306E\u5272\u9AD8(\u58F2\u308B\u306A)",
-  rich_real: "\u672C\u7269\u306E\u5272\u9AD8",
-  trap: "\u7F60",
-  na: "\u2014"
-};
-function computeVerdict(v) {
-  const pct = v != null && v.percentile != null ? v.percentile : null;
-  if (pct == null) {
-    return { class: "na", label: VERDICT_LABELS["na"], drivers: [] };
-  }
-  const val = v && v.value || {};
-  if (val.cyclical === true) {
-    return { class: "na", label: "\u30B7\u30AF\u30EA\u30AB\u30EB(\u5225\u7269\u5DEE\u3057)", drivers: ["cyclical"] };
-  }
-  const t = val.perTrail != null ? val.perTrail : null;
-  const f = val.perFwd != null ? val.perFwd : null;
-  const peg = val.peg != null ? val.peg : null;
-  const debtHeavy = !!val.debtHeavy;
-  const rising = t != null && f != null && f <= t * 0.9;
-  const falling = t != null && f != null && f >= t * 1.05;
-  const zone = pct <= 30 ? "cheap" : pct >= 70 ? "rich" : "mid";
-  if (zone === "cheap") {
-    if (falling) {
-      return { class: "trap", label: VERDICT_LABELS["trap"], drivers: ["fwd\u226Btrail", "\u4E00\u904E\u6027/\u6E1B\u76CA"] };
-    }
-    if (f != null && f > 40) {
-      return {
-        class: "rich_fake",
-        label: VERDICT_LABELS["rich_fake"],
-        drivers: ["%\u30BF\u30A4\u30EB\u306E\u30A2\u30E4", "\u7D76\u5BFE\u5024\u9AD8\u30FB\u8FFD\u308F\u306A\u3044"]
-      };
-    }
-    if (debtHeavy) {
-      return { class: "cheap_fake", label: VERDICT_LABELS["cheap_fake"], drivers: ["\u8CA0\u50B5/\u7C3F\u5916\u3067EV\u5272\u9AD8", "\u30D5\u30A7\u30A2"] };
-    }
-    return { class: "cheap_real", label: VERDICT_LABELS["cheap_real"], drivers: ["fwd<trail/\u8CA0\u50B5\u8EFD", "\u672C\u7269\u306E\u5272\u5B89"] };
-  }
-  if (zone === "rich") {
-    if (falling) {
-      return { class: "trap", label: VERDICT_LABELS["trap"], drivers: ["\u4E00\u904E\u6027\u76CA\u3067fake-cheap"] };
-    }
-    if (rising && peg != null && peg < 2) {
-      return {
-        class: "rich_fake",
-        label: VERDICT_LABELS["rich_fake"],
-        drivers: ["\u5229\u76CA\u7206\u767A\u3067\u5272\u9AD8\u306F\u898B\u305B\u304B\u3051", "\u58F2\u308B\u306A"]
-      };
-    }
-    return { class: "rich_real", label: VERDICT_LABELS["rich_real"], drivers: ["\u6210\u9577\u3067\u6B63\u5F53\u5316\u3055\u308C\u306A\u3044\u9AD8\u5024"] };
-  }
-  return { class: "fair", label: VERDICT_LABELS["fair"], drivers: [] };
-}
-function valuationCellHTML(v, dataCol = "per") {
-  if (!v) return `<td class="wl-per-cell wl-per-empty" data-col="${dataCol}">\u2013</td>`;
-  const s = VAL_STATUS[v.status] || VAL_STATUS.hold;
-  const hasPct = v.percentile != null && isFinite(v.percentile);
-  const per = v.perCurrent != null && isFinite(v.perCurrent) ? Number(v.perCurrent).toFixed(1) : "\u2013";
-  const band = v.bandLow != null && v.bandHigh != null ? `${v.bandLow}\u2013${v.bandHigh}${v.bandMedian != null ? ` \u4E2D\u592E${v.bandMedian}` : ""}` : "\u2014";
-  const pctTxt = hasPct ? `${Math.round(v.percentile)}%ile` : "\u2014";
-  const title = `PER ${per} \uFF0F \u30D0\u30F3\u30C9 ${band} \uFF0F ${pctTxt} \uFF0F ${v.asOf || ""}${v.note ? ` \uFF0F ${v.note}` : ""}`;
-  const tile = hasPct ? `${Math.round(v.percentile)}<span class="wl-per-unit">%ile</span>` : '<span class="wl-per-unit">\u2014</span>';
-  return `<td class="wl-per-cell" data-col="${dataCol}" title="${escapeHTML(title)}">
-      <span class="wl-per-tile">${tile}</span>
-      <span class="wl-per-status">${s.icon}<span class="wl-per-label">${s.label}</span></span>
-    </td>`;
-}
-
 // src/stock-list.js
 function updateSlColStyle() {
   const el = document.getElementById("sl-col-style");
@@ -2383,7 +2280,9 @@ function updateSlColStyle() {
   if (state.slDetailVisible) {
     el.textContent = "";
   } else {
-    el.textContent = SL_DETAIL_COLS.map((c) => `.sl-table th[data-col="${c}"], .sl-table td[data-col="${c}"] { display: none; }`).join("\n");
+    el.textContent = SL_DETAIL_COLS.map(
+      (c) => `.sl-table th[data-col="${c}"], .sl-table td[data-col="${c}"] { display: none; }`
+    ).join("\n");
   }
 }
 function slToggleDetail() {
@@ -2430,9 +2329,6 @@ function renderStockList() {
     } else if (state.listSortCol === "price") {
       va = a.price;
       vb = b.price;
-    } else if (state.listSortCol === "per") {
-      va = valuationPercentile(a.ySymbol);
-      vb = valuationPercentile(b.ySymbol);
     } else if (state.listSortCol === "shares") {
       va = a.shares;
       vb = b.shares;
@@ -2471,7 +2367,6 @@ function renderStockList() {
       <td data-col="shares">${sharesStr}</td>
       <td data-col="avgCost">${costStr}</td>
       <td data-col="price">${priceStr}</td>
-      ${valuationCellHTML(getValuation(p.ySymbol))}
       ${periodCells}
       <td data-col="pnl" class="${pnlAmtCls}">${pnlStr}</td>
       <td data-col="pnlPct" class="sl-pct-cell" ${pnlPctBg ? `style="background:${pnlPctBg};color:${pnlPctFg}"` : ""}>${pnlPctStr}</td>
@@ -2485,7 +2380,6 @@ function renderStockList() {
       ${th("\u4FDD\u6709\u6570", "shares")}
       ${th("\u53D6\u5F97\u5358\u4FA1", "avgCost")}
       ${th("\u73FE\u5728\u5024", "price")}
-      ${th("PER\u63A1\u70B9", "per", "center")}
       ${makePeriodHeaderCells(state.listSortCol, state.listSortDir, "slSort")}
       ${th("\u542B\u307F\u640D\u76CA", "pnl")}
       ${th("\u640D\u76CA\u7387", "pnlPct", "center")}
@@ -3136,14 +3030,8 @@ function removeFromWatchlist(symbol) {
 }
 async function fetchTickerInfo(symbol) {
   const [chartData, qsData] = await Promise.all([
-    fetchViaProxy(
-      `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=2d`,
-      7e3
-    ),
-    fetchViaProxy(
-      `https://query2.finance.yahoo.com/v11/finance/quoteSummary/${symbol}?modules=price`,
-      6e3
-    )
+    fetchViaProxy(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=2d`, 7e3),
+    fetchViaProxy(`https://query2.finance.yahoo.com/v11/finance/quoteSummary/${symbol}?modules=price`, 6e3)
   ]);
   const result = chartData?.chart?.result?.[0];
   if (!result) return null;
@@ -3154,12 +3042,7 @@ async function fetchTickerInfo(symbol) {
   const prevClose = meta.regularMarketPreviousClose ?? meta.chartPreviousClose ?? null;
   const dayPct = preCalcPct !== null ? preCalcPct : prevClose ? (price - prevClose) / prevClose * 100 : null;
   const qsPrice = qsData?.quoteSummary?.result?.[0]?.price || {};
-  const candidates = [
-    qsPrice.longName,
-    qsPrice.shortName,
-    meta.longName,
-    meta.shortName
-  ].map((s) => (s || "").trim()).filter(Boolean);
+  const candidates = [qsPrice.longName, qsPrice.shortName, meta.longName, meta.shortName].map((s) => (s || "").trim()).filter(Boolean);
   const name = candidates.length ? candidates.reduce((a, b) => b.length > a.length ? b : a) : symbol;
   const rawType = (meta.quoteType || qsPrice.quoteType || "").toUpperCase();
   const instrType = (meta.instrumentType || "").toUpperCase();
@@ -3288,10 +3171,12 @@ document.addEventListener("click", (e) => {
 async function fetchWatchlistData() {
   const symbols = state.watchlist.map((w) => w.symbol);
   if (symbols.length === 0) return;
-  await Promise.all(symbols.map(async (sym) => {
-    const live = await fetchLivePrice(sym);
-    if (live) state.watchlistPrices[sym] = live;
-  }));
+  await Promise.all(
+    symbols.map(async (sym) => {
+      const live = await fetchLivePrice(sym);
+      if (live) state.watchlistPrices[sym] = live;
+    })
+  );
   for (const range of ["1y", "5y", "10y"]) {
     await fetchAllHistorical(range);
     renderWatchlist();
@@ -3304,10 +3189,6 @@ function wlSort(col) {
 function wlGetPct(item, periodId) {
   if (periodId === "1d") return state.watchlistPrices[item.symbol]?.dayPct ?? null;
   return getHistoricalChangePct(item.symbol, periodId);
-}
-function wlValuationCell(item) {
-  const v = getValuation(item.symbol) || item.valuation || null;
-  return valuationCellHTML(v);
 }
 function renderWatchlist() {
   const panel = document.getElementById("panel-watchlist");
@@ -3332,10 +3213,7 @@ function renderWatchlist() {
       vb = b.exchange ?? "";
       return dir * va.localeCompare(vb);
     }
-    if (col === "per") {
-      va = (getValuation(a.symbol) || a.valuation)?.percentile ?? -Infinity;
-      vb = (getValuation(b.symbol) || b.valuation)?.percentile ?? -Infinity;
-    } else if (col === "price") {
+    if (col === "price") {
       va = state.watchlistPrices[a.symbol]?.price ?? -Infinity;
       vb = state.watchlistPrices[b.symbol]?.price ?? -Infinity;
     } else {
@@ -3357,7 +3235,6 @@ function renderWatchlist() {
       <td data-col="symbol" class="sl-sym">${symEsc}<span class="sl-inline-name">${nameEsc}</span></td>
       <td class="wl-market-cell"><span class="wl-type-badge">${exEsc}</span></td>
       <td class="wl-price-cell">${priceStr}</td>
-      ${wlValuationCell(item)}
       ${periodCells}
       <td class="wl-del-cell">
         <button class="wl-del-btn" data-action="removeFromWatchlist" data-arg="${escapeHTML(item.symbol)}" title="\u30A6\u30A9\u30C3\u30C1\u30EA\u30B9\u30C8\u304B\u3089\u524A\u9664">\xD7</button>
@@ -3369,7 +3246,6 @@ function renderWatchlist() {
       ${th('\u30C6\u30A3\u30C3\u30AB\u30FC<br><span class="sl-th-sub">\u9298\u67C4\u540D</span>', "symbol")}
       ${th("\u5E02\u5834", "market", "center")}
       ${th("\u73FE\u5728\u5024", "price")}
-      ${th('PER\u63A1\u70B9<br><span class="sl-th-sub">%ile</span>', "per", "center")}
       ${makePeriodHeaderCells(state.wlSortCol, state.wlSortDir, "wlSort")}
       <th></th>
     </tr></thead>
@@ -4432,7 +4308,7 @@ function showSymbolTip(ev, title, symbols) {
 }
 
 // src/briefing.js
-var _loaded2 = false;
+var _loaded = false;
 var _frame = null;
 var _themeObserver = null;
 var _resizeFit = false;
@@ -4468,7 +4344,7 @@ function _ensureResizeFit() {
 function renderBriefing(force = false) {
   const panel = document.getElementById("panel-briefing");
   if (!panel) return;
-  if (_loaded2 && !force) return;
+  if (_loaded && !force) return;
   panel.innerHTML = '<div class="bf-msg">\u8AAD\u307F\u8FBC\u307F\u4E2D\u2026</div>';
   fetch(`data/briefings/index.json?_=${Date.now()}`).then((r) => {
     if (!r.ok) throw new Error(`index ${r.status}`);
@@ -4530,7 +4406,7 @@ function renderBriefing(force = false) {
         if (_frame && url) _frame.src = _withCacheBust(url);
       });
     }
-    _loaded2 = true;
+    _loaded = true;
   }).catch(() => {
     panel.innerHTML = '<div class="bf-msg bf-err">Briefing \u306E\u8AAD\u307F\u8FBC\u307F\u306B\u5931\u6557\u3057\u307E\u3057\u305F\u3002</div>';
   });
@@ -4592,6 +4468,85 @@ function getTargetPct(symbol) {
     return pct != null ? pct : null;
   }
   return null;
+}
+
+// src/valuations.js
+var VAL_URL = "data/valuations.json";
+var _vals = {};
+var _loaded2 = false;
+async function loadValuations() {
+  try {
+    const r = await fetch(`${VAL_URL}?_=${Date.now()}`);
+    if (!r.ok) throw new Error(`val ${r.status}`);
+    const j = await r.json();
+    _vals = j && j.valuations || {};
+    _loaded2 = true;
+  } catch {
+    _vals = {};
+  }
+  return _vals;
+}
+function getValuation(ySymbol) {
+  return ySymbol ? _vals[ySymbol] || null : null;
+}
+function valuationsLoaded() {
+  return _loaded2;
+}
+var VERDICT_LABELS = {
+  cheap_real: "\u672C\u7269\u306E\u5272\u5B89",
+  cheap_fake: "\u898B\u305B\u304B\u3051\u306E\u5272\u5B89(\u30D5\u30A7\u30A2)",
+  fair: "\u4E2D\u7ACB",
+  rich_fake: "\u898B\u305B\u304B\u3051\u306E\u5272\u9AD8(\u58F2\u308B\u306A)",
+  rich_real: "\u672C\u7269\u306E\u5272\u9AD8",
+  trap: "\u7F60",
+  na: "\u2014"
+};
+function computeVerdict(v) {
+  const pct = v != null && v.percentile != null ? v.percentile : null;
+  if (pct == null) {
+    return { class: "na", label: VERDICT_LABELS["na"], drivers: [] };
+  }
+  const val = v && v.value || {};
+  if (val.cyclical === true) {
+    return { class: "na", label: "\u30B7\u30AF\u30EA\u30AB\u30EB(\u5225\u7269\u5DEE\u3057)", drivers: ["cyclical"] };
+  }
+  const t = val.perTrail != null ? val.perTrail : null;
+  const f = val.perFwd != null ? val.perFwd : null;
+  const peg = val.peg != null ? val.peg : null;
+  const debtHeavy = !!val.debtHeavy;
+  const rising = t != null && f != null && f <= t * 0.9;
+  const falling = t != null && f != null && f >= t * 1.05;
+  const zone = pct <= 30 ? "cheap" : pct >= 70 ? "rich" : "mid";
+  if (zone === "cheap") {
+    if (falling) {
+      return { class: "trap", label: VERDICT_LABELS["trap"], drivers: ["fwd\u226Btrail", "\u4E00\u904E\u6027/\u6E1B\u76CA"] };
+    }
+    if (f != null && f > 40) {
+      return {
+        class: "rich_fake",
+        label: VERDICT_LABELS["rich_fake"],
+        drivers: ["%\u30BF\u30A4\u30EB\u306E\u30A2\u30E4", "\u7D76\u5BFE\u5024\u9AD8\u30FB\u8FFD\u308F\u306A\u3044"]
+      };
+    }
+    if (debtHeavy) {
+      return { class: "cheap_fake", label: VERDICT_LABELS["cheap_fake"], drivers: ["\u8CA0\u50B5/\u7C3F\u5916\u3067EV\u5272\u9AD8", "\u30D5\u30A7\u30A2"] };
+    }
+    return { class: "cheap_real", label: VERDICT_LABELS["cheap_real"], drivers: ["fwd<trail/\u8CA0\u50B5\u8EFD", "\u672C\u7269\u306E\u5272\u5B89"] };
+  }
+  if (zone === "rich") {
+    if (falling) {
+      return { class: "trap", label: VERDICT_LABELS["trap"], drivers: ["\u4E00\u904E\u6027\u76CA\u3067fake-cheap"] };
+    }
+    if (rising && peg != null && peg < 2) {
+      return {
+        class: "rich_fake",
+        label: VERDICT_LABELS["rich_fake"],
+        drivers: ["\u5229\u76CA\u7206\u767A\u3067\u5272\u9AD8\u306F\u898B\u305B\u304B\u3051", "\u58F2\u308B\u306A"]
+      };
+    }
+    return { class: "rich_real", label: VERDICT_LABELS["rich_real"], drivers: ["\u6210\u9577\u3067\u6B63\u5F53\u5316\u3055\u308C\u306A\u3044\u9AD8\u5024"] };
+  }
+  return { class: "fair", label: VERDICT_LABELS["fair"], drivers: [] };
 }
 
 // src/valuation-tab.js
