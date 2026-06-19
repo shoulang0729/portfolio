@@ -59,6 +59,10 @@
     "europe": {
       "cap": 5,
       "members": ["VGK"]
+    },
+    "energy": {
+      "cap": 5,
+      "members": ["XLE"]
     }
   },
   "conviction": {
@@ -81,5 +85,6 @@
       "targetPct": 8,
       "note": "保険・$300K例外・固定"
     }
-  }
+  },
+  "themeEtfs": ["SMH", "200A.T", "NLR", "DTCR", "URA", "1615.T", "1629.T", "COPX", "REMX", "SLV", "VGK", "XLE"]
 }

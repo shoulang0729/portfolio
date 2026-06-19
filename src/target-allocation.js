@@ -75,7 +75,19 @@ export function getTargetPct(symbol) {
     if (tier.targets && tier.targets[symbol] != null) return tier.targets[symbol];
   }
 
-  // 3. テーマメンバー → convictionPct
+  // 2.5 テーマ代表ETF → テーマ上限 ÷ そのテーマのETF数
+  //     SMH/200A 等「テーマを丸ごと持つETF」は標準$50K単位でなくテーマ枠で測る。
+  //     同一テーマに複数ETF（半導体=SMH+200A）があれば上限を均等割り。
+  if (_cfg.themeEtfs && _cfg.themeEtfs.includes(symbol)) {
+    const etfTheme = getThemeOf(symbol);
+    if (etfTheme !== null) {
+      const cap = getThemeCap(etfTheme);
+      const n = _cfg.themeEtfs.filter((s) => getThemeOf(s) === etfTheme).length || 1;
+      return cap != null ? Math.round((cap / n) * 100) / 100 : null;
+    }
+  }
+
+  // 3. テーマメンバー（単一株）→ convictionPct
   const theme = getThemeOf(symbol);
   if (theme !== null) {
     const conviction = (_cfg.conviction && _cfg.conviction[symbol]) || 'standard';

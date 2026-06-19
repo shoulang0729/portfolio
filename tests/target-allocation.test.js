@@ -36,7 +36,9 @@ const TEST_CONFIG = {
     silver: { cap: 1.5, members: ['SLV'] },
     space: { cap: 3, members: ['SPCX', 'RKLB', 'RDW'] },
     europe: { cap: 5, members: ['VGK'] },
+    energy: { cap: 5, members: ['XLE'] },
   },
+  themeEtfs: ['SMH', '200A.T', 'NLR', 'DTCR', 'URA', '1615.T', '1629.T', 'COPX', 'REMX', 'SLV', 'VGK', 'XLE'],
   conviction: { MSFT: 'high', AMZN: 'standard' },
   override: { GLDM: { targetPct: 8, note: '保険・$300K例外・固定' } },
 };
@@ -70,6 +72,23 @@ describe('getTargetPct', () => {
 
   it('returns null for unknown symbol', () => {
     expect(getTargetPct('UNKNOWN_XYZ')).toBeNull();
+  });
+
+  // テーマ代表ETF: target = テーマ上限 ÷ そのテーマのETF数
+  it('theme ETF SMH → semiconductor cap 13 ÷ 2 ETFs = 6.5', () => {
+    expect(getTargetPct('SMH')).toBe(6.5);
+  });
+
+  it('sole-ETF theme XLE → energy cap 5 ÷ 1 = 5', () => {
+    expect(getTargetPct('XLE')).toBe(5);
+  });
+
+  it('japan_theme cap 10 split among its 2 ETFs → 1615.T = 5', () => {
+    expect(getTargetPct('1615.T')).toBe(5);
+  });
+
+  it('single-stock theme member keeps conviction (not ETF rule) → 9983.T = 1.4', () => {
+    expect(getTargetPct('9983.T')).toBe(1.4);
   });
 });
 
