@@ -8,11 +8,18 @@
 // ══════════════════════════════════════════════════════════════
 
 import { state } from './state.js';
-import { escapeHTML, makeTh, getHistoricalChangePct, fmtPrice, _tableSort, makePeriodCells, makePeriodHeaderCells } from './utils.js';
+import {
+  escapeHTML,
+  makeTh,
+  getHistoricalChangePct,
+  fmtPrice,
+  _tableSort,
+  makePeriodCells,
+  makePeriodHeaderCells,
+} from './utils.js';
 import { fetchViaProxy, fetchLivePrice, fetchAllHistorical, setStatus } from './data.js';
 import { WORKER_URL } from './config.js';
 import { validateWatchlistItem } from './schema.js';
-import { getValuation, valuationCellHTML } from './valuations.js';
 
 // ══════════════════════════════════════════════
 // STORAGE
@@ -51,7 +58,9 @@ async function _loadWatchlistFromWorker() {
     if (Array.isArray(remote) && remote.length > 0) {
       // 通常: KV のデータをローカルへ反映
       state.watchlist = remote;
-      try { localStorage.setItem('hm-watchlist', JSON.stringify(remote)); } catch (e) {
+      try {
+        localStorage.setItem('hm-watchlist', JSON.stringify(remote));
+      } catch (e) {
         console.warn('[watchlist] localStorage 保存失敗（容量超過の可能性）:', e);
       }
     } else if (state.watchlist.length > 0) {
@@ -60,7 +69,9 @@ async function _loadWatchlistFromWorker() {
     } else {
       await _restoreWatchlistFromSnapshot();
     }
-  } catch { /* localStorageをそのまま使用 */ }
+  } catch {
+    /* localStorageをそのまま使用 */
+  }
 }
 
 async function _restoreWatchlistFromSnapshot() {
@@ -115,7 +126,7 @@ function addToWatchlist(item) {
     console.warn('[watchlist] validation failed for item:', item?.symbol, e.message);
     return;
   }
-  if (state.watchlist.some(w => w.symbol === item.symbol)) return;
+  if (state.watchlist.some((w) => w.symbol === item.symbol)) return;
   state.watchlist.push(item);
   saveWatchlist();
   renderWatchlist();
@@ -123,7 +134,7 @@ function addToWatchlist(item) {
 }
 
 function removeFromWatchlist(symbol) {
-  state.watchlist = state.watchlist.filter(w => w.symbol !== symbol);
+  state.watchlist = state.watchlist.filter((w) => w.symbol !== symbol);
   saveWatchlist();
   renderWatchlist();
 }
@@ -136,68 +147,60 @@ function removeFromWatchlist(symbol) {
 async function fetchTickerInfo(symbol) {
   // chart API（価格）と quoteSummary（正式商品名）を並列取得
   const [chartData, qsData] = await Promise.all([
-    fetchViaProxy(
-      `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=2d`, 7000
-    ),
-    fetchViaProxy(
-      `https://query2.finance.yahoo.com/v11/finance/quoteSummary/${symbol}?modules=price`, 6000
-    ),
+    fetchViaProxy(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=2d`, 7000),
+    fetchViaProxy(`https://query2.finance.yahoo.com/v11/finance/quoteSummary/${symbol}?modules=price`, 6000),
   ]);
 
   const result = chartData?.chart?.result?.[0];
   if (!result) return null;
-  const meta  = result.meta || {};
+  const meta = result.meta || {};
   const price = meta.regularMarketPrice ?? null;
   if (price == null) return null;
 
   const preCalcPct = meta.regularMarketChangePercent ?? null;
-  const prevClose  = meta.regularMarketPreviousClose ?? meta.chartPreviousClose ?? null;
-  const dayPct = preCalcPct !== null
-    ? preCalcPct
-    : (prevClose ? ((price - prevClose) / prevClose) * 100 : null);
+  const prevClose = meta.regularMarketPreviousClose ?? meta.chartPreviousClose ?? null;
+  const dayPct = preCalcPct !== null ? preCalcPct : prevClose ? ((price - prevClose) / prevClose) * 100 : null;
 
   // 名前: quoteSummary の longName を最優先（日本ETFの正式商品名が入ることが多い）
   const qsPrice = qsData?.quoteSummary?.result?.[0]?.price || {};
-  const candidates = [
-    qsPrice.longName,
-    qsPrice.shortName,
-    meta.longName,
-    meta.shortName,
-  ].map(s => (s || '').trim()).filter(Boolean);
+  const candidates = [qsPrice.longName, qsPrice.shortName, meta.longName, meta.shortName]
+    .map((s) => (s || '').trim())
+    .filter(Boolean);
   // 最も長い名前を採用（商品名は運用会社名より長い傾向がある）
-  const name = candidates.length
-    ? candidates.reduce((a, b) => b.length > a.length ? b : a)
-    : symbol;
+  const name = candidates.length ? candidates.reduce((a, b) => (b.length > a.length ? b : a)) : symbol;
 
   // quoteType 判定: instrumentType → quoteType → 名前内キーワード の優先順
   const rawType = (meta.quoteType || qsPrice.quoteType || '').toUpperCase();
   const instrType = (meta.instrumentType || '').toUpperCase();
-  const isEtfByName = name.includes('ETF') || name.includes('上場投信')
-                   || name.includes('上場投資信託');
-  const type = (instrType === 'ETF' || rawType === 'ETF' || isEtfByName) ? 'ETF'
-             : (rawType === 'MUTUALFUND') ? 'MUTUALFUND'
-             : (rawType === 'CURRENCY')   ? 'CURRENCY'
-             : rawType || 'EQUITY';
+  const isEtfByName = name.includes('ETF') || name.includes('上場投信') || name.includes('上場投資信託');
+  const type =
+    instrType === 'ETF' || rawType === 'ETF' || isEtfByName
+      ? 'ETF'
+      : rawType === 'MUTUALFUND'
+        ? 'MUTUALFUND'
+        : rawType === 'CURRENCY'
+          ? 'CURRENCY'
+          : rawType || 'EQUITY';
 
   return { price, dayPct, name, type, exchange: meta.exchangeName || '' };
 }
 
 // ── 市場ラベル・バッジ変換ヘルパー ──
 function wlDetectMarket(symbol, exchangeName) {
-  if (symbol.endsWith('.T'))  return '東証';
+  if (symbol.endsWith('.T')) return '東証';
   if (symbol.endsWith('.HK')) return '香港';
-  if (symbol.endsWith('=X'))  return '通貨';
+  if (symbol.endsWith('=X')) return '通貨';
   if (exchangeName) {
-    if (/tokyo|tse/i.test(exchangeName))     return '東証';
+    if (/tokyo|tse/i.test(exchangeName)) return '東証';
     if (/hong kong|hkex/i.test(exchangeName)) return '香港';
   }
   return 'US';
 }
 function wlTypeBadge(quoteType) {
   const t = (quoteType || '').toUpperCase();
-  if (t === 'ETF')         return 'ETF';
-  if (t === 'MUTUALFUND')  return '投信';
-  if (t === 'CURRENCY')    return '通貨';
+  if (t === 'ETF') return 'ETF';
+  if (t === 'MUTUALFUND') return '投信';
+  if (t === 'CURRENCY') return '通貨';
   return '株';
 }
 
@@ -207,12 +210,13 @@ let _wlSearchSeq = 0;
 
 function onWatchlistSearch(eventOrQuery) {
   // data-action ディスパッチャ経由（input イベント）、または文字列引数の両方を受ける
-  const q = (typeof eventOrQuery === 'string')
-    ? eventOrQuery
-    : (eventOrQuery?.target?.value ?? '');
+  const q = typeof eventOrQuery === 'string' ? eventOrQuery : (eventOrQuery?.target?.value ?? '');
   clearTimeout(_wlSearchTimer);
   const dropdown = document.getElementById('wl-search-dropdown');
-  if (!q.trim()) { dropdown.hidden = true; return; }
+  if (!q.trim()) {
+    dropdown.hidden = true;
+    return;
+  }
   dropdown.innerHTML = '<div class="wl-search-msg">確認中…</div>';
   dropdown.hidden = false;
   _wlSearchTimer = setTimeout(() => searchTicker(q), 500);
@@ -220,7 +224,7 @@ function onWatchlistSearch(eventOrQuery) {
 
 async function searchTicker(q) {
   const dropdown = document.getElementById('wl-search-dropdown');
-  const input    = q.trim().toUpperCase();
+  const input = q.trim().toUpperCase();
   // race condition 対策: このリクエストの世代を記録。await 後に最新でなければ破棄する（#246）
   const seq = ++_wlSearchSeq;
 
@@ -247,7 +251,7 @@ async function searchTicker(q) {
 
   // 全候補を並列取得（チャートAPIなので必ず動作する）
   const results = await Promise.all(
-    [...candidates].map(async sym => {
+    [...candidates].map(async (sym) => {
       const info = await fetchTickerInfo(sym);
       return info ? { symbol: sym, ...info } : null;
     })
@@ -256,7 +260,7 @@ async function searchTicker(q) {
   if (seq !== _wlSearchSeq) return;
   // 重複シンボルを除去して返す
   const seen = new Set();
-  const found = results.filter(r => r && !seen.has(r.symbol) && seen.add(r.symbol));
+  const found = results.filter((r) => r && !seen.has(r.symbol) && seen.add(r.symbol));
 
   if (found.length === 0) {
     dropdown.innerHTML = `<div class="wl-search-msg">
@@ -266,20 +270,19 @@ async function searchTicker(q) {
     return;
   }
 
-  dropdown.innerHTML = found.map(item => {
-    const market  = wlDetectMarket(item.symbol, item.exchange);
-    const badge   = wlTypeBadge(item.type);
-    const already = state.watchlist.some(w => w.symbol === item.symbol);
-    const cur     = market === '東証' ? 'JPY' : market === '香港' ? 'HKD' : 'USD';
-    const priceStr = fmtPrice(item.price, cur);
-    const pctStr   = item.dayPct != null
-      ? `${item.dayPct >= 0 ? '+' : ''}${item.dayPct.toFixed(2)}%`
-      : '';
-    const sym  = escapeHTML(item.symbol);
-    const name = escapeHTML(item.name || item.symbol);
-    const mkt  = escapeHTML(market);
-    const bdg  = escapeHTML(badge);
-    return `<div class="wl-search-item${already ? ' wl-already' : ''}"
+  dropdown.innerHTML = found
+    .map((item) => {
+      const market = wlDetectMarket(item.symbol, item.exchange);
+      const badge = wlTypeBadge(item.type);
+      const already = state.watchlist.some((w) => w.symbol === item.symbol);
+      const cur = market === '東証' ? 'JPY' : market === '香港' ? 'HKD' : 'USD';
+      const priceStr = fmtPrice(item.price, cur);
+      const pctStr = item.dayPct != null ? `${item.dayPct >= 0 ? '+' : ''}${item.dayPct.toFixed(2)}%` : '';
+      const sym = escapeHTML(item.symbol);
+      const name = escapeHTML(item.name || item.symbol);
+      const mkt = escapeHTML(market);
+      const bdg = escapeHTML(badge);
+      return `<div class="wl-search-item${already ? ' wl-already' : ''}"
          data-symbol="${sym}"
          data-name="${name}"
          data-market="${mkt}"
@@ -290,22 +293,23 @@ async function searchTicker(q) {
       <span class="wl-market-label">${mkt}</span>
       <span class="wl-item-name">${name}</span>
       <span class="wl-item-price">${priceStr}${pctStr ? ` <span class="wl-item-pct ${item.dayPct >= 0 ? 'pos' : 'neg'}">${pctStr}</span>` : ''}</span>
-      ${already
-        ? '<span class="wl-status-tag wl-registered">登録済</span>'
-        : '<span class="wl-status-tag wl-add-tag">＋ 追加</span>'}
+      ${
+        already
+          ? '<span class="wl-status-tag wl-registered">登録済</span>'
+          : '<span class="wl-status-tag wl-add-tag">＋ 追加</span>'
+      }
     </div>`;
-  }).join('');
+    })
+    .join('');
 }
 
 function wlSelectItem(arg, event) {
-  const el = event instanceof Event
-    ? event.target.closest('.wl-search-item')
-    : arg;
+  const el = event instanceof Event ? event.target.closest('.wl-search-item') : arg;
   if (!el || el.classList.contains('wl-already')) return;
-  const symbol   = el.dataset.symbol;
-  const name     = el.dataset.name;
+  const symbol = el.dataset.symbol;
+  const name = el.dataset.name;
   const exchange = el.dataset.market;
-  const type     = el.dataset.badge;
+  const type = el.dataset.badge;
 
   // 通貨を市場から判定
   let cur = 'USD';
@@ -317,7 +321,10 @@ function wlSelectItem(arg, event) {
   // ドロップダウン内の表示を更新
   el.classList.add('wl-already');
   const tag = el.querySelector('.wl-status-tag');
-  if (tag) { tag.className = 'wl-status-tag wl-registered'; tag.textContent = '登録済'; }
+  if (tag) {
+    tag.className = 'wl-status-tag wl-registered';
+    tag.textContent = '登録済';
+  }
 
   // 検索欄をクリア
   const input = document.getElementById('wl-search-input');
@@ -327,7 +334,7 @@ function wlSelectItem(arg, event) {
 }
 
 // 検索欄の外をクリックしたらドロップダウンを閉じる
-document.addEventListener('click', e => {
+document.addEventListener('click', (e) => {
   if (!e.target.closest('#wl-search-wrap')) {
     const dd = document.getElementById('wl-search-dropdown');
     if (dd) dd.hidden = true;
@@ -339,14 +346,16 @@ document.addEventListener('click', e => {
 // ══════════════════════════════════════════════
 
 async function fetchWatchlistData() {
-  const symbols = state.watchlist.map(w => w.symbol);
+  const symbols = state.watchlist.map((w) => w.symbol);
   if (symbols.length === 0) return;
 
   // ライブ価格を並列取得
-  await Promise.all(symbols.map(async sym => {
-    const live = await fetchLivePrice(sym);
-    if (live) state.watchlistPrices[sym] = live;
-  }));
+  await Promise.all(
+    symbols.map(async (sym) => {
+      const live = await fetchLivePrice(sym);
+      if (live) state.watchlistPrices[sym] = live;
+    })
+  );
 
   // 履歴データは Historical Heatmap と共通の fetchAllHistorical 経由で取得する。
   // → state.fetchingRanges / state.historicalAttempted のフラグが正しくセットされ、
@@ -383,14 +392,6 @@ function wlGetPct(item, periodId) {
 }
 
 /** ウォッチリストテーブルを描画 */
-// ── PER採点セル ──
-// 単一ストア data/valuations.json（symbol→valuation）を優先参照し、無ければ
-// KV item.valuation にフォールバック。保有テーブルと同じ採点を共有（重複計算なし）。
-function wlValuationCell(item) {
-  const v = getValuation(item.symbol) || item.valuation || null;
-  return valuationCellHTML(v);
-}
-
 export function renderWatchlist() {
   const panel = document.getElementById('panel-watchlist');
   if (panel?.hidden) return;
@@ -408,17 +409,16 @@ export function renderWatchlist() {
     const dir = state.wlSortDir === 'desc' ? -1 : 1;
     let va, vb;
     if (col === 'symbol') {
-      va = a.symbol; vb = b.symbol;
+      va = a.symbol;
+      vb = b.symbol;
       return dir * va.localeCompare(vb);
     }
     if (col === 'market') {
-      va = a.exchange ?? ''; vb = b.exchange ?? '';
+      va = a.exchange ?? '';
+      vb = b.exchange ?? '';
       return dir * va.localeCompare(vb);
     }
-    if (col === 'per') {
-      va = (getValuation(a.symbol) || a.valuation)?.percentile ?? -Infinity;
-      vb = (getValuation(b.symbol) || b.valuation)?.percentile ?? -Infinity;
-    } else if (col === 'price') {
+    if (col === 'price') {
       va = state.watchlistPrices[a.symbol]?.price ?? -Infinity;
       vb = state.watchlistPrices[b.symbol]?.price ?? -Infinity;
     } else {
@@ -430,40 +430,39 @@ export function renderWatchlist() {
   });
 
   // makeTh のカリー版（sortFn・ソート状態をクロージャでキャプチャ）
-  const th = (label, col, align) =>
-    makeTh(label, col, align, state.wlSortCol, state.wlSortDir, 'wlSort');
+  const th = (label, col, align) => makeTh(label, col, align, state.wlSortCol, state.wlSortDir, 'wlSort');
 
   // ── 行生成 ──
-  const rows = sorted.map(item => {
-    const live     = state.watchlistPrices[item.symbol];
-    const price    = live?.price;
-    const priceStr = price != null ? fmtPrice(price, item.cur) : '–';
+  const rows = sorted
+    .map((item) => {
+      const live = state.watchlistPrices[item.symbol];
+      const price = live?.price;
+      const priceStr = price != null ? fmtPrice(price, item.cur) : '–';
 
-    // 期間セル群（utils.js の共通ヘルパー。Historical Heatmap と完全同一仕様）
-    // → dataCol が自動で渡るため "…/-" の loading 判定も同一になる
-    const periodCells = makePeriodCells(periodId => wlGetPct(item, periodId));
+      // 期間セル群（utils.js の共通ヘルパー。Historical Heatmap と完全同一仕様）
+      // → dataCol が自動で渡るため "…/-" の loading 判定も同一になる
+      const periodCells = makePeriodCells((periodId) => wlGetPct(item, periodId));
 
-    const symEsc  = escapeHTML(item.symbol);
-    const nameEsc = escapeHTML(item.name || '');
-    const exEsc   = escapeHTML(item.exchange || '');
-    return `<tr>
+      const symEsc = escapeHTML(item.symbol);
+      const nameEsc = escapeHTML(item.name || '');
+      const exEsc = escapeHTML(item.exchange || '');
+      return `<tr>
       <td data-col="symbol" class="sl-sym">${symEsc}<span class="sl-inline-name">${nameEsc}</span></td>
       <td class="wl-market-cell"><span class="wl-type-badge">${exEsc}</span></td>
       <td class="wl-price-cell">${priceStr}</td>
-      ${wlValuationCell(item)}
       ${periodCells}
       <td class="wl-del-cell">
         <button class="wl-del-btn" data-action="removeFromWatchlist" data-arg="${escapeHTML(item.symbol)}" title="ウォッチリストから削除">×</button>
       </td>
     </tr>`;
-  }).join('');
+    })
+    .join('');
 
   wrap.innerHTML = `<table class="sl-table wl-table">
     <thead><tr>
       ${th('ティッカー<br><span class="sl-th-sub">銘柄名</span>', 'symbol')}
       ${th('市場', 'market', 'center')}
       ${th('現在値', 'price')}
-      ${th('PER採点<br><span class="sl-th-sub">%ile</span>', 'per', 'center')}
       ${makePeriodHeaderCells(state.wlSortCol, state.wlSortDir, 'wlSort')}
       <th></th>
     </tr></thead>
@@ -471,4 +470,14 @@ export function renderWatchlist() {
   </table>`;
 }
 
-export { saveWatchlist, _loadWatchlistFromWorker, _restoreWatchlistFromSnapshot, addToWatchlist, removeFromWatchlist, wlSort, onWatchlistSearch, wlSelectItem, fetchWatchlistData };
+export {
+  saveWatchlist,
+  _loadWatchlistFromWorker,
+  _restoreWatchlistFromSnapshot,
+  addToWatchlist,
+  removeFromWatchlist,
+  wlSort,
+  onWatchlistSearch,
+  wlSelectItem,
+  fetchWatchlistData,
+};
