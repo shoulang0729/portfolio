@@ -1,10 +1,41 @@
 {
   "processed": [
-    {"number": 243, "title": "bug: auth-ui.js ローカルPINハッシュをサーバー同期成功前に更新してしまう", "summary": "src/auth-ui.js の _pcSubmit() でサーバー同期 (await fetch) を先に実行し、成功後のみ localStorage を更新するよう修正。失敗時はエラーメッセージを表示して変更を中断する。"}
+    {
+      "number": 376,
+      "title": "Briefing修正: 資産総額バグ・ヘルス本文余白・PER横スクロール",
+      "summary": "2026-06-19-0503.html: ①資産総額を¥582,071,523に修正, ②.flagを縦構成(.flag-h+.tk)に変更してヘルス本文余白解消, ③table.wlにtable-layout:fixedと列幅固定+判定列折り返しを追加"
+    },
+    {
+      "number": 367,
+      "title": "ソースコードレビュー: 脆弱性・矛盾・高度化の提案",
+      "summary": "auth-pin.js/_auth.failsをlocalStorageに永続化(hm-pin-fails)してロックアウト後の失敗回数リセット回避を修正; auth-ui.jsで失敗時・成功時にfailsを同期保存・削除するよう対応"
+    }
   ],
   "skipped": [
-    {"number": 220, "title": "[Risk Exposure] サマリーバーの「対象N銘柄」を構成銘柄数(look-through)にしたい", "reason": "Wait ラベル"},
-    {"number": 193, "title": "feat: スナップショット自動保存（1日2回）＋ Claude 自動分析レポート生成", "reason": "Wait ラベル"},
-    {"number": 16, "title": "perf: Worker レート制限の KV レイテンシーを Cloudflare ダッシュボード設定に移行", "reason": "Wait ラベル"}
+    {
+      "number": 306,
+      "title": "refactor: Cloudflare Worker を route/service/provider 単位に分割する",
+      "reason": "Wait ラベル"
+    },
+    {
+      "number": 305,
+      "title": "feat: ETF/投信の look-through 構成銘柄取得パイプラインを実データ化する",
+      "reason": "Wait ラベル"
+    },
+    {
+      "number": 304,
+      "title": "feat: Target Allocation とリバランス提案を追加する",
+      "reason": "Wait ラベル"
+    },
+    {
+      "number": 301,
+      "title": "feat: Portfolio Timeline でスナップショット履歴と変化分析を扱う",
+      "reason": "Wait ラベル"
+    },
+    {
+      "number": 220,
+      "title": "[Risk Exposure] サマリーバーの「対象N銘柄」を構成銘柄数(look-through)にしたい",
+      "reason": "Wait ラベル"
+    }
   ]
 }
