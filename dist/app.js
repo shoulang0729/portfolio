@@ -4461,6 +4461,14 @@ function getTargetPct(symbol) {
   for (const tier of Object.values(tiers)) {
     if (tier.targets && tier.targets[symbol] != null) return tier.targets[symbol];
   }
+  if (_cfg.themeEtfs && _cfg.themeEtfs.includes(symbol)) {
+    const etfTheme = getThemeOf(symbol);
+    if (etfTheme !== null) {
+      const cap = getThemeCap(etfTheme);
+      const n = _cfg.themeEtfs.filter((s) => getThemeOf(s) === etfTheme).length || 1;
+      return cap != null ? Math.round(cap / n * 100) / 100 : null;
+    }
+  }
   const theme = getThemeOf(symbol);
   if (theme !== null) {
     const conviction = _cfg.conviction && _cfg.conviction[symbol] || "standard";
@@ -4468,6 +4476,11 @@ function getTargetPct(symbol) {
     return pct != null ? pct : null;
   }
   return null;
+}
+function getThemeCap(theme) {
+  if (!_cfg || !_cfg.themeCaps || !_cfg.themeCaps[theme]) return null;
+  const cap = _cfg.themeCaps[theme].cap;
+  return cap != null ? cap : null;
 }
 
 // src/valuations.js
