@@ -79,12 +79,108 @@ ETF を種類で分けて扱いを変える：
 ---
 
 ## 6. 調査結果（VS Code 記入欄）
-<!-- ここに調査結果を追記してください。記入後、Mulmo が設計を確定します。 -->
 
-- FMP ETF エンドポイントで取れる指標：
-- trailing / forward：
-- 銘柄別 PER 可用性（VT / VEA / VGK / ACWI / SMH / XLF / XLV / XLP / DTCR / LITE / SHLD）：
-- 原指数 forward PE の取得可否：
-- etf-holdings（トップ構成＋比率）の可否：
-- サンプル値（SMH / VT / DTCR）：
-- 所感・詰まり：
+調査日: 2026-06-21 / 取得経路: Worker `/yahoo` プロキシ → Yahoo Finance `v10/finance/quoteSummary?modules=summaryDetail`
+
+### FMP ETF エンドポイントで取れる指標
+
+| エンドポイント | 状態 | PE系 | 備考 |
+|---|---|---|---|
+| `/stable/profile` | ✅ 取得可 | **なし** | price / beta / marketCap / isEtf のみ。PE フィールド自体が存在しない |
+| `/stable/key-metrics-ttm` | 🔒 Premium ブロック | 含む可能性 | 現プランで "Premium Qu…" エラー |
+| `/stable/ratios` | 🔒 Premium ブロック | 含む可能性 | 同上 |
+| `/stable/financial-ratios-ttm` | ⚠️ 空配列 | — | エラーではなく `[]` |
+| `/stable/etf-info` | ⚠️ 空配列 | — | 全 ETF で空 |
+| `/stable/etf-holdings` | ⚠️ 空配列 | — | 全 ETF で空 |
+| `/stable/etf-valuation` | ⚠️ 空配列 | — | 全 ETF で空 |
+| `/stable/etf-sector-weightings` | ⚠️ 空配列 | — | 全 ETF で空 |
+| `/api/v3/*` `/api/v4/*` | ❌ Legacy 廃止 | — | 2025/8 以前のユーザー専用 |
+
+**結論: FMP（現プラン）では ETF の PER は取得不可。**  
+ETF 専用エンドポイント群がすべて空配列を返すため、プラン問題というより FMP 自体が ETF のファンドレベル PER を保持していない可能性が高い。
+
+### trailing / forward
+
+| 指標 | FMP | Yahoo Finance |
+|---|---|---|
+| trailing P/E | ❌ 取れない | **✅ 取れる**（`summaryDetail.trailingPE`） |
+| forward P/E | ❌ 取れない | ❌ 取れない（ETF では空 `{}`） |
+| P/B / PEG | ❌ 取れない | ❌ 取れない（空） |
+
+**→ trailing のみで設計が現実解。**
+
+### 銘柄別 PER 可用性（Yahoo Finance `summaryDetail.trailingPE`）
+
+| ETF | trailingPE | forwardPE | 備考 |
+|---|---|---|---|
+| VT | 22.5 | N/A | |
+| VEA | 18.6 | N/A | |
+| VGK | 17.8 | N/A | |
+| ACWI | 23.3 | N/A | |
+| SMH | 44.5 | N/A | |
+| XLF | 16.9 | N/A | |
+| XLV | 24.1 | N/A | |
+| XLP | 25.1 | N/A | |
+| DTCR | 22.1 | N/A | |
+| SHLD | 29.3 | −6.4 | forwardPE は異常値（赤字企業混在） |
+| LITE | — | — | ETF ではなく個別株（Lumentum Holdings Inc.） |
+| ASHR | 17.4 | N/A | |
+| 3033.HK | 18.4 | N/A | |
+| 1615.T | 17.7 | N/A | |
+| 2800.HK | **N/A** | N/A | Yahoo でも欠損 |
+| 1629.T / 1477.T / 2516.T / 200A.T | N/A | N/A | FMP profile も空配列 |
+
+対象 ETF（LITE 除く）は **13/14 で trailingPE が自動取得可能。**
+
+### 原指数 forward PE の取得可否
+
+**現実的な無料手段はない。** MSCI/S&P が公表する指数レベルの forward PE は有料データ。  
+Yahoo Finance でも ETF の forwardPE フィールドは空（SHLD の −6.4 は赤字企業混在による異常値）。  
+→ **`perFwd` は ETF では null 固定で設計する。**
+
+### etf-holdings（トップ構成 + 比率）の可否
+
+FMP の `/stable/etf-holdings` は空配列。Worker の `/etf/constituents` ルートは「構成銘柄が見つかりません」（B2 アダプタ未実装）。  
+→ **現時点では取得不可。B2（Issue #201）実装後に再評価。**
+
+### サンプル値（SMH / VT / DTCR）
+
+**SMH（VanEck Semiconductor ETF）**
+```json
+{
+  "trailingPE":  { "raw": 44.497772, "fmt": "44.50" },
+  "forwardPE":   {},
+  "totalAssets": { "raw": 67822489600, "fmt": "67.82B" },
+  "yield":       { "raw": 0.0018, "fmt": "0.18%" },
+  "navPrice":    { "raw": 659.73, "fmt": "659.73" }
+}
+```
+
+**VT（Vanguard Total World Stock ETF）**
+```json
+{
+  "trailingPE":  { "raw": 22.508926, "fmt": "22.51" },
+  "forwardPE":   {},
+  "totalAssets": { "raw": 95332884480, "fmt": "95.33B" },
+  "yield":       { "raw": 0.0159, "fmt": "1.59%" },
+  "navPrice":    { "raw": 157.59, "fmt": "157.59" }
+}
+```
+
+**DTCR（Global X Data Center & Digital Infrastructure ETF）**
+```json
+{
+  "trailingPE":  { "raw": 22.132208, "fmt": "22.13" },
+  "forwardPE":   {},
+  "totalAssets": { "raw": 2144204160, "fmt": "2.14B" },
+  "yield":       { "raw": 0.0074, "fmt": "0.74%" },
+  "navPrice":    { "raw": 31.80, "fmt": "31.80" }
+}
+```
+
+### 所感・詰まり
+
+- FMP は想定外に ETF バリュエーションが薄い。Premium プランに上げても etf-info 系が空のままなら無意味になる可能性がある
+- Yahoo Finance の `summaryDetail.trailingPE` が **既存 Worker 無料・追加インフラなし** で 13/14 を取れるのは想定より良好な結果
+- `perTrail` のみ投入して `perFwd=null` で verdict を走らせる設計が最もコスパが良いと判断。Mulmo 側で `computeVerdict` の片側 null 時の挙動（rising/falling 判定が効かなくなる件）を設計に織り込んでほしい
+- 2800.HK と日本 ETF 4本（1629.T / 1477.T / 2516.T / 200A.T）は Yahoo でも PE 欠損。コモディティ扱いと同様に `cyclical=true` 相当で na にするか、静的値を手当てするか要判断
