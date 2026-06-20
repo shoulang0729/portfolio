@@ -3,6 +3,7 @@
 // ルート一覧:
 //   GET  /yahoo?url=<encoded>           Yahoo Finance プロキシ（CORS 回避）
 //   GET  /finnhub?path=<path>&<params>  Finnhub プロキシ（APIキー隠蔽）
+//   GET  /fmp?path=<path>&<params>      Financial Modeling Prep プロキシ（APIキー隠蔽・quality 用）
 //   GET  /forex?from=<from>&to=<to>    為替レートプロキシ（Yahoo Finance）
 //   POST /ai/openai                     OpenAI (ChatGPT) プロキシ
 //   POST /ai/gemini                     Gemini プロキシ
@@ -37,6 +38,7 @@ import {
 } from './etf-constituents.js';
 
 const FINNHUB_BASE = 'https://finnhub.io/api/v1';
+const FMP_BASE = 'https://financialmodelingprep.com';
 
 /**
  * Yahoo Finance シンボルを Finnhub シンボルに変換
@@ -292,6 +294,31 @@ async function handleFinnhub(url, env, origin) {
 
   try {
     const res = await fetch(`${FINNHUB_BASE}${path}?${params}`);
+    const data = await res.json();
+    return jsonRes(data, res.status, origin);
+  } catch (e) {
+    return errRes(`取得失敗: ${e.message}`, 502, origin);
+  }
+}
+
+// ── Financial Modeling Prep プロキシ（quality ファンダ取得用） ──
+// 日次/週次バッチが key-metrics / ratios / 財務3表を叩いて quality を算出する。
+// path は FMP の /api/v3・/api/v4・/stable のいずれかのみ許可（apikey は Secret 付与）。
+async function handleFmp(url, env, origin) {
+  const apiKey = env.FMP_API_KEY;
+  if (!apiKey) return errRes('FMP APIキーが未設定です', 500, origin);
+
+  const path = url.searchParams.get('path') || '';
+  if (!/^\/(api\/v[34]|stable)\/[a-zA-Z0-9/._-]+$/.test(path)) {
+    return errRes('不正な path です', 400, origin);
+  }
+
+  const params = new URLSearchParams(url.searchParams);
+  params.delete('path');
+  params.set('apikey', apiKey);
+
+  try {
+    const res = await fetch(`${FMP_BASE}${path}?${params}`);
     const data = await res.json();
     return jsonRes(data, res.status, origin);
   } catch (e) {
@@ -1215,11 +1242,12 @@ export default {
 
     const path = url.pathname;
     if (path === '/')                return new Response('portfolio-proxy OK', { status: 200 });
-    if (path === '/yahoo' || path === '/finnhub' || path === '/etf/constituents') {
+    if (path === '/yahoo' || path === '/finnhub' || path === '/fmp' || path === '/etf/constituents') {
       if (await checkRateLimit(request, env)) return errRes('Too Many Requests', 429, org);
     }
     if (path === '/yahoo')           return handleYahoo(url, env, org);
     if (path === '/finnhub')         return handleFinnhub(url, env, org);
+    if (path === '/fmp')             return handleFmp(url, env, org);
     if (path === '/forex')           return handleForex(url, env, org);
     if (path === '/etf/constituents') return handleEtfConstituents(url, env, org, ctx);
     if (path === '/ai/models')       return handleAIModels(env, org);
