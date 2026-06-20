@@ -232,10 +232,10 @@ async function main() {
   const written = writeQualityBlocks(VALS_PATH, results);
   console.log(`\nWrote ${VALS_PATH} (${written} symbols)`);
 
-  // Git commit & push
-  execSync('git add data/valuations.json', { cwd: ROOT });
+  // Git commit & push（パス限定コミット: 共有ワークツリーで他にステージ済みの
+  // ファイルがあっても valuations.json だけをコミットする）
   execSync(
-    `git commit -m "chore: quality auto-update US stocks $(date +%F)"`,
+    `git commit data/valuations.json -m "chore: quality auto-update US stocks $(date +%F)"`,
     { cwd: ROOT, shell: true }
   );
   execSync('git push', { cwd: ROOT });
