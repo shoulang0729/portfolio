@@ -30,3 +30,8 @@ test-results/
 
 # Claude Code output logs (contains API keys/tokens)
 output.txt
+
+# quality バッチのローカル API キー設定（FMP / EDINET DB）
+data/scheduler/fmp-config.json
+data/scheduler/edinet-config.json
+*secret*
