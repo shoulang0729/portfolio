@@ -36,7 +36,7 @@ Toshio → Mulmo（設計・指示書）→ VS Code（実装）→ PR → Toshio
 3. **触る範囲の正本**（指示書が都度指定する）
    - 例: Briefing → `docs/briefing-generation-spec.md` / MF 取り込み → `mf-import-config.json` の `schema`
 
-## 守ること（要点・詳細は CLAUDE.md / AGENTS.md）
+## 守ること（要点・詳細は CLAUDE.md）
 
 - **1 Task = 1 ブランチ = 1 PR = 1 Issue**。ベースは必ず `main`、push 前に `git pull --rebase`。
 - **squash マージのみ＋ブランチ auto-delete**。feature ブランチは残さない。
