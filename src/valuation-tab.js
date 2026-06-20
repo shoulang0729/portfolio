@@ -19,6 +19,7 @@ import { loadTargetAllocation, getTargetPct, getThemeOf, computeThemeUsage } fro
 import { loadMfHoldings, getMfTotals } from './networth.js';
 import { loadValuations, getValuation, computeVerdict, valuationsLoaded } from './valuations.js';
 import { loadTriggers, triggersLoaded, getTriggers, evaluateTriggers } from './triggers.js';
+import { loadVerdictOutcomes, outcomesLoaded, computeHitRate } from './verdict-outcomes.js';
 import { escapeHTML } from './utils.js';
 
 /** ローカルの once-guard: 並行二重ロードを防ぐ */
@@ -53,6 +54,9 @@ async function _ensureData() {
   }
   if (!triggersLoaded()) {
     loads.push(loadTriggers());
+  }
+  if (!outcomesLoaded()) {
+    loads.push(loadVerdictOutcomes());
   }
   await Promise.all(loads);
 }
@@ -402,10 +406,15 @@ export async function renderValuationTab() {
   const cheapCount = rows.filter((r) => r.verdict && r.verdict.class === 'cheap_real').length;
   const triggerCount = rows.filter((r) => r.trig && r.trig.active.length > 0).length;
 
+  const hr = computeHitRate();
+  const hitRateVal =
+    hr.resolved > 0
+      ? `<span title="${hr.ratePct}%" aria-label="的中率${hr.ratePct}%">${hr.hits}-${hr.misses}</span>`
+      : '—';
   const statsHTML = `<div class="val-stats">
     <div class="val-stat"><span class="k">過大ポジ</span><span class="v">${overCount}</span></div>
     <div class="val-stat"><span class="k">割安候補</span><span class="v">${cheapCount}</span></div>
-    <div class="val-stat"><span class="k">的中率</span><span class="v">—</span></div>
+    <div class="val-stat"><span class="k">的中率</span><span class="v">${hitRateVal}</span></div>
     <div class="val-stat"><span class="k">トリガー</span><span class="v">${triggerCount}</span></div>
   </div>`;
 

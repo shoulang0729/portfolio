@@ -1,0 +1,25 @@
+{
+  "updated": "2026-06-20",
+  "note": "verdict/発議の事後結果。hit/miss が出たら記録→的中率に反映。pendingは未確定。判断の質を測る学習ループ(Phase5b)。",
+  "outcomes": [
+    {
+      "date": "2026-06-04",
+      "symbol": "SMH",
+      "call": "売り（半導体集中是正）",
+      "outcome": "hit",
+      "note": "直後6/5 Nasdaq-4.18%・6/8 日経-3100で正当化"
+    },
+    {
+      "date": "2026-06-04",
+      "symbol": "GOOGL",
+      "call": "売り（増資希薄化前）",
+      "outcome": "hit",
+      "note": "希薄化前に完了"
+    },
+    { "date": "2026-06-04", "symbol": "SHLD", "call": "損切り", "outcome": "hit", "note": "下落局面で回避・損益通算" },
+    { "date": "2026-06-19", "symbol": "MSFT", "call": "本物の割安→買い", "outcome": "pending", "note": "" },
+    { "date": "2026-06-19", "symbol": "SMH", "call": "見せかけの割高→集中度のみ", "outcome": "pending", "note": "" },
+    { "date": "2026-06-19", "symbol": "8050", "call": "罠→利確", "outcome": "pending", "note": "" },
+    { "date": "2026-06-19", "symbol": "AMZN", "call": "フェア→拾うだけ", "outcome": "pending", "note": "" }
+  ]
+}
