@@ -328,12 +328,12 @@
         "drivers": ["成長で正当化されない高値"]
       },
       "quality": {
-        "roic": 104.3,
+        "roic": 52,
         "wacc": 8,
-        "grossProf": 0.58,
-        "fcfConv": 1.05,
+        "grossProf": 0.54,
+        "fcfConv": 0.88,
         "fScore": 8,
-        "altmanZ": 10.64,
+        "altmanZ": 11.46,
         "intCoverage": null,
         "qScore": 8
       },
@@ -371,13 +371,13 @@
         "drivers": ["負債/簿外でEV割高", "フェア"]
       },
       "quality": {
-        "roic": 13.5,
+        "roic": 10.7,
         "wacc": 8,
-        "grossProf": 0.41,
-        "fcfConv": -0.03,
+        "grossProf": 0.44,
+        "fcfConv": 0.1,
         "fScore": 6,
-        "altmanZ": 4.54,
-        "intCoverage": 33.7,
+        "altmanZ": 5.6,
+        "intCoverage": 43.8,
         "qScore": 6
       },
       "momentum": {
@@ -414,13 +414,13 @@
         "drivers": []
       },
       "quality": {
-        "roic": 28.3,
+        "roic": 21.8,
         "wacc": 8,
-        "grossProf": 0.36,
-        "fcfConv": 0.4,
+        "grossProf": 0.4,
+        "fcfConv": 0.55,
         "fScore": 6,
-        "altmanZ": 10.03,
-        "intCoverage": 111.8,
+        "altmanZ": 17.36,
+        "intCoverage": 1110.7,
         "qScore": 6
       },
       "momentum": {
@@ -458,14 +458,14 @@
         "drivers": ["fwd<trail/負債軽", "本物の割安"]
       },
       "quality": {
-        "roic": 27.2,
+        "roic": 21.6,
         "wacc": 8,
         "grossProf": 0.31,
-        "fcfConv": 0.58,
-        "fScore": 5,
-        "altmanZ": 9.28,
-        "intCoverage": null,
-        "qScore": 5
+        "fcfConv": 0.7,
+        "fScore": 6,
+        "altmanZ": 7.9,
+        "intCoverage": 52.8,
+        "qScore": 6
       },
       "momentum": {
         "priceMom1Y": -20.6,
@@ -501,14 +501,14 @@
         "drivers": ["成長で正当化されない高値"]
       },
       "quality": {
-        "roic": 6.3,
+        "roic": 3,
         "wacc": 8,
-        "grossProf": 0.13,
-        "fcfConv": 1.78,
-        "fScore": 6,
-        "altmanZ": 14.36,
-        "intCoverage": 14.4,
-        "qScore": 6
+        "grossProf": 0.12,
+        "fcfConv": 1.64,
+        "fScore": 5,
+        "altmanZ": 17.97,
+        "intCoverage": 16.6,
+        "qScore": 5
       },
       "momentum": {
         "priceMom1Y": 26.6,
@@ -609,12 +609,12 @@
         "drivers": ["%タイルのアヤ", "絶対値高・追わない"]
       },
       "quality": {
-        "roic": 306.8,
+        "roic": 17.9,
         "wacc": 8,
-        "grossProf": 0.43,
-        "fcfConv": 1.17,
+        "grossProf": 0.41,
+        "fcfConv": 1.29,
         "fScore": 7,
-        "altmanZ": 134.9,
+        "altmanZ": 126.84,
         "intCoverage": null,
         "qScore": 7
       },
