@@ -98,14 +98,14 @@
         "drivers": ["cyclical", "利益-14%YoY"]
       },
       "quality": {
-        "roic": 8.9,
+        "roic": 6,
         "wacc": 6,
-        "grossProf": 0.2,
-        "fcfConv": 0.68,
-        "fScore": 5,
-        "altmanZ": 2.94,
-        "intCoverage": 10.6,
-        "qScore": 5
+        "grossProf": null,
+        "fcfConv": 0.71,
+        "fScore": 4,
+        "altmanZ": null,
+        "intCoverage": 80.2,
+        "qScore": 4
       },
       "momentum": {
         "priceMom1Y": 44.9,
@@ -676,13 +676,13 @@
         "drivers": ["一過性益でfake-cheap"]
       },
       "quality": {
-        "roic": 9.2,
+        "roic": 7.1,
         "wacc": 6,
-        "grossProf": 0.4,
-        "fcfConv": 1.23,
+        "grossProf": 0.37,
+        "fcfConv": 2.45,
         "fScore": 8,
-        "altmanZ": 2.44,
-        "intCoverage": 22.2,
+        "altmanZ": null,
+        "intCoverage": 13.6,
         "qScore": 8
       },
       "momentum": {
@@ -718,14 +718,14 @@
         "drivers": ["成長で正当化されない高値"]
       },
       "quality": {
-        "roic": 37.6,
+        "roic": 17.5,
         "wacc": 6,
-        "grossProf": 0.46,
-        "fcfConv": 1.43,
-        "fScore": 8,
-        "altmanZ": 8.6,
-        "intCoverage": 49.0,
-        "qScore": 8
+        "grossProf": 0.47,
+        "fcfConv": 0.94,
+        "fScore": 7,
+        "altmanZ": null,
+        "intCoverage": 44,
+        "qScore": 7
       },
       "momentum": {
         "priceMom1Y": 75.6,
