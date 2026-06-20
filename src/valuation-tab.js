@@ -7,16 +7,18 @@
 //
 // 依存:
 //   ./positions.js       (positions)
-//   ./target-allocation.js (loadTargetAllocation, getTargetPct, getThemeOf)
+//   ./target-allocation.js (loadTargetAllocation, getTargetPct, getThemeOf, computeThemeUsage)
 //   ./networth.js        (loadMfHoldings, getMfTotals)
 //   ./valuations.js      (loadValuations, getValuation, computeVerdict, valuationsLoaded)
+//   ./triggers.js        (loadTriggers, triggersLoaded, getTriggers, evaluateTriggers)
 //   ./utils.js           (escapeHTML)
 // ══════════════════════════════════════════════════════════════
 
 import { positions } from './positions.js';
-import { loadTargetAllocation, getTargetPct, getThemeOf } from './target-allocation.js';
+import { loadTargetAllocation, getTargetPct, getThemeOf, computeThemeUsage } from './target-allocation.js';
 import { loadMfHoldings, getMfTotals } from './networth.js';
 import { loadValuations, getValuation, computeVerdict, valuationsLoaded } from './valuations.js';
+import { loadTriggers, triggersLoaded, getTriggers, evaluateTriggers } from './triggers.js';
 import { escapeHTML } from './utils.js';
 
 /** ローカルの once-guard: 並行二重ロードを防ぐ */
@@ -48,6 +50,9 @@ async function _ensureData() {
   }
   if (!valuationsLoaded()) {
     loads.push(loadValuations());
+  }
+  if (!triggersLoaded()) {
+    loads.push(loadTriggers());
   }
   await Promise.all(loads);
 }
@@ -192,6 +197,27 @@ function line3HTML(val) {
 }
 
 /**
+ * 総合レンズ専用: トリガー行 HTML を生成する。
+ * @param {{ active: Array<{side:string,type:string,action:string,reason:string}>, watching: Array<{side:string,type:string,action:string,note:string}> }} trig
+ * @returns {string}
+ */
+function triggerLineHTML(trig) {
+  if (!trig || (trig.active.length === 0 && trig.watching.length === 0)) return '';
+
+  if (trig.active.length > 0) {
+    const t = trig.active[0];
+    if (t.side === 'sell') {
+      return `<div class="val-trig sell">🔴 売り発議: ${escapeHTML(t.action)} <span class="trg-r">(${escapeHTML(t.reason)})</span></div>`;
+    }
+    return `<div class="val-trig buy">🟢 買い余地: ${escapeHTML(t.action)}</div>`;
+  }
+
+  // watching のみ
+  const w = trig.watching[0];
+  return `<div class="val-trig watch">監視中: ${escapeHTML(w.action)}（${escapeHTML(w.note)}）</div>`;
+}
+
+/**
  * 1 銘柄分の行 HTML を生成する（_lens に応じて line3 を切り替える）。
  * @param {{ symbol:string, name:string, value:number, ySymbol:string, cat:string, cur:string }} p
  * @param {number} currentPct
@@ -199,9 +225,10 @@ function line3HTML(val) {
  * @param {number|null} gap
  * @param {import('./valuations.js').Verdict|null} verdict
  * @param {any|null} val
+ * @param {{ active: Array<any>, watching: Array<any> }|null} trig
  * @returns {string}
  */
-function rowHTML(p, currentPct, targetPct, gap, verdict, val) {
+function rowHTML(p, currentPct, targetPct, gap, verdict, val, trig) {
   // line 1: シンボル + 銘柄名 + verdict chip
   const chipHTML =
     verdict && verdict.class !== 'na'
@@ -220,13 +247,16 @@ function rowHTML(p, currentPct, targetPct, gap, verdict, val) {
   // line 3: レンズ別メトリクス
   const line3 = line3HTML(val);
 
-  return `<div class="val-row">${line1}${line2}${line3}</div>`;
+  // トリガー行: 総合レンズのみ表示
+  const trigLine = _lens === 'total' && trig ? triggerLineHTML(trig) : '';
+
+  return `<div class="val-row">${line1}${line2}${line3}${trigLine}</div>`;
 }
 
 /**
  * 現在の _lens に応じて rows を並び替えて返す（元配列は変更しない）。
- * @param {Array<{p:any,currentPct:number,targetPct:number|null,gap:number|null,verdict:any,val:any}>} rows
- * @returns {Array<{p:any,currentPct:number,targetPct:number|null,gap:number|null,verdict:any,val:any}>}
+ * @param {Array<{p:any,currentPct:number,targetPct:number|null,gap:number|null,verdict:any,val:any,trig:any}>} rows
+ * @returns {Array<{p:any,currentPct:number,targetPct:number|null,gap:number|null,verdict:any,val:any,trig:any}>}
  */
 function sortedRows(rows) {
   const copy = rows.slice();
@@ -317,8 +347,18 @@ export async function renderValuationTab() {
     return;
   }
 
+  // symbol → currentPct マップ（テーマ使用率計算用）
+  /** @type {Record<string, number>} */
+  const currentPctBySymbol = {};
+  for (const p of positions) {
+    const pct = ((p.value || 0) / denom) * 100;
+    // ySymbol と symbol 両方にマップ（computeThemeUsage は members で参照するため）
+    if (p.ySymbol) currentPctBySymbol[p.ySymbol] = pct;
+    if (p.symbol && p.symbol !== p.ySymbol) currentPctBySymbol[p.symbol] = pct;
+  }
+
   // 各銘柄のメトリクスを計算
-  /** @type {Array<{p: any, currentPct: number, targetPct: number|null, gap: number|null, verdict: import('./valuations.js').Verdict|null, val: any|null, tkey: string|null}>} */
+  /** @type {Array<{p: any, currentPct: number, targetPct: number|null, gap: number|null, verdict: import('./valuations.js').Verdict|null, val: any|null, tkey: string|null, trig: {active:Array<any>,watching:Array<any>}|null}>} */
   const rows = positions.map((p) => {
     const currentPct = ((p.value || 0) / denom) * 100;
 
@@ -339,18 +379,34 @@ export async function renderValuationTab() {
     const val = getValuation(p.ySymbol);
     const verdict = val ? computeVerdict(val) : null;
 
-    return { p, currentPct, targetPct, gap, verdict, val, tkey };
+    // テーマ使用率（concentration トリガー用）
+    const trigTheme = (tkey && getThemeOf(tkey)) || (p.ySymbol && getThemeOf(p.ySymbol)) || null;
+    const themeUsagePct = trigTheme ? computeThemeUsage(trigTheme, currentPctBySymbol).used : null;
+
+    // トリガーを評価（ySymbol 優先、次に symbol）
+    const trigSymbol = getTriggers(p.ySymbol) ? p.ySymbol : getTriggers(p.symbol) ? p.symbol : null;
+    const trig = trigSymbol
+      ? evaluateTriggers(trigSymbol, {
+          percentile: val && val.percentile != null ? val.percentile : null,
+          peg: val && val.value && val.value.peg != null ? val.value.peg : null,
+          themeUsagePct,
+          price: p.price != null ? p.price : null,
+        })
+      : null;
+
+    return { p, currentPct, targetPct, gap, verdict, val, tkey, trig };
   });
 
   // ヘッダー統計（常に総合ベースで計算）
   const overCount = rows.filter((r) => r.gap != null && r.gap > 0.5).length;
   const cheapCount = rows.filter((r) => r.verdict && r.verdict.class === 'cheap_real').length;
+  const triggerCount = rows.filter((r) => r.trig && r.trig.active.length > 0).length;
 
   const statsHTML = `<div class="val-stats">
     <div class="val-stat"><span class="k">過大ポジ</span><span class="v">${overCount}</span></div>
     <div class="val-stat"><span class="k">割安候補</span><span class="v">${cheapCount}</span></div>
     <div class="val-stat"><span class="k">的中率</span><span class="v">—</span></div>
-    <div class="val-stat"><span class="k">トリガー</span><span class="v">—</span></div>
+    <div class="val-stat"><span class="k">トリガー</span><span class="v">${triggerCount}</span></div>
   </div>`;
 
   // レンズ切替ピル（4つすべて有効）
@@ -371,7 +427,7 @@ export async function renderValuationTab() {
 
   // 現在レンズでソートして行を生成
   const sorted = sortedRows(rows);
-  const rowsHTML = sorted.map((r) => rowHTML(r.p, r.currentPct, r.targetPct, r.gap, r.verdict, r.val)).join('');
+  const rowsHTML = sorted.map((r) => rowHTML(r.p, r.currentPct, r.targetPct, r.gap, r.verdict, r.val, r.trig)).join('');
 
   wrap.innerHTML = `${statsHTML}${lensHTML}<div class="val-list">${rowsHTML}</div>`;
 
