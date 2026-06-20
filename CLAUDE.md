@@ -1,5 +1,7 @@
 # Portfolio Heatmap — Claude Code 引き継ぎ情報
 
+> **開発フロー（必読）**: このリポは「設計=Mulmo / 実装=あなた」の一方通行で開発しています。着手前に [`docs/mulmo-vscode-workflow.md`](docs/mulmo-vscode-workflow.md) を読み、設計は自己判断で変えず・矛盾があれば止めて報告してください。
+
 ## プロジェクト概要
 Finnhub API（優先）+ Yahoo Finance API（フォールバック）を使ったポートフォリオ可視化 Web アプリ。
 Heatmap・Historical Heatmap・Watchlist Historical Heatmap の3タブ構成。
