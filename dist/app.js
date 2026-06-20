@@ -4258,7 +4258,7 @@ function computePortfolioReturns(alignedBySym, weights) {
 
 // src/liquidity-calc.js
 var ADV_WINDOW = 20;
-var PARTICIPATION = 0.2;
+var PARTICIPATION = 0.1;
 var ILLIQUID_DAYS = 5;
 function adv(series, window2 = ADV_WINDOW) {
   if (!Array.isArray(series) || series.length === 0) return null;
