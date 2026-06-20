@@ -4864,6 +4864,39 @@ function evaluateTriggers(symbol, ctx) {
   return { active, watching };
 }
 
+// src/verdict-outcomes.js
+var OUTCOMES_URL = "data/verdict-outcomes.json";
+var _outcomes = [];
+var _loaded4 = false;
+async function loadVerdictOutcomes() {
+  try {
+    const r = await fetch(`${OUTCOMES_URL}?_=${Date.now()}`);
+    if (!r.ok) throw new Error(`verdict-outcomes ${r.status}`);
+    const j = await r.json();
+    _outcomes = Array.isArray(j && j.outcomes) ? j.outcomes : [];
+    _loaded4 = true;
+  } catch {
+    _outcomes = [];
+  }
+  return _outcomes;
+}
+function outcomesLoaded() {
+  return _loaded4;
+}
+function computeHitRate() {
+  let hits = 0;
+  let misses = 0;
+  let pending = 0;
+  for (const o of _outcomes) {
+    if (o.outcome === "hit") hits++;
+    else if (o.outcome === "miss") misses++;
+    else pending++;
+  }
+  const resolved = hits + misses;
+  const ratePct = resolved > 0 ? Math.round(hits / resolved * 100) : null;
+  return { hits, misses, pending, resolved, ratePct };
+}
+
 // src/valuation-tab.js
 var _taLoaded2 = false;
 var _mfLoaded = false;
@@ -4889,6 +4922,9 @@ async function _ensureData() {
   }
   if (!triggersLoaded()) {
     loads.push(loadTriggers());
+  }
+  if (!outcomesLoaded()) {
+    loads.push(loadVerdictOutcomes());
   }
   await Promise.all(loads);
 }
@@ -5098,10 +5134,12 @@ async function renderValuationTab() {
   const overCount = rows.filter((r) => r.gap != null && r.gap > 0.5).length;
   const cheapCount = rows.filter((r) => r.verdict && r.verdict.class === "cheap_real").length;
   const triggerCount = rows.filter((r) => r.trig && r.trig.active.length > 0).length;
+  const hr = computeHitRate();
+  const hitRateVal = hr.resolved > 0 ? `<span title="${hr.ratePct}%" aria-label="\u7684\u4E2D\u7387${hr.ratePct}%">${hr.hits}-${hr.misses}</span>` : "\u2014";
   const statsHTML = `<div class="val-stats">
     <div class="val-stat"><span class="k">\u904E\u5927\u30DD\u30B8</span><span class="v">${overCount}</span></div>
     <div class="val-stat"><span class="k">\u5272\u5B89\u5019\u88DC</span><span class="v">${cheapCount}</span></div>
-    <div class="val-stat"><span class="k">\u7684\u4E2D\u7387</span><span class="v">\u2014</span></div>
+    <div class="val-stat"><span class="k">\u7684\u4E2D\u7387</span><span class="v">${hitRateVal}</span></div>
     <div class="val-stat"><span class="k">\u30C8\u30EA\u30AC\u30FC</span><span class="v">${triggerCount}</span></div>
   </div>`;
   const lenses = [
