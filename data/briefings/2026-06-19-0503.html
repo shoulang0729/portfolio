@@ -79,21 +79,28 @@
   .ment .claim{font-size:14.5px;}
   .subh{font-size:11.5px;font-weight:800;color:var(--text2);margin:10px 0 2px;letter-spacing:.03em;}
   .subh-ic{width:12px;height:12px;vertical-align:-1px;}
-  .flag{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);}
+  .flag{padding:9px 0;border-bottom:1px solid var(--border);}
   .flag:last-child{border-bottom:none;}
-  .flag > div:first-child{flex:1;min-width:0;}
-  .flag .tk{line-height:1.55;}
+  .flag-h{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+  .flag-h b{flex:1;min-width:0;}
+  .flag .tk{line-height:1.55;margin-top:3px;}
   .lab{font-size:12px;padding:1px 8px;border-radius:6px;font-weight:800;align-self:flex-start;white-space:nowrap;}
   .lab.hi{background:rgba(255,59,48,0.15);color:var(--up);}
   .lab.ok{background:rgba(52,199,89,0.16);color:var(--down);}
   .lab.mid{background:rgba(204,120,92,0.18);color:var(--accent);}
-  table.wl{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px;}
+  /* 横スクロール防止: table-layout:fixed＋判定列は折り返し（理由/括弧は次行へ） */
+  table.wl{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px;table-layout:fixed;}
   table.wl th{font-size:10px;color:var(--text2);font-weight:700;text-align:right;padding:4px 4px 6px 0;border-bottom:1px solid var(--border);white-space:nowrap;}
   table.wl th:first-child{text-align:left;}
-  table.wl td{padding:7px 4px;border-bottom:1px solid var(--border);text-align:right;font-weight:700;white-space:nowrap;}
+  table.wl td{padding:7px 4px;border-bottom:1px solid var(--border);text-align:right;font-weight:700;}
   table.wl td:first-child{text-align:left;font-weight:700;}
+  table.wl th:first-child,table.wl td:first-child{width:32%;}
+  table.wl th:nth-child(2),table.wl td:nth-child(2){width:15%;}
+  table.wl th:nth-child(3),table.wl td:nth-child(3){width:15%;}
+  table.wl th:nth-child(4),table.wl td:nth-child(4){text-align:left;white-space:normal;word-break:break-word;font-size:11px;line-height:1.4;}
   table.wl tr:last-child td{border-bottom:none;}
-  table.wl .nm{display:block;font-size:10px;color:var(--text2);font-weight:600;}
+  table.wl .nm{display:block;font-size:10px;color:var(--text2);font-weight:600;white-space:normal;}
+  .jsub{display:block;font-size:10px;color:var(--text2);font-weight:600;}
   .act{display:flex;gap:9px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);}
   .act:last-child{border-bottom:none;} .dot{flex:0 0 auto;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-top:9px;}
   .insight{background:var(--surface2);border-left:3px solid var(--accent);border-radius:0 10px 10px 0;
@@ -226,11 +233,11 @@
   <section id="s4">
     <div class="sec-title"><b>4</b> ヘルスチェック</div>
     <div class="card">
-      <div class="flag"><div><b>半導体テーマ集中（最優先：利確発議）</b><div class="tk">SMH ¥40.0M（%タイル98・bandHigh45に到達）＋200A.T ¥36.7M＝計¥76.8M・14.3%。AI相場の調整局面で最も感応度が高い単一リスク。<b>強気の今こそSMHを1.5〜2割トリムし半導体合計を12〜13%へ縮小、余剰をNLR/DTCRへ回す</b>。</div></div><span class="lab hi">発議・高優先</span></div>
-      <div class="flag"><div><b>ファストリ(9983.T) 保有・%タイル97（利確発議）</b><div class="tk">PER54.01・自己バンド(22-55)上限圏。恒常的高PEのグロースだがレンジ上端での部分利確は理に適う。コアは残し1/4トリム。急がないが能動発議として記録。</div></div><span class="lab mid">発議・中優先</span></div>
-      <div class="flag"><div><b>日本株ETF群（1306/1615/1629/8050）%タイル100</b><div class="tk">全て最高値圏。銀行(1615)・商社(1629)は低PER業種の金利/ROE再評価という構造触媒あり＝即売りではない。日本株全体が反落したら優先的に薄める順序として記録（触媒の弱いものから）。</div></div><span class="lab mid">低優先・監視</span></div>
-      <div class="flag"><div><b>米国株34.6%（¥186.2M）</b><div class="tk">最大カテゴリ。ドル円160高止まりで円換算が嵩上げ中。6/27日銀会合での追加利上げ時は円高→逆風。MSFT/AMZN割安側へ回転することでテーマ最適化も兼ねる。</div></div><span class="lab mid">34.6%</span></div>
-      <div class="flag"><div><b>投資用キャッシュ比率10%（目標：SMHトリムで回転）</b><div class="tk">SMHトリム原資→NLR$50K/MSFT$15K打診/AMZN$237.5指値へ直接回転させる設計。現金積み増し先行より回転優先の局面。</div></div><span class="lab ok">10.0%</span></div>
+      <div class="flag"><div class="flag-h"><b>半導体テーマ集中（最優先：利確発議）</b><span class="lab hi">発議・高優先</span></div><div class="tk">SMH ¥40.0M（%タイル98・bandHigh45に到達）＋200A.T ¥36.7M＝計¥76.8M・14.3%。AI相場の調整局面で最も感応度が高い単一リスク。<b>強気の今こそSMHを1.5〜2割トリムし半導体合計を12〜13%へ縮小、余剰をNLR/DTCRへ回す</b>。</div></div>
+      <div class="flag"><div class="flag-h"><b>ファストリ(9983.T) 保有・%タイル97（利確発議）</b><span class="lab mid">発議・中優先</span></div><div class="tk">PER54.01・自己バンド(22-55)上限圏。恒常的高PEのグロースだがレンジ上端での部分利確は理に適う。コアは残し1/4トリム。急がないが能動発議として記録。</div></div>
+      <div class="flag"><div class="flag-h"><b>日本株ETF群（1306/1615/1629/8050）%タイル100</b><span class="lab mid">低優先・監視</span></div><div class="tk">全て最高値圏。銀行(1615)・商社(1629)は低PER業種の金利/ROE再評価という構造触媒あり＝即売りではない。日本株全体が反落したら優先的に薄める順序として記録（触媒の弱いものから）。</div></div>
+      <div class="flag"><div class="flag-h"><b>米国株34.6%（¥186.2M）</b><span class="lab mid">34.6%</span></div><div class="tk">最大カテゴリ。ドル円160高止まりで円換算が嵩上げ中。6/27日銀会合での追加利上げ時は円高→逆風。MSFT/AMZN割安側へ回転することでテーマ最適化も兼ねる。</div></div>
+      <div class="flag"><div class="flag-h"><b>投資用キャッシュ比率10%（目標：SMHトリムで回転）</b><span class="lab ok">10.0%</span></div><div class="tk">SMHトリム原資→NLR$50K/MSFT$15K打診/AMZN$237.5指値へ直接回転させる設計。現金積み増し先行より回転優先の局面。</div></div>
       <div class="insight"><span class="ilabel">売り発議（高優先）：</span>SMH 1.5〜2割トリム（bandHigh45到達・%タイル98・半導体14.3%の主因）を最優先発議。200A.T はSMHトリム後も半導体13%超なら二段目として5〜10%トリム。9983.T は1/4部分利確（コア維持・急がない）。日本株ETF群は触媒が剥落したら機械的に薄める候補として台帳記録。</div>
     </div>
   </section>
@@ -370,7 +377,7 @@ function toggleMask(){
 // Initialize with real values accessible via unmask button
 (function(){
   var vals={
-    total:'¥537,534,421',
+    total:'¥582,071,523',
     inv:'¥537,534,421',
     cash:'¥53,908,363'
   };
