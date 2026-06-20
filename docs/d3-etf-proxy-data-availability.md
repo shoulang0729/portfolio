@@ -184,3 +184,60 @@ FMP の `/stable/etf-holdings` は空配列。Worker の `/etf/constituents` ル
 - Yahoo Finance の `summaryDetail.trailingPE` が **既存 Worker 無料・追加インフラなし** で 13/14 を取れるのは想定より良好な結果
 - `perTrail` のみ投入して `perFwd=null` で verdict を走らせる設計が最もコスパが良いと判断。Mulmo 側で `computeVerdict` の片側 null 時の挙動（rising/falling 判定が効かなくなる件）を設計に織り込んでほしい
 - 2800.HK と日本 ETF 4本（1629.T / 1477.T / 2516.T / 200A.T）は Yahoo でも PE 欠損。コモディティ扱いと同様に `cyclical=true` 相当で na にするか、静的値を手当てするか要判断
+
+---
+
+## 7. 確定設計（Mulmo・2026-06-21）→ VS Code 実装スペック（A4）
+> §6 の事実を受けてユーザーと確定。**実装はここから VS Code 担当（A4）**。設計は自己判断で変えず、矛盾あれば止めて報告。
+
+### 7.0 結論
+ETF verdict は **Yahoo `summaryDetail.trailingPE` を `perTrail` に投入し、`perFwd=null`／`peg=null` のまま走らせる**。
+forward/holdings ベースの精緻化は **データが無いので今フェーズでは追わない**（欠損は無理に埋めない＝次フェーズ）。
+
+### 7.1 確定した3判断（ユーザー・2026-06-21）
+- **Q1＝情報レイヤー扱い**：ETF の割安/割高は **表示するが、§5 の売り発議を自動で立てない**。proxy＋低 confidence バッジを付す。
+- **Q2＝純 trailing で統一**：手動 forward seed を**廃止**。**SMH の NVDA seed（perFwd 20.6/perTrail 31.3/peg 0.46）を撤去**し、Yahoo trailing 44.5 で評価（→ rich_real 寄りになるが、Q1 により売りシグナル化しない）。メンテゼロを優先。
+- **Q3＝欠損 ETF は na**：PER が取れない ETF（2800.HK / 1629.T / 1477.T / 2516.T / 200A.T）は **判定せず %タイル順位のみ**。静的手当てはしない。
+
+### 7.2 ETF 区分と扱い（最終）
+| 区分 | 銘柄 | perTrail | perFwd | verdict |
+|------|------|----------|--------|---------|
+| 広域株式 | VT / VEA / VGK / ACWI | Yahoo trailing | null | %タイル3段階 |
+| セクター/テーマ株式 | SMH / XLF / XLV / XLP / DTCR / SHLD | Yahoo trailing | null | %タイル3段階 |
+| シクリカル/コモディティ | COPX / REMX / XLE | — | — | **na（`cyclical=true` 維持・不変）** |
+| PER欠損 | 2800.HK / 1629.T / 1477.T / 2516.T / 200A.T | null | null | **na（%タイルのみ）** |
+| ※ETFでない | LITE（Lumentum＝個別株） | 個別株扱い | — | 既存ロジック |
+
+### 7.3 verdict は **コード変更不要**（既存ロジックで意図どおり退化する）
+`classifyVerdict()` は perFwd=null だと rising/falling 分岐が自然に無効化され、ETF はこう落ちる（確認済）：
+- %タイル ≤30 → `cheap_real`（🟢本物の割安）／ 31–69 → `fair`（🟡フェア）／ ≥70 → `rich_real`（🔴本物の割高）
+- → **3段階に単純化される。これは仕様どおり**。computeVerdict には手を入れない。
+
+### 7.4 confidence も **基本コード変更不要**（自然に「低」へ）
+`computeConfidence()` は `hasPer = perTrail!=null && perFwd!=null` を要求するため、**perFwd=null の ETF は hasPer=false → score が伸びず大半が「低」判定**になる（例: SMH pct98 でも score≈1.0=低）。狙いどおり。
+- ただし **proxy 由来であることを UI に明示**したい（confidence「低」だけだと理由が伝わらない）。→ 7.5 のフラグでバッジ表示。
+
+### 7.5 必要な実装（A4 の作業）
+1. **バッチで ETF trailingPE を投入**：価格系バッチ（trailing は株価で日々動くので価格更新に相乗り。最低週次）で、対象 ETF（7.2 の上2区分）の `value.perTrail` を Yahoo `summaryDetail.trailingPE` から更新。`perFwd`/`peg` は触らない（null のまま）。
+2. **proxy フラグ追加**：`value.perSource: "fund-trailing"`（ETF のみ）を立てる。Value タブで verdict chip 横に **「proxy」バッジ＋confidenceは既存の「低」** を表示。ツールチップ＝「ETFのファンド実績PER。予想PER不在のため%タイル基準の粗い判定」。
+3. **§5 トリガー連携（②売りルール）**：`evaluateTriggers()` で **`type:'valuation'` かつ `side:'sell'` のトリガーは、ETF（proxy銘柄）では `active` に上げず `watching` に降格**。
+   - ⚠️ **`type:'concentration'`（テーマ上限超過）は ETF でも従来どおり `active` に上げる**（PF リスク由来＝§4/§5 の正当な売り。ETF の自前バリュエーションとは別物）。混同しないこと。
+   - 実装：`evaluateTriggers(symbol, ctx)` の ctx に `isEtf`（or proxy 判定）を渡し、valuation+sell 分岐で `if (ctx.isEtf) { watching.push(...); continue; }`。
+4. **SMH の手動 seed 撤去**：`valuations.json` の SMH から perFwd/peg の NVDA proxy 値を外し、perTrail を Yahoo 実値に。`value.perSource:"fund-trailing"` を付与。
+5. **欠損 ETF**：7.2 下2区分は perTrail=null のまま（na）。何もしない。
+
+### 7.6 受け入れ基準
+- [ ] 対象 ETF（VT/VEA/VGK/ACWI/SMH/XLF/XLV/XLP/DTCR/SHLD）に perTrail が入り、Value タブで %タイル3段階 verdict＋「proxy」バッジ＋confidence「低」が出る。
+- [ ] SMH が NVDA seed 撤去後も壊れず、trailing ベースで rich_real 系に表示（売り発議は立たない）。
+- [ ] ETF の valuation 売りトリガーが `watching` 止まり、concentration 売りトリガーは従来どおり `active`。
+- [ ] シクリカル（COPX/REMX/XLE）・欠損 ETF は na のまま不変。
+- [ ] 個別株 9 銘柄の既存挙動・既存テスト不変。新ロジックにテスト追加。
+
+### 7.7 スコープ外（次フェーズ・無理に埋めない）
+- forward PER / 原指数 fwd PE の取得（有料・将来）。
+- etf-holdings ベースの上位N加重 proxy（B2 / #201 実装後に再評価）。
+- 欠損 ETF（HK/日本）の静的手当て。
+- ETF の quality ブロック（個別財務が無いので算出不可・null 継続）。
+
+### 7.8 完了後
+本ドキュメント §7 の各項目に実装 PR 番号を追記し、Wiki「投資システム アップグレード計画」A4/D-3 を Mulmo が更新する。
