@@ -56,7 +56,9 @@
  * @typedef {{
  *   class: 'cheap_real'|'cheap_fake'|'fair'|'rich_fake'|'rich_real'|'trap'|'na',
  *   label: string,
- *   drivers: string[]
+ *   drivers: string[],
+ *   sub?: 'trap_cheap'|'trap_once'|null,
+ *   confidence?: '高'|'中'|'低'|null
  * }} Verdict
  */
 
@@ -117,31 +119,79 @@ const VERDICT_LABELS = {
   cheap_real: '本物の割安',
   cheap_fake: '見せかけの割安(フェア)',
   fair: '中立',
-  rich_fake: '見せかけの割高(売るな)',
+  rich_fake: '見せかけの割高(フェア)',
   rich_real: '本物の割高',
   trap: '罠',
-  na: '—',
+  na: '-',
 };
 
 /**
+ * 判定確度（エンジンの Verdict 判定がどれだけ信頼できるか）を 高/中/低 で返す。
+ * ユーザーの主観的「確信度」（サイズ入力）とは別概念。
+ * ① データ充足度（実績/予想PER・PEG・Fスコアの揃い具合）
+ * ② 境界余裕（%タイルが 30/70 境界に近いほど分類が反転しやすく低下）
+ * ③ 利益方向シグナルの有無
+ * @param {number} pct - %タイル
+ * @param {{ value?: ValueBlock, quality?: QualityBlock }} v
+ * @returns {'高'|'中'|'低'}
+ */
+function computeConfidence(pct, v) {
+  const val = (v && v.value) || {};
+  const q = (v && v.quality) || {};
+  const hasPer = val.perTrail != null && isFinite(val.perTrail) && val.perFwd != null && isFinite(val.perFwd);
+  const hasPeg = val.peg != null && isFinite(val.peg);
+  const hasF = q.fScore != null && isFinite(q.fScore);
+
+  // ① データ充足度（最大 2.0）
+  let score = (hasPer ? 0.5 : 0) + (hasPeg ? 0.5 : 0) + (hasF ? 1.0 : 0);
+
+  // ② 境界余裕（最大 1.0）— 30/70 から離れているほど高い
+  const edge = Math.min(Math.abs(pct - 30), Math.abs(pct - 70));
+  if (pct <= 12 || pct >= 88) score += 1.0;
+  else if (edge >= 15) score += 0.75;
+  else if (edge >= 8) score += 0.4;
+  else score += 0.1;
+
+  // ③ 利益方向シグナル（最大 0.5）
+  if (hasPer) score += 0.5;
+
+  if (score >= 2.8) return '高';
+  if (score >= 1.5) return '中';
+  return '低';
+}
+
+/**
  * バリュエーションオブジェクトから割安/割高の"正体"を判定する純粋関数。
+ * 戻り値には判定確度（confidence）と罠サブ種別（sub）を含む。
  *
- * @param {{ percentile?: number|null, value?: ValueBlock }} v - バリュエーションオブジェクト
+ * @param {{ percentile?: number|null, value?: ValueBlock, quality?: QualityBlock }} v - バリュエーションオブジェクト
  * @returns {Verdict}
  */
 export function computeVerdict(v) {
+  const base = classifyVerdict(v);
+  const pct = v != null && v.percentile != null ? v.percentile : null;
+  base.confidence = base.class === 'na' || pct == null ? null : computeConfidence(pct, v);
+  return base;
+}
+
+/**
+ * Verdict の"正体"分類（判定確度を付与する前の純分類）。
+ * @param {{ percentile?: number|null, value?: ValueBlock }} v
+ * @returns {Verdict}
+ */
+function classifyVerdict(v) {
   const pct = v != null && v.percentile != null ? v.percentile : null;
 
   // null percentile → na
   if (pct == null) {
-    return { class: 'na', label: VERDICT_LABELS['na'], drivers: [] };
+    return { class: 'na', label: VERDICT_LABELS['na'], drivers: [], sub: null };
   }
 
   const val = (v && v.value) || {};
 
   // cyclical → na (PERによる採点対象外)
   if (val.cyclical === true) {
-    return { class: 'na', label: 'シクリカル(別物差し)', drivers: ['cyclical'] };
+    return { class: 'na', label: 'シクリカル(別物差し)', drivers: ['cyclical'], sub: null };
   }
 
   const t = val.perTrail != null ? val.perTrail : null;
@@ -157,38 +207,52 @@ export function computeVerdict(v) {
   const zone = pct <= 30 ? 'cheap' : pct >= 70 ? 'rich' : 'mid';
 
   if (zone === 'cheap') {
+    // 割安圏で減益 → 割安の罠
     if (falling) {
-      return { class: 'trap', label: VERDICT_LABELS['trap'], drivers: ['fwd≫trail', '一過性/減益'] };
+      return { class: 'trap', label: '罠・割安の罠', drivers: ['fwd≫trail', '一過性/減益'], sub: 'trap_cheap' };
     }
     if (f != null && f > 40) {
       return {
         class: 'rich_fake',
         label: VERDICT_LABELS['rich_fake'],
         drivers: ['%タイルのアヤ', '絶対値高・追わない'],
+        sub: null,
       };
     }
     if (debtHeavy) {
-      return { class: 'cheap_fake', label: VERDICT_LABELS['cheap_fake'], drivers: ['負債/簿外でEV割高', 'フェア'] };
+      return {
+        class: 'cheap_fake',
+        label: VERDICT_LABELS['cheap_fake'],
+        drivers: ['負債/簿外でEV割高', 'フェア'],
+        sub: null,
+      };
     }
-    return { class: 'cheap_real', label: VERDICT_LABELS['cheap_real'], drivers: ['fwd<trail/負債軽', '本物の割安'] };
+    return {
+      class: 'cheap_real',
+      label: VERDICT_LABELS['cheap_real'],
+      drivers: ['fwd<trail/負債軽', '本物の割安'],
+      sub: null,
+    };
   }
 
   if (zone === 'rich') {
+    // 割高圏で一過性益により安く見える → 一過性益の罠
     if (falling) {
-      return { class: 'trap', label: VERDICT_LABELS['trap'], drivers: ['一過性益でfake-cheap'] };
+      return { class: 'trap', label: '罠・一過性益', drivers: ['一過性益でfake-cheap'], sub: 'trap_once' };
     }
     if (rising && peg != null && peg < 2) {
       return {
         class: 'rich_fake',
         label: VERDICT_LABELS['rich_fake'],
         drivers: ['利益爆発で割高は見せかけ', '売るな'],
+        sub: null,
       };
     }
-    return { class: 'rich_real', label: VERDICT_LABELS['rich_real'], drivers: ['成長で正当化されない高値'] };
+    return { class: 'rich_real', label: VERDICT_LABELS['rich_real'], drivers: ['成長で正当化されない高値'], sub: null };
   }
 
   // mid
-  return { class: 'fair', label: VERDICT_LABELS['fair'], drivers: [] };
+  return { class: 'fair', label: VERDICT_LABELS['fair'], drivers: [], sub: null };
 }
 
 /**

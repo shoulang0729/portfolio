@@ -580,54 +580,103 @@
   margin-bottom: 8px; padding: 4px 0;
 }
 
-/* 各銘柄行 */
+/* 各銘柄カード */
+.val-list { display: flex; flex-direction: column; gap: 10px; }
 .val-row {
-  padding: 10px 0; border-bottom: 1px solid var(--border2);
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 13px; overflow: hidden;
 }
-.val-row:last-child { border-bottom: none; }
+.val-body { padding: 10px 13px; }
 
-/* 行1: シンボル・銘柄名・chip */
-.val-r1 {
-  display: flex; align-items: baseline; flex-wrap: wrap; gap: 5px;
-  margin-bottom: 4px;
+/* アクションバナー（カード上部の色帯） */
+.val-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 4px 13px; font-size: 12px; font-weight: 700; line-height: 1.2;
 }
-.val-tk { font-size: 13px; font-weight: 700; color: var(--text); }
-.val-nm { font-size: 11px; color: var(--text2); flex: 1; min-width: 0; }
+.val-banner .va { display: inline-flex; align-items: center; gap: 6px; }
+.val-banner .gl { font-size: 10px; opacity: 0.9; }
+.val-banner .vb {
+  font-size: 11px; font-weight: 500; opacity: 0.92;
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.val-banner--sell  { background: var(--pos); color: #fff; }
+.val-banner--buy   { background: var(--neg); color: #fff; }
+.val-banner--watch { background: color-mix(in srgb, var(--warn) 14%, transparent); color: var(--warn); }
+.val-banner--hold  { background: var(--surface2); color: var(--text2); }
 
-/* バーディクト chip */
+/* 上段: シンボル + 銘柄名（下揃え） + verdict chip */
+.val-head { display: flex; align-items: flex-end; gap: 8px; margin-bottom: 8px; }
+.val-tk { font-size: 22px; font-weight: 800; color: var(--text); line-height: 1; }
+.val-nm {
+  font-size: 12px; color: var(--text2); flex: 1; min-width: 0; line-height: 1;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* Verdict chip（本物=強い色 / 見せかけ=灰+方向ドット / 罠=アンバー） */
 .val-chip {
-  margin-left: auto; font-size: 10px; padding: 2px 6px;
-  border-radius: 4px; white-space: nowrap; font-weight: 500;
+  align-self: flex-end; font-size: 11px; font-weight: 700;
+  padding: 0 11px; height: 25px; border-radius: 20px;
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
 }
-/* 日本市場の慣例: 上昇=赤(--up)=過大、下落=緑(--down)=割安 */
-.vc-cheap_real  { background: rgba(var(--down-rgb, 34,197,94), 0.15); color: var(--down); }
-.vc-cheap_fake  { background: var(--surface2); color: var(--accent); border: 1px solid var(--accent); }
-.vc-fair        { background: var(--surface2); color: var(--text2); }
-.vc-rich_fake   { background: var(--surface2); color: var(--text2); }
-.vc-rich_real   { background: rgba(var(--up-rgb, 239,68,68), 0.15); color: var(--up); }
-.vc-trap        { background: transparent; color: var(--up); border: 1px dashed var(--up); }
-.vc-na          { background: var(--surface2); color: var(--text2); }
+.vc-cheap_fake::before,
+.vc-rich_fake::before {
+  content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+}
+.vc-cheap_real { background: color-mix(in srgb, var(--neg) 16%, transparent); color: var(--neg); }
+.vc-rich_real  { background: color-mix(in srgb, var(--pos) 16%, transparent); color: var(--pos); }
+.vc-fair       { background: var(--surface2); color: var(--text2); }
+.vc-cheap_fake { background: var(--surface2); color: var(--text2); }
+.vc-rich_fake  { background: var(--surface2); color: var(--text2); }
+.vc-cheap_fake::before { background: var(--neg); }
+.vc-rich_fake::before  { background: var(--pos); }
+.vc-trap-cheap { background: transparent; color: var(--warn); border: 1px dashed var(--warn); }
+.vc-trap-once  { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+.vc-na         { background: var(--surface2); color: var(--text2); }
 
-/* 行2: サイズバー */
-.val-r2 { margin-bottom: 3px; }
-.val-size { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.val-size-label { font-size: 11px; color: var(--text2); white-space: nowrap; }
-.val-bar {
-  position: relative; height: 6px; width: 100px; max-width: 40vw;
-  background: var(--surface2); border-radius: 3px; overflow: visible; flex-shrink: 0;
+/* サイズバー（左端0% / 右端=適正×2 / 適正は中央） */
+.val-size-wrap { margin: 2px 0 8px; }
+.val-sb { display: flex; flex-direction: column; gap: 2px; }
+.val-sb-top { position: relative; height: 15px; }
+.val-sb-cur {
+  position: absolute; bottom: -1px; transform: translateX(-50%);
+  font-size: 13px; font-weight: 700; white-space: nowrap;
 }
-.val-bar .cur {
-  position: absolute; left: 0; top: 0; height: 100%;
-  background: var(--accent); opacity: 0.5; border-radius: 3px;
+.val-sb-cur.over  { color: var(--pos); }
+.val-sb-cur.under { color: var(--neg); }
+.val-sb-cur.fit   { color: var(--text2); }
+.val-sb-bar {
+  position: relative; height: 14px; background: var(--surface3);
+  border-radius: 7px; overflow: hidden;
 }
-.val-bar .tgt {
-  position: absolute; top: -2px; width: 2px; height: 10px;
-  background: var(--text); border-radius: 1px; transform: translateX(-50%);
+.val-sb-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 7px; }
+.val-sb-fill.over  { background: color-mix(in srgb, var(--pos) 85%, transparent); }
+.val-sb-fill.under { background: color-mix(in srgb, var(--neg) 85%, transparent); }
+.val-sb-fill.fit   { background: var(--text2); }
+.val-sb-x {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  color: #fff; font-size: 11px; font-weight: 700;
 }
-.gap { font-size: 11px; font-weight: 600; }
-.gap.over  { color: var(--up); }
-.gap.under { color: var(--down); }
-.gap.fit   { color: var(--text2); }
+.val-sb-scale { display: flex; justify-content: space-between; align-items: flex-end; }
+.val-sb-scale .end { font-size: 9px; color: var(--text2); }
+.val-sb-scale .mid {
+  display: flex; flex-direction: column; align-items: center; gap: 1px; line-height: 1.1;
+}
+.val-sb-scale .tri {
+  width: 0; height: 0; border-left: 4px solid transparent;
+  border-right: 4px solid transparent; border-bottom: 5px solid var(--accent);
+}
+.val-sb-scale .lab { font-size: 11px; font-weight: 700; color: var(--accent); white-space: nowrap; }
+.val-sb-scale .cv { font-size: 9.5px; font-weight: 600; opacity: 0.85; }
+.val-sb--na .val-sb-bar { background: var(--surface2); }
+
+/* 指標チップ（総合レンズ: PER / PEG / Fスコア 等幅3分割） */
+.val-chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.val-c {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 7px;
+  padding: 4px; text-align: center; font-size: 10px; color: var(--text2); line-height: 1.2;
+}
+.val-c .k { display: block; }
+.val-c b { display: block; color: var(--text); font-weight: 700; font-size: 15px; margin-top: 1px; line-height: 1.05; }
 
 /* 行3: メトリクス */
 .val-met {
@@ -651,12 +700,31 @@
 .val-mom-up { color: var(--up); font-weight: 600; }
 .val-mom-dn { color: var(--down); font-weight: 600; }
 /* ── /Value タブ ── */
-/* ── Value タブ: トリガー行 ── */
-.val-trig { font-size: 11.5px; margin-top: 5px; font-weight: 600; }
-.val-trig.sell { color: var(--up); }
-.val-trig.buy { color: var(--down); }
-.val-trig.watch { color: var(--text2); font-weight: 500; }
-.val-trig .trg-r { color: var(--text2); font-weight: 400; font-size: 10.5px; }
+/* ── Value タブ: 判定確度（カード最下部） ── */
+.val-jc {
+  display: flex; align-items: center; gap: 8px; margin-top: 8px;
+  font-size: 10.5px; color: var(--text2); flex-wrap: wrap;
+}
+.val-jc .jc-nm { font-weight: 700; }
+.val-jc .jc-dots { display: inline-flex; align-items: center; gap: 4px; }
+.val-jc .d { width: 6px; height: 6px; border-radius: 50%; background: var(--border); }
+.val-jc .d.on { background: var(--accent); }
+.val-jc .lv { font-size: 10.5px; font-weight: 700; color: var(--text2); margin-left: 1px; }
+.val-jc .drv { opacity: 0.85; }
+
+/* ── Value タブ: 用語解説（常設・native details） ── */
+.val-gloss {
+  margin-top: 16px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--surface); overflow: hidden;
+}
+.val-gloss > summary {
+  padding: 10px 14px; font-size: 12px; font-weight: 700; color: var(--text);
+  cursor: pointer; list-style: none;
+}
+.val-gloss > summary::-webkit-details-marker { display: none; }
+.val-gloss-body { padding: 0 14px 12px; }
+.val-gloss-body p { font-size: 11.5px; color: var(--text2); margin: 8px 0 0; line-height: 1.5; }
+.val-gloss-body b { color: var(--text); font-weight: 700; }
 
 /* ── Risk overview (Phase 4 v1) ── */
 .risk-overview {
