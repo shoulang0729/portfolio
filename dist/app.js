@@ -4771,7 +4771,9 @@ async function buildQuantCard(posList) {
   const portReturns = computePortfolioReturns(aligned.bySym, normWeights);
   const pfVol = annualizedVol(portReturns);
   const pfWorstD = worstReturn(portReturns);
+  const pfWorstW = worstWindow(portReturns, 5);
   const pfWorstM = worstWindow(portReturns, 21);
+  const pfWorstQ = worstWindow(portReturns, 63);
   let _cum = 100;
   const pfSeriesLinear = portReturns.map((r, i) => {
     _cum *= 1 + r;
@@ -4810,10 +4812,20 @@ async function buildQuantCard(posList) {
     return el;
   }
   pfRow.appendChild(_stat("\u5E74\u7387\u30DC\u30E9", _pct1(pfVol), (pfVol ?? 0) > 0.2));
-  pfRow.appendChild(_stat("\u6700\u60AA\u65E5", _pct1(pfWorstD), true));
-  pfRow.appendChild(_stat("\u6700\u60AA1\u30F6\u6708", _pct1(pfWorstM), true));
   pfRow.appendChild(_stat("\u6700\u5927DD", _pct1(pfMaxDD), true));
   card.appendChild(pfRow);
+  const stressTitle = document.createElement("div");
+  stressTitle.className = "rq-stat-label";
+  stressTitle.style.marginTop = "8px";
+  stressTitle.textContent = "\u30B9\u30C8\u30EC\u30B9\uFF08\u904E\u53BB1\u5E74\u306E\u6700\u60AA\u5C40\u9762\u30FBPF\uFF09";
+  card.appendChild(stressTitle);
+  const stressRow = document.createElement("div");
+  stressRow.className = "rq-row";
+  stressRow.appendChild(_stat("\u6700\u60AA1\u65E5", _pct1(pfWorstD), true));
+  stressRow.appendChild(_stat("\u6700\u60AA1\u9031", _pct1(pfWorstW), true));
+  stressRow.appendChild(_stat("\u6700\u60AA1\u30F6\u6708", _pct1(pfWorstM), true));
+  stressRow.appendChild(_stat("\u6700\u60AA3\u30F6\u6708", _pct1(pfWorstQ), true));
+  card.appendChild(stressRow);
   const covNote = document.createElement("p");
   covNote.className = "rq-note";
   covNote.textContent = `${covered.length}\u9298\u67C4\u3067\u7B97\u51FA\uFF08\u5C65\u6B74\u672A\u53D6\u5F97${excluded}\u9664\u5916\uFF09`;
@@ -4918,9 +4930,25 @@ async function buildQuantCard(posList) {
   }
   const foot = document.createElement("p");
   foot.className = "rq-note";
-  foot.textContent = "\u203B\u30D9\u30FC\u30BF\u306F\u30DD\u30FC\u30C8\u30D5\u30A9\u30EA\u30AA\u81EA\u8EAB\u3078\u306E\u611F\u5FDC\u5EA6\uFF08\u5E02\u5834\u30D9\u30F3\u30C1\u30DE\u30FC\u30AF\u4E0D\u8981\u306E\u5C65\u6B74\u7B97\u51FA\uFF09\u3002\u51FA\u53E3\u65E5\u6570\u306F\u682A\u6570\xF7(\u5E73\u5747\u51FA\u6765\u9AD8\xD7\u53C2\u52A0\u7387)\u306E\u6982\u7B97\u3002";
+  foot.textContent = "\u203B\u30D9\u30FC\u30BF\u306F\u30DD\u30FC\u30C8\u30D5\u30A9\u30EA\u30AA\u81EA\u8EAB\u3078\u306E\u611F\u5FDC\u5EA6\uFF08\u5E02\u5834\u30D9\u30F3\u30C1\u30DE\u30FC\u30AF\u4E0D\u8981\u306E\u5C65\u6B74\u7B97\u51FA\uFF09\u3002\u30B9\u30C8\u30EC\u30B9\u306F\u904E\u53BB1\u5E74\u306E\u6700\u60AA\u5C40\u9762\uFF08\u30A4\u30D9\u30F3\u30C8\u540D\u4ED8\u304D\u30B7\u30CA\u30EA\u30AA\u306F\u5C06\u6765\u62E1\u5F35\uFF09\u3002\u51FA\u53E3\u65E5\u6570\u306F\u682A\u6570\xF7(\u5E73\u5747\u51FA\u6765\u9AD8\xD7\u53C2\u52A0\u7387)\u306E\u6982\u7B97\u3002";
   card.appendChild(foot);
   return card;
+}
+function buildRiskGlossary() {
+  const d = document.createElement("details");
+  d.className = "val-gloss";
+  d.innerHTML = `<summary>\u7528\u8A9E\u89E3\u8AAC</summary>
+    <div class="val-gloss-body">
+      <p><b>\u96C6\u4E2D\u5EA6</b>\uFF1A1\u9298\u67C4\u30FB1\u30C6\u30FC\u30DE\u30FB1\u901A\u8CA8\u3078\u306E\u504F\u308A\u3002\u81F4\u547D\u50B7\u3092\u907F\u3051\u308B\u305F\u3081\u4E0A\u9650\u30D0\u30F3\u30C9\u3067\u7BA1\u7406\u3002</p>
+      <p><b>\u5E74\u7387\u30DC\u30E9</b>\uFF1A\u65E5\u6B21\u30EA\u30BF\u30FC\u30F3\u306E\u3070\u3089\u3064\u304D\uFF08\u6A19\u6E96\u504F\u5DEE\uFF09\u3092\u5E74\u7387\u63DB\u7B97\u3002\u5927\u304D\u3044\u307B\u3069\u5024\u52D5\u304D\u304C\u8352\u3044\u3002</p>
+      <p><b>\u76F8\u95A2\uFF08\u22650.85\uFF09</b>\uFF1A2\u9298\u67C4\u304C\u4E00\u7DD2\u306B\u52D5\u304F\u5EA6\u5408\u3044\uFF08-1\u301C+1\uFF09\u3002\u9AD8\u76F8\u95A2\u30DA\u30A2\u3070\u304B\u308A\u3060\u3068\u5206\u6563\u304C\u52B9\u304B\u305A\u4E00\u7DD2\u306B\u4E0B\u3052\u308B\u3002</p>
+      <p><b>\u6700\u5927DD\uFF08\u30C9\u30ED\u30FC\u30C0\u30A6\u30F3\uFF09</b>\uFF1A\u9AD8\u5024\u304B\u3089\u8C37\u307E\u3067\u306E\u6700\u5927\u4E0B\u843D\u7387\u3002\u6700\u3082\u82E6\u3057\u3044\u5C40\u9762\u306E\u6C88\u307F\u8FBC\u307F\u3002</p>
+      <p><b>\u30B9\u30C8\u30EC\u30B9\uFF08\u6700\u60AA1\u65E5/1\u9031/1\u30F6\u6708/3\u30F6\u6708\uFF09</b>\uFF1A\u904E\u53BB1\u5E74\u3067\u305D\u306E\u671F\u9593\u306B\u88AB\u3063\u305F\u6700\u60AA\u306E\u4E0B\u843D\u7387\u3002\u300C\u6700\u60AA\u3069\u308C\u3060\u3051\u98DF\u3089\u3046\u304B\u300D\u306E\u4F53\u611F\u3002</p>
+      <p><b>PF\u03B2\uFF08\u30DD\u30FC\u30C8\u30D5\u30A9\u30EA\u30AA\u30FB\u30D9\u30FC\u30BF\uFF09</b>\uFF1A\u5404\u9298\u67C4\u304CPF\u5168\u4F53\u306B\u5BFE\u3057\u3069\u308C\u3060\u3051\u654F\u611F\u306B\u52D5\u304F\u304B\u3002\u5E02\u5834\u30D9\u30F3\u30C1\u30DE\u30FC\u30AF\u4E0D\u8981\u306E\u5C65\u6B74\u7B97\u51FA\u3002</p>
+      <p><b>\u30EA\u30B9\u30AF\u5BC4\u4E0E\uFF08vol\xD7|\u03B2|\uFF09</b>\uFF1A\u30DC\u30E9\xD7\u30D9\u30FC\u30BF\u7D76\u5BFE\u5024\u3002PF\u30EA\u30B9\u30AF\u3078\u306E\u5BC4\u4E0E\u304C\u5927\u304D\u3044\u9298\u67C4\u307B\u3069\u4E0A\u4F4D\u3002</p>
+      <p><b>\u51FA\u53E3\u65E5\u6570</b>\uFF1A\u4FDD\u6709\u3092\u634C\u304F\u306E\u306B\u304B\u304B\u308B\u55B6\u696D\u65E5\u6570\uFF1D\u682A\u6570\xF7(\u5E73\u5747\u51FA\u6765\u9AD8ADV\xD7\u53C2\u52A0\u7387)\u30025\u55B6\u696D\u65E5\u8D85\u306F\u6D41\u52D5\u6027\u30EA\u30B9\u30AF\u3068\u3057\u3066\u8B66\u544A\u3002</p>
+    </div>`;
+  return d;
 }
 var _taLoaded = false;
 async function renderRiskCharts() {
@@ -4973,6 +5001,7 @@ async function renderRiskCharts() {
   const srcLines = mfSrc ? [baseSrc, ...mfSrc, MANUAL_SOURCES[1]] : [baseSrc, ...MANUAL_SOURCES];
   src.textContent = srcLines.filter(Boolean).join(" \uFF0F ");
   wrap.appendChild(src);
+  wrap.appendChild(buildRiskGlossary());
 }
 function showLegendTip(ev, dim, key, dimResult) {
   const tip = document.getElementById("tooltip");
