@@ -1,8 +1,9 @@
 // @ts-check
-import { readFileSync, writeFileSync } from 'fs';
+import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
 import { execSync } from 'child_process';
+import { writeQualityBlocks } from './writeback.mjs';
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dir, '../..');
@@ -227,13 +228,9 @@ async function main() {
     return;
   }
 
-  // Write back: results の quality だけを該当エントリに上書き
-  for (const [sym, quality] of Object.entries(results)) {
-    if (valuations[sym]) valuations[sym].quality = quality;
-  }
-
-  writeFileSync(VALS_PATH, JSON.stringify(doc, null, 2) + '\n', 'utf8');
-  console.log(`\nWrote ${VALS_PATH}`);
+  // Write back: 元フォーマットを保ったまま quality ブロックだけ差し替え
+  const written = writeQualityBlocks(VALS_PATH, results);
+  console.log(`\nWrote ${VALS_PATH} (${written} symbols)`);
 
   // Git commit & push
   execSync('git add data/valuations.json', { cwd: ROOT });

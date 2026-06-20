@@ -1,11 +1,12 @@
 // @ts-check
-import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
 import { execSync } from 'child_process';
 
 import { normalizeEdinetFinancials, resolveEdinetCode } from '../../src/edinet-normalize.js';
 import { computeQuality } from '../../src/quality-calc.js';
+import { writeQualityBlocks } from './writeback.mjs';
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dir, '../..');
@@ -153,16 +154,8 @@ async function main() {
     return;
   }
 
-  // Write back only the quality field for matched symbols
-  let updated = 0;
-  for (const [sym, quality] of Object.entries(results)) {
-    if (valuations[sym]) {
-      valuations[sym].quality = quality;
-      updated++;
-    }
-  }
-
-  writeFileSync(VALS_PATH, JSON.stringify(doc, null, 2) + '\n', 'utf8');
+  // Write back: 元フォーマットを保ったまま quality ブロックだけ差し替え
+  const updated = writeQualityBlocks(VALS_PATH, results);
   console.log(`\nvaluations.json 更新完了 (${updated}銘柄)`);
 
   execSync('git add data/valuations.json', { cwd: ROOT });
