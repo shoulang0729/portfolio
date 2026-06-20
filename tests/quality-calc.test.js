@@ -65,6 +65,10 @@ describe('fcfConv', () => {
   it('null on missing netIncome', () => {
     expect(fcfConv({ freeCashFlow: 68 })).toBeNull();
   });
+  it('null when netIncome <= 0 (ratio undefined for loss-makers)', () => {
+    expect(fcfConv({ freeCashFlow: 50, netIncome: -10 })).toBeNull();
+    expect(fcfConv({ freeCashFlow: 50, netIncome: 0 })).toBeNull();
+  });
 });
 
 describe('intCoverage', () => {
