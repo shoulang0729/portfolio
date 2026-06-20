@@ -158,8 +158,9 @@ async function main() {
   const updated = writeQualityBlocks(VALS_PATH, results);
   console.log(`\nvaluations.json 更新完了 (${updated}銘柄)`);
 
-  execSync('git add data/valuations.json', { cwd: ROOT });
-  execSync(`git commit -m "chore: quality auto-update JP stocks $(date +%F)"`, {
+  // パス限定コミット: 共有ワークツリーで他にステージ済みのファイルがあっても
+  // valuations.json だけをコミットする
+  execSync(`git commit data/valuations.json -m "chore: quality auto-update JP stocks $(date +%F)"`, {
     cwd: ROOT,
     shell: true,
   });
