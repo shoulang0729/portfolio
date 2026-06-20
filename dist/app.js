@@ -4482,6 +4482,19 @@ function getThemeCap(theme) {
   const cap = _cfg.themeCaps[theme].cap;
   return cap != null ? cap : null;
 }
+function computeThemeUsage(theme, currentPctBySymbol) {
+  const cap = getThemeCap(theme);
+  let members = (
+    /** @type {string[]} */
+    []
+  );
+  if (_cfg && _cfg.themeCaps && _cfg.themeCaps[theme]) {
+    members = _cfg.themeCaps[theme].members || [];
+  }
+  const used = members.reduce((sum, sym) => sum + (currentPctBySymbol[sym] || 0), 0);
+  const headroom = cap != null ? cap - used : null;
+  return { theme, cap, used, headroom };
+}
 
 // src/valuations.js
 var VAL_URL = "data/valuations.json";
@@ -4562,6 +4575,91 @@ function computeVerdict(v) {
   return { class: "fair", label: VERDICT_LABELS["fair"], drivers: [] };
 }
 
+// src/triggers.js
+var TRIGGERS_URL = "data/triggers.json";
+var _trig = {};
+var _loaded3 = false;
+async function loadTriggers() {
+  try {
+    const r = await fetch(`${TRIGGERS_URL}?_=${Date.now()}`);
+    if (!r.ok) throw new Error(`triggers ${r.status}`);
+    const j = await r.json();
+    _trig = j && j.triggers || {};
+    _loaded3 = true;
+  } catch {
+    _trig = {};
+  }
+  return _trig;
+}
+function triggersLoaded() {
+  return _loaded3;
+}
+function getTriggers(symbol) {
+  if (!symbol) return null;
+  return _trig[symbol] || null;
+}
+function evaluateTriggers(symbol, ctx) {
+  const entry = getTriggers(symbol);
+  const active = [];
+  const watching = [];
+  if (!entry) return { active, watching };
+  function evalList(list, side) {
+    for (const t of list) {
+      const type = t.type;
+      const action = t.action || "";
+      if (type === "thesis" || type === "conditional") {
+        watching.push({ side, type, action, note: t.note || "" });
+        continue;
+      }
+      if (type === "concentration") {
+        const capPct = t.capPct;
+        const themeUsagePct = ctx.themeUsagePct;
+        if (themeUsagePct != null && themeUsagePct > capPct) {
+          const reason = t.theme === "semiconductor" ? `\u534A\u5C0E\u4F53\u96C6\u4E2D ${themeUsagePct.toFixed(1)}%>${capPct}%` : `\u96C6\u4E2D\u5EA6 ${themeUsagePct.toFixed(1)}%>${capPct}%`;
+          active.push({ side, type, action, reason });
+        }
+        continue;
+      }
+      if (type === "valuation") {
+        if (side === "sell") {
+          if (t.pctGte != null && ctx.percentile != null && ctx.percentile >= t.pctGte) {
+            active.push({ side, type, action, reason: `%\u30BF\u30A4\u30EB${Math.round(ctx.percentile)}\u2265${t.pctGte}` });
+            continue;
+          }
+          if (t.pegGte != null && ctx.peg != null && ctx.peg >= t.pegGte) {
+            active.push({ side, type, action, reason: `PEG${ctx.peg.toFixed(1)}\u2265${t.pegGte}` });
+            continue;
+          }
+        } else {
+          if (t.pctLte != null && ctx.percentile != null && ctx.percentile <= t.pctLte) {
+            active.push({ side, type, action, reason: `%\u30BF\u30A4\u30EB${Math.round(ctx.percentile)}\u2264${t.pctLte}` });
+            continue;
+          }
+        }
+        continue;
+      }
+      if (type === "limit") {
+        const trigPrice = t.price;
+        const curPrice = ctx.price;
+        if (curPrice != null && trigPrice != null) {
+          if (t.dir === "below" && curPrice <= trigPrice) {
+            active.push({ side, type, action, reason: `\u4FA1\u683C ${curPrice}\u2264${trigPrice}` });
+            continue;
+          }
+          if (t.dir === "above" && curPrice >= trigPrice) {
+            active.push({ side, type, action, reason: `\u4FA1\u683C ${curPrice}\u2265${trigPrice}` });
+            continue;
+          }
+        }
+        continue;
+      }
+    }
+  }
+  if (Array.isArray(entry.sell)) evalList(entry.sell, "sell");
+  if (Array.isArray(entry.buy)) evalList(entry.buy, "buy");
+  return { active, watching };
+}
+
 // src/valuation-tab.js
 var _taLoaded = false;
 var _mfLoaded = false;
@@ -4584,6 +4682,9 @@ async function _ensureData() {
   }
   if (!valuationsLoaded()) {
     loads.push(loadValuations());
+  }
+  if (!triggersLoaded()) {
+    loads.push(loadTriggers());
   }
   await Promise.all(loads);
 }
@@ -4679,7 +4780,19 @@ function line3HTML(val) {
   }
   return "";
 }
-function rowHTML(p, currentPct, targetPct, gap, verdict, val) {
+function triggerLineHTML(trig) {
+  if (!trig || trig.active.length === 0 && trig.watching.length === 0) return "";
+  if (trig.active.length > 0) {
+    const t = trig.active[0];
+    if (t.side === "sell") {
+      return `<div class="val-trig sell">\u{1F534} \u58F2\u308A\u767A\u8B70: ${escapeHTML(t.action)} <span class="trg-r">(${escapeHTML(t.reason)})</span></div>`;
+    }
+    return `<div class="val-trig buy">\u{1F7E2} \u8CB7\u3044\u4F59\u5730: ${escapeHTML(t.action)}</div>`;
+  }
+  const w = trig.watching[0];
+  return `<div class="val-trig watch">\u76E3\u8996\u4E2D: ${escapeHTML(w.action)}\uFF08${escapeHTML(w.note)}\uFF09</div>`;
+}
+function rowHTML(p, currentPct, targetPct, gap, verdict, val, trig) {
   const chipHTML = verdict && verdict.class !== "na" ? `<span class="${chipClass(verdict.class)}" title="${escapeHTML(verdict.drivers.join("\u30FB"))}">${escapeHTML(verdict.label)}</span>` : "";
   const line1 = `<div class="val-r1">
     <b class="val-tk">${escapeHTML(p.symbol)}</b>
@@ -4688,7 +4801,8 @@ function rowHTML(p, currentPct, targetPct, gap, verdict, val) {
   </div>`;
   const line2 = `<div class="val-r2">${sizeBarHTML(currentPct, targetPct)}</div>`;
   const line3 = line3HTML(val);
-  return `<div class="val-row">${line1}${line2}${line3}</div>`;
+  const trigLine = _lens === "total" && trig ? triggerLineHTML(trig) : "";
+  return `<div class="val-row">${line1}${line2}${line3}${trigLine}</div>`;
 }
 function sortedRows(rows) {
   const copy = rows.slice();
@@ -4746,6 +4860,12 @@ async function renderValuationTab() {
     wrap.innerHTML = '<div class="val-soon">\u30C7\u30FC\u30BF\u6E96\u5099\u4E2D\u3002\u30DE\u30CD\u30D5\u30A9\u53D6\u8FBC\u307E\u305F\u306FCSV\u53D6\u8FBC\u3092\u5B9F\u884C\u3057\u3066\u304F\u3060\u3055\u3044\u3002</div>';
     return;
   }
+  const currentPctBySymbol = {};
+  for (const p of positions) {
+    const pct = (p.value || 0) / denom * 100;
+    if (p.ySymbol) currentPctBySymbol[p.ySymbol] = pct;
+    if (p.symbol && p.symbol !== p.ySymbol) currentPctBySymbol[p.symbol] = pct;
+  }
   const rows = positions.map((p) => {
     const currentPct = (p.value || 0) / denom * 100;
     let tkey = null;
@@ -4760,15 +4880,25 @@ async function renderValuationTab() {
     const gap = targetPct != null ? currentPct - targetPct : null;
     const val = getValuation(p.ySymbol);
     const verdict = val ? computeVerdict(val) : null;
-    return { p, currentPct, targetPct, gap, verdict, val, tkey };
+    const trigTheme = tkey && getThemeOf(tkey) || p.ySymbol && getThemeOf(p.ySymbol) || null;
+    const themeUsagePct = trigTheme ? computeThemeUsage(trigTheme, currentPctBySymbol).used : null;
+    const trigSymbol = getTriggers(p.ySymbol) ? p.ySymbol : getTriggers(p.symbol) ? p.symbol : null;
+    const trig = trigSymbol ? evaluateTriggers(trigSymbol, {
+      percentile: val && val.percentile != null ? val.percentile : null,
+      peg: val && val.value && val.value.peg != null ? val.value.peg : null,
+      themeUsagePct,
+      price: p.price != null ? p.price : null
+    }) : null;
+    return { p, currentPct, targetPct, gap, verdict, val, tkey, trig };
   });
   const overCount = rows.filter((r) => r.gap != null && r.gap > 0.5).length;
   const cheapCount = rows.filter((r) => r.verdict && r.verdict.class === "cheap_real").length;
+  const triggerCount = rows.filter((r) => r.trig && r.trig.active.length > 0).length;
   const statsHTML = `<div class="val-stats">
     <div class="val-stat"><span class="k">\u904E\u5927\u30DD\u30B8</span><span class="v">${overCount}</span></div>
     <div class="val-stat"><span class="k">\u5272\u5B89\u5019\u88DC</span><span class="v">${cheapCount}</span></div>
     <div class="val-stat"><span class="k">\u7684\u4E2D\u7387</span><span class="v">\u2014</span></div>
-    <div class="val-stat"><span class="k">\u30C8\u30EA\u30AC\u30FC</span><span class="v">\u2014</span></div>
+    <div class="val-stat"><span class="k">\u30C8\u30EA\u30AC\u30FC</span><span class="v">${triggerCount}</span></div>
   </div>`;
   const lenses = [
     { key: "total", label: "\u7DCF\u5408" },
@@ -4782,7 +4912,7 @@ async function renderValuationTab() {
   const lensHTML = `<div class="val-lens" role="tablist" aria-label="\u30EC\u30F3\u30BA\u9078\u629E">${pillsHTML}</div>
   <div class="val-lens-cap">${escapeHTML(lensCap(_lens))}</div>`;
   const sorted = sortedRows(rows);
-  const rowsHTML = sorted.map((r) => rowHTML(r.p, r.currentPct, r.targetPct, r.gap, r.verdict, r.val)).join("");
+  const rowsHTML = sorted.map((r) => rowHTML(r.p, r.currentPct, r.targetPct, r.gap, r.verdict, r.val, r.trig)).join("");
   wrap.innerHTML = `${statsHTML}${lensHTML}<div class="val-list">${rowsHTML}</div>`;
   wrap.querySelectorAll(".val-seg[data-lens]").forEach((btn) => {
     btn.addEventListener("click", () => {
