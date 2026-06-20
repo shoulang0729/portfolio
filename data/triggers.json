@@ -1,0 +1,28 @@
+{
+  "updated": "2026-06-19",
+  "note": "売り/買いトリガー台帳。Value総合レンズで抵触を自動評価し『発議』を表示。type=concentration/valuation/limit/thesis/conditional。thesis/conditionalは自動判定せず『監視中』表示。",
+  "triggers": {
+    "SMH": {
+      "sell": [{ "type": "concentration", "theme": "semiconductor", "capPct": 13, "action": "1.5〜2割トリム→AI電力へ" }]
+    },
+    "200A.T": {
+      "sell": [
+        {
+          "type": "concentration",
+          "theme": "semiconductor",
+          "capPct": 13,
+          "action": "半導体13%超なら二段目5〜10%トリム"
+        }
+      ]
+    },
+    "9983.T": { "sell": [{ "type": "valuation", "pctGte": 95, "action": "1/4トリム利確" }] },
+    "8050.T": { "sell": [{ "type": "thesis", "note": "一過性益の剥落", "action": "winner利確" }] },
+    "TSLA": { "sell": [{ "type": "valuation", "pegGte": 3, "action": "新規禁止・過大なら縮小" }] },
+    "MSFT": { "buy": [{ "type": "valuation", "pctLte": 5, "action": "$15K打診→$50K" }] },
+    "AMZN": { "buy": [{ "type": "limit", "price": 237.5, "dir": "below", "action": "$15K第1弾" }] },
+    "NLR": { "buy": [{ "type": "thesis", "note": "AI電力本丸・マネックス確認後", "action": "$50K" }] },
+    "VGK": { "buy": [{ "type": "conditional", "note": "原油<$85+ホルムズ正常化", "action": "買い戻し" }] },
+    "CBRS": { "buy": [{ "type": "limit", "price": 220, "dir": "below", "action": "打診" }] },
+    "6016.T": { "buy": [{ "type": "limit", "price": 8500, "dir": "below", "action": "打診" }] }
+  }
+}

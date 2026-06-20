@@ -651,3 +651,10 @@
 .val-mom-up { color: var(--up); font-weight: 600; }
 .val-mom-dn { color: var(--down); font-weight: 600; }
 /* ── /Value タブ ── */
+/* ── Value タブ: トリガー行 ── */
+.val-trig { font-size: 11.5px; margin-top: 5px; font-weight: 600; }
+.val-trig.sell { color: var(--up); }
+.val-trig.buy { color: var(--down); }
+.val-trig.watch { color: var(--text2); font-weight: 500; }
+.val-trig .trg-r { color: var(--text2); font-weight: 400; font-size: 10.5px; }
+/* ── /Value タブ: トリガー行 ── */
