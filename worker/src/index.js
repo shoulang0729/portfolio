@@ -5,6 +5,7 @@
 //   GET  /finnhub?path=<path>&<params>  Finnhub プロキシ（APIキー隠蔽）
 //   GET  /fmp?path=<path>&<params>      Financial Modeling Prep プロキシ（APIキー隠蔽・quality 用）
 //   GET  /edgar?path=<path>             SEC EDGAR プロキシ（キー不要・UA付与・quality 照合用）
+//   GET  /edinet-db?path=<path>         EDINET DB プロキシ（APIキー隠蔽・日本株 quality 用）
 //   GET  /forex?from=<from>&to=<to>    為替レートプロキシ（Yahoo Finance）
 //   POST /ai/openai                     OpenAI (ChatGPT) プロキシ
 //   POST /ai/gemini                     Gemini プロキシ
@@ -312,6 +313,32 @@ async function handleEdgar(url, env, origin) {
   const ua = env.SEC_USER_AGENT || 'portfolio-quality contact@example.com';
   try {
     const res = await fetch(`https://data.sec.gov${path}`, { headers: { 'User-Agent': ua, Accept: 'application/json' } });
+    const data = await res.json();
+    return jsonRes(data, res.status, origin);
+  } catch (e) {
+    return errRes(`取得失敗: ${e.message}`, 502, origin);
+  }
+}
+
+// ── EDINET DB プロキシ（日本株 quality 取得用） ──
+// edinetdb.jp の /v1/* エンドポイントに X-API-Key を付与してプロキシする。
+// path は /v1/companies/{code}/financials 等の読み取り専用エンドポイントのみ許可。
+async function handleEdinetDb(url, env, origin) {
+  const apiKey = env.EDINET_DB_API_KEY;
+  if (!apiKey) return errRes('EDINET DB APIキーが未設定です', 500, origin);
+
+  const path = url.searchParams.get('path') || '';
+  if (!/^\/v1\/(companies|search)(\/[a-zA-Z0-9._-]+)*(\/[a-zA-Z0-9_-]+)?(\?.*)?$/.test(path)) {
+    return errRes('不正な path です', 400, origin);
+  }
+
+  const params = new URLSearchParams(url.searchParams);
+  params.delete('path');
+  const qs = params.toString();
+
+  try {
+    const fetchUrl = `https://edinetdb.jp${path}${qs ? `?${qs}` : ''}`;
+    const res = await fetch(fetchUrl, { headers: { 'X-API-Key': apiKey, Accept: 'application/json' } });
     const data = await res.json();
     return jsonRes(data, res.status, origin);
   } catch (e) {
@@ -1260,13 +1287,14 @@ export default {
 
     const path = url.pathname;
     if (path === '/')                return new Response('portfolio-proxy OK', { status: 200 });
-    if (path === '/yahoo' || path === '/finnhub' || path === '/fmp' || path === '/edgar' || path === '/etf/constituents') {
+    if (path === '/yahoo' || path === '/finnhub' || path === '/fmp' || path === '/edgar' || path === '/edinet-db' || path === '/etf/constituents') {
       if (await checkRateLimit(request, env)) return errRes('Too Many Requests', 429, org);
     }
     if (path === '/yahoo')           return handleYahoo(url, env, org);
     if (path === '/finnhub')         return handleFinnhub(url, env, org);
     if (path === '/fmp')             return handleFmp(url, env, org);
     if (path === '/edgar')           return handleEdgar(url, env, org);
+    if (path === '/edinet-db')       return handleEdinetDb(url, env, org);
     if (path === '/forex')           return handleForex(url, env, org);
     if (path === '/etf/constituents') return handleEtfConstituents(url, env, org, ctx);
     if (path === '/ai/models')       return handleAIModels(env, org);
