@@ -56,7 +56,7 @@ async function fmpFetch(path, key) {
   return fetchWithRetry(url);
 }
 
-function fmpToFundamentals(profile, incomes, balances, cashflows) {
+function fmpToFundamentals(profile, incomes, balances, cashflows, keyMetrics) {
   const cur = incomes[0] || {};
   const priorI = incomes[1] || null;
   const curB = balances[0] || {};
@@ -92,7 +92,13 @@ function fmpToFundamentals(profile, incomes, balances, cashflows) {
   f.prior = periodFrom(priorI, priorB, priorCF);
   f.market = 'us';
   f.marketCap = profile && profile[0] ? (profile[0].marketCap ?? null) : null;
-  f.roicDirect = null;
+  // FMP key-metrics の returnOnInvestedCapital（小数）を % 換算して直接 ROIC に採用。
+  // 無料枠外の銘柄では key-metrics が取れず null → quality-calc が NOPAT で代替計算する。
+  const km = Array.isArray(keyMetrics) ? keyMetrics[0] : null;
+  f.roicDirect =
+    km && typeof km.returnOnInvestedCapital === 'number'
+      ? +(km.returnOnInvestedCapital * 100).toFixed(1)
+      : null;
   f.taxRate =
     cur.incomeTaxExpense != null &&
     cur.incomeBeforeTax != null &&
@@ -144,11 +150,13 @@ async function fetchEdgarFundamentals(sym) {
 // --- Per-symbol processing ---
 async function processFmp(sym, key) {
   console.log(`  [FMP] Fetching ${sym}...`);
-  const [profile, incomes, balances, cashflows] = await Promise.all([
+  const [profile, incomes, balances, cashflows, keyMetrics] = await Promise.all([
     fmpFetch(`/stable/profile?symbol=${sym}`, key),
     fmpFetch(`/stable/income-statement?symbol=${sym}&limit=2`, key),
     fmpFetch(`/stable/balance-sheet-statement?symbol=${sym}&limit=2`, key),
     fmpFetch(`/stable/cash-flow-statement?symbol=${sym}&limit=2`, key),
+    // key-metrics の returnOnInvestedCapital を直接 ROIC に使う。無料枠外なら取得失敗 → null 扱い。
+    fmpFetch(`/stable/key-metrics?symbol=${sym}&limit=1`, key).catch(() => null),
   ]);
 
   const incomesArr = Array.isArray(incomes) ? incomes : [];
@@ -159,7 +167,7 @@ async function processFmp(sym, key) {
     throw new Error(`FMP returned all-null key fields for ${sym}`);
   }
 
-  return fmpToFundamentals(profile, incomesArr, balancesArr, cashflowsArr);
+  return fmpToFundamentals(profile, incomesArr, balancesArr, cashflowsArr, keyMetrics);
 }
 
 async function getFundamentals(sym, key) {
