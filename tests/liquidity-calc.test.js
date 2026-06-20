@@ -45,8 +45,8 @@ describe('exitDays', () => {
   });
 
   it('uses default participation', () => {
-    expect(PARTICIPATION).toBe(0.2);
-    expect(exitDays(1000, 1000)).toBeCloseTo(5, 6); // 1000/(1000*0.2)=5
+    expect(PARTICIPATION).toBe(0.1);
+    expect(exitDays(1000, 1000)).toBeCloseTo(10, 6); // 1000/(1000*0.1)=10
   });
 
   it('returns null on bad inputs', () => {
@@ -60,13 +60,13 @@ describe('exitDays', () => {
 describe('computeLiquidity', () => {
   it('sorts by exit days descending, nulls last', () => {
     const holdings = [
-      { sym: 'LIQUID', shares: 100, series: vseries([10000, 10000]) }, // 100/(10000*0.2)=0.05日
-      { sym: 'ILLIQUID', shares: 100000, series: vseries([1000, 1000]) }, // 100000/(1000*0.2)=500日
+      { sym: 'LIQUID', shares: 100, series: vseries([10000, 10000]) }, // 100/(10000*0.1)=0.1日
+      { sym: 'ILLIQUID', shares: 100000, series: vseries([1000, 1000]) }, // 100000/(1000*0.1)=1000日
       { sym: 'NOVOL', shares: 100, series: [{ date: new Date(), close: 50 }] }, // ADV null → days null
     ];
     const r = computeLiquidity(holdings);
     expect(r.map((x) => x.sym)).toEqual(['ILLIQUID', 'LIQUID', 'NOVOL']);
-    expect(r[0].days).toBeCloseTo(500, 4);
+    expect(r[0].days).toBeCloseTo(1000, 4);
     expect(r[2].days).toBeNull();
   });
 
