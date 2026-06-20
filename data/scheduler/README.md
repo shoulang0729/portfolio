@@ -1,17 +1,23 @@
-# quality 自動供給バッチ（A3）
+# 自動供給バッチ（A3 quality / A4 ETF PER）
 
-`valuations.json` の `quality` ブロックを週次で自動更新するバッチ群。
+`valuations.json` の `quality` / `value` ブロックを週次で自動更新するバッチ群。
 **Mulmo のワークスペース（手元）で実行する**前提。CI では動かさない（API キーを Secrets に置かないため）。
 
 ## スクリプト
 
-| ファイル | 対象 | データソース |
-|---|---|---|
-| `quality-us.mjs` | 米国個別株（ETF 除外） | FMP stable API（優先）→ SEC EDGAR（フォールバック） |
-| `quality-jp.mjs` | 日本個別株（`.T`・ETF 除外） | EDINET DB API |
+| ファイル | 対象 | データソース | 更新ブロック |
+|---|---|---|---|
+| `quality-us.mjs` | 米国個別株（ETF 除外） | FMP stable API（優先）→ SEC EDGAR（フォールバック） | `quality` |
+| `quality-jp.mjs` | 日本個別株（`.T`・ETF 除外） | EDINET DB API | `quality` |
+| `etf-pe.mjs` | ETF 10銘柄（広域株式＋セクター/テーマ） | Yahoo `summaryDetail.trailingPE`（Worker `/yahoo` 経由） | `value`（perTrail＋perSource） |
 
-いずれも純関数 `src/quality-calc.js` の `computeQuality()` で指標を算出し、
-`data/valuations.json` の該当シンボルの `quality` フィールドだけを上書きする。
+`quality-*` は純関数 `src/quality-calc.js` の `computeQuality()` で指標を算出。
+`etf-pe.mjs` は ETF のファンド実績PER を `value.perTrail` に投入し `value.perSource:"fund-trailing"` を立てる
+（FMP は ETF の PER を持たないため Yahoo 経由・予想PER/PEG は ETF では取得不能なので触らない。設計＝`docs/d3-etf-proxy-data-availability.md` §7）。
+いずれも `data/scheduler/writeback.mjs` の `writeBlocks()` で**該当ブロックだけ**を元フォーマット保持で書き換える（API キー不要）。
+
+> ⚠️ `etf-pe.mjs` の対象は広域株式（VT/VEA/VGK/ACWI）＋セクター/テーマ（SMH/XLF/XLV/XLP/DTCR/SHLD）の10銘柄のみ。
+> シクリカル（COPX/REMX/XLE＝`cyclical` で na）・日本欠損 ETF（1629/1477/2516/200A.T＝percentile 判定維持）は対象外。
 
 ## API キーの渡し方（2 通り・どちらか）
 

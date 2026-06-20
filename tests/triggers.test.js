@@ -121,6 +121,45 @@ describe('evaluateTriggers – valuation sell pegGte', () => {
   });
 });
 
+// ── ETF proxy 降格（A4 / §7.5.3）─────────────────────────────
+describe('evaluateTriggers – ETF proxy demotion', () => {
+  it('9983.T valuation sell: isEtf=true なら active でなく watching に降格', () => {
+    const result = evaluateTriggers('9983.T', { percentile: 97, isEtf: true });
+    expect(result.active).toHaveLength(0);
+    expect(result.watching).toHaveLength(1);
+    expect(result.watching[0].side).toBe('sell');
+    expect(result.watching[0].type).toBe('valuation');
+    expect(result.watching[0].note).toContain('proxy');
+    expect(result.watching[0].note).toContain('97');
+  });
+
+  it('TSLA valuation sell(peg): isEtf=true なら watching に降格', () => {
+    const result = evaluateTriggers('TSLA', { peg: 4.06, isEtf: true });
+    expect(result.active).toHaveLength(0);
+    expect(result.watching).toHaveLength(1);
+    expect(result.watching[0].note).toContain('proxy');
+  });
+
+  it('9983.T valuation sell: isEtf=false（既定）は従来どおり active', () => {
+    const result = evaluateTriggers('9983.T', { percentile: 97 });
+    expect(result.active).toHaveLength(1);
+    expect(result.watching).toHaveLength(0);
+  });
+
+  it('SMH concentration: isEtf=true でも active のまま（降格しない）', () => {
+    const result = evaluateTriggers('SMH', { themeUsagePct: 14.3, isEtf: true });
+    expect(result.active).toHaveLength(1);
+    expect(result.active[0].type).toBe('concentration');
+    expect(result.active[0].side).toBe('sell');
+  });
+
+  it('9983.T valuation sell: isEtf=true でも閾値未達なら active も watching も出ない', () => {
+    const result = evaluateTriggers('9983.T', { percentile: 90, isEtf: true });
+    expect(result.active).toHaveLength(0);
+    expect(result.watching).toHaveLength(0);
+  });
+});
+
 // ── valuation buy pctLte ──────────────────────────────────────
 describe('evaluateTriggers – valuation buy pctLte', () => {
   it('MSFT: percentile 0 <= pctLte 5 → active buy', () => {
