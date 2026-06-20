@@ -120,8 +120,16 @@ async function fetchSymbolHistory(symbol, range = '1y') {
   const adjCloses = result.indicators?.adjclose?.[0]?.adjclose || [];
   const rawCloses = result.indicators?.quote?.[0]?.close || [];
   const closes = adjCloses.length ? adjCloses : rawCloses;
+  // 出来高（流動性=出口日数の算出に使用）。未収録時は vol を付けない（後方互換）
+  const volumes = result.indicators?.quote?.[0]?.volume || [];
   const entries = timestamps
-    .map((ts, i) => ({ date: new Date(ts * 1000), close: closes[i] }))
+    .map((ts, i) => {
+      const v = volumes[i];
+      /** @type {{date: Date, close: number, vol?: number}} */
+      const e = { date: new Date(ts * 1000), close: closes[i] };
+      if (v != null && isFinite(v)) e.vol = v;
+      return e;
+    })
     .filter(p => p.close != null && isFinite(p.close));
   // adjclose が超直近の分割に未対応の場合に備えてスプリット自動補正
   // IDB・sessionStorage・メモリに並行書き込み
