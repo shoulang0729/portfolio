@@ -310,15 +310,20 @@ function rowHTML(p, currentPct, targetPct, verdict, val, trig, conviction) {
   // アクションバナー（全レンズ共通・常時表示）
   const banner = bannerHTML(trig);
 
-  // 上段: シンボル + 銘柄名（下揃え）+ verdict chip
+  // 上段: シンボル + 銘柄名（下揃え）+ verdict chip + proxy バッジ
   const chipHTML =
     verdict && verdict.label && verdict.label !== '-'
       ? `<span class="${chipClass(verdict)}" title="${escapeHTML(verdict.drivers.join('・'))}">${escapeHTML(verdict.label)}</span>`
       : '';
+  // proxy ETF（value.perSource:"fund-trailing"）は判定が proxy 由来である旨をバッジ表示
+  const isProxy = !!(val && val.value && val.value.perSource === 'fund-trailing');
+  const proxyHTML = isProxy
+    ? `<span class="val-proxy" title="ETFのファンド実績PER。予想PER不在のため%タイル基準の粗い判定">proxy</span>`
+    : '';
   const head = `<div class="val-head">
     <b class="val-tk">${escapeHTML(p.symbol)}</b>
     <span class="val-nm">${escapeHTML(p.name)}</span>
-    ${chipHTML}
+    ${chipHTML}${proxyHTML}
   </div>`;
 
   // サイズバー（全レンズ共通）
@@ -504,6 +509,9 @@ export async function renderValuationTab() {
     const trigTheme = (tkey && getThemeOf(tkey)) || (p.ySymbol && getThemeOf(p.ySymbol)) || null;
     const themeUsagePct = trigTheme ? computeThemeUsage(trigTheme, currentPctBySymbol).used : null;
 
+    // proxy ETF 判定（value.perSource:"fund-trailing" が立っている＝自前PERが proxy）
+    const isEtf = !!(val && val.value && val.value.perSource === 'fund-trailing');
+
     // トリガーを評価（ySymbol 優先、次に symbol）
     const trigSymbol = getTriggers(p.ySymbol) ? p.ySymbol : getTriggers(p.symbol) ? p.symbol : null;
     const trig = trigSymbol
@@ -512,6 +520,7 @@ export async function renderValuationTab() {
           peg: val && val.value && val.value.peg != null ? val.value.peg : null,
           themeUsagePct,
           price: p.price != null ? p.price : null,
+          isEtf,
         })
       : null;
 
