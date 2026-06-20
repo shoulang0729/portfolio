@@ -633,6 +633,14 @@
 .vc-trap-once  { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
 .vc-na         { background: var(--surface2); color: var(--text2); }
 
+/* proxy バッジ（ETF のファンド実績PER由来＝粗い判定の明示） */
+.val-proxy {
+  align-self: flex-end; font-size: 9px; font-weight: 700; letter-spacing: 0.04em;
+  text-transform: uppercase; padding: 0 6px; height: 17px; border-radius: 9px;
+  display: inline-flex; align-items: center;
+  background: var(--surface2); color: var(--text3); border: 1px dashed var(--border);
+}
+
 /* サイズバー（左端0% / 右端=適正×2 / 適正は中央） */
 .val-size-wrap { margin: 2px 0 8px; }
 .val-sb { display: flex; flex-direction: column; gap: 2px; }
