@@ -1871,10 +1871,14 @@ async function setHistoricalEntry(range, symbol, entries) {
   state.historicalCache[range][symbol] = entries;
   try {
     const db = await getDb();
-    const serialised = entries.map((e) => ({
-      date: e.date instanceof Date ? e.date.toISOString() : e.date,
-      close: e.close
-    }));
+    const serialised = entries.map((e) => {
+      const s = {
+        date: e.date instanceof Date ? e.date.toISOString() : e.date,
+        close: e.close
+      };
+      if (typeof e.vol === "number" && isFinite(e.vol)) s.vol = e.vol;
+      return s;
+    });
     await idbPut(db, STORE_NAME, `${range}:${symbol}`, { entries: serialised, ts: Date.now() });
   } catch (e) {
     console.warn("[historical-cache] IDB write failed:", e);
@@ -1890,10 +1894,14 @@ async function getAllHistorical(range) {
     for (const { key, value } of all) {
       if (typeof key !== "string" || !key.startsWith(prefix)) continue;
       const symbol = key.slice(prefix.length);
-      result[symbol] = (value.entries || []).map((e) => ({
-        date: e.date instanceof Date ? e.date : new Date(e.date),
-        close: e.close
-      }));
+      result[symbol] = (value.entries || []).map((e) => {
+        const o = {
+          date: e.date instanceof Date ? e.date : new Date(e.date),
+          close: e.close
+        };
+        if (typeof e.vol === "number" && isFinite(e.vol)) o.vol = e.vol;
+        return o;
+      });
     }
     return result;
   } catch (e) {
@@ -1914,10 +1922,14 @@ async function restoreFromIDB() {
       const range = key.slice(0, colonIdx);
       const symbol = key.slice(colonIdx + 1);
       if (!state.historicalCache[range]) state.historicalCache[range] = {};
-      state.historicalCache[range][symbol] = (value.entries || []).map((e) => ({
-        date: e.date instanceof Date ? e.date : new Date(e.date),
-        close: e.close
-      }));
+      state.historicalCache[range][symbol] = (value.entries || []).map((e) => {
+        const o = {
+          date: e.date instanceof Date ? e.date : new Date(e.date),
+          close: e.close
+        };
+        if (typeof e.vol === "number" && isFinite(e.vol)) o.vol = e.vol;
+        return o;
+      });
     }
   } catch (e) {
     console.warn("[historical-cache] restoreFromIDB failed:", e);
@@ -2145,7 +2157,13 @@ async function fetchSymbolHistory(symbol, range = "1y") {
   const adjCloses = result.indicators?.adjclose?.[0]?.adjclose || [];
   const rawCloses = result.indicators?.quote?.[0]?.close || [];
   const closes = adjCloses.length ? adjCloses : rawCloses;
-  const entries = timestamps.map((ts, i) => ({ date: new Date(ts * 1e3), close: closes[i] })).filter((p) => p.close != null && isFinite(p.close));
+  const volumes = result.indicators?.quote?.[0]?.volume || [];
+  const entries = timestamps.map((ts, i) => {
+    const v = volumes[i];
+    const e = { date: new Date(ts * 1e3), close: closes[i] };
+    if (v != null && isFinite(v)) e.vol = v;
+    return e;
+  }).filter((p) => p.close != null && isFinite(p.close));
   await setHistoricalEntry(range, symbol, applySplitCorrection(entries));
 }
 function isMarketHours() {
@@ -4238,6 +4256,43 @@ function computePortfolioReturns(alignedBySym, weights) {
   return port;
 }
 
+// src/liquidity-calc.js
+var ADV_WINDOW = 20;
+var PARTICIPATION = 0.2;
+var ILLIQUID_DAYS = 5;
+function adv(series, window2 = ADV_WINDOW) {
+  if (!Array.isArray(series) || series.length === 0) return null;
+  const vols = series.map((e) => e && typeof e.vol === "number" ? e.vol : null).filter((v) => v != null && isFinite(v) && v > 0);
+  if (vols.length === 0) return null;
+  const recent = vols.slice(-window2);
+  const sum = recent.reduce((s, v) => s + v, 0);
+  return sum / recent.length;
+}
+function exitDays(shares, advVal, participation = PARTICIPATION) {
+  if (!(shares > 0)) return null;
+  if (advVal == null || !(advVal > 0)) return null;
+  const perDay = advVal * participation;
+  if (!(perDay > 0)) return null;
+  return shares / perDay;
+}
+function computeLiquidity(holdings, opts = {}) {
+  const window2 = opts.window ?? ADV_WINDOW;
+  const participation = opts.participation ?? PARTICIPATION;
+  if (!Array.isArray(holdings)) return [];
+  const out = holdings.map((h) => {
+    const advVal = adv(h.series, window2);
+    const days = exitDays(h.shares, advVal, participation);
+    return { sym: h.sym, advVal, days };
+  });
+  out.sort((a, b) => {
+    if (a.days == null && b.days == null) return 0;
+    if (a.days == null) return 1;
+    if (b.days == null) return -1;
+    return b.days - a.days;
+  });
+  return out;
+}
+
 // src/manual-assets.js
 var MANUAL_ASSETS = [
   // 現金（2026/05/31 時点・手動入力）
@@ -4798,9 +4853,60 @@ async function buildQuantCard(posList) {
     }
     card.appendChild(contribRow);
   }
+  const liqHoldings = covered.filter((p) => typeof p.shares === "number" && p.shares > 0 && Array.isArray(hist[p.ySymbol])).map((p) => ({
+    sym: (
+      /** @type {string} */
+      p.ySymbol
+    ),
+    shares: (
+      /** @type {number} */
+      p.shares
+    ),
+    series: hist[
+      /** @type {string} */
+      p.ySymbol
+    ]
+  }));
+  const liq = computeLiquidity(liqHoldings).filter((x) => x.days != null);
+  const liqTitle = document.createElement("div");
+  liqTitle.className = "rq-stat-label";
+  liqTitle.style.marginTop = "8px";
+  liqTitle.textContent = `\u6D41\u52D5\u6027 \u51FA\u53E3\u65E5\u6570\uFF08ADV${ADV_WINDOW}\xD7${Math.round(PARTICIPATION * 100)}%/\u65E5\uFF09`;
+  card.appendChild(liqTitle);
+  if (liq.length === 0) {
+    const liqNote = document.createElement("p");
+    liqNote.className = "rq-note";
+    liqNote.textContent = "\u51FA\u6765\u9AD8\u30C7\u30FC\u30BF\u672A\u53D6\u5F97\uFF08\u4FA1\u683C\u66F4\u65B0\u5F8C\u306B\u84C4\u7A4D\u3055\u308C\u7B97\u51FA\u3055\u308C\u307E\u3059\uFF09";
+    card.appendChild(liqNote);
+  } else {
+    const liqRow = document.createElement("div");
+    liqRow.className = "rq-row";
+    for (const { sym, days } of liq.slice(0, 5)) {
+      const el = document.createElement("div");
+      el.className = "rq-stat";
+      const lb = document.createElement("span");
+      lb.className = "rq-stat-label";
+      lb.textContent = escapeHTML(sym);
+      const vl = document.createElement("span");
+      const sev = days != null && days > ILLIQUID_DAYS;
+      vl.className = `rq-stat-value${sev ? " rq-sev" : ""}`;
+      vl.textContent = days != null ? `${days < 1 ? days.toFixed(1) : Math.round(days)}\u65E5` : "\u2014";
+      el.appendChild(lb);
+      el.appendChild(vl);
+      liqRow.appendChild(el);
+    }
+    card.appendChild(liqRow);
+    const illiquidCount = liq.filter((x) => x.days != null && x.days > ILLIQUID_DAYS).length;
+    if (illiquidCount > 0) {
+      const liqWarn = document.createElement("p");
+      liqWarn.className = "rq-note";
+      liqWarn.textContent = `\u51FA\u53E3\u306B${ILLIQUID_DAYS}\u55B6\u696D\u65E5\u8D85\u304B\u304B\u308B\u4FDD\u6709 ${illiquidCount}\u4EF6`;
+      card.appendChild(liqWarn);
+    }
+  }
   const foot = document.createElement("p");
   foot.className = "rq-note";
-  foot.textContent = "\u203B\u30D9\u30FC\u30BF\u306F\u30DD\u30FC\u30C8\u30D5\u30A9\u30EA\u30AA\u81EA\u8EAB\u3078\u306E\u611F\u5FDC\u5EA6\uFF08\u5E02\u5834\u30D9\u30F3\u30C1\u30DE\u30FC\u30AF\u4E0D\u8981\u306E\u5C65\u6B74\u7B97\u51FA\uFF09\u3002\u6D41\u52D5\u6027\u306F4b+";
+  foot.textContent = "\u203B\u30D9\u30FC\u30BF\u306F\u30DD\u30FC\u30C8\u30D5\u30A9\u30EA\u30AA\u81EA\u8EAB\u3078\u306E\u611F\u5FDC\u5EA6\uFF08\u5E02\u5834\u30D9\u30F3\u30C1\u30DE\u30FC\u30AF\u4E0D\u8981\u306E\u5C65\u6B74\u7B97\u51FA\uFF09\u3002\u51FA\u53E3\u65E5\u6570\u306F\u682A\u6570\xF7(\u5E73\u5747\u51FA\u6765\u9AD8\xD7\u53C2\u52A0\u7387)\u306E\u6982\u7B97\u3002";
   card.appendChild(foot);
   return card;
 }
