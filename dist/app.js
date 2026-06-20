@@ -5421,6 +5421,12 @@ function pos52w(series) {
   if (!(hi > lo)) return null;
   return (last - lo) / (hi - lo) * 100;
 }
+function relStrength(series, benchSeries) {
+  const a = priceMom1Y(series);
+  const b = priceMom1Y(benchSeries);
+  if (a === null || b === null) return null;
+  return a - b;
+}
 function computePriceMomentum(series) {
   const m1y = priceMom1Y(series);
   const p52 = pos52w(series);
@@ -5561,7 +5567,7 @@ function line3HTML(val) {
       <span><b>\u6539\u5B9A90d</b> ${escapeHTML(fmtRaw(m.epsRev90d))}%</span>
       <span><b>1Y</b> <span${mom1yCls}>${escapeHTML(mom1yStr)}%</span></span>
       <span><b>52\u9031\u4F4D\u7F6E</b> ${escapeHTML(fmtRaw(m.pos52w))}%</span>
-      <span><b>\u5BFE\u30BB\u30AF\u30BF\u30FC</b> ${escapeHTML(fmtRaw(m.rsVsSector))}%</span>
+      <span><b>\u5BFE\u5E02\u5834</b> ${escapeHTML(fmtRaw(m.rsVsSector))}%</span>
     </div>`;
   }
   return "";
@@ -5698,6 +5704,7 @@ async function renderValuationTab() {
     /** @type {Record<string, Array<{date: Date, close: number}>>} */
     await getAllHistorical("1y")
   );
+  const _benchSeries = _hist["ACWI"] || null;
   const currentPctBySymbol = {};
   for (const p of positions) {
     const pct = (p.value || 0) / denom * 100;
@@ -5719,14 +5726,16 @@ async function renderValuationTab() {
     const conviction = tkey != null ? getConviction(tkey) : null;
     let val = getValuation(p.ySymbol);
     const liveMom = p.ySymbol ? computePriceMomentum(_hist[p.ySymbol]) : null;
-    if (liveMom) {
+    const liveRs = p.ySymbol && _benchSeries ? relStrength(_hist[p.ySymbol], _benchSeries) : null;
+    if (liveMom || liveRs != null) {
       const m = val && val.momentum || {};
       val = {
         ...val || {},
         momentum: {
           ...m,
-          priceMom1Y: m.priceMom1Y != null ? m.priceMom1Y : liveMom.priceMom1Y,
-          pos52w: m.pos52w != null ? m.pos52w : liveMom.pos52w
+          priceMom1Y: m.priceMom1Y != null ? m.priceMom1Y : liveMom ? liveMom.priceMom1Y : null,
+          pos52w: m.pos52w != null ? m.pos52w : liveMom ? liveMom.pos52w : null,
+          rsVsSector: m.rsVsSector != null ? m.rsVsSector : liveRs
         }
       };
     }

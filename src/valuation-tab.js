@@ -27,7 +27,7 @@ import { loadValuations, getValuation, computeVerdict, valuationsLoaded } from '
 import { loadTriggers, triggersLoaded, getTriggers, evaluateTriggers } from './triggers.js';
 import { loadVerdictOutcomes, outcomesLoaded, computeHitRate } from './verdict-outcomes.js';
 import { getAllHistorical } from './historical-cache.js';
-import { computePriceMomentum } from './momentum-calc.js';
+import { computePriceMomentum, relStrength } from './momentum-calc.js';
 import { escapeHTML } from './utils.js';
 
 /** ローカルの once-guard: 並行二重ロードを防ぐ */
@@ -219,7 +219,7 @@ function line3HTML(val) {
       <span><b>改定90d</b> ${escapeHTML(fmtRaw(m.epsRev90d))}%</span>
       <span><b>1Y</b> <span${mom1yCls}>${escapeHTML(mom1yStr)}%</span></span>
       <span><b>52週位置</b> ${escapeHTML(fmtRaw(m.pos52w))}%</span>
-      <span><b>対セクター</b> ${escapeHTML(fmtRaw(m.rsVsSector))}%</span>
+      <span><b>対市場</b> ${escapeHTML(fmtRaw(m.rsVsSector))}%</span>
     </div>`;
   }
 
@@ -449,6 +449,8 @@ export async function renderValuationTab() {
   // valuations.json の手動シードが優先、null の項目だけ live 値で埋める。
   // getAllHistorical は内部で例外を握り潰し {} を返すため try/catch 不要。
   const _hist = /** @type {Record<string, Array<{date: Date, close: number}>>} */ (await getAllHistorical('1y'));
+  // 対市場の相対強さ（rsVsSector）のベンチ＝世界株 ACWI（保有・履歴キャッシュにある）。
+  const _benchSeries = _hist['ACWI'] || null;
 
   // symbol → currentPct マップ（テーマ使用率計算用）
   /** @type {Record<string, number>} */
@@ -481,16 +483,18 @@ export async function renderValuationTab() {
     const conviction = tkey != null ? getConviction(tkey) : null;
 
     let val = getValuation(p.ySymbol);
-    // 価格モメンタム（priceMom1Y / pos52w）を履歴から live 補完（null のみ）
+    // 価格モメンタム（priceMom1Y / pos52w / rsVsSector=対ACWI）を履歴から live 補完（null のみ）
     const liveMom = p.ySymbol ? computePriceMomentum(_hist[p.ySymbol]) : null;
-    if (liveMom) {
+    const liveRs = p.ySymbol && _benchSeries ? relStrength(_hist[p.ySymbol], _benchSeries) : null;
+    if (liveMom || liveRs != null) {
       const m = (val && val.momentum) || {};
       val = {
         ...(val || {}),
         momentum: {
           ...m,
-          priceMom1Y: m.priceMom1Y != null ? m.priceMom1Y : liveMom.priceMom1Y,
-          pos52w: m.pos52w != null ? m.pos52w : liveMom.pos52w,
+          priceMom1Y: m.priceMom1Y != null ? m.priceMom1Y : liveMom ? liveMom.priceMom1Y : null,
+          pos52w: m.pos52w != null ? m.pos52w : liveMom ? liveMom.pos52w : null,
+          rsVsSector: m.rsVsSector != null ? m.rsVsSector : liveRs,
         },
       };
     }

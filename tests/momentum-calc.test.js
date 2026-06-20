@@ -1,7 +1,7 @@
 // Tests for price momentum pure functions in src/momentum-calc.js
 
 import { describe, it, expect } from 'vitest';
-import { priceMom1Y, pos52w, computePriceMomentum } from '../src/momentum-calc.js';
+import { priceMom1Y, pos52w, computePriceMomentum, relStrength } from '../src/momentum-calc.js';
 
 /** ヘルパー: close 配列を {date, close} 系列に変換 */
 function series(closes) {
@@ -42,6 +42,21 @@ describe('pos52w', () => {
     expect(pos52w(series([100, 100, 100]))).toBeNull();
     expect(pos52w(series([100]))).toBeNull();
     expect(pos52w([])).toBeNull();
+  });
+});
+
+describe('relStrength', () => {
+  it('returns stock 1Y return minus benchmark 1Y return (%pt)', () => {
+    // stock +20% (100→120), bench +5% (100→105) → +15pt
+    expect(relStrength(series([100, 120]), series([100, 105]))).toBeCloseTo(15, 6);
+    // underperformer: stock -10%, bench +5% → -15pt
+    expect(relStrength(series([100, 90]), series([100, 105]))).toBeCloseTo(-15, 6);
+  });
+
+  it('returns null when either side is not computable', () => {
+    expect(relStrength(series([100]), series([100, 105]))).toBeNull();
+    expect(relStrength(series([100, 120]), series([100]))).toBeNull();
+    expect(relStrength(series([100, 120]), null)).toBeNull();
   });
 });
 
