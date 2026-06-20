@@ -595,7 +595,9 @@ async function buildQuantCard(posList) {
   // ポートフォリオ指標
   const pfVol = annualizedVol(portReturns);
   const pfWorstD = worstReturn(portReturns);
-  const pfWorstM = worstWindow(portReturns, 21);
+  const pfWorstW = worstWindow(portReturns, 5); // 最悪1週(5営業日)
+  const pfWorstM = worstWindow(portReturns, 21); // 最悪1ヶ月(21営業日)
+  const pfWorstQ = worstWindow(portReturns, 63); // 最悪3ヶ月(63営業日)
 
   // PF 最大 DD: portReturns から累積系列を O(n) で再構築して maxDrawdown へ
   let _cum = 100;
@@ -650,10 +652,23 @@ async function buildQuantCard(posList) {
   }
 
   pfRow.appendChild(_stat('年率ボラ', _pct1(pfVol), (pfVol ?? 0) > 0.2));
-  pfRow.appendChild(_stat('最悪日', _pct1(pfWorstD), true));
-  pfRow.appendChild(_stat('最悪1ヶ月', _pct1(pfWorstM), true));
   pfRow.appendChild(_stat('最大DD', _pct1(pfMaxDD), true));
   card.appendChild(pfRow);
+
+  // ── ストレス（過去1年の最悪局面・PF）─────────────────────────────────────
+  const stressTitle = document.createElement('div');
+  stressTitle.className = 'rq-stat-label';
+  stressTitle.style.marginTop = '8px';
+  stressTitle.textContent = 'ストレス（過去1年の最悪局面・PF）';
+  card.appendChild(stressTitle);
+
+  const stressRow = document.createElement('div');
+  stressRow.className = 'rq-row';
+  stressRow.appendChild(_stat('最悪1日', _pct1(pfWorstD), true));
+  stressRow.appendChild(_stat('最悪1週', _pct1(pfWorstW), true));
+  stressRow.appendChild(_stat('最悪1ヶ月', _pct1(pfWorstM), true));
+  stressRow.appendChild(_stat('最悪3ヶ月', _pct1(pfWorstQ), true));
+  card.appendChild(stressRow);
 
   // カバレッジ注記
   const covNote = document.createElement('p');
@@ -770,10 +785,32 @@ async function buildQuantCard(posList) {
   const foot = document.createElement('p');
   foot.className = 'rq-note';
   foot.textContent =
-    '※ベータはポートフォリオ自身への感応度（市場ベンチマーク不要の履歴算出）。出口日数は株数÷(平均出来高×参加率)の概算。';
+    '※ベータはポートフォリオ自身への感応度（市場ベンチマーク不要の履歴算出）。ストレスは過去1年の最悪局面（イベント名付きシナリオは将来拡張）。出口日数は株数÷(平均出来高×参加率)の概算。';
   card.appendChild(foot);
 
   return card;
+}
+
+/**
+ * Risk タブ下部に常設する用語解説（タップ開閉・CSP安全な native details）。
+ * Value タブの .val-gloss と同じスタイルを流用する。
+ * @returns {HTMLElement}
+ */
+function buildRiskGlossary() {
+  const d = document.createElement('details');
+  d.className = 'val-gloss';
+  d.innerHTML = `<summary>用語解説</summary>
+    <div class="val-gloss-body">
+      <p><b>集中度</b>：1銘柄・1テーマ・1通貨への偏り。致命傷を避けるため上限バンドで管理。</p>
+      <p><b>年率ボラ</b>：日次リターンのばらつき（標準偏差）を年率換算。大きいほど値動きが荒い。</p>
+      <p><b>相関（≥0.85）</b>：2銘柄が一緒に動く度合い（-1〜+1）。高相関ペアばかりだと分散が効かず一緒に下げる。</p>
+      <p><b>最大DD（ドローダウン）</b>：高値から谷までの最大下落率。最も苦しい局面の沈み込み。</p>
+      <p><b>ストレス（最悪1日/1週/1ヶ月/3ヶ月）</b>：過去1年でその期間に被った最悪の下落率。「最悪どれだけ食らうか」の体感。</p>
+      <p><b>PFβ（ポートフォリオ・ベータ）</b>：各銘柄がPF全体に対しどれだけ敏感に動くか。市場ベンチマーク不要の履歴算出。</p>
+      <p><b>リスク寄与（vol×|β|）</b>：ボラ×ベータ絶対値。PFリスクへの寄与が大きい銘柄ほど上位。</p>
+      <p><b>出口日数</b>：保有を捌くのにかかる営業日数＝株数÷(平均出来高ADV×参加率)。5営業日超は流動性リスクとして警告。</p>
+    </div>`;
+  return d;
 }
 
 // ── once-guard: target-allocation を二重ロードしない ───────────────────────
@@ -852,6 +889,9 @@ export async function renderRiskCharts() {
   const srcLines = mfSrc ? [baseSrc, ...mfSrc, MANUAL_SOURCES[1]] : [baseSrc, ...MANUAL_SOURCES];
   src.textContent = srcLines.filter(Boolean).join(' ／ ');
   wrap.appendChild(src);
+
+  // ── 用語解説（常設・タブ末尾）────────────────────────────────────────────
+  wrap.appendChild(buildRiskGlossary());
 }
 
 // ── 凡例ホバー時の構成銘柄ツールチップ（#212）─────────────────────────
