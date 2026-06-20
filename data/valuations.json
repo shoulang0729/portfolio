@@ -40,7 +40,17 @@
       "asOf": "2026-06-18",
       "bandBasis": "TTM",
       "bandConfidence": "low",
-      "bandNote": "実体はジャパンエンジンコーポレーション(J-ENG/舶用エンジン小型株)。プロンプトの『ヤンマー?』は誤り。irbank 2010年以降のPERレンジは赤字〜約50倍と極端に広く、業績変動が大きい市況株。アンカー15.69はバンド下〜中位。低流動・利益ボラ大でconfidence=low、バンドは広めに設定。"
+      "bandNote": "実体はジャパンエンジンコーポレーション(J-ENG/舶用エンジン小型株)。プロンプトの『ヤンマー?』は誤り。irbank 2010年以降のPERレンジは赤字〜約50倍と極端に広く、業績変動が大きい市況株。アンカー15.69はバンド下〜中位。低流動・利益ボラ大でconfidence=low、バンドは広めに設定。",
+      "quality": {
+        "roic": 23.5,
+        "wacc": 6,
+        "grossProf": 0.25,
+        "fcfConv": 0.35,
+        "fScore": 6,
+        "altmanZ": null,
+        "intCoverage": 217.4,
+        "qScore": 6
+      }
     },
     "SMH": {
       "perCurrent": 44.5,
@@ -193,7 +203,17 @@
       "asOf": "2026-06-18",
       "bandBasis": "TTM P/E (Yahoo trailingPE)",
       "bandConfidence": "low",
-      "bandNote": "Lumentum=個別株(光通信)。MacroTrends 10年TTM PEレンジは13.35(2018/9・EPS$4.49のピーク利益期)〜696(2016/10・EPS$0.06)で極端に乱高下。5年平均は55(public.com)〜77.6(fullratio)。現アンカー153.16はTTM利益が一時的に縮小したサイクル底でPEが膨張した状態(2026/5時点で136〜156の報告もあり)。極端な>200は外れ値として除外し、利益正常化局面を想定した広めレンジ。バンド位置だけで割高判断せず、利益サイクル(forward PEや正規化EPS)併用が必須。出典: MacroTrends/fullratio/public.com/GuruFocus(2026-06取得)。"
+      "bandNote": "Lumentum=個別株(光通信)。MacroTrends 10年TTM PEレンジは13.35(2018/9・EPS$4.49のピーク利益期)〜696(2016/10・EPS$0.06)で極端に乱高下。5年平均は55(public.com)〜77.6(fullratio)。現アンカー153.16はTTM利益が一時的に縮小したサイクル底でPEが膨張した状態(2026/5時点で136〜156の報告もあり)。極端な>200は外れ値として除外し、利益正常化局面を想定した広めレンジ。バンド位置だけで割高判断せず、利益サイクル(forward PEや正規化EPS)併用が必須。出典: MacroTrends/fullratio/public.com/GuruFocus(2026-06取得)。",
+      "quality": {
+        "roic": -3.7,
+        "wacc": 8,
+        "grossProf": 0.11,
+        "fcfConv": -4.04,
+        "fScore": 7,
+        "altmanZ": null,
+        "intCoverage": null,
+        "qScore": 7
+      }
     },
     "CRWD": {
       "perCurrent": 145,
@@ -206,7 +226,17 @@
       "asOf": "2026-06-14",
       "bandBasis": "forwardPE",
       "bandConfidence": "low",
-      "bandNote": "TTM net loss (GAAP) so trailingPE is NM; band built on forwardPE. Recent forward PE ~84-143. Daily trailingPE will not resolve - compare against forward PE."
+      "bandNote": "TTM net loss (GAAP) so trailingPE is NM; band built on forwardPE. Recent forward PE ~84-143. Daily trailingPE will not resolve - compare against forward PE.",
+      "quality": {
+        "roic": -5.7,
+        "wacc": 8,
+        "grossProf": 0.32,
+        "fcfConv": null,
+        "fScore": 4,
+        "altmanZ": null,
+        "intCoverage": null,
+        "qScore": 4
+      }
     },
     "PANW": {
       "perCurrent": 250.24,
@@ -219,7 +249,17 @@
       "asOf": "2026-06-18",
       "bandBasis": "TTM",
       "bandConfidence": "low",
-      "bandNote": "Spiky TTM (37 to >1300 on thin earnings); band uses normalized range, 3yr avg ~109, recent year-end ~110. Anchor 245.55 above bandHigh - elevated."
+      "bandNote": "Spiky TTM (37 to >1300 on thin earnings); band uses normalized range, 3yr avg ~109, recent year-end ~110. Anchor 245.55 above bandHigh - elevated.",
+      "quality": {
+        "roic": 11.3,
+        "wacc": 8,
+        "grossProf": 0.29,
+        "fcfConv": 3.28,
+        "fScore": 4,
+        "altmanZ": null,
+        "intCoverage": null,
+        "qScore": 4
+      }
     },
     "2800.HK": {
       "perCurrent": 13.5,
