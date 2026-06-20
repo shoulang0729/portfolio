@@ -60,6 +60,26 @@ describe('worker/src/index.js helpers', () => {
     });
   });
 
+  // Helper: /edgar path 検証（handleEdgar の許可パターンと同一）
+  describe('EDGAR path validation', () => {
+    function isValidEdgarPath(path) {
+      return /^\/api\/xbrl\/(companyfacts|companyconcept|frames)\/[a-zA-Z0-9/._-]+$/.test(path);
+    }
+
+    it('許可: companyfacts / companyconcept / frames', () => {
+      expect(isValidEdgarPath('/api/xbrl/companyfacts/CIK0000320193.json')).toBe(true);
+      expect(isValidEdgarPath('/api/xbrl/companyconcept/CIK0000320193/us-gaap/Assets.json')).toBe(true);
+      expect(isValidEdgarPath('/api/xbrl/frames/us-gaap/Assets/USD/CY2024Q4I.json')).toBe(true);
+    });
+
+    it('拒否: 他パス・空・スキーム混入', () => {
+      expect(isValidEdgarPath('')).toBe(false);
+      expect(isValidEdgarPath('/files/company_tickers.json')).toBe(false); // 別ホスト用
+      expect(isValidEdgarPath('/api/xbrl/submissions/x')).toBe(false);
+      expect(isValidEdgarPath('//evil.com/api/xbrl/companyfacts/x')).toBe(false);
+    });
+  });
+
   // Helper: Origin 検証
   describe('CORS origin validation', () => {
     function isAllowedOrigin(origin, env) {
