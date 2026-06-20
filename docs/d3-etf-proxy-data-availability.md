@@ -252,3 +252,14 @@ forward/holdings ベースの精緻化は **データが無いので今フェー
 
 ### 7.8 完了後
 本ドキュメント §7 の各項目に実装 PR 番号を追記し、Wiki「投資システム アップグレード計画」A4/D-3 を Mulmo が更新する。
+
+### 7.9 実装完了（A4・2026-06-21・main マージ済）
+VS Code 実装を Mulmo が main で検証・確認。**全項目スペック通り**で着地。
+- **コミット**：`3970c4f`（コード＝etf-pe バッチ／isEtf トリガー降格／proxy バッジ）／`76f5ff0`（データ＝ETF trailingPE 投入＋シクリカル3銘柄 cyclical na 化）／`f14bdff`（テスト＝isEtf 降格・writeback insert ／version bump `v=20260621A`／README）。
+- **検証結果（main の実データ）**：
+  - SMH＝perTrail 44.5・perFwd/peg=null・`perSource:"fund-trailing"`（NVDA seed 撤去確認）。VT/XLV ほか上2区分に perTrail 投入。
+  - COPX/REMX/XLE＝`value.cyclical=true` 付与で na 化（判断1）。
+  - 1629.T 等 日本欠損 ETF＝据え置き（percentile 判定維持・判断2）。
+  - `data/scheduler/etf-pe.mjs` 新設（§7.5.1 承認どおり）。`src/triggers.js` に `isEtf` 降格分岐（valuation+sell のみ watching・concentration は active 維持）。
+  - computeVerdict / computeConfidence は無改変（データ＋トリガー＋バッチ＋UI のみ）。
+- **残（次フェーズ・§7.7）**：forward/原指数 fwd PE・holdings 加重 proxy（B2 #201）・欠損 ETF 静的手当て・ETF quality。実機（スマホ）での verdict/バッジ目視は本人確認待ち。
