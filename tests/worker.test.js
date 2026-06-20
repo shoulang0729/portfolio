@@ -80,6 +80,27 @@ describe('worker/src/index.js helpers', () => {
     });
   });
 
+  // Helper: /edinet-db path 検証（handleEdinetDb の許可パターンと同一）
+  describe('EDINET DB path validation', () => {
+    function isValidEdinetDbPath(path) {
+      return /^\/v1\/(companies|search)(\/[a-zA-Z0-9._-]+)*(\/[a-zA-Z0-9_-]+)?(\?.*)?$/.test(path);
+    }
+
+    it('許可: search / companies / financials エンドポイント', () => {
+      expect(isValidEdinetDbPath('/v1/search')).toBe(true);
+      expect(isValidEdinetDbPath('/v1/companies/E01532/financials')).toBe(true);
+      expect(isValidEdinetDbPath('/v1/companies/E01532/financials?period=annual&limit=2')).toBe(true);
+      expect(isValidEdinetDbPath('/v1/companies/E03217')).toBe(true);
+    });
+
+    it('拒否: v2 / 管理系パス・空・スキーム混入', () => {
+      expect(isValidEdinetDbPath('')).toBe(false);
+      expect(isValidEdinetDbPath('/v2/search')).toBe(false);
+      expect(isValidEdinetDbPath('/admin/users')).toBe(false);
+      expect(isValidEdinetDbPath('//evil.com/v1/search')).toBe(false);
+    });
+  });
+
   // Helper: Origin 検証
   describe('CORS origin validation', () => {
     function isAllowedOrigin(origin, env) {
