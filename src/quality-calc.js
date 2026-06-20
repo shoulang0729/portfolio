@@ -98,11 +98,13 @@ export function grossProf(f) {
 
 /**
  * FCF変換率 = FCF ÷ 純利益（小数）。FCF は freeCashFlow 優先、無ければ ocf − |capex|。
+ * 純利益 ≤ 0（赤字）の場合は比率が意味を成さない（FCF>0 でも比率が負/発散する）ため null。
  * @param {Fundamentals|FinPeriod} f
  * @returns {number|null}
  */
 export function fcfConv(f) {
   if (!f) return null;
+  if (!num(f.netIncome) || f.netIncome <= 0) return null; // 赤字は変換率を定義しない
   let fcf = num(f.freeCashFlow) ? f.freeCashFlow : null;
   if (fcf === null && num(f.operatingCashFlow)) {
     // capex は FMP では負、EDGAR では正で来うる → 絶対値で投資控除に統一
