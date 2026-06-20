@@ -35,6 +35,31 @@ describe('worker/src/index.js helpers', () => {
     });
   });
 
+  // Helper: /fmp path 検証（handleFmp の許可パターンと同一）
+  describe('FMP path validation', () => {
+    function isValidFmpPath(path) {
+      return /^\/(api\/v[34]|stable)\/[a-zA-Z0-9/._-]+$/.test(path);
+    }
+
+    it('許可: v3 / v4 / stable の財務系パス', () => {
+      expect(isValidFmpPath('/api/v3/income-statement/AAPL')).toBe(true);
+      expect(isValidFmpPath('/api/v3/key-metrics/MSFT')).toBe(true);
+      expect(isValidFmpPath('/api/v4/some-endpoint')).toBe(true);
+      expect(isValidFmpPath('/stable/ratios')).toBe(true);
+      expect(isValidFmpPath('/api/v3/profile/BRK.B')).toBe(true); // ドット含むティッカー
+    });
+
+    it('拒否: 不正・空・スキーム混入・他バージョン', () => {
+      expect(isValidFmpPath('')).toBe(false);
+      expect(isValidFmpPath('/')).toBe(false);
+      expect(isValidFmpPath('income-statement/AAPL')).toBe(false); // 先頭スラッシュ無し
+      expect(isValidFmpPath('/api/v2/quote')).toBe(false); // 未許可バージョン
+      expect(isValidFmpPath('/api/v3/')).toBe(false); // 末尾に内容なし
+      expect(isValidFmpPath('/api/v3/x?y=1')).toBe(false); // クエリ混入
+      expect(isValidFmpPath('//evil.com/api/v3/x')).toBe(false);
+    });
+  });
+
   // Helper: Origin 検証
   describe('CORS origin validation', () => {
     function isAllowedOrigin(origin, env) {
