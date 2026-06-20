@@ -20,6 +20,8 @@ import { loadMfHoldings, getMfTotals } from './networth.js';
 import { loadValuations, getValuation, computeVerdict, valuationsLoaded } from './valuations.js';
 import { loadTriggers, triggersLoaded, getTriggers, evaluateTriggers } from './triggers.js';
 import { loadVerdictOutcomes, outcomesLoaded, computeHitRate } from './verdict-outcomes.js';
+import { getAllHistorical } from './historical-cache.js';
+import { computePriceMomentum } from './momentum-calc.js';
 import { escapeHTML } from './utils.js';
 
 /** ローカルの once-guard: 並行二重ロードを防ぐ */
@@ -351,6 +353,11 @@ export async function renderValuationTab() {
     return;
   }
 
+  // 価格モメンタムを履歴キャッシュ（1y close 系列）から自動算出。
+  // valuations.json の手動シードが優先、null の項目だけ live 値で埋める。
+  // getAllHistorical は内部で例外を握り潰し {} を返すため try/catch 不要。
+  const _hist = /** @type {Record<string, Array<{date: Date, close: number}>>} */ (await getAllHistorical('1y'));
+
   // symbol → currentPct マップ（テーマ使用率計算用）
   /** @type {Record<string, number>} */
   const currentPctBySymbol = {};
@@ -380,7 +387,20 @@ export async function renderValuationTab() {
     const targetPct = tkey != null ? getTargetPct(tkey) : null;
     const gap = targetPct != null ? currentPct - targetPct : null;
 
-    const val = getValuation(p.ySymbol);
+    let val = getValuation(p.ySymbol);
+    // 価格モメンタム（priceMom1Y / pos52w）を履歴から live 補完（null のみ）
+    const liveMom = p.ySymbol ? computePriceMomentum(_hist[p.ySymbol]) : null;
+    if (liveMom) {
+      const m = (val && val.momentum) || {};
+      val = {
+        ...(val || {}),
+        momentum: {
+          ...m,
+          priceMom1Y: m.priceMom1Y != null ? m.priceMom1Y : liveMom.priceMom1Y,
+          pos52w: m.pos52w != null ? m.pos52w : liveMom.pos52w,
+        },
+      };
+    }
     const verdict = val ? computeVerdict(val) : null;
 
     // テーマ使用率（concentration トリガー用）

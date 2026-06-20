@@ -5213,6 +5213,39 @@ function computeHitRate() {
   return { hits, misses, pending, resolved, ratePct };
 }
 
+// src/momentum-calc.js
+function _closes(series) {
+  if (!Array.isArray(series)) return [];
+  return series.map((e) => e && e.close).filter((c) => typeof c === "number" && c > 0);
+}
+function priceMom1Y(series) {
+  const c = _closes(series);
+  if (c.length < 2) return null;
+  const first = c[0];
+  const last = c[c.length - 1];
+  if (!(first > 0)) return null;
+  return (last / first - 1) * 100;
+}
+function pos52w(series) {
+  const c = _closes(series);
+  if (c.length < 2) return null;
+  const last = c[c.length - 1];
+  let hi = -Infinity;
+  let lo = Infinity;
+  for (const v of c) {
+    if (v > hi) hi = v;
+    if (v < lo) lo = v;
+  }
+  if (!(hi > lo)) return null;
+  return (last - lo) / (hi - lo) * 100;
+}
+function computePriceMomentum(series) {
+  const m1y = priceMom1Y(series);
+  const p52 = pos52w(series);
+  if (m1y === null && p52 === null) return null;
+  return { priceMom1Y: m1y, pos52w: p52 };
+}
+
 // src/valuation-tab.js
 var _taLoaded2 = false;
 var _mfLoaded = false;
@@ -5416,6 +5449,10 @@ async function renderValuationTab() {
     wrap.innerHTML = '<div class="val-soon">\u30C7\u30FC\u30BF\u6E96\u5099\u4E2D\u3002\u30DE\u30CD\u30D5\u30A9\u53D6\u8FBC\u307E\u305F\u306FCSV\u53D6\u8FBC\u3092\u5B9F\u884C\u3057\u3066\u304F\u3060\u3055\u3044\u3002</div>';
     return;
   }
+  const _hist = (
+    /** @type {Record<string, Array<{date: Date, close: number}>>} */
+    await getAllHistorical("1y")
+  );
   const currentPctBySymbol = {};
   for (const p of positions) {
     const pct = (p.value || 0) / denom * 100;
@@ -5434,7 +5471,19 @@ async function renderValuationTab() {
     }
     const targetPct = tkey != null ? getTargetPct(tkey) : null;
     const gap = targetPct != null ? currentPct - targetPct : null;
-    const val = getValuation(p.ySymbol);
+    let val = getValuation(p.ySymbol);
+    const liveMom = p.ySymbol ? computePriceMomentum(_hist[p.ySymbol]) : null;
+    if (liveMom) {
+      const m = val && val.momentum || {};
+      val = {
+        ...val || {},
+        momentum: {
+          ...m,
+          priceMom1Y: m.priceMom1Y != null ? m.priceMom1Y : liveMom.priceMom1Y,
+          pos52w: m.pos52w != null ? m.pos52w : liveMom.pos52w
+        }
+      };
+    }
     const verdict = val ? computeVerdict(val) : null;
     const trigTheme = tkey && getThemeOf(tkey) || p.ySymbol && getThemeOf(p.ySymbol) || null;
     const themeUsagePct = trigTheme ? computeThemeUsage(trigTheme, currentPctBySymbol).used : null;
