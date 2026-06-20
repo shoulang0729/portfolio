@@ -59,10 +59,15 @@ export async function setHistoricalEntry(range, symbol, entries) {
   // IDB に永続化（クロスセッション）
   try {
     const db = await getDb();
-    const serialised = entries.map(e => ({
-      date:  e.date instanceof Date ? e.date.toISOString() : e.date,
-      close: e.close,
-    }));
+    const serialised = entries.map(e => {
+      /** @type {{date: string, close: number, vol?: number}} */
+      const s = {
+        date:  e.date instanceof Date ? e.date.toISOString() : e.date,
+        close: e.close,
+      };
+      if (typeof e.vol === 'number' && isFinite(e.vol)) s.vol = e.vol;
+      return s;
+    });
     await idbPut(db, STORE_NAME, `${range}:${symbol}`, { entries: serialised, ts: Date.now() });
   } catch (e) {
     console.warn('[historical-cache] IDB write failed:', e);
@@ -82,10 +87,15 @@ export async function getAllHistorical(range) {
     for (const { key, value } of all) {
       if (typeof key !== 'string' || !key.startsWith(prefix)) continue;
       const symbol = key.slice(prefix.length);
-      result[symbol] = (value.entries || []).map(e => ({
-        date:  e.date instanceof Date ? e.date : new Date(e.date),
-        close: e.close,
-      }));
+      result[symbol] = (value.entries || []).map(e => {
+        /** @type {{date: Date, close: number, vol?: number}} */
+        const o = {
+          date:  e.date instanceof Date ? e.date : new Date(e.date),
+          close: e.close,
+        };
+        if (typeof e.vol === 'number' && isFinite(e.vol)) o.vol = e.vol;
+        return o;
+      });
     }
     return result;
   } catch (e) {
@@ -111,10 +121,15 @@ export async function restoreFromIDB() {
       const range  = key.slice(0, colonIdx);
       const symbol = key.slice(colonIdx + 1);
       if (!state.historicalCache[range]) state.historicalCache[range] = {};
-      state.historicalCache[range][symbol] = (value.entries || []).map(e => ({
-        date:  e.date instanceof Date ? e.date : new Date(e.date),
-        close: e.close,
-      }));
+      state.historicalCache[range][symbol] = (value.entries || []).map(e => {
+        /** @type {{date: Date, close: number, vol?: number}} */
+        const o = {
+          date:  e.date instanceof Date ? e.date : new Date(e.date),
+          close: e.close,
+        };
+        if (typeof e.vol === 'number' && isFinite(e.vol)) o.vol = e.vol;
+        return o;
+      });
     }
   } catch (e) {
     console.warn('[historical-cache] restoreFromIDB failed:', e);
