@@ -197,15 +197,23 @@ forward/holdings ベースの精緻化は **データが無いので今フェー
 ### 7.1 確定した3判断（ユーザー・2026-06-21）
 - **Q1＝情報レイヤー扱い**：ETF の割安/割高は **表示するが、§5 の売り発議を自動で立てない**。proxy＋低 confidence バッジを付す。
 - **Q2＝純 trailing で統一**：手動 forward seed を**廃止**。**SMH の NVDA seed（perFwd 20.6/perTrail 31.3/peg 0.46）を撤去**し、Yahoo trailing 44.5 で評価（→ rich_real 寄りになるが、Q1 により売りシグナル化しない）。メンテゼロを優先。
-- **Q3＝欠損 ETF は na**：PER が取れない ETF（2800.HK / 1629.T / 1477.T / 2516.T / 200A.T）は **判定せず %タイル順位のみ**。静的手当てはしない。
+- **Q3＝欠損 ETF**：当初「na」と決めたが、**実データ検証（VS Code差し戻し・2026-06-21）で前提が崩れた**ため §7.2A で再確定。
 
-### 7.2 ETF 区分と扱い（最終）
+### 7.2A 差し戻し再確定（2026-06-21・VS Code 指摘 → ユーザー再決定）
+**事実**：当初 §7 が「シクリカル・欠損 ETF は na のまま不変」「`cyclical=true` 維持」と書いたが、実データでは**いずれも na ではなかった**。`cyclical=true` は valuations.json 全体で 6301.T の1箇所のみ。下記 ETF は **旧%タイルシステムの `perCurrent`＋`bandLow/High` を保持**し、percentile ゾーンで cheap/fair/rich に分類されていた（＝percentile は実在バンド由来の正当値・捏造ではない）。
+
+これを受けた**再確定**：
+- **判断1：シクリカル（COPX/REMX/XLE）→ na 化する**。理由＝PER% はシクリカルに逆張り（不況減益→PER高→偽の割高。現に XLE pct100→rich は誤判定）。設計§③「シクリカルは商品価格デックで見る」通り。**`value.cyclical=true` を3銘柄に付与**（データのみ・コード変更なし）。
+- **判断2：日本欠損 ETF（1629.T/1477.T/2516.T/200A.T）→ percentile 判定を維持**（na にしない）。理由＝seeded PER バンドがあり根拠あり・perFwd=null で広域株 ETF と同じ「%タイル駆動・低confidence」に着地・**一貫性優先**。na 化は逆に不整合＋コード改修を要するため不採用。「無理に埋めない・次フェーズ」方針とも整合（既存挙動を残すだけ＝何も足さない）。
+- 2800.HK は非保有（Value タブ非表示）。同じ broad-equity 扱い（percentile 維持）でよい。
+
+### 7.2 ETF 区分と扱い（最終・7.2A 反映済）
 | 区分 | 銘柄 | perTrail | perFwd | verdict |
 |------|------|----------|--------|---------|
 | 広域株式 | VT / VEA / VGK / ACWI | Yahoo trailing | null | %タイル3段階 |
 | セクター/テーマ株式 | SMH / XLF / XLV / XLP / DTCR / SHLD | Yahoo trailing | null | %タイル3段階 |
-| シクリカル/コモディティ | COPX / REMX / XLE | — | — | **na（`cyclical=true` 維持・不変）** |
-| PER欠損 | 2800.HK / 1629.T / 1477.T / 2516.T / 200A.T | null | null | **na（%タイルのみ）** |
+| シクリカル/コモディティ | COPX / REMX / XLE | — | — | **na（`value.cyclical=true` を新規付与）** |
+| 日本欠損（seededバンド有） | 1629.T / 1477.T / 2516.T / 200A.T（＋非保有2800.HK） | null（Yahoo欠損） | null | **percentile判定を維持・低confidence**（変更なし） |
 | ※ETFでない | LITE（Lumentum＝個別株） | 個別株扱い | — | 既存ロジック |
 
 ### 7.3 verdict は **コード変更不要**（既存ロジックで意図どおり退化する）
@@ -218,20 +226,23 @@ forward/holdings ベースの精緻化は **データが無いので今フェー
 - ただし **proxy 由来であることを UI に明示**したい（confidence「低」だけだと理由が伝わらない）。→ 7.5 のフラグでバッジ表示。
 
 ### 7.5 必要な実装（A4 の作業）
-1. **バッチで ETF trailingPE を投入**：価格系バッチ（trailing は株価で日々動くので価格更新に相乗り。最低週次）で、対象 ETF（7.2 の上2区分）の `value.perTrail` を Yahoo `summaryDetail.trailingPE` から更新。`perFwd`/`peg` は触らない（null のまま）。
-2. **proxy フラグ追加**：`value.perSource: "fund-trailing"`（ETF のみ）を立てる。Value タブで verdict chip 横に **「proxy」バッジ＋confidenceは既存の「低」** を表示。ツールチップ＝「ETFのファンド実績PER。予想PER不在のため%タイル基準の粗い判定」。
+1. **新規バッチ `data/scheduler/etf-pe.mjs` で ETF trailingPE を投入**（承認済・2026-06-21）：既存 `data/scheduler/` に price バッチが無い（quality-us/jp/writeback のみ・watchlist-per.mjs は不在）ため、**新規バッチを新設**。対象 ETF（7.2 の上2区分＝10銘柄）の `value.perTrail` を Yahoo `summaryDetail.trailingPE`（Worker `/yahoo` 経由）から更新。`perFwd`/`peg` は触らない（null のまま）。trailing は株価で日々動くが、ファンダ的更新頻度は週次で十分。
+2. **proxy フラグ追加**：`value.perSource: "fund-trailing"`（上2区分 ETF のみ）を立てる。Value タブで verdict chip 横に **「proxy」バッジ＋confidenceは既存の「低」** を表示。ツールチップ＝「ETFのファンド実績PER。予想PER不在のため%タイル基準の粗い判定」。
 3. **§5 トリガー連携（②売りルール）**：`evaluateTriggers()` で **`type:'valuation'` かつ `side:'sell'` のトリガーは、ETF（proxy銘柄）では `active` に上げず `watching` に降格**。
    - ⚠️ **`type:'concentration'`（テーマ上限超過）は ETF でも従来どおり `active` に上げる**（PF リスク由来＝§4/§5 の正当な売り。ETF の自前バリュエーションとは別物）。混同しないこと。
    - 実装：`evaluateTriggers(symbol, ctx)` の ctx に `isEtf`（or proxy 判定）を渡し、valuation+sell 分岐で `if (ctx.isEtf) { watching.push(...); continue; }`。
-4. **SMH の手動 seed 撤去**：`valuations.json` の SMH から perFwd/peg の NVDA proxy 値を外し、perTrail を Yahoo 実値に。`value.perSource:"fund-trailing"` を付与。
-5. **欠損 ETF**：7.2 下2区分は perTrail=null のまま（na）。何もしない。
+4. **SMH の手動 seed 撤去**：`valuations.json` の SMH から perFwd/peg の NVDA proxy 値を外し、perTrail を Yahoo 実値（44.5）に。`value.perSource:"fund-trailing"` を付与。
+5. **シクリカル na 化（判断1）**：`valuations.json` の **COPX / REMX / XLE に `value.cyclical=true` を付与**（→ classifyVerdict が na＝「シクリカル(別物差し)」を返す）。データのみ・コード変更なし。
+6. **日本欠損 ETF（判断2）＝何もしない**：1629.T/1477.T/2516.T/200A.T（＋2800.HK）は **既存の percentile 判定を維持**。perTrail も cyclical も付与しない。confidence は既存ロジックで自然に「低」。
 
 ### 7.6 受け入れ基準
 - [ ] 対象 ETF（VT/VEA/VGK/ACWI/SMH/XLF/XLV/XLP/DTCR/SHLD）に perTrail が入り、Value タブで %タイル3段階 verdict＋「proxy」バッジ＋confidence「低」が出る。
 - [ ] SMH が NVDA seed 撤去後も壊れず、trailing ベースで rich_real 系に表示（売り発議は立たない）。
 - [ ] ETF の valuation 売りトリガーが `watching` 止まり、concentration 売りトリガーは従来どおり `active`。
-- [ ] シクリカル（COPX/REMX/XLE）・欠損 ETF は na のまま不変。
+- [ ] **COPX/REMX/XLE は `cyclical=true` 付与で na（シクリカル別物差し）に変わる**（旧 fair/fair/rich から変化）。
+- [ ] **日本欠損 ETF（1629/1477/2516/200A.T）は percentile 判定のまま不変**（rich/cheap 等を維持・低confidence）。
 - [ ] 個別株 9 銘柄の既存挙動・既存テスト不変。新ロジックにテスト追加。
+- [ ] computeVerdict / computeConfidence のコードは変更しない（データ付与とトリガー/バッチ/UIのみ）。
 
 ### 7.7 スコープ外（次フェーズ・無理に埋めない）
 - forward PER / 原指数 fwd PE の取得（有料・将来）。
