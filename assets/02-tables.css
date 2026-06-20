@@ -729,3 +729,60 @@
 }
 /* ── /Risk overview (Phase 4 v1) ── */
 /* ── /Value タブ: トリガー行 ── */
+
+/* ── Risk quant (Phase 4b) ── */
+.risk-quant {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px 10px;
+  margin-bottom: 12px;
+}
+.risk-quant h4 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 10px;
+}
+.rq-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-bottom: 8px;
+}
+.rq-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.rq-stat-label {
+  font-size: 10px;
+  color: var(--text2);
+}
+.rq-stat-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+.rq-chip {
+  display: inline-block;
+  font-size: 10.5px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  padding: 1px 8px;
+  color: var(--text);
+}
+.rq-sev {
+  color: var(--up);
+}
+.rq-ok {
+  color: var(--down);
+  font-weight: 600;
+}
+.rq-note {
+  font-size: 10px;
+  color: var(--text2);
+  margin: 4px 0 0;
+}
+/* ── /Risk quant (Phase 4b) ── */
