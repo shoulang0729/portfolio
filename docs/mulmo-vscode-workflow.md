@@ -31,8 +31,7 @@ Toshio → Mulmo（設計・指示書）→ VS Code（実装）→ PR → Toshio
 1. **その回の指示書** — `docs/handoff/<YYYY-MM-DD>-<feature-slug>.md`
    そのタスク専用のエントリポイント。背景・対象ファイル・手順・受け入れ条件・触ってはいけない範囲が書いてある。
 2. **リポの常設ルール（毎回必読）**
-   - `CLAUDE.md` — プロジェクト規約
-   - `AGENTS.md` — エージェント向け運用ルール
+   - `CLAUDE.md` — プロジェクト規約・エージェント向け運用ルール
    - `.claude/codex-review-prompt.md` — レビュー観点
 3. **触る範囲の正本**（指示書が都度指定する）
    - 例: Briefing → `docs/briefing-generation-spec.md` / MF 取り込み → `mf-import-config.json` の `schema`
@@ -47,6 +46,29 @@ Toshio → Mulmo（設計・指示書）→ VS Code（実装）→ PR → Toshio
 - **`assets/*.css` に `prettier --write` を掛けない**（全体再整形で巨大 diff 化する）。
 - load-bearing なフィールド名は変更しない（例: mf-holdings の `cat` / `cur` / `value` / `totals.imported` / `asOf`）。
 - 勝手にやらない（要確認）: force push / `reset --hard` / main 削除 / Secrets / `CLAUDE.md` / `.claude` 設定 / ワークフロー大改修。
+
+## Mulmo ↔ VS Code のやり取りチャネル原則
+
+**「生き続けるもの → docs / 消費されるもの → Issue」**
+
+| チャネル | 寿命 | 使う場面 |
+|---|---|---|
+| `docs/` のMarkdownファイル | 永続 | アーキテクチャ・設計制約・API仕様・調査結果の長期参照 |
+| GitHub Issue | 完了で閉じる | 調査依頼・実装タスク・バグ報告・「やること」の依頼と完了確認 |
+
+**運用パターン:**
+
+1. Mulmo が `docs/` に設計コンテキスト（背景・方針・制約）を書く
+2. Mulmo が Issue を起票し、関連 doc へリンク（「背景は doc 参照」）
+3. VS Code が Issue コメントに調査結果・完了報告を書いて Issue をクローズ
+4. 結果を長期参照したい場合のみ doc に転記
+
+**やりがちなアンチパターン:**
+
+- 仕様書に調査依頼と結果記入欄を同居させる → 完了が見えない・PR との連携ができない
+- すべてを Issue のコメントで済ませる → 設計の背景が流れて消える
+
+---
 
 ## 困ったとき
 
