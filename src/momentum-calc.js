@@ -53,6 +53,20 @@ export function pos52w(series) {
 }
 
 /**
+ * 相対強さ（Relative Strength）= 銘柄の1Y騰落率 − ベンチマークの1Y騰落率（%pt）。
+ * ベンチに広域指数(ACWI等)を使えば「対市場」、セクターETFなら「対セクター」。
+ * @param {Array<{date: Date, close: number}>} series       銘柄の昇順 close 系列
+ * @param {Array<{date: Date, close: number}>} benchSeries  ベンチマークの昇順 close 系列
+ * @returns {number|null}  どちらかが算出不能なら null
+ */
+export function relStrength(series, benchSeries) {
+  const a = priceMom1Y(series);
+  const b = priceMom1Y(benchSeries);
+  if (a === null || b === null) return null;
+  return a - b;
+}
+
+/**
  * 履歴系列から価格モメンタムをまとめて算出する。
  * @param {Array<{date: Date, close: number}>} series
  * @returns {{ priceMom1Y: number|null, pos52w: number|null }|null}  算出不能なら null
