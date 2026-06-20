@@ -1881,6 +1881,26 @@ async function setHistoricalEntry(range, symbol, entries) {
   }
   saveCacheToSession();
 }
+async function getAllHistorical(range) {
+  try {
+    const db = await getDb();
+    const all = await idbGetAllEntries(db, STORE_NAME);
+    const prefix = `${range}:`;
+    const result = {};
+    for (const { key, value } of all) {
+      if (typeof key !== "string" || !key.startsWith(prefix)) continue;
+      const symbol = key.slice(prefix.length);
+      result[symbol] = (value.entries || []).map((e) => ({
+        date: e.date instanceof Date ? e.date : new Date(e.date),
+        close: e.close
+      }));
+    }
+    return result;
+  } catch (e) {
+    console.warn("[historical-cache] getAllHistorical failed:", e);
+    return {};
+  }
+}
 async function restoreFromIDB() {
   try {
     const db = await Promise.race([
@@ -3985,7 +4005,11 @@ function computeRiskBreakdown(posList = positions) {
       const unknown = value - known;
       if (unknown > 1e-6) {
         bucket.cats[UNKNOWN_KEY] = (bucket.cats[UNKNOWN_KEY] || 0) + unknown;
-        (bucket.contributors[UNKNOWN_KEY] || (bucket.contributors[UNKNOWN_KEY] = [])).push({ symbol: p.symbol || "", name, value: unknown });
+        (bucket.contributors[UNKNOWN_KEY] || (bucket.contributors[UNKNOWN_KEY] = [])).push({
+          symbol: p.symbol || "",
+          name,
+          value: unknown
+        });
       }
       bucket.total += value;
       bucket.known += known;
@@ -4073,6 +4097,145 @@ function _olderAsOf(a, b) {
   if (!b) return a;
   if (!a) return b;
   return Date.parse(b) < Date.parse(a) ? b : a;
+}
+function dailyReturns(series) {
+  if (!Array.isArray(series) || series.length < 2) return [];
+  const out = [];
+  for (let i = 1; i < series.length; i++) {
+    const prev = series[i - 1];
+    const cur = series[i];
+    if (!(prev?.close > 0) || !(cur?.close > 0)) continue;
+    const r = cur.close / prev.close - 1;
+    if (!Number.isFinite(r)) continue;
+    out.push({ date: cur.date, r });
+  }
+  return out;
+}
+function stdev(arr) {
+  if (!Array.isArray(arr) || arr.length < 2) return 0;
+  const n = arr.length;
+  const mean = arr.reduce((s, x) => s + x, 0) / n;
+  const variance = arr.reduce((s, x) => s + (x - mean) ** 2, 0) / (n - 1);
+  return Math.sqrt(variance);
+}
+function annualizedVol(returnsArr) {
+  if (!Array.isArray(returnsArr) || returnsArr.length < 2) return null;
+  return stdev(returnsArr) * Math.sqrt(252);
+}
+function maxDrawdown(series) {
+  if (!Array.isArray(series) || series.length < 2) return 0;
+  let peak = -Infinity;
+  let maxDD = 0;
+  for (const pt of series) {
+    const v = pt?.close;
+    if (!(v > 0)) continue;
+    if (v > peak) peak = v;
+    const dd = v / peak - 1;
+    if (dd < maxDD) maxDD = dd;
+  }
+  return maxDD;
+}
+function pearson(a, b) {
+  if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length || a.length < 2) return null;
+  const n = a.length;
+  const ma = a.reduce((s, x) => s + x, 0) / n;
+  const mb = b.reduce((s, x) => s + x, 0) / n;
+  let cov = 0, va = 0, vb = 0;
+  for (let i = 0; i < n; i++) {
+    const da = a[i] - ma;
+    const db = b[i] - mb;
+    cov += da * db;
+    va += da * da;
+    vb += db * db;
+  }
+  if (va === 0 || vb === 0) return null;
+  return cov / Math.sqrt(va * vb);
+}
+function covar(a, b) {
+  if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length || a.length < 2) return null;
+  const n = a.length;
+  const ma = a.reduce((s, x) => s + x, 0) / n;
+  const mb = b.reduce((s, x) => s + x, 0) / n;
+  let c = 0;
+  for (let i = 0; i < n; i++) c += (a[i] - ma) * (b[i] - mb);
+  return c / (n - 1);
+}
+function betaTo(ri, rref) {
+  const cv = covar(ri, rref);
+  if (cv === null) return null;
+  const cv2 = covar(rref, rref);
+  if (cv2 === null || cv2 === 0) return null;
+  return cv / cv2;
+}
+function worstReturn(returnsArr) {
+  if (!Array.isArray(returnsArr) || returnsArr.length === 0) return null;
+  return Math.min(...returnsArr);
+}
+function worstWindow(returnsArr, k) {
+  if (!Array.isArray(returnsArr) || returnsArr.length < k || k <= 0) return null;
+  let worst = Infinity;
+  for (let i = 0; i <= returnsArr.length - k; i++) {
+    let compound = 1;
+    for (let j = i; j < i + k; j++) compound *= 1 + returnsArr[j];
+    const ret = compound - 1;
+    if (ret < worst) worst = ret;
+  }
+  return worst === Infinity ? null : worst;
+}
+function alignReturnsByDate(seriesMap) {
+  const empty = { dates: [], bySym: {} };
+  if (!seriesMap || typeof seriesMap !== "object") return empty;
+  const syms = Object.keys(seriesMap);
+  if (syms.length === 0) return empty;
+  const bySymDate = {};
+  for (const sym of syms) {
+    const rets = dailyReturns(seriesMap[sym]);
+    bySymDate[sym] = {};
+    for (const { date, r } of rets) {
+      const ds = date instanceof Date ? date.toISOString().slice(0, 10) : String(date).slice(0, 10);
+      bySymDate[sym][ds] = r;
+    }
+  }
+  const allSets = syms.map((s) => new Set(Object.keys(bySymDate[s])));
+  const commonDates = [...allSets[0]].filter((d) => allSets.every((set) => set.has(d)));
+  commonDates.sort();
+  if (commonDates.length < 2) return empty;
+  const bySym = {};
+  for (const sym of syms) {
+    bySym[sym] = commonDates.map((d) => bySymDate[sym][d]);
+  }
+  return { dates: commonDates, bySym };
+}
+function highCorrelationPairs(alignedBySym, threshold = 0.85) {
+  if (!alignedBySym || typeof alignedBySym !== "object") return [];
+  const syms = Object.keys(alignedBySym);
+  const pairs = [];
+  for (let i = 0; i < syms.length; i++) {
+    for (let j = i + 1; j < syms.length; j++) {
+      const corr = pearson(alignedBySym[syms[i]], alignedBySym[syms[j]]);
+      if (corr !== null && corr >= threshold) {
+        pairs.push({ a: syms[i], b: syms[j], corr });
+      }
+    }
+  }
+  pairs.sort((x, y) => y.corr - x.corr);
+  return pairs;
+}
+function computePortfolioReturns(alignedBySym, weights) {
+  if (!alignedBySym || !weights) return [];
+  const syms = Object.keys(alignedBySym).filter((s) => (weights[s] ?? 0) > 0);
+  if (syms.length === 0) return [];
+  const totalW = syms.reduce((s, sym) => s + weights[sym], 0);
+  if (!(totalW > 0)) return [];
+  const len = alignedBySym[syms[0]].length;
+  if (len === 0) return [];
+  const port = new Array(len).fill(0);
+  for (const sym of syms) {
+    const w = weights[sym] / totalW;
+    const arr = alignedBySym[sym];
+    for (let t = 0; t < len; t++) port[t] += w * arr[t];
+  }
+  return port;
 }
 
 // src/manual-assets.js
@@ -4485,8 +4648,160 @@ function buildRiskOverviewCard() {
   card.appendChild(chipsStat);
   const note = document.createElement("div");
   note.className = "ro-note";
-  note.textContent = "\u203B \u30D9\u30FC\u30BF\u30FB\u76F8\u95A2\u30FB\u30B9\u30C8\u30EC\u30B9\u30FB\u6D41\u52D5\u6027\u306F\u6B21\u6BB5\uFF084b\uFF09\u3067\u8FFD\u52A0\u4E88\u5B9A";
+  note.textContent = "\u203B \u30D9\u30FC\u30BF\u30FB\u76F8\u95A2\u306F\u4E0B\u6BB5\u30AF\u30AA\u30F3\u30C4\u30AB\u30FC\u30C9\uFF084b\uFF09\u3092\u53C2\u7167\u3002\u30B9\u30C8\u30EC\u30B9\u30FB\u6D41\u52D5\u6027\u306F 4b+ \u4E88\u5B9A";
   card.appendChild(note);
+  return card;
+}
+function _pct1(v, forcePlus = false) {
+  if (v === null || !Number.isFinite(v)) return "\u2014";
+  const s = `${(v * 100).toFixed(1)}%`;
+  return forcePlus && v > 0 ? `+${s}` : s;
+}
+async function buildQuantCard(posList) {
+  const card = document.createElement("div");
+  card.className = "risk-quant";
+  const title = document.createElement("h4");
+  title.textContent = "\u30AF\u30AA\u30F3\u30C4\u30FB\u30EA\u30B9\u30AF\uFF08\u904E\u53BB1\u5E74\u30FB\u5C65\u6B74\u30D9\u30FC\u30B9\uFF09";
+  card.appendChild(title);
+  function _fallback(msg) {
+    const p = document.createElement("p");
+    p.className = "rq-note";
+    p.style.color = "var(--text2)";
+    p.textContent = msg;
+    card.appendChild(p);
+    return card;
+  }
+  let hist;
+  try {
+    hist = await getAllHistorical("1y");
+  } catch {
+    return _fallback("\u5C65\u6B74\u672A\u53D6\u5F97\uFF08Historical/Watch \u30BF\u30D6\u3092\u958B\u304F\u3068\u65E5\u6B21\u7CFB\u5217\u304C\u84C4\u7A4D\u3055\u308C\u7B97\u51FA\u3055\u308C\u307E\u3059\uFF09");
+  }
+  if (!hist || Object.keys(hist).length === 0) {
+    return _fallback("\u5C65\u6B74\u672A\u53D6\u5F97\uFF08Historical/Watch \u30BF\u30D6\u3092\u958B\u304F\u3068\u65E5\u6B21\u7CFB\u5217\u304C\u84C4\u7A4D\u3055\u308C\u7B97\u51FA\u3055\u308C\u307E\u3059\uFF09");
+  }
+  const covered = posList.filter((p) => p.ySymbol && Array.isArray(hist[p.ySymbol]) && hist[p.ySymbol].length >= 2);
+  if (covered.length < 2) {
+    return _fallback("\u5C65\u6B74\u672A\u53D6\u5F97\uFF08Historical/Watch \u30BF\u30D6\u3092\u958B\u304F\u3068\u65E5\u6B21\u7CFB\u5217\u304C\u84C4\u7A4D\u3055\u308C\u7B97\u51FA\u3055\u308C\u307E\u3059\uFF09");
+  }
+  const rawWeights = {};
+  for (const p of covered) {
+    rawWeights[
+      /** @type {string} */
+      p.ySymbol
+    ] = (rawWeights[p.ySymbol] || 0) + (p.value || 0);
+  }
+  const wTotal = Object.values(rawWeights).reduce((s, w) => s + w, 0);
+  const normWeights = {};
+  for (const [sym, w] of Object.entries(rawWeights)) {
+    normWeights[sym] = wTotal > 0 ? w / wTotal : 0;
+  }
+  const seriesMap = {};
+  for (const p of covered) {
+    if (p.ySymbol && !seriesMap[p.ySymbol]) seriesMap[p.ySymbol] = hist[p.ySymbol];
+  }
+  const aligned = alignReturnsByDate(seriesMap);
+  const portReturns = computePortfolioReturns(aligned.bySym, normWeights);
+  const pfVol = annualizedVol(portReturns);
+  const pfWorstD = worstReturn(portReturns);
+  const pfWorstM = worstWindow(portReturns, 21);
+  let _cum = 100;
+  const pfSeriesLinear = portReturns.map((r, i) => {
+    _cum *= 1 + r;
+    return { date: new Date(aligned.dates[i] || "2000-01-01"), close: _cum };
+  });
+  const pfMaxDD = maxDrawdown(pfSeriesLinear);
+  const corrPairs = highCorrelationPairs(aligned.bySym, 0.85);
+  const perHolding = [];
+  for (const sym of Object.keys(aligned.bySym)) {
+    const rets = aligned.bySym[sym];
+    const vol = annualizedVol(rets) ?? 0;
+    const beta = betaTo(rets, portReturns);
+    const dd = maxDrawdown(seriesMap[sym]);
+    perHolding.push({ sym, vol, beta, dd });
+  }
+  perHolding.sort((a, b) => {
+    const ra = a.vol * Math.abs(a.beta ?? 1);
+    const rb = b.vol * Math.abs(b.beta ?? 1);
+    return rb - ra;
+  });
+  const top3 = perHolding.slice(0, 3);
+  const excluded = posList.length - covered.length;
+  const pfRow = document.createElement("div");
+  pfRow.className = "rq-row";
+  function _stat(label, valText, isSev = false) {
+    const el = document.createElement("div");
+    el.className = "rq-stat";
+    const lb = document.createElement("span");
+    lb.className = "rq-stat-label";
+    lb.textContent = label;
+    const vl = document.createElement("span");
+    vl.className = `rq-stat-value${isSev ? " rq-sev" : ""}`;
+    vl.textContent = valText;
+    el.appendChild(lb);
+    el.appendChild(vl);
+    return el;
+  }
+  pfRow.appendChild(_stat("\u5E74\u7387\u30DC\u30E9", _pct1(pfVol), (pfVol ?? 0) > 0.2));
+  pfRow.appendChild(_stat("\u6700\u60AA\u65E5", _pct1(pfWorstD), true));
+  pfRow.appendChild(_stat("\u6700\u60AA1\u30F6\u6708", _pct1(pfWorstM), true));
+  pfRow.appendChild(_stat("\u6700\u5927DD", _pct1(pfMaxDD), true));
+  card.appendChild(pfRow);
+  const covNote = document.createElement("p");
+  covNote.className = "rq-note";
+  covNote.textContent = `${covered.length}\u9298\u67C4\u3067\u7B97\u51FA\uFF08\u5C65\u6B74\u672A\u53D6\u5F97${excluded}\u9664\u5916\uFF09`;
+  card.appendChild(covNote);
+  const corrTitle = document.createElement("div");
+  corrTitle.className = "rq-stat-label";
+  corrTitle.textContent = "\u9AD8\u76F8\u95A2\u30DA\u30A2\uFF08\u22650.85\uFF09";
+  card.appendChild(corrTitle);
+  const corrRow = document.createElement("div");
+  corrRow.className = "rq-row";
+  const top5Pairs = corrPairs.slice(0, 5);
+  if (top5Pairs.length === 0) {
+    const okChip = document.createElement("span");
+    okChip.className = "rq-chip rq-ok";
+    okChip.textContent = "\u306A\u3057";
+    corrRow.appendChild(okChip);
+  } else {
+    for (const { a, b, corr } of top5Pairs) {
+      const chip = document.createElement("span");
+      chip.className = "rq-chip";
+      const escA = escapeHTML(a);
+      const escB = escapeHTML(b);
+      chip.textContent = `${escA}\u2013${escB} ${corr.toFixed(2)}`;
+      corrRow.appendChild(chip);
+    }
+  }
+  card.appendChild(corrRow);
+  if (top3.length > 0) {
+    const contribTitle = document.createElement("div");
+    contribTitle.className = "rq-stat-label";
+    contribTitle.style.marginTop = "8px";
+    contribTitle.textContent = "\u30EA\u30B9\u30AF\u5BC4\u4E0E Top3\uFF08vol\xD7|\u03B2|\u964D\u9806\uFF09";
+    card.appendChild(contribTitle);
+    const contribRow = document.createElement("div");
+    contribRow.className = "rq-row";
+    for (const { sym, vol, beta } of top3) {
+      const el = document.createElement("div");
+      el.className = "rq-stat";
+      const lb = document.createElement("span");
+      lb.className = "rq-stat-label";
+      lb.textContent = escapeHTML(sym);
+      const vl = document.createElement("span");
+      vl.className = "rq-stat-value";
+      const betaStr = beta !== null ? ` \u03B2${beta.toFixed(1)}` : "";
+      vl.textContent = `vol ${_pct1(vol)}${betaStr}`;
+      el.appendChild(lb);
+      el.appendChild(vl);
+      contribRow.appendChild(el);
+    }
+    card.appendChild(contribRow);
+  }
+  const foot = document.createElement("p");
+  foot.className = "rq-note";
+  foot.textContent = "\u203B\u30D9\u30FC\u30BF\u306F\u30DD\u30FC\u30C8\u30D5\u30A9\u30EA\u30AA\u81EA\u8EAB\u3078\u306E\u611F\u5FDC\u5EA6\uFF08\u5E02\u5834\u30D9\u30F3\u30C1\u30DE\u30FC\u30AF\u4E0D\u8981\u306E\u5C65\u6B74\u7B97\u51FA\uFF09\u3002\u6D41\u52D5\u6027\u306F4b+";
+  card.appendChild(foot);
   return card;
 }
 var _taLoaded = false;
@@ -4506,6 +4821,7 @@ async function renderRiskCharts() {
   const sourceSummary = getSourceSummary(assets);
   wrap.textContent = "";
   wrap.appendChild(buildRiskOverviewCard());
+  wrap.appendChild(await buildQuantCard(positions));
   const sumInfo = getClassificationSummary(assets);
   const summary = document.createElement("div");
   summary.className = "risk-summary";
@@ -4897,6 +5213,39 @@ function computeHitRate() {
   return { hits, misses, pending, resolved, ratePct };
 }
 
+// src/momentum-calc.js
+function _closes(series) {
+  if (!Array.isArray(series)) return [];
+  return series.map((e) => e && e.close).filter((c) => typeof c === "number" && c > 0);
+}
+function priceMom1Y(series) {
+  const c = _closes(series);
+  if (c.length < 2) return null;
+  const first = c[0];
+  const last = c[c.length - 1];
+  if (!(first > 0)) return null;
+  return (last / first - 1) * 100;
+}
+function pos52w(series) {
+  const c = _closes(series);
+  if (c.length < 2) return null;
+  const last = c[c.length - 1];
+  let hi = -Infinity;
+  let lo = Infinity;
+  for (const v of c) {
+    if (v > hi) hi = v;
+    if (v < lo) lo = v;
+  }
+  if (!(hi > lo)) return null;
+  return (last - lo) / (hi - lo) * 100;
+}
+function computePriceMomentum(series) {
+  const m1y = priceMom1Y(series);
+  const p52 = pos52w(series);
+  if (m1y === null && p52 === null) return null;
+  return { priceMom1Y: m1y, pos52w: p52 };
+}
+
 // src/valuation-tab.js
 var _taLoaded2 = false;
 var _mfLoaded = false;
@@ -5100,6 +5449,10 @@ async function renderValuationTab() {
     wrap.innerHTML = '<div class="val-soon">\u30C7\u30FC\u30BF\u6E96\u5099\u4E2D\u3002\u30DE\u30CD\u30D5\u30A9\u53D6\u8FBC\u307E\u305F\u306FCSV\u53D6\u8FBC\u3092\u5B9F\u884C\u3057\u3066\u304F\u3060\u3055\u3044\u3002</div>';
     return;
   }
+  const _hist = (
+    /** @type {Record<string, Array<{date: Date, close: number}>>} */
+    await getAllHistorical("1y")
+  );
   const currentPctBySymbol = {};
   for (const p of positions) {
     const pct = (p.value || 0) / denom * 100;
@@ -5118,7 +5471,19 @@ async function renderValuationTab() {
     }
     const targetPct = tkey != null ? getTargetPct(tkey) : null;
     const gap = targetPct != null ? currentPct - targetPct : null;
-    const val = getValuation(p.ySymbol);
+    let val = getValuation(p.ySymbol);
+    const liveMom = p.ySymbol ? computePriceMomentum(_hist[p.ySymbol]) : null;
+    if (liveMom) {
+      const m = val && val.momentum || {};
+      val = {
+        ...val || {},
+        momentum: {
+          ...m,
+          priceMom1Y: m.priceMom1Y != null ? m.priceMom1Y : liveMom.priceMom1Y,
+          pos52w: m.pos52w != null ? m.pos52w : liveMom.pos52w
+        }
+      };
+    }
     const verdict = val ? computeVerdict(val) : null;
     const trigTheme = tkey && getThemeOf(tkey) || p.ySymbol && getThemeOf(p.ySymbol) || null;
     const themeUsagePct = trigTheme ? computeThemeUsage(trigTheme, currentPctBySymbol).used : null;

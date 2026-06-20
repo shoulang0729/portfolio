@@ -1,7 +1,7 @@
 // Tests for look-through risk aggregation in src/risk-calc.js
 
 import { describe, it, expect, afterEach } from 'vitest';
-import { computeRiskBreakdown, toSlices, getContributors, getClassificationSummary, getSourceSummary, holdingsToBreakdown, RISK_DIMENSIONS, UNKNOWN_KEY } from '../src/risk-calc.js';
+import { computeRiskBreakdown, toSlices, getContributors, getClassificationSummary, getSourceSummary, holdingsToBreakdown, RISK_DIMENSIONS, UNKNOWN_KEY, dailyReturns, stdev, annualizedVol, maxDrawdown, pearson, covar, betaTo, worstReturn, worstWindow, alignReturnsByDate, highCorrelationPairs, computePortfolioReturns } from '../src/risk-calc.js';
 import { state } from '../src/state.js';
 
 describe('computeRiskBreakdown — synthetic positions', () => {
@@ -335,5 +335,269 @@ describe('holdingsToBreakdown — Level 2 normalized holdings adapter (#206)', (
     // toSlices で整合を確認（純粋な集計プロパティの検証）
     expect(breakdown.sector.tech).toBeCloseTo(0.8, 6);
     expect(Object.values(breakdown.currency).reduce((s, v) => s + v, 0)).toBeCloseTo(0.8, 6);
+  });
+});
+
+// Phase 4b ―― クオンツ純関数テスト
+// ══════════════════════════════════════════════════════════════
+
+/** 合成価格系列ヘルパー（Date オブジェクト付き） */
+function makeSeries(closes) {
+  return closes.map((close, i) => ({
+    date: new Date(2024, 0, i + 1), // 2024-01-01 から 1 日ずつ
+    close,
+  }));
+}
+
+describe('dailyReturns', () => {
+  it('returns pairwise log-like simple returns for [100, 110, 99]', () => {
+    const s = makeSeries([100, 110, 99]);
+    const r = dailyReturns(s);
+    expect(r).toHaveLength(2);
+    expect(r[0].r).toBeCloseTo(0.1, 6); // 110/100 - 1
+    expect(r[1].r).toBeCloseTo(-0.1, 6); // 99/110 - 1 ≈ -0.0909
+  });
+
+  it('returns [] for series with <2 elements', () => {
+    expect(dailyReturns([])).toEqual([]);
+    expect(dailyReturns(makeSeries([100]))).toEqual([]);
+  });
+
+  it('skips entries with non-positive close', () => {
+    const s = [
+      { date: new Date(2024, 0, 1), close: 100 },
+      { date: new Date(2024, 0, 2), close: 0 }, // invalid
+      { date: new Date(2024, 0, 3), close: 110 },
+    ];
+    const r = dailyReturns(s);
+    // 100→0 は skip、0→110 も skip (prev.close=0 は >0 でない)
+    expect(r).toHaveLength(0);
+  });
+
+  it('returns date objects on each entry', () => {
+    const s = makeSeries([100, 120]);
+    const r = dailyReturns(s);
+    expect(r[0].date).toBeInstanceOf(Date);
+  });
+});
+
+describe('stdev', () => {
+  it('computes sample stdev of [2, 4, 4, 4, 5, 5, 7, 9] ≈ 2.138', () => {
+    // textbook example — sample stdev = 2
+    expect(stdev([2, 4, 4, 4, 5, 5, 7, 9])).toBeCloseTo(2.138, 2);
+  });
+
+  it('returns 0 for arrays with <2 elements', () => {
+    expect(stdev([])).toBe(0);
+    expect(stdev([5])).toBe(0);
+  });
+});
+
+describe('annualizedVol', () => {
+  it('returns positive value for a non-constant return series', () => {
+    const rets = dailyReturns(makeSeries([100, 110, 99, 105, 101])).map((x) => x.r);
+    const vol = annualizedVol(rets);
+    expect(vol).not.toBeNull();
+    expect(/** @type {number} */ (vol)).toBeGreaterThan(0);
+  });
+
+  it('returns null for arrays with <2 elements', () => {
+    expect(annualizedVol([])).toBeNull();
+    expect(annualizedVol([0.01])).toBeNull();
+  });
+});
+
+describe('maxDrawdown', () => {
+  it('returns -0.5 for [100, 120, 60] (peak 120 → trough 60)', () => {
+    const s = makeSeries([100, 120, 60]);
+    expect(maxDrawdown(s)).toBeCloseTo(-0.5, 6);
+  });
+
+  it('returns 0 for a strictly rising series', () => {
+    expect(maxDrawdown(makeSeries([100, 110, 120]))).toBe(0);
+  });
+
+  it('returns 0 for series with <2 elements', () => {
+    expect(maxDrawdown([])).toBe(0);
+    expect(maxDrawdown(makeSeries([100]))).toBe(0);
+  });
+});
+
+describe('pearson', () => {
+  it('returns 1 for two identical arrays', () => {
+    const a = [1, 2, 3, 4, 5];
+    expect(pearson(a, a)).toBeCloseTo(1, 6);
+  });
+
+  it('returns -1 for perfectly opposite arrays', () => {
+    const a = [1, 2, 3, 4, 5];
+    const b = [5, 4, 3, 2, 1];
+    expect(pearson(a, b)).toBeCloseTo(-1, 6);
+  });
+
+  it('returns null for arrays with <2 elements', () => {
+    expect(pearson([], [])).toBeNull();
+    expect(pearson([1], [1])).toBeNull();
+  });
+
+  it('returns null for zero-variance arrays', () => {
+    expect(pearson([3, 3, 3], [1, 2, 3])).toBeNull();
+  });
+});
+
+describe('betaTo', () => {
+  it('returns ~2 when ri = 2 * rref', () => {
+    const rref = [0.01, -0.02, 0.03, -0.01, 0.02];
+    const ri = rref.map((r) => 2 * r);
+    expect(betaTo(ri, rref)).toBeCloseTo(2, 4);
+  });
+
+  it('returns null if var(rref) = 0', () => {
+    expect(betaTo([1, 2, 3], [0, 0, 0])).toBeNull();
+  });
+
+  it('returns null for insufficient data', () => {
+    expect(betaTo([0.01], [0.01])).toBeNull();
+  });
+});
+
+describe('worstReturn', () => {
+  it('returns the minimum daily return', () => {
+    expect(worstReturn([0.01, -0.05, 0.02, -0.03])).toBeCloseTo(-0.05, 6);
+  });
+
+  it('returns null for empty array', () => {
+    expect(worstReturn([])).toBeNull();
+  });
+});
+
+describe('worstWindow', () => {
+  it('returns minimum 3-day compounded return for simple series', () => {
+    // [0, 0, -0.5]: only window is [-0.5] prod=(1)(1)(0.5)-1=-0.5
+    const rets = [0, 0, -0.5];
+    expect(worstWindow(rets, 3)).toBeCloseTo(-0.5, 6);
+  });
+
+  it('returns null if length < k', () => {
+    expect(worstWindow([0.01, 0.02], 3)).toBeNull();
+  });
+
+  it('returns null for k=0', () => {
+    expect(worstWindow([0.01, 0.02, 0.03], 0)).toBeNull();
+  });
+
+  it('finds the correct worst window among several candidates', () => {
+    // [0.1, -0.2, 0.3, -0.4]
+    // window k=2: [0.1,-0.2]→(1.1)(0.8)-1=-0.12, [-0.2,0.3]→(0.8)(1.3)-1=0.04, [0.3,-0.4]→(1.3)(0.6)-1=-0.22
+    const rets = [0.1, -0.2, 0.3, -0.4];
+    const worst = worstWindow(rets, 2);
+    expect(worst).toBeCloseTo(1.3 * 0.6 - 1, 4);
+  });
+});
+
+describe('alignReturnsByDate', () => {
+  it('returns the intersection of dates when two syms have overlapping but non-identical date sets', () => {
+    // symA: 2024-01-01..03 (returns on 02, 03)
+    // symB: 2024-01-02..04 (returns on 03, 04)
+    // intersection of return dates: only 2024-01-03
+    // But we need >=2 common dates → expect empty
+    const symA = makeSeries([100, 110, 120]); // dates: jan 1,2,3; returns dates: jan 2,3
+    const symB = [
+      { date: new Date(2024, 0, 2), close: 200 },
+      { date: new Date(2024, 0, 3), close: 210 },
+      { date: new Date(2024, 0, 4), close: 220 },
+    ]; // returns dates: jan 3,4
+    const result = alignReturnsByDate({ A: symA, B: symB });
+    // only jan 3 is common → <2 → empty
+    expect(result.dates).toHaveLength(0);
+    expect(result.bySym).toEqual({});
+  });
+
+  it('returns aligned returns for two syms with >=2 common return dates', () => {
+    // symA: jan1..5 → return dates jan2,3,4,5
+    const symA = makeSeries([100, 110, 121, 133.1, 146.41]);
+    // symB: jan1..5 same dates → return dates jan2,3,4,5
+    const symB = makeSeries([200, 220, 242, 266.2, 292.82]);
+    const result = alignReturnsByDate({ A: symA, B: symB });
+    expect(result.dates).toHaveLength(4);
+    expect(result.bySym.A).toHaveLength(4);
+    expect(result.bySym.B).toHaveLength(4);
+    // Each return in A should be 10/100 = 0.1
+    for (const r of result.bySym.A) expect(r).toBeCloseTo(0.1, 6);
+    // Each return in B should be 20/200 = 0.1
+    for (const r of result.bySym.B) expect(r).toBeCloseTo(0.1, 6);
+  });
+
+  it('returns empty for non-overlapping date sets', () => {
+    const symA = makeSeries([100, 110]); // returns on jan 2
+    const symB = [
+      { date: new Date(2024, 1, 1), close: 200 },
+      { date: new Date(2024, 1, 2), close: 210 },
+    ]; // returns on feb 2
+    const result = alignReturnsByDate({ A: symA, B: symB });
+    expect(result.dates).toHaveLength(0);
+  });
+
+  it('handles empty seriesMap gracefully', () => {
+    expect(alignReturnsByDate({}).dates).toHaveLength(0);
+    // @ts-ignore
+    expect(alignReturnsByDate(null).dates).toHaveLength(0);
+  });
+});
+
+describe('highCorrelationPairs', () => {
+  it('returns a perfectly correlated pair (identical series) above threshold 0.85', () => {
+    // Two identical return series → corr = 1.0
+    const series = makeSeries([100, 110, 105, 120, 115]);
+    const aligned = alignReturnsByDate({ X: series, Y: series });
+    const pairs = highCorrelationPairs(aligned.bySym, 0.85);
+    expect(pairs).toHaveLength(1);
+    expect(pairs[0].corr).toBeCloseTo(1, 4);
+    // symbols order: one of {a:'X',b:'Y'} or {a:'Y',b:'X'}
+    expect(new Set([pairs[0].a, pairs[0].b])).toEqual(new Set(['X', 'Y']));
+  });
+
+  it('returns empty array when no pair exceeds threshold', () => {
+    // Opposite series → corr = -1 → below 0.85
+    const A = makeSeries([100, 110, 105, 120, 115]);
+    const B = makeSeries([100, 90, 95, 80, 85]);
+    const aligned = alignReturnsByDate({ A, B });
+    const pairs = highCorrelationPairs(aligned.bySym, 0.85);
+    // Corr is negative or low → none should pass
+    for (const p of pairs) expect(p.corr).toBeGreaterThanOrEqual(0.85);
+  });
+
+  it('handles empty or null bySym gracefully', () => {
+    expect(highCorrelationPairs({}, 0.85)).toEqual([]);
+    // @ts-ignore
+    expect(highCorrelationPairs(null, 0.85)).toEqual([]);
+  });
+});
+
+describe('computePortfolioReturns', () => {
+  it('returns equal-weighted average of returns for two syms with equal weights', () => {
+    const series1 = makeSeries([100, 110, 121]);
+    const series2 = makeSeries([100, 90, 99]);
+    const aligned = alignReturnsByDate({ A: series1, B: series2 });
+    const port = computePortfolioReturns(aligned.bySym, { A: 1, B: 1 });
+    expect(port).toHaveLength(2);
+    // day1: 0.5 * 0.1 + 0.5 * (-0.1) = 0
+    expect(port[0]).toBeCloseTo(0, 6);
+    // day2: 0.5 * 0.1 + 0.5 * 0.1 = 0.1
+    expect(port[1]).toBeCloseTo(0.1, 6);
+  });
+
+  it('normalizes weights so they sum to 1', () => {
+    const series = makeSeries([100, 110, 121]);
+    const aligned = alignReturnsByDate({ A: series, B: series });
+    // weights 3:1 → same as 0.75:0.25 — but both identical so result = series return
+    const port = computePortfolioReturns(aligned.bySym, { A: 3, B: 1 });
+    expect(port[0]).toBeCloseTo(0.1, 6);
+  });
+
+  it('returns [] for empty or missing bySym', () => {
+    expect(computePortfolioReturns({}, { A: 1 })).toEqual([]);
+    // @ts-ignore
+    expect(computePortfolioReturns(null, {})).toEqual([]);
   });
 });
