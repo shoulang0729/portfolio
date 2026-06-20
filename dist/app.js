@@ -4086,6 +4086,76 @@ var MANUAL_SOURCES = [
   "\u3072\u3075\u307F\u6295\u4FE1\u30FB\u3072\u3075\u307F\u30DE\u30A4\u30AF\u30ED\u30B9\u30B3\u30FC\u30D7pro\u30FB\u3072\u3075\u307F\u30AF\u30ED\u30B9\u30AA\u30FC\u30D0\u30FCpro \u5206\u985E = \u30EC\u30AA\u30B9\u30FB\u30AD\u30E3\u30D4\u30BF\u30EB\u30EF\u30FC\u30AF\u30B9 \u6708\u6B21\u30EC\u30DD\u30FC\u30C8\uFF082026\u5E744\u6708\u57FA\u6E96\uFF09"
 ];
 
+// src/target-allocation.js
+var TARGET_ALLOC_URL = "data/target-allocation.json";
+var _cfg = null;
+async function loadTargetAllocation() {
+  try {
+    const r = await fetch(`${TARGET_ALLOC_URL}?_=${Date.now()}`);
+    if (!r.ok) throw new Error(`target-allocation ${r.status}`);
+    _cfg = await r.json();
+  } catch {
+    _cfg = null;
+  }
+  return _cfg;
+}
+function getThemeOf(symbol) {
+  if (!_cfg || !_cfg.themeCaps) return null;
+  for (const [theme, def] of Object.entries(_cfg.themeCaps)) {
+    if (Array.isArray(def.members) && def.members.includes(symbol)) return theme;
+  }
+  return null;
+}
+function getTargetPct(symbol) {
+  if (!_cfg) return null;
+  if (_cfg.override && _cfg.override[symbol] != null) {
+    const ov = _cfg.override[symbol];
+    if (ov.targetPct != null) return ov.targetPct;
+  }
+  const tiers = _cfg.tiers || {};
+  for (const tier of Object.values(tiers)) {
+    if (tier.targets && tier.targets[symbol] != null) return tier.targets[symbol];
+  }
+  if (_cfg.themeEtfs && _cfg.themeEtfs.includes(symbol)) {
+    const etfTheme = getThemeOf(symbol);
+    if (etfTheme !== null) {
+      const cap = getThemeCap(etfTheme);
+      const n = _cfg.themeEtfs.filter((s) => getThemeOf(s) === etfTheme).length || 1;
+      return cap != null ? Math.round(cap / n * 100) / 100 : null;
+    }
+  }
+  const theme = getThemeOf(symbol);
+  if (theme !== null) {
+    const conviction = _cfg.conviction && _cfg.conviction[symbol] || "standard";
+    const pct = _cfg.convictionPct && _cfg.convictionPct[conviction];
+    return pct != null ? pct : null;
+  }
+  return null;
+}
+function getThemeCap(theme) {
+  if (!_cfg || !_cfg.themeCaps || !_cfg.themeCaps[theme]) return null;
+  const cap = _cfg.themeCaps[theme].cap;
+  return cap != null ? cap : null;
+}
+function computeThemeUsage(theme, currentPctBySymbol) {
+  const cap = getThemeCap(theme);
+  let members = (
+    /** @type {string[]} */
+    []
+  );
+  if (_cfg && _cfg.themeCaps && _cfg.themeCaps[theme]) {
+    members = _cfg.themeCaps[theme].members || [];
+  }
+  const used = members.reduce((sum, sym) => sum + (currentPctBySymbol[sym] || 0), 0);
+  const headroom = cap != null ? cap - used : null;
+  return { theme, cap, used, headroom };
+}
+function computeGap(symbol, currentPct) {
+  const targetPct = getTargetPct(symbol);
+  const gapPct = targetPct != null ? currentPct - targetPct : null;
+  return { symbol, currentPct, targetPct, gapPct };
+}
+
 // src/risk-charts.js
 var TITLES = {
   assetClass: "\u30A2\u30BB\u30C3\u30C8\u30AF\u30E9\u30B9",
@@ -4094,9 +4164,25 @@ var TITLES = {
   sector: "\u30BB\u30AF\u30BF\u30FC"
 };
 var LABELS = {
-  assetClass: { equity: "\u682A\u5F0F", bond: "\u50B5\u5238", commodity: "\u30B3\u30E2\u30C7\u30A3\u30C6\u30A3", reit: "REIT", cash: "\u73FE\u91D1", crypto: "\u6697\u53F7\u8CC7\u7523" },
+  assetClass: {
+    equity: "\u682A\u5F0F",
+    bond: "\u50B5\u5238",
+    commodity: "\u30B3\u30E2\u30C7\u30A3\u30C6\u30A3",
+    reit: "REIT",
+    cash: "\u73FE\u91D1",
+    crypto: "\u6697\u53F7\u8CC7\u7523"
+  },
   currency: { JPY: "\u5186 JPY", USD: "\u30C9\u30EB USD", EUR: "\u30E6\u30FC\u30ED EUR", other: "\u305D\u306E\u4ED6\u901A\u8CA8" },
-  country: { japan: "\u65E5\u672C", us: "\u7C73\u56FD", europe: "\u6B27\u5DDE", em: "\u65B0\u8208\u56FD", latam: "\u4E2D\u5357\u7C73", china: "\u4E2D\u56FD", global: "\u5206\u6563", commodity: "\u30B3\u30E2\u30C7\u30A3\u30C6\u30A3" },
+  country: {
+    japan: "\u65E5\u672C",
+    us: "\u7C73\u56FD",
+    europe: "\u6B27\u5DDE",
+    em: "\u65B0\u8208\u56FD",
+    latam: "\u4E2D\u5357\u7C73",
+    china: "\u4E2D\u56FD",
+    global: "\u5206\u6563",
+    commodity: "\u30B3\u30E2\u30C7\u30A3\u30C6\u30A3"
+  },
   sector: {
     tech: "\u30BD\u30D5\u30C8\u30A6\u30A7\u30A2/IT",
     semis: "\u534A\u5C0E\u4F53",
@@ -4226,17 +4312,200 @@ function buildChartCard(dim, dimResult, dimSource) {
   }
   return card;
 }
-function renderRiskCharts() {
+function _resolvePositionTkeys(denom) {
+  return positions.map((p) => {
+    const currentPct = (p.value || 0) / denom * 100;
+    let tkey = null;
+    for (const candidate of [p.ySymbol, p.symbol, p.name]) {
+      if (!candidate) continue;
+      if (getTargetPct(candidate) != null || getThemeOf(candidate) != null) {
+        tkey = candidate;
+        break;
+      }
+    }
+    return { p, tkey, currentPct };
+  });
+}
+function buildRiskOverviewCard() {
+  const card = document.createElement("div");
+  card.className = "risk-overview";
+  const h4 = document.createElement("h4");
+  h4.textContent = "\u30EA\u30B9\u30AF\u8981\u7D04\uFF08\u81F4\u547D\u50B7\u56DE\u907F\uFF09";
+  card.appendChild(h4);
+  const roRow = document.createElement("div");
+  roRow.className = "ro-row";
+  card.appendChild(roRow);
+  const totals = getMfTotals();
+  const denom = totals && totals.imported || positions.reduce((s, p) => s + (p.value || 0), 0);
+  const cashRatioStat = document.createElement("div");
+  cashRatioStat.className = "ro-stat";
+  const cashLabel = document.createElement("div");
+  cashLabel.className = "ro-stat-label";
+  cashLabel.textContent = "\u6295\u8CC7\u7528\u30AD\u30E3\u30C3\u30B7\u30E5\u6BD4\u7387";
+  cashRatioStat.appendChild(cashLabel);
+  const cashVal = document.createElement("div");
+  cashVal.className = "ro-stat-value";
+  if (totals) {
+    const cr = totals.cashRatio;
+    const outOfRange = cr < 5 || cr > 20;
+    cashVal.textContent = `${cr.toFixed(1)}%`;
+    cashVal.style.color = outOfRange ? "var(--up)" : "var(--text)";
+    if (outOfRange) cashVal.title = cr < 5 ? "\u30AD\u30E3\u30C3\u30B7\u30E5\u4E0D\u8DB3\uFF08<5%\uFF09" : "\u30AD\u30E3\u30C3\u30B7\u30E5\u904E\u591A\uFF08>20%\uFF09";
+  } else {
+    cashVal.textContent = "\u2014";
+  }
+  cashRatioStat.appendChild(cashVal);
+  roRow.appendChild(cashRatioStat);
+  const taAvailable = (
+    /** @type {boolean} */
+    denom > 0
+  );
+  const oversizeStat = document.createElement("div");
+  oversizeStat.className = "ro-stat";
+  const oversizeLabel = document.createElement("div");
+  oversizeLabel.className = "ro-stat-label";
+  oversizeLabel.textContent = "\u904E\u5927\u30DD\u30B8";
+  oversizeStat.appendChild(oversizeLabel);
+  const oversizeVal = document.createElement("div");
+  oversizeVal.className = "ro-stat-value";
+  if (taAvailable) {
+    const resolved = _resolvePositionTkeys(denom);
+    let oversizeCount = 0;
+    for (const { tkey, currentPct } of resolved) {
+      if (!tkey) continue;
+      const gap = computeGap(tkey, currentPct);
+      if (gap.gapPct != null && gap.gapPct > 0.5) oversizeCount++;
+    }
+    oversizeVal.textContent = `${oversizeCount} \u4EF6`;
+    if (oversizeCount > 0) oversizeVal.style.color = "var(--up)";
+  } else {
+    oversizeVal.textContent = "\u2014";
+  }
+  oversizeStat.appendChild(oversizeVal);
+  roRow.appendChild(oversizeStat);
+  const maxConStat = document.createElement("div");
+  maxConStat.className = "ro-stat";
+  const maxConLabel = document.createElement("div");
+  maxConLabel.className = "ro-stat-label";
+  maxConLabel.textContent = "\u6700\u5927\u96C6\u4E2D";
+  maxConStat.appendChild(maxConLabel);
+  const maxConVal = document.createElement("div");
+  maxConVal.className = "ro-stat-value";
+  if (taAvailable && denom > 0) {
+    const currentPctBySymbol = {};
+    for (const p of positions) {
+      const pct = (p.value || 0) / denom * 100;
+      if (p.ySymbol) currentPctBySymbol[p.ySymbol] = (currentPctBySymbol[p.ySymbol] || 0) + pct;
+      if (p.symbol && p.symbol !== p.ySymbol) currentPctBySymbol[p.symbol] = (currentPctBySymbol[p.symbol] || 0) + pct;
+    }
+    let maxLabel = null;
+    let maxPct = 0;
+    const themeUsedPct = {};
+    const resolved2 = _resolvePositionTkeys(denom);
+    for (const { tkey, currentPct } of resolved2) {
+      if (!tkey) continue;
+      const theme = getThemeOf(tkey);
+      if (theme) {
+        themeUsedPct[theme] = (themeUsedPct[theme] || 0) + currentPct;
+      }
+    }
+    for (const [theme, used] of Object.entries(themeUsedPct)) {
+      if (used > maxPct) {
+        maxPct = used;
+        maxLabel = escapeHTML(theme);
+      }
+    }
+    for (const p of positions) {
+      const pct = (p.value || 0) / denom * 100;
+      if (pct > maxPct) {
+        maxPct = pct;
+        maxLabel = escapeHTML(p.name || p.symbol || "");
+      }
+    }
+    if (maxLabel) {
+      maxConVal.textContent = `${maxLabel} ${maxPct.toFixed(1)}%`;
+      if (maxPct > 20) maxConVal.style.color = "var(--up)";
+    } else {
+      maxConVal.textContent = "\u2014";
+    }
+  } else {
+    maxConVal.textContent = "\u2014";
+  }
+  maxConStat.appendChild(maxConVal);
+  roRow.appendChild(maxConStat);
+  const chipsStat = document.createElement("div");
+  chipsStat.className = "ro-stat ro-stat-chips";
+  const chipsLabel = document.createElement("div");
+  chipsLabel.className = "ro-stat-label";
+  chipsLabel.textContent = "\u30C6\u30FC\u30DE\u4E0A\u9650\u8D85\u904E";
+  chipsStat.appendChild(chipsLabel);
+  if (taAvailable && denom > 0) {
+    const currentPctBySymbol2 = {};
+    for (const p of positions) {
+      const pct = (p.value || 0) / denom * 100;
+      if (p.ySymbol) currentPctBySymbol2[p.ySymbol] = (currentPctBySymbol2[p.ySymbol] || 0) + pct;
+      if (p.symbol && p.symbol !== p.ySymbol)
+        currentPctBySymbol2[p.symbol] = (currentPctBySymbol2[p.symbol] || 0) + pct;
+    }
+    const resolvedForTheme = _resolvePositionTkeys(denom);
+    const themes = /* @__PURE__ */ new Set();
+    for (const { tkey } of resolvedForTheme) {
+      if (!tkey) continue;
+      const th = getThemeOf(tkey);
+      if (th) themes.add(th);
+    }
+    const overThemes = [];
+    for (const theme of themes) {
+      const cap = getThemeCap(theme);
+      if (cap == null) continue;
+      const usage = computeThemeUsage(theme, currentPctBySymbol2);
+      if (usage.used > cap) overThemes.push({ theme, used: usage.used, cap });
+    }
+    if (overThemes.length === 0) {
+      const ok = document.createElement("span");
+      ok.className = "ro-ok";
+      ok.textContent = "\u306A\u3057";
+      chipsStat.appendChild(ok);
+    } else {
+      const chipsWrap = document.createElement("div");
+      chipsWrap.className = "ro-chips-wrap";
+      for (const { theme, used, cap } of overThemes) {
+        const chip = document.createElement("span");
+        chip.className = "ro-chip";
+        chip.textContent = `${escapeHTML(theme)} ${used.toFixed(1)}%>${cap}%`;
+        chipsWrap.appendChild(chip);
+      }
+      chipsStat.appendChild(chipsWrap);
+    }
+  } else {
+    const dash = document.createElement("span");
+    dash.textContent = "\u2014";
+    chipsStat.appendChild(dash);
+  }
+  card.appendChild(chipsStat);
+  const note = document.createElement("div");
+  note.className = "ro-note";
+  note.textContent = "\u203B \u30D9\u30FC\u30BF\u30FB\u76F8\u95A2\u30FB\u30B9\u30C8\u30EC\u30B9\u30FB\u6D41\u52D5\u6027\u306F\u6B21\u6BB5\uFF084b\uFF09\u3067\u8FFD\u52A0\u4E88\u5B9A";
+  card.appendChild(note);
+  return card;
+}
+var _taLoaded = false;
+async function renderRiskCharts() {
   const panel = document.getElementById("panel-risk");
   if (!panel || panel.hidden) return;
   const wrap = document.getElementById("risk-charts-wrap");
   if (!wrap) return;
   if (typeof d3 === "undefined") return;
+  if (!_taLoaded) {
+    await loadTargetAllocation();
+    _taLoaded = true;
+  }
   const manualAssets = getMfManualAssets() || MANUAL_ASSETS;
   const assets = [...positions, ...manualAssets];
   const breakdown = computeRiskBreakdown(assets);
   const sourceSummary = getSourceSummary(assets);
   wrap.textContent = "";
+  wrap.appendChild(buildRiskOverviewCard());
   const sumInfo = getClassificationSummary(assets);
   const summary = document.createElement("div");
   summary.className = "risk-summary";
@@ -4431,71 +4700,6 @@ function _withCacheBust(url) {
   return next.pathname.replace(/^\//, "") + next.search;
 }
 
-// src/target-allocation.js
-var TARGET_ALLOC_URL = "data/target-allocation.json";
-var _cfg = null;
-async function loadTargetAllocation() {
-  try {
-    const r = await fetch(`${TARGET_ALLOC_URL}?_=${Date.now()}`);
-    if (!r.ok) throw new Error(`target-allocation ${r.status}`);
-    _cfg = await r.json();
-  } catch {
-    _cfg = null;
-  }
-  return _cfg;
-}
-function getThemeOf(symbol) {
-  if (!_cfg || !_cfg.themeCaps) return null;
-  for (const [theme, def] of Object.entries(_cfg.themeCaps)) {
-    if (Array.isArray(def.members) && def.members.includes(symbol)) return theme;
-  }
-  return null;
-}
-function getTargetPct(symbol) {
-  if (!_cfg) return null;
-  if (_cfg.override && _cfg.override[symbol] != null) {
-    const ov = _cfg.override[symbol];
-    if (ov.targetPct != null) return ov.targetPct;
-  }
-  const tiers = _cfg.tiers || {};
-  for (const tier of Object.values(tiers)) {
-    if (tier.targets && tier.targets[symbol] != null) return tier.targets[symbol];
-  }
-  if (_cfg.themeEtfs && _cfg.themeEtfs.includes(symbol)) {
-    const etfTheme = getThemeOf(symbol);
-    if (etfTheme !== null) {
-      const cap = getThemeCap(etfTheme);
-      const n = _cfg.themeEtfs.filter((s) => getThemeOf(s) === etfTheme).length || 1;
-      return cap != null ? Math.round(cap / n * 100) / 100 : null;
-    }
-  }
-  const theme = getThemeOf(symbol);
-  if (theme !== null) {
-    const conviction = _cfg.conviction && _cfg.conviction[symbol] || "standard";
-    const pct = _cfg.convictionPct && _cfg.convictionPct[conviction];
-    return pct != null ? pct : null;
-  }
-  return null;
-}
-function getThemeCap(theme) {
-  if (!_cfg || !_cfg.themeCaps || !_cfg.themeCaps[theme]) return null;
-  const cap = _cfg.themeCaps[theme].cap;
-  return cap != null ? cap : null;
-}
-function computeThemeUsage(theme, currentPctBySymbol) {
-  const cap = getThemeCap(theme);
-  let members = (
-    /** @type {string[]} */
-    []
-  );
-  if (_cfg && _cfg.themeCaps && _cfg.themeCaps[theme]) {
-    members = _cfg.themeCaps[theme].members || [];
-  }
-  const used = members.reduce((sum, sym) => sum + (currentPctBySymbol[sym] || 0), 0);
-  const headroom = cap != null ? cap - used : null;
-  return { theme, cap, used, headroom };
-}
-
 // src/valuations.js
 var VAL_URL = "data/valuations.json";
 var _vals = {};
@@ -4661,15 +4865,15 @@ function evaluateTriggers(symbol, ctx) {
 }
 
 // src/valuation-tab.js
-var _taLoaded = false;
+var _taLoaded2 = false;
 var _mfLoaded = false;
 var _lens = "total";
 async function _ensureData() {
   const loads = [];
-  if (!_taLoaded) {
+  if (!_taLoaded2) {
     loads.push(
       loadTargetAllocation().then(() => {
-        _taLoaded = true;
+        _taLoaded2 = true;
       })
     );
   }
