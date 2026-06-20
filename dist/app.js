@@ -5324,12 +5324,18 @@ function evaluateTriggers(symbol, ctx) {
       }
       if (type === "valuation") {
         if (side === "sell") {
+          let reason = null;
           if (t.pctGte != null && ctx.percentile != null && ctx.percentile >= t.pctGte) {
-            active.push({ side, type, action, reason: `%\u30BF\u30A4\u30EB${Math.round(ctx.percentile)}\u2265${t.pctGte}` });
-            continue;
+            reason = `%\u30BF\u30A4\u30EB${Math.round(ctx.percentile)}\u2265${t.pctGte}`;
+          } else if (t.pegGte != null && ctx.peg != null && ctx.peg >= t.pegGte) {
+            reason = `PEG${ctx.peg.toFixed(1)}\u2265${t.pegGte}`;
           }
-          if (t.pegGte != null && ctx.peg != null && ctx.peg >= t.pegGte) {
-            active.push({ side, type, action, reason: `PEG${ctx.peg.toFixed(1)}\u2265${t.pegGte}` });
+          if (reason != null) {
+            if (ctx.isEtf) {
+              watching.push({ side, type, action, note: `ETF proxy\uFF08\u53C2\u8003\uFF09: ${reason}` });
+            } else {
+              active.push({ side, type, action, reason });
+            }
             continue;
           }
         } else {
@@ -5621,10 +5627,12 @@ function totalChipsHTML(val) {
 function rowHTML(p, currentPct, targetPct, verdict, val, trig, conviction) {
   const banner = bannerHTML(trig);
   const chipHTML = verdict && verdict.label && verdict.label !== "-" ? `<span class="${chipClass(verdict)}" title="${escapeHTML(verdict.drivers.join("\u30FB"))}">${escapeHTML(verdict.label)}</span>` : "";
+  const isProxy = !!(val && val.value && val.value.perSource === "fund-trailing");
+  const proxyHTML = isProxy ? `<span class="val-proxy" title="ETF\u306E\u30D5\u30A1\u30F3\u30C9\u5B9F\u7E3EPER\u3002\u4E88\u60F3PER\u4E0D\u5728\u306E\u305F\u3081%\u30BF\u30A4\u30EB\u57FA\u6E96\u306E\u7C97\u3044\u5224\u5B9A">proxy</span>` : "";
   const head = `<div class="val-head">
     <b class="val-tk">${escapeHTML(p.symbol)}</b>
     <span class="val-nm">${escapeHTML(p.name)}</span>
-    ${chipHTML}
+    ${chipHTML}${proxyHTML}
   </div>`;
   const size = `<div class="val-size-wrap">${sizeBarHTML(currentPct, targetPct, conviction)}</div>`;
   const metrics = _lens === "total" ? totalChipsHTML(val) : line3HTML(val);
@@ -5742,12 +5750,14 @@ async function renderValuationTab() {
     const verdict = val ? computeVerdict(val) : null;
     const trigTheme = tkey && getThemeOf(tkey) || p.ySymbol && getThemeOf(p.ySymbol) || null;
     const themeUsagePct = trigTheme ? computeThemeUsage(trigTheme, currentPctBySymbol).used : null;
+    const isEtf = !!(val && val.value && val.value.perSource === "fund-trailing");
     const trigSymbol = getTriggers(p.ySymbol) ? p.ySymbol : getTriggers(p.symbol) ? p.symbol : null;
     const trig = trigSymbol ? evaluateTriggers(trigSymbol, {
       percentile: val && val.percentile != null ? val.percentile : null,
       peg: val && val.value && val.value.peg != null ? val.value.peg : null,
       themeUsagePct,
-      price: p.price != null ? p.price : null
+      price: p.price != null ? p.price : null,
+      isEtf
     }) : null;
     return { p, currentPct, targetPct, gap, verdict, val, tkey, trig, conviction };
   });
