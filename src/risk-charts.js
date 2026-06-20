@@ -13,7 +13,16 @@ import {
   getContributors,
   getClassificationSummary,
   getSourceSummary,
+  annualizedVol,
+  maxDrawdown,
+  betaTo,
+  worstReturn,
+  worstWindow,
+  alignReturnsByDate,
+  highCorrelationPairs,
+  computePortfolioReturns,
 } from './risk-calc.js';
+import { getAllHistorical } from './historical-cache.js';
 import { fmtJPYInt, fmtPctInt, escapeHTML } from './utils.js';
 import { positions } from './positions.js';
 import { MANUAL_ASSETS, MANUAL_SOURCES } from './manual-assets.js';
@@ -495,8 +504,221 @@ function buildRiskOverviewCard() {
   // ── 注記 ─────────────────────────────────────────────────────────────────
   const note = document.createElement('div');
   note.className = 'ro-note';
-  note.textContent = '※ ベータ・相関・ストレス・流動性は次段（4b）で追加予定';
+  note.textContent = '※ ベータ・相関は下段クオンツカード（4b）を参照。ストレス・流動性は 4b+ 予定';
   card.appendChild(note);
+
+  return card;
+}
+
+// ── Phase 4b: クオンツ・リスクカード ────────────────────────────────────────
+
+/**
+ * 数値を百分率文字列に整形（小数1桁、符号付き）。
+ * @param {number|null} v
+ * @param {boolean} [forcePlus]
+ * @returns {string}
+ */
+function _pct1(v, forcePlus = false) {
+  if (v === null || !Number.isFinite(v)) return '—';
+  const s = `${(v * 100).toFixed(1)}%`;
+  return forcePlus && v > 0 ? `+${s}` : s;
+}
+
+/**
+ * クオンツ・リスクカードを非同期で生成する。
+ * 履歴データが未取得の場合は案内メッセージのみのカードを返す。
+ * @param {Array<{symbol:string, name?:string, value?:number, ySymbol?:string}>} posList
+ * @returns {Promise<HTMLElement>}
+ */
+async function buildQuantCard(posList) {
+  const card = document.createElement('div');
+  card.className = 'risk-quant';
+
+  const title = document.createElement('h4');
+  title.textContent = 'クオンツ・リスク（過去1年・履歴ベース）';
+  card.appendChild(title);
+
+  /** 案内メッセージを出してカードを返す内部ヘルパー */
+  function _fallback(msg) {
+    const p = document.createElement('p');
+    p.className = 'rq-note';
+    p.style.color = 'var(--text2)';
+    p.textContent = msg;
+    card.appendChild(p);
+    return card;
+  }
+
+  // 履歴を取得
+  /** @type {Record<string, Array<{date: Date, close: number}>>} */
+  let hist;
+  try {
+    hist = await getAllHistorical('1y');
+  } catch {
+    return _fallback('履歴未取得（Historical/Watch タブを開くと日次系列が蓄積され算出されます）');
+  }
+  if (!hist || Object.keys(hist).length === 0) {
+    return _fallback('履歴未取得（Historical/Watch タブを開くと日次系列が蓄積され算出されます）');
+  }
+
+  // 履歴ありポジションのみ対象（>=2点を持つ系列）
+  const covered = posList.filter((p) => p.ySymbol && Array.isArray(hist[p.ySymbol]) && hist[p.ySymbol].length >= 2);
+
+  if (covered.length < 2) {
+    return _fallback('履歴未取得（Historical/Watch タブを開くと日次系列が蓄積され算出されます）');
+  }
+
+  // ウェイト（denom ベース; covered 内で正規化）
+  /** @type {Record<string, number>} */
+  const rawWeights = {};
+  for (const p of covered) {
+    rawWeights[/** @type {string} */ (p.ySymbol)] = (rawWeights[p.ySymbol] || 0) + (p.value || 0);
+  }
+  const wTotal = Object.values(rawWeights).reduce((s, w) => s + w, 0);
+  /** @type {Record<string, number>} */
+  const normWeights = {};
+  for (const [sym, w] of Object.entries(rawWeights)) {
+    normWeights[sym] = wTotal > 0 ? w / wTotal : 0;
+  }
+
+  // seriesMap: ySymbol → 価格系列
+  /** @type {Record<string, Array<{date: Date, close: number}>>} */
+  const seriesMap = {};
+  for (const p of covered) {
+    if (p.ySymbol && !seriesMap[p.ySymbol]) seriesMap[p.ySymbol] = hist[p.ySymbol];
+  }
+
+  // 日付アライメント & ポートフォリオリターン
+  const aligned = alignReturnsByDate(seriesMap);
+  const portReturns = computePortfolioReturns(aligned.bySym, normWeights);
+
+  // ポートフォリオ指標
+  const pfVol = annualizedVol(portReturns);
+  const pfWorstD = worstReturn(portReturns);
+  const pfWorstM = worstWindow(portReturns, 21);
+
+  // PF 最大 DD: portReturns から累積系列を O(n) で再構築して maxDrawdown へ
+  let _cum = 100;
+  const pfSeriesLinear = portReturns.map((r, i) => {
+    _cum *= 1 + r;
+    return { date: new Date(aligned.dates[i] || '2000-01-01'), close: _cum };
+  });
+  const pfMaxDD = maxDrawdown(pfSeriesLinear);
+
+  // 高相関ペア
+  const corrPairs = highCorrelationPairs(aligned.bySym, 0.85);
+
+  // 銘柄別: vol, beta, maxDD（リスク寄与降順）
+  /** @type {Array<{sym: string, vol: number, beta: number|null, dd: number}>} */
+  const perHolding = [];
+  for (const sym of Object.keys(aligned.bySym)) {
+    const rets = aligned.bySym[sym];
+    const vol = annualizedVol(rets) ?? 0;
+    const beta = betaTo(rets, portReturns);
+    const dd = maxDrawdown(seriesMap[sym]);
+    perHolding.push({ sym, vol, beta, dd });
+  }
+  // リスク寄与 = vol * |beta|（beta null は vol のみで比較）
+  perHolding.sort((a, b) => {
+    const ra = a.vol * Math.abs(a.beta ?? 1);
+    const rb = b.vol * Math.abs(b.beta ?? 1);
+    return rb - ra;
+  });
+  const top3 = perHolding.slice(0, 3);
+
+  const excluded = posList.length - covered.length;
+
+  // ── DOM 構築 ──────────────────────────────────────────────────────────────
+
+  // PF 行
+  const pfRow = document.createElement('div');
+  pfRow.className = 'rq-row';
+
+  /** @param {string} label @param {string} valText @param {boolean} [isSev] */
+  function _stat(label, valText, isSev = false) {
+    const el = document.createElement('div');
+    el.className = 'rq-stat';
+    const lb = document.createElement('span');
+    lb.className = 'rq-stat-label';
+    lb.textContent = label;
+    const vl = document.createElement('span');
+    vl.className = `rq-stat-value${isSev ? ' rq-sev' : ''}`;
+    vl.textContent = valText;
+    el.appendChild(lb);
+    el.appendChild(vl);
+    return el;
+  }
+
+  pfRow.appendChild(_stat('年率ボラ', _pct1(pfVol), (pfVol ?? 0) > 0.2));
+  pfRow.appendChild(_stat('最悪日', _pct1(pfWorstD), true));
+  pfRow.appendChild(_stat('最悪1ヶ月', _pct1(pfWorstM), true));
+  pfRow.appendChild(_stat('最大DD', _pct1(pfMaxDD), true));
+  card.appendChild(pfRow);
+
+  // カバレッジ注記
+  const covNote = document.createElement('p');
+  covNote.className = 'rq-note';
+  covNote.textContent = `${covered.length}銘柄で算出（履歴未取得${excluded}除外）`;
+  card.appendChild(covNote);
+
+  // 高相関ペア
+  const corrTitle = document.createElement('div');
+  corrTitle.className = 'rq-stat-label';
+  corrTitle.textContent = '高相関ペア（≥0.85）';
+  card.appendChild(corrTitle);
+
+  const corrRow = document.createElement('div');
+  corrRow.className = 'rq-row';
+  const top5Pairs = corrPairs.slice(0, 5);
+  if (top5Pairs.length === 0) {
+    const okChip = document.createElement('span');
+    okChip.className = 'rq-chip rq-ok';
+    okChip.textContent = 'なし';
+    corrRow.appendChild(okChip);
+  } else {
+    for (const { a, b, corr } of top5Pairs) {
+      const chip = document.createElement('span');
+      chip.className = 'rq-chip';
+      // escapeHTML applied to dynamic symbol strings
+      const escA = escapeHTML(a);
+      const escB = escapeHTML(b);
+      chip.textContent = `${escA}–${escB} ${corr.toFixed(2)}`;
+      corrRow.appendChild(chip);
+    }
+  }
+  card.appendChild(corrRow);
+
+  // リスク寄与トップ3
+  if (top3.length > 0) {
+    const contribTitle = document.createElement('div');
+    contribTitle.className = 'rq-stat-label';
+    contribTitle.style.marginTop = '8px';
+    contribTitle.textContent = 'リスク寄与 Top3（vol×|β|降順）';
+    card.appendChild(contribTitle);
+
+    const contribRow = document.createElement('div');
+    contribRow.className = 'rq-row';
+    for (const { sym, vol, beta } of top3) {
+      const el = document.createElement('div');
+      el.className = 'rq-stat';
+      const lb = document.createElement('span');
+      lb.className = 'rq-stat-label';
+      lb.textContent = escapeHTML(sym);
+      const vl = document.createElement('span');
+      vl.className = 'rq-stat-value';
+      const betaStr = beta !== null ? ` β${beta.toFixed(1)}` : '';
+      vl.textContent = `vol ${_pct1(vol)}${betaStr}`;
+      el.appendChild(lb);
+      el.appendChild(vl);
+      contribRow.appendChild(el);
+    }
+    card.appendChild(contribRow);
+  }
+
+  // 脚注
+  const foot = document.createElement('p');
+  foot.className = 'rq-note';
+  foot.textContent = '※ベータはポートフォリオ自身への感応度（市場ベンチマーク不要の履歴算出）。流動性は4b+';
+  card.appendChild(foot);
 
   return card;
 }
@@ -533,6 +755,10 @@ export async function renderRiskCharts() {
   // ── リスク要約カード（Phase 4 v1）────────────────────────────────────────
   wrap.appendChild(buildRiskOverviewCard());
   // ── /リスク要約カード ────────────────────────────────────────────────────
+
+  // ── クオンツ・リスクカード（Phase 4b）────────────────────────────────────
+  wrap.appendChild(await buildQuantCard(positions));
+  // ── /クオンツ・リスクカード ──────────────────────────────────────────────
 
   // 分類状況サマリーバー（#217）。各セグメントをホバーで内訳（銘柄一覧）表示。
   const sumInfo = getClassificationSummary(assets);
