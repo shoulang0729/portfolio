@@ -4,6 +4,10 @@
   "asOf": "2026-06-18",
   "valuations": {
     "VEA": {
+      "value": {
+        "perTrail": 18.64,
+        "perSource": "fund-trailing"
+      },
       "perCurrent": 18.64,
       "bandLow": 12,
       "bandHigh": 18.5,
@@ -17,6 +21,10 @@
       "bandNote": "Yahoo trailingPE anchor 18.66 (先進国ex-US)。VEAのTTM P/Eは過去5-10年で概ね12(2020/2022の底)〜18近辺で推移。現在18.66は近年の高位＝バンド上端付近。MSCI World系の5年平均~21より低い水準で、先進国ex-USは構造的に米国より割安。bandは目測レンジ(GuruFocus/Vanguard公式17.3xは算定方式差で参考)。不確実性: ETFのPER集計は提供元差大。"
     },
     "VGK": {
+      "value": {
+        "perTrail": 17.77,
+        "perSource": "fund-trailing"
+      },
       "perCurrent": 17.77,
       "bandLow": 12,
       "bandHigh": 18,
@@ -65,11 +73,8 @@
       "bandConfidence": "low",
       "bandNote": "Semiconductor基準=Yahoo trailingPE。半導体は強いシクリカル+成長でP/Eレンジが極めて広い。サイクル谷(2018末/2022下期)は18-22、平時25-30、AIブーム拡大局面(2024-26)は40-45超。アンカー44.23はバンド最上端(~90%タイル)=台帳🔴rich/90%と整合し現在のAI需要バリュエーション拡大を反映。⚠Yahoo TTM≈42 vs Investing.com≈29.34と算定差大。EPS急変でTTMが大きくブレるためconfidence=low。",
       "value": {
-        "perTrail": 31.3,
-        "perFwd": 20.6,
-        "peg": 0.46,
-        "debtHeavy": false,
-        "proxyOf": "NVDA"
+        "perTrail": 44.5,
+        "perSource": "fund-trailing"
       }
     },
     "6301.T": {
@@ -128,6 +133,10 @@
       "bandNote": "TOPIX連動ETF。構成指数TOPIX(現プライム市場)のTTM PERで代替。10年平均は概ね14〜15倍、常用域12〜18倍。東証は2022/3でTOPIX PER公表終了→以降プライム市場PERで接続(ソース差あり)。アンカー18.36はレンジ上端=最高値圏で日経7万円の過熱と整合。"
     },
     "VT": {
+      "value": {
+        "perTrail": 22.51,
+        "perSource": "fund-trailing"
+      },
       "perCurrent": 22.51,
       "bandLow": 15,
       "bandHigh": 24,
@@ -141,6 +150,10 @@
       "bandNote": "Yahoo trailingPE anchor 22.5 (全世界)。VTのTTM P/Eは過去5-10年で概ね15(2022弱気相場の底)〜24(2021/2024-26の高値圏)。現22.5はバンド上位80%付近=高値圏。全世界株は米国比率高でMSCI World 5年平均~21に近い。Vanguard公式21.3xは参考。confidence med。"
     },
     "XLF": {
+      "value": {
+        "perTrail": 16.9,
+        "perSource": "fund-trailing"
+      },
       "perCurrent": 16.9,
       "bandLow": 12.5,
       "bandHigh": 18.5,
@@ -154,6 +167,10 @@
       "bandNote": "Financials基準=Yahoo trailingPE。XLFは銀行/保険/資本市場の比率高くTTM P/Eは構造的に低位。5-10年で概ね12-18台で推移(2020コロナ底/2022は低位、2024-26は上端)。アンカー17.08は上限寄り(~70%タイル)で現状の高値圏と整合。⚠Yahoo TTM≈17.6に対しInvesting.com≈15.06と算定差大(加重平均/赤字除外等)。バンドはYahoo基準に寄せた。"
     },
     "XLV": {
+      "value": {
+        "perTrail": 24.1,
+        "perSource": "fund-trailing"
+      },
       "perCurrent": 24.1,
       "bandLow": 16.5,
       "bandHigh": 25,
@@ -167,6 +184,10 @@
       "bandNote": "Health Care基準=Yahoo trailingPE。ディフェンシブで安定的、5-10年で概ね16-25。アンカー24.14はバンド上端付近(~85-90%タイル)=Yahoo基準では割高寄りに見える。⚠ただしInvesting.com等は≈17.6と大きく低く、ソース差が極端なセクター(製薬の一時費用/減損でTTM EPSが振れやすい)。Yahoo trailingPEに寄せたためアンカーが上端化、note留意。"
     },
     "XLP": {
+      "value": {
+        "perTrail": 25.07,
+        "perSource": "fund-trailing"
+      },
       "perCurrent": 25.07,
       "bandLow": 19,
       "bandHigh": 26,
@@ -180,6 +201,10 @@
       "bandNote": "Consumer Staples基準=Yahoo trailingPE。低ボラ・安定収益でレンジ狭く5-10年概ね19-26。アンカー25.16は上端寄り(~75-80%タイル)=現状割高で台帳の🔴richと整合。⚠Yahoo TTM≈25に対しInvesting.com≈19.89/別ソース22.78と分散。Yahoo基準に寄せた。"
     },
     "DTCR": {
+      "value": {
+        "perTrail": 22.13,
+        "perSource": "fund-trailing"
+      },
       "perCurrent": 22.13,
       "bandLow": 18,
       "bandHigh": 32,
@@ -518,6 +543,9 @@
       }
     },
     "COPX": {
+      "value": {
+        "cyclical": true
+      },
       "perCurrent": 19.72,
       "bandLow": 10,
       "bandHigh": 30,
@@ -544,6 +572,9 @@
       "bandNote": "Yahoo trailingPE anchor 12.9 (中南米)。中南米(ブラジル中心)株のTTM P/Eは過去5-10年で概ね8(コモディティ安・通貨安局面)〜15、Bovespa 3年平均~10.2/現~11.5。新興国・通貨/コモディティ依存でPERの振れ大=バンド薄い。現12.9はバンド中位やや上。confidence low。"
     },
     "REMX": {
+      "value": {
+        "cyclical": true
+      },
       "perCurrent": 40,
       "bandLow": 15,
       "bandHigh": 55,
@@ -557,6 +588,10 @@
       "bandNote": "VanEck レアアース/戦略金属ETF=高シクリカル。2021-22のレアアース価格ブームでは構成株(MP Materials等)の利益急増しPEは低め、2023以降は価格下落・利益急減(MP 2023 EBITDA-56%)でPE膨張〜赤字(NM)化。年次リターンも+80%(21)/-31%(22)/-19%(23)と乱高下。現アンカー40.21はTTM利益縮小局面の高PE。source間で23.8〜41とブレ、一部-119(赤字)も。サイクルで大きく振れるため広めレンジ＋note必須。出典: Yahoo/Investing.com/etfdb/MP Materials 8-K(2026-06取得)。"
     },
     "SHLD": {
+      "value": {
+        "perTrail": 29.34,
+        "perSource": "fund-trailing"
+      },
       "perCurrent": 29.34,
       "bandLow": 22,
       "bandHigh": 40,
@@ -570,6 +605,9 @@
       "bandNote": "Global X 防衛テックETF(2023/9設定・履歴約2.5年で極薄)。2024 +35%/2025 +74%の急騰で構成株のバリュエーションが拡大(Rheinmetall PE 2024末37→2026 72、Palantir 100倍超)。現アンカー29.26に対しYahoo trailingPE 33.93の報告もあり。歴史不足で分位は目測。地政学テーマで触媒は強いがマルチプル圧縮リスク大。出典: stockanalysis/Investing.com/financecharts(2026-06取得)。"
     },
     "XLE": {
+      "value": {
+        "cyclical": true
+      },
       "perCurrent": 20.09,
       "bandLow": 9,
       "bandHigh": 20,
@@ -735,6 +773,10 @@
       }
     },
     "ACWI": {
+      "value": {
+        "perTrail": 23.28,
+        "perSource": "fund-trailing"
+      },
       "perCurrent": 23.28,
       "bandLow": 15,
       "bandHigh": 24,
