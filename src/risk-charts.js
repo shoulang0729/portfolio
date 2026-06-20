@@ -23,6 +23,7 @@ import {
   computePortfolioReturns,
 } from './risk-calc.js';
 import { getAllHistorical } from './historical-cache.js';
+import { computeLiquidity, ILLIQUID_DAYS, ADV_WINDOW, PARTICIPATION } from './liquidity-calc.js';
 import { fmtJPYInt, fmtPctInt, escapeHTML } from './utils.js';
 import { positions } from './positions.js';
 import { MANUAL_ASSETS, MANUAL_SOURCES } from './manual-assets.js';
@@ -527,7 +528,7 @@ function _pct1(v, forcePlus = false) {
 /**
  * クオンツ・リスクカードを非同期で生成する。
  * 履歴データが未取得の場合は案内メッセージのみのカードを返す。
- * @param {Array<{symbol:string, name?:string, value?:number, ySymbol?:string}>} posList
+ * @param {Array<{symbol:string, name?:string, value?:number, ySymbol?:string, shares?:number}>} posList
  * @returns {Promise<HTMLElement>}
  */
 async function buildQuantCard(posList) {
@@ -714,10 +715,62 @@ async function buildQuantCard(posList) {
     card.appendChild(contribRow);
   }
 
+  // ── 流動性（出口日数）─────────────────────────────────────────────────────
+  // 履歴に出来高(vol)がある銘柄のみ。出口日数 = 株数 ÷ (ADV × 参加率)。
+  const liqHoldings = covered
+    .filter((p) => typeof p.shares === 'number' && p.shares > 0 && Array.isArray(hist[p.ySymbol]))
+    .map((p) => ({
+      sym: /** @type {string} */ (p.ySymbol),
+      shares: /** @type {number} */ (p.shares),
+      series: hist[/** @type {string} */ (p.ySymbol)],
+    }));
+  const liq = computeLiquidity(liqHoldings).filter((x) => x.days != null);
+
+  const liqTitle = document.createElement('div');
+  liqTitle.className = 'rq-stat-label';
+  liqTitle.style.marginTop = '8px';
+  liqTitle.textContent = `流動性 出口日数（ADV${ADV_WINDOW}×${Math.round(PARTICIPATION * 100)}%/日）`;
+  card.appendChild(liqTitle);
+
+  if (liq.length === 0) {
+    const liqNote = document.createElement('p');
+    liqNote.className = 'rq-note';
+    liqNote.textContent = '出来高データ未取得（価格更新後に蓄積され算出されます）';
+    card.appendChild(liqNote);
+  } else {
+    const liqRow = document.createElement('div');
+    liqRow.className = 'rq-row';
+    // 捌きにくい順に最大5件
+    for (const { sym, days } of liq.slice(0, 5)) {
+      const el = document.createElement('div');
+      el.className = 'rq-stat';
+      const lb = document.createElement('span');
+      lb.className = 'rq-stat-label';
+      lb.textContent = escapeHTML(sym);
+      const vl = document.createElement('span');
+      const sev = days != null && days > ILLIQUID_DAYS;
+      vl.className = `rq-stat-value${sev ? ' rq-sev' : ''}`;
+      vl.textContent = days != null ? `${days < 1 ? days.toFixed(1) : Math.round(days)}日` : '—';
+      el.appendChild(lb);
+      el.appendChild(vl);
+      liqRow.appendChild(el);
+    }
+    card.appendChild(liqRow);
+
+    const illiquidCount = liq.filter((x) => x.days != null && x.days > ILLIQUID_DAYS).length;
+    if (illiquidCount > 0) {
+      const liqWarn = document.createElement('p');
+      liqWarn.className = 'rq-note';
+      liqWarn.textContent = `出口に${ILLIQUID_DAYS}営業日超かかる保有 ${illiquidCount}件`;
+      card.appendChild(liqWarn);
+    }
+  }
+
   // 脚注
   const foot = document.createElement('p');
   foot.className = 'rq-note';
-  foot.textContent = '※ベータはポートフォリオ自身への感応度（市場ベンチマーク不要の履歴算出）。流動性は4b+';
+  foot.textContent =
+    '※ベータはポートフォリオ自身への感応度（市場ベンチマーク不要の履歴算出）。出口日数は株数÷(平均出来高×参加率)の概算。';
   card.appendChild(foot);
 
   return card;
