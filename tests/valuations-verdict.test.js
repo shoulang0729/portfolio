@@ -100,7 +100,7 @@ describe('computeVerdict PLTR', () => {
       value: { perTrail: 144, perFwd: 81, peg: 1.58, evEbitda: 149, debtHeavy: false },
     });
     expect(result.class).toBe('rich_fake');
-    expect(result.label).toBe('見せかけの割高(売るな)');
+    expect(result.label).toBe('見せかけの割高(フェア)');
   });
 });
 
@@ -126,7 +126,8 @@ describe('computeVerdict 8050.T', () => {
       value: { perTrail: 11.7, perFwd: 23.0, debtHeavy: false },
     });
     expect(result.class).toBe('trap');
-    expect(result.label).toBe('罠');
+    expect(result.label).toBe('罠・一過性益');
+    expect(result.sub).toBe('trap_once');
   });
 });
 
@@ -140,5 +141,39 @@ describe('computeVerdict 6301.T', () => {
     expect(result.class).toBe('na');
     expect(result.label).toBe('シクリカル(別物差し)');
     expect(result.drivers).toContain('cyclical');
+  });
+});
+
+// ── 罠サブ種別: 割安圏で減益 → trap_cheap ──
+describe('computeVerdict trap subtype', () => {
+  it('trap_cheap: cheap zone with falling earnings (fwd >> trail)', () => {
+    // zone=cheap (pct=15). falling: 18>=12*1.05=12.6 YES → 割安の罠
+    const result = computeVerdict({
+      percentile: 15,
+      value: { perTrail: 12, perFwd: 18, debtHeavy: false },
+    });
+    expect(result.class).toBe('trap');
+    expect(result.sub).toBe('trap_cheap');
+    expect(result.label).toBe('罠・割安の罠');
+  });
+});
+
+// ── 判定確度（confidence）の付与 ──
+describe('computeVerdict confidence', () => {
+  it('attaches 高/中/低 for a scored verdict', () => {
+    const result = computeVerdict({
+      percentile: 8,
+      value: { perTrail: 18, perFwd: 16, peg: 1.1, debtHeavy: false },
+      quality: { fScore: 8 },
+    });
+    expect(result.class).toBe('cheap_real');
+    expect(['高', '中', '低']).toContain(result.confidence);
+  });
+
+  it('confidence is null for na / cyclical', () => {
+    const na = computeVerdict({ percentile: null, value: {} });
+    expect(na.confidence).toBeNull();
+    const cyc = computeVerdict({ percentile: 50, value: { cyclical: true } });
+    expect(cyc.confidence).toBeNull();
   });
 });

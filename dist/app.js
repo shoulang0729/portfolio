@@ -4350,6 +4350,18 @@ function getTargetPct(symbol) {
   }
   return null;
 }
+function getConviction(symbol) {
+  if (!_cfg) return null;
+  if (_cfg.override && _cfg.override[symbol] && _cfg.override[symbol].targetPct != null) return null;
+  const tiers = _cfg.tiers || {};
+  for (const tier of Object.values(tiers)) {
+    if (tier.targets && tier.targets[symbol] != null) return null;
+  }
+  if (_cfg.themeEtfs && _cfg.themeEtfs.includes(symbol)) return null;
+  if (getThemeOf(symbol) === null) return null;
+  const conv = _cfg.conviction && _cfg.conviction[symbol] || "standard";
+  return conv === "probe" || conv === "standard" || conv === "high" ? conv : "standard";
+}
 function getThemeCap(theme) {
   if (!_cfg || !_cfg.themeCaps || !_cfg.themeCaps[theme]) return null;
   const cap = _cfg.themeCaps[theme].cap;
@@ -5148,19 +5160,42 @@ var VERDICT_LABELS = {
   cheap_real: "\u672C\u7269\u306E\u5272\u5B89",
   cheap_fake: "\u898B\u305B\u304B\u3051\u306E\u5272\u5B89(\u30D5\u30A7\u30A2)",
   fair: "\u4E2D\u7ACB",
-  rich_fake: "\u898B\u305B\u304B\u3051\u306E\u5272\u9AD8(\u58F2\u308B\u306A)",
+  rich_fake: "\u898B\u305B\u304B\u3051\u306E\u5272\u9AD8(\u30D5\u30A7\u30A2)",
   rich_real: "\u672C\u7269\u306E\u5272\u9AD8",
   trap: "\u7F60",
-  na: "\u2014"
+  na: "-"
 };
+function computeConfidence(pct, v) {
+  const val = v && v.value || {};
+  const q = v && v.quality || {};
+  const hasPer = val.perTrail != null && isFinite(val.perTrail) && val.perFwd != null && isFinite(val.perFwd);
+  const hasPeg = val.peg != null && isFinite(val.peg);
+  const hasF = q.fScore != null && isFinite(q.fScore);
+  let score = (hasPer ? 0.5 : 0) + (hasPeg ? 0.5 : 0) + (hasF ? 1 : 0);
+  const edge = Math.min(Math.abs(pct - 30), Math.abs(pct - 70));
+  if (pct <= 12 || pct >= 88) score += 1;
+  else if (edge >= 15) score += 0.75;
+  else if (edge >= 8) score += 0.4;
+  else score += 0.1;
+  if (hasPer) score += 0.5;
+  if (score >= 2.8) return "\u9AD8";
+  if (score >= 1.5) return "\u4E2D";
+  return "\u4F4E";
+}
 function computeVerdict(v) {
+  const base = classifyVerdict(v);
+  const pct = v != null && v.percentile != null ? v.percentile : null;
+  base.confidence = base.class === "na" || pct == null ? null : computeConfidence(pct, v);
+  return base;
+}
+function classifyVerdict(v) {
   const pct = v != null && v.percentile != null ? v.percentile : null;
   if (pct == null) {
-    return { class: "na", label: VERDICT_LABELS["na"], drivers: [] };
+    return { class: "na", label: VERDICT_LABELS["na"], drivers: [], sub: null };
   }
   const val = v && v.value || {};
   if (val.cyclical === true) {
-    return { class: "na", label: "\u30B7\u30AF\u30EA\u30AB\u30EB(\u5225\u7269\u5DEE\u3057)", drivers: ["cyclical"] };
+    return { class: "na", label: "\u30B7\u30AF\u30EA\u30AB\u30EB(\u5225\u7269\u5DEE\u3057)", drivers: ["cyclical"], sub: null };
   }
   const t = val.perTrail != null ? val.perTrail : null;
   const f = val.perFwd != null ? val.perFwd : null;
@@ -5171,34 +5206,46 @@ function computeVerdict(v) {
   const zone = pct <= 30 ? "cheap" : pct >= 70 ? "rich" : "mid";
   if (zone === "cheap") {
     if (falling) {
-      return { class: "trap", label: VERDICT_LABELS["trap"], drivers: ["fwd\u226Btrail", "\u4E00\u904E\u6027/\u6E1B\u76CA"] };
+      return { class: "trap", label: "\u7F60\u30FB\u5272\u5B89\u306E\u7F60", drivers: ["fwd\u226Btrail", "\u4E00\u904E\u6027/\u6E1B\u76CA"], sub: "trap_cheap" };
     }
     if (f != null && f > 40) {
       return {
         class: "rich_fake",
         label: VERDICT_LABELS["rich_fake"],
-        drivers: ["%\u30BF\u30A4\u30EB\u306E\u30A2\u30E4", "\u7D76\u5BFE\u5024\u9AD8\u30FB\u8FFD\u308F\u306A\u3044"]
+        drivers: ["%\u30BF\u30A4\u30EB\u306E\u30A2\u30E4", "\u7D76\u5BFE\u5024\u9AD8\u30FB\u8FFD\u308F\u306A\u3044"],
+        sub: null
       };
     }
     if (debtHeavy) {
-      return { class: "cheap_fake", label: VERDICT_LABELS["cheap_fake"], drivers: ["\u8CA0\u50B5/\u7C3F\u5916\u3067EV\u5272\u9AD8", "\u30D5\u30A7\u30A2"] };
+      return {
+        class: "cheap_fake",
+        label: VERDICT_LABELS["cheap_fake"],
+        drivers: ["\u8CA0\u50B5/\u7C3F\u5916\u3067EV\u5272\u9AD8", "\u30D5\u30A7\u30A2"],
+        sub: null
+      };
     }
-    return { class: "cheap_real", label: VERDICT_LABELS["cheap_real"], drivers: ["fwd<trail/\u8CA0\u50B5\u8EFD", "\u672C\u7269\u306E\u5272\u5B89"] };
+    return {
+      class: "cheap_real",
+      label: VERDICT_LABELS["cheap_real"],
+      drivers: ["fwd<trail/\u8CA0\u50B5\u8EFD", "\u672C\u7269\u306E\u5272\u5B89"],
+      sub: null
+    };
   }
   if (zone === "rich") {
     if (falling) {
-      return { class: "trap", label: VERDICT_LABELS["trap"], drivers: ["\u4E00\u904E\u6027\u76CA\u3067fake-cheap"] };
+      return { class: "trap", label: "\u7F60\u30FB\u4E00\u904E\u6027\u76CA", drivers: ["\u4E00\u904E\u6027\u76CA\u3067fake-cheap"], sub: "trap_once" };
     }
     if (rising && peg != null && peg < 2) {
       return {
         class: "rich_fake",
         label: VERDICT_LABELS["rich_fake"],
-        drivers: ["\u5229\u76CA\u7206\u767A\u3067\u5272\u9AD8\u306F\u898B\u305B\u304B\u3051", "\u58F2\u308B\u306A"]
+        drivers: ["\u5229\u76CA\u7206\u767A\u3067\u5272\u9AD8\u306F\u898B\u305B\u304B\u3051", "\u58F2\u308B\u306A"],
+        sub: null
       };
     }
-    return { class: "rich_real", label: VERDICT_LABELS["rich_real"], drivers: ["\u6210\u9577\u3067\u6B63\u5F53\u5316\u3055\u308C\u306A\u3044\u9AD8\u5024"] };
+    return { class: "rich_real", label: VERDICT_LABELS["rich_real"], drivers: ["\u6210\u9577\u3067\u6B63\u5F53\u5316\u3055\u308C\u306A\u3044\u9AD8\u5024"], sub: null };
   }
-  return { class: "fair", label: VERDICT_LABELS["fair"], drivers: [] };
+  return { class: "fair", label: VERDICT_LABELS["fair"], drivers: [], sub: null };
 }
 
 // src/triggers.js
@@ -5389,31 +5436,46 @@ function fmt1(n) {
 function fmtRaw(n) {
   return n != null && isFinite(n) ? n.toFixed(1) : "\u2014";
 }
-function chipClass(cls) {
-  return `val-chip vc-${escapeHTML(cls)}`;
-}
-function gapBadge(gap) {
-  if (gap == null) return { text: "\u2014", cls: "gap" };
-  if (gap > 0.5) return { text: `+${fmt1(gap)}%`, cls: "gap over" };
-  if (gap < -0.5) return { text: `${fmt1(gap)}%`, cls: "gap under" };
-  return { text: `\xB1${fmt1(Math.abs(gap))}%`, cls: "gap fit" };
-}
-function sizeBarHTML(currentPct, targetPct) {
-  if (targetPct == null) {
-    return `<span class="val-size"><span class="val-size-label">\u9069\u6B63\u2014</span></span>`;
+function chipClass(verdict) {
+  if (verdict.class === "trap") {
+    return verdict.sub === "trap_once" ? "val-chip vc-trap-once" : "val-chip vc-trap-cheap";
   }
-  const scale = 30;
-  const curW = Math.min(100, currentPct / scale * 100);
-  const tgtL = Math.min(100, targetPct / scale * 100);
-  const badge = gapBadge(currentPct - targetPct);
-  return `<span class="val-size">
-    <span class="val-size-label">${fmt1(currentPct)}% \u2192 ${fmt1(targetPct)}%</span>
-    <span class="val-bar" title="\u73FE\u5728 ${fmt1(currentPct)}% vs \u76EE\u6A19 ${fmt1(targetPct)}%">
-      <span class="cur" style="width:${curW.toFixed(1)}%"></span>
-      <span class="tgt" style="left:${tgtL.toFixed(1)}%"></span>
-    </span>
-    <span class="${escapeHTML(badge.cls)}">${escapeHTML(badge.text)}</span>
-  </span>`;
+  return `val-chip vc-${escapeHTML(verdict.class)}`;
+}
+function convictionLabel(conviction) {
+  if (conviction === "probe") return "\u6253\u8A3A";
+  if (conviction === "standard") return "\u6A19\u6E96";
+  if (conviction === "high") return "\u9AD8\u78BA\u4FE1";
+  return "";
+}
+function sizeBarHTML(currentPct, targetPct, conviction) {
+  if (targetPct == null || !isFinite(targetPct) || targetPct <= 0) {
+    return `<div class="val-sb val-sb--na">
+      <div class="val-sb-top"></div>
+      <div class="val-sb-bar"></div>
+      <div class="val-sb-scale"><span class="end"></span><span class="mid"><span class="lab">\u9069\u6B63\u2014</span></span><span class="end"></span></div>
+    </div>`;
+  }
+  const scaleMax = targetPct * 2;
+  const ratio = currentPct / scaleMax;
+  const fillW = Math.min(100, Math.max(0, ratio * 100));
+  const diff = currentPct - targetPct;
+  const fillCls = diff > 0.5 ? "over" : diff < -0.5 ? "under" : "fit";
+  const curLeft = Math.min(94, Math.max(6, fillW));
+  const overflow = currentPct > scaleMax;
+  const mult = overflow ? currentPct / targetPct : null;
+  const xnum = overflow && mult != null ? `<span class="val-sb-x">\xD7 ${mult.toFixed(1)}</span>` : "";
+  const convTxt = convictionLabel(conviction);
+  const convHTML = convTxt ? `<span class="cv">\uFF08${escapeHTML(convTxt)}\uFF09</span>` : "";
+  return `<div class="val-sb">
+    <div class="val-sb-top"><span class="val-sb-cur ${fillCls}" style="left:${curLeft.toFixed(0)}%">${fmt1(currentPct)}%</span></div>
+    <div class="val-sb-bar"><span class="val-sb-fill ${fillCls}" style="width:${fillW.toFixed(1)}%"></span>${xnum}</div>
+    <div class="val-sb-scale">
+      <span class="end">\u6301\u305F\u306A\u3059\u304E</span>
+      <span class="mid"><span class="tri" aria-hidden="true"></span><span class="lab">${fmt1(targetPct)}%${convHTML}</span></span>
+      <span class="end">\u6301\u3061\u3059\u304E</span>
+    </div>
+  </div>`;
 }
 function line3HTML(val) {
   if (_lens === "total") {
@@ -5475,29 +5537,64 @@ function line3HTML(val) {
   }
   return "";
 }
-function triggerLineHTML(trig) {
-  if (!trig || trig.active.length === 0 && trig.watching.length === 0) return "";
-  if (trig.active.length > 0) {
+function bannerHTML(trig) {
+  let kind = "hold";
+  let glyph = "\u25AA";
+  let action = "\u7DAD\u6301";
+  let reason = "";
+  if (trig && trig.active.length > 0) {
     const t = trig.active[0];
     if (t.side === "sell") {
-      return `<div class="val-trig sell">\u{1F534} \u58F2\u308A\u767A\u8B70: ${escapeHTML(t.action)} <span class="trg-r">(${escapeHTML(t.reason)})</span></div>`;
+      kind = "sell";
+      glyph = "\u25BC";
+      action = "\u30C8\u30EA\u30E0";
+    } else {
+      kind = "buy";
+      glyph = "\u25B2";
+      action = "\u7A4D\u5897";
     }
-    return `<div class="val-trig buy">\u{1F7E2} \u8CB7\u3044\u4F59\u5730: ${escapeHTML(t.action)}</div>`;
+    reason = t.reason || t.action || "";
+  } else if (trig && trig.watching.length > 0) {
+    const w = trig.watching[0];
+    kind = "watch";
+    glyph = "\u25E6";
+    action = "\u76E3\u8996";
+    reason = w.note || w.action || "";
   }
-  const w = trig.watching[0];
-  return `<div class="val-trig watch">\u76E3\u8996\u4E2D: ${escapeHTML(w.action)}\uFF08${escapeHTML(w.note)}\uFF09</div>`;
+  const reasonHTML = reason ? `<span class="vb">${escapeHTML(reason)}</span>` : "";
+  return `<div class="val-banner val-banner--${kind}"><span class="va"><span class="gl" aria-hidden="true">${glyph}</span>${action}</span>${reasonHTML}</div>`;
 }
-function rowHTML(p, currentPct, targetPct, gap, verdict, val, trig) {
-  const chipHTML = verdict && verdict.class !== "na" ? `<span class="${chipClass(verdict.class)}" title="${escapeHTML(verdict.drivers.join("\u30FB"))}">${escapeHTML(verdict.label)}</span>` : "";
-  const line1 = `<div class="val-r1">
+function confidenceHTML(verdict) {
+  if (!verdict || verdict.confidence == null) return "";
+  const lv = verdict.confidence;
+  const dots = lv === "\u9AD8" ? 3 : lv === "\u4E2D" ? 2 : 1;
+  let dotsHTML = "";
+  for (let i = 0; i < 3; i++) dotsHTML += `<i class="d${i < dots ? " on" : ""}"></i>`;
+  const drv = verdict.drivers && verdict.drivers.length ? `<span class="drv">\u6839\u62E0: ${escapeHTML(verdict.drivers.join("\u30FB"))}</span>` : "";
+  return `<div class="val-jc"><span class="jc-nm">\u5224\u5B9A\u78BA\u5EA6</span><span class="jc-dots" aria-label="\u5224\u5B9A\u78BA\u5EA6 ${escapeHTML(lv)}">${dotsHTML}<span class="lv">${escapeHTML(lv)}</span></span>${drv}</div>`;
+}
+function totalChipsHTML(val) {
+  const v = val && val.value || {};
+  const q = val && val.quality || {};
+  const per = `${fmtRaw(v.perTrail)}\u2192${fmtRaw(v.perFwd)}`;
+  return `<div class="val-chips">
+    <span class="val-c"><span class="k">PER</span><b>${escapeHTML(per)}</b></span>
+    <span class="val-c"><span class="k">PEG</span><b>${escapeHTML(fmtRaw(v.peg))}</b></span>
+    <span class="val-c"><span class="k">F\u30B9\u30B3\u30A2</span><b>${escapeHTML(fmtRaw(q.fScore))}</b></span>
+  </div>`;
+}
+function rowHTML(p, currentPct, targetPct, verdict, val, trig, conviction) {
+  const banner = bannerHTML(trig);
+  const chipHTML = verdict && verdict.label && verdict.label !== "-" ? `<span class="${chipClass(verdict)}" title="${escapeHTML(verdict.drivers.join("\u30FB"))}">${escapeHTML(verdict.label)}</span>` : "";
+  const head = `<div class="val-head">
     <b class="val-tk">${escapeHTML(p.symbol)}</b>
     <span class="val-nm">${escapeHTML(p.name)}</span>
     ${chipHTML}
   </div>`;
-  const line2 = `<div class="val-r2">${sizeBarHTML(currentPct, targetPct)}</div>`;
-  const line3 = line3HTML(val);
-  const trigLine = _lens === "total" && trig ? triggerLineHTML(trig) : "";
-  return `<div class="val-row">${line1}${line2}${line3}${trigLine}</div>`;
+  const size = `<div class="val-size-wrap">${sizeBarHTML(currentPct, targetPct, conviction)}</div>`;
+  const metrics = _lens === "total" ? totalChipsHTML(val) : line3HTML(val);
+  const confLine = confidenceHTML(verdict);
+  return `<div class="val-row">${banner}<div class="val-body">${head}${size}${metrics}${confLine}</div></div>`;
 }
 function sortedRows(rows) {
   const copy = rows.slice();
@@ -5545,6 +5642,19 @@ function lensCap(lens) {
   if (lens === "momentum") return "1Y\u9A30\u843D\u9806";
   return "";
 }
+function glossaryHTML() {
+  return `<details class="val-gloss">
+    <summary>\u7528\u8A9E\u89E3\u8AAC</summary>
+    <div class="val-gloss-body">
+      <p><b>Verdict\uFF08\u6B63\u4F53\uFF09</b>\uFF1APER\u306E\u5272\u5B89/\u5272\u9AD8\u306E\u300C\u4F4D\u7F6E\u300D\u3068\u5229\u76CA\u306E\u300C\u5411\u304D\u300D\u3092\u5408\u6210\u3057\u305F\u7D50\u8AD6\u3002\u672C\u7269\u306E\u5272\u5B89/\u5272\u9AD8\uFF08\u884C\u52D5\u3067\u304D\u308B\uFF09\u3001\u898B\u305B\u304B\u3051(\u30D5\u30A7\u30A2)\uFF1D\u5272\u5B89/\u5272\u9AD8\u306B\u898B\u3048\u3066\u5B9F\u614B\u30D5\u30A7\u30A2\u3001\u7F60\uFF1D\u5272\u5B89\u306E\u7F60/\u4E00\u904E\u6027\u76CA\u3001\u4E2D\u7ACB\u3001-\uFF08\u30B7\u30AF\u30EA\u30AB\u30EB\uFF1DPER\u63A1\u70B9\u5916\uFF09\u306E7\u7A2E\u3002</p>
+      <p><b>PER \u4F8B: 52\u219238\uFF08\u5B9F\u7E3E\u2192\u4E88\u60F3\uFF09</b>\uFF1A\u5DE6\uFF1D\u5B9F\u7E3EPER\uFF08\u904E\u53BB12\u30AB\u6708\uFF09\u3001\u53F3\uFF1D\u4E88\u60F3PER\uFF08\u6765\u671F\u4E88\u60F3\uFF09\u3002\u53F3\u304C\u5C0F\u3055\u3044\uFF1D\u6765\u671F\u5229\u76CA\u304C\u5897\u3048\u308B\u898B\u8FBC\u307F\u3002\u5411\u304D\u304C\u6700\u91CD\u8981\u30B7\u30B0\u30CA\u30EB\u3002</p>
+      <p><b>PEG</b>\uFF1APER \xF7 \u5229\u76CA\u6210\u9577\u7387\u30021\u672A\u6E80\uFF1D\u5272\u5B89\u5BC4\u308A\u30013\u8D85\uFF1D\u5272\u9AD8\u3002\u6210\u9577\u3092\u52A0\u5473\u3057\u305F\u5272\u9AD8\u5EA6\u3002</p>
+      <p><b>F\u30B9\u30B3\u30A2\uFF080\u301C9\u70B9\u30FBPiotroski\uFF09</b>\uFF1A\u53CE\u76CA\u6027\u30FB\u8CA1\u52D9\u30FB\u52B9\u7387\u306E9\u9805\u76EE\u3092\u54041\u70B9\u3067\u63A1\u70B9\u30027\u301C9\uFF1D\u5065\u5168\u30010\u301C2\uFF1D\u5371\u967A\uFF08\u7F60\u6FC3\u539A\uFF09\u3002\u5272\u5B89\u304C\u300C\u672C\u7269\u304B\u7F60\u304B\u300D\u306E\u54C1\u8CEA\u70B9\u3002</p>
+      <p><b>\u5224\u5B9A\u78BA\u5EA6</b>\uFF1A\u30A8\u30F3\u30B8\u30F3\u306EVerdict\u5224\u5B9A\u304C\u3069\u308C\u3060\u3051\u4FE1\u983C\u3067\u304D\u308B\u304B\uFF08\u30C7\u30FC\u30BF\u5145\u8DB3\uFF0B\u30B7\u30B0\u30CA\u30EB\u4E00\u81F4\uFF0B\u5883\u754C\u4F59\u88D5\uFF09\u3002\u78BA\u4FE1\u5EA6\uFF08\u81EA\u5206\u306E\u81EA\u4FE1\uFF1D\u30B5\u30A4\u30BA\u5165\u529B\uFF09\u3068\u306F\u5225\u7269\u3002</p>
+      <p><b>\u78BA\u4FE1\u5EA6</b>\uFF1A\u81EA\u5206\u306E\u4E3B\u89B3\u7684\u306A\u81EA\u4FE1\u3002\u6253\u8A3A/\u6A19\u6E96/\u9AD8\u78BA\u4FE1\u3067\u9069\u6B63\u30B5\u30A4\u30BA\uFF08%\uFF09\u3092\u6C7A\u3081\u308B\u5165\u529B\u3002\u30B5\u30A4\u30BA\u30D0\u30FC\u306E\u9069\u6B63\u30DE\u30FC\u30AB\u30FC\u8107\u306B\u8868\u793A\u3002</p>
+    </div>
+  </details>`;
+}
 async function renderValuationTab() {
   const wrap = document.getElementById("value-wrap");
   if (!wrap) return;
@@ -5577,6 +5687,7 @@ async function renderValuationTab() {
     }
     const targetPct = tkey != null ? getTargetPct(tkey) : null;
     const gap = targetPct != null ? currentPct - targetPct : null;
+    const conviction = tkey != null ? getConviction(tkey) : null;
     let val = getValuation(p.ySymbol);
     const liveMom = p.ySymbol ? computePriceMomentum(_hist[p.ySymbol]) : null;
     if (liveMom) {
@@ -5600,7 +5711,7 @@ async function renderValuationTab() {
       themeUsagePct,
       price: p.price != null ? p.price : null
     }) : null;
-    return { p, currentPct, targetPct, gap, verdict, val, tkey, trig };
+    return { p, currentPct, targetPct, gap, verdict, val, tkey, trig, conviction };
   });
   const overCount = rows.filter((r) => r.gap != null && r.gap > 0.5).length;
   const cheapCount = rows.filter((r) => r.verdict && r.verdict.class === "cheap_real").length;
@@ -5625,8 +5736,8 @@ async function renderValuationTab() {
   const lensHTML = `<div class="val-lens" role="tablist" aria-label="\u30EC\u30F3\u30BA\u9078\u629E">${pillsHTML}</div>
   <div class="val-lens-cap">${escapeHTML(lensCap(_lens))}</div>`;
   const sorted = sortedRows(rows);
-  const rowsHTML = sorted.map((r) => rowHTML(r.p, r.currentPct, r.targetPct, r.gap, r.verdict, r.val, r.trig)).join("");
-  wrap.innerHTML = `${statsHTML}${lensHTML}<div class="val-list">${rowsHTML}</div>`;
+  const rowsHTML = sorted.map((r) => rowHTML(r.p, r.currentPct, r.targetPct, r.verdict, r.val, r.trig, r.conviction)).join("");
+  wrap.innerHTML = `${statsHTML}${lensHTML}<div class="val-list">${rowsHTML}</div>${glossaryHTML()}`;
   wrap.querySelectorAll(".val-seg[data-lens]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const nextLens = (

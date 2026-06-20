@@ -15,7 +15,13 @@
 // ══════════════════════════════════════════════════════════════
 
 import { positions } from './positions.js';
-import { loadTargetAllocation, getTargetPct, getThemeOf, computeThemeUsage } from './target-allocation.js';
+import {
+  loadTargetAllocation,
+  getTargetPct,
+  getConviction,
+  getThemeOf,
+  computeThemeUsage,
+} from './target-allocation.js';
 import { loadMfHoldings, getMfTotals } from './networth.js';
 import { loadValuations, getValuation, computeVerdict, valuationsLoaded } from './valuations.js';
 import { loadTriggers, triggersLoaded, getTriggers, evaluateTriggers } from './triggers.js';
@@ -82,49 +88,67 @@ function fmtRaw(n) {
 }
 
 /**
- * バーディクトのクラス名から CSS クラス名（.vc-xxx）を返す。
- * @param {string} cls
+ * バーディクトから chip の CSS クラス名を返す。罠は2種を区別する。
+ * @param {import('./valuations.js').Verdict} verdict
  * @returns {string}
  */
-function chipClass(cls) {
-  return `val-chip vc-${escapeHTML(cls)}`;
+function chipClass(verdict) {
+  if (verdict.class === 'trap') {
+    return verdict.sub === 'trap_once' ? 'val-chip vc-trap-once' : 'val-chip vc-trap-cheap';
+  }
+  return `val-chip vc-${escapeHTML(verdict.class)}`;
 }
 
 /**
- * ギャップ数値からバッジ文字列を返す。
- * @param {number|null} gap
- * @returns {{ text: string, cls: string }}
+ * 確信度コードを日本語ラベルに変換する。
+ * @param {'probe'|'standard'|'high'|null} conviction
+ * @returns {string}
  */
-function gapBadge(gap) {
-  if (gap == null) return { text: '—', cls: 'gap' };
-  if (gap > 0.5) return { text: `+${fmt1(gap)}%`, cls: 'gap over' };
-  if (gap < -0.5) return { text: `${fmt1(gap)}%`, cls: 'gap under' };
-  return { text: `±${fmt1(Math.abs(gap))}%`, cls: 'gap fit' };
+function convictionLabel(conviction) {
+  if (conviction === 'probe') return '打診';
+  if (conviction === 'standard') return '標準';
+  if (conviction === 'high') return '高確信';
+  return '';
 }
 
 /**
- * サイズバー HTML を生成する。
+ * サイズバー HTML を生成する（左端=0%・右端=適正×2・適正は常に中央）。
+ * 塗りが中央を超える＝持ちすぎ、届かない＝持たなすぎ。
+ * 適正の2倍超は塗りを満タンにし右端に倍率「× N」を表示。
+ * 適正マーカー（▲）直下に「適正%（確信度）」を1行で示す。
  * @param {number} currentPct
  * @param {number|null} targetPct
+ * @param {'probe'|'standard'|'high'|null} conviction
  * @returns {string}
  */
-function sizeBarHTML(currentPct, targetPct) {
-  if (targetPct == null) {
-    return `<span class="val-size"><span class="val-size-label">適正—</span></span>`;
+function sizeBarHTML(currentPct, targetPct, conviction) {
+  if (targetPct == null || !isFinite(targetPct) || targetPct <= 0) {
+    return `<div class="val-sb val-sb--na">
+      <div class="val-sb-top"></div>
+      <div class="val-sb-bar"></div>
+      <div class="val-sb-scale"><span class="end"></span><span class="mid"><span class="lab">適正—</span></span><span class="end"></span></div>
+    </div>`;
   }
-  // クランプして視覚的に崩れないようにする（最大 30% 分）
-  const scale = 30;
-  const curW = Math.min(100, (currentPct / scale) * 100);
-  const tgtL = Math.min(100, (targetPct / scale) * 100);
-  const badge = gapBadge(currentPct - targetPct);
-  return `<span class="val-size">
-    <span class="val-size-label">${fmt1(currentPct)}% → ${fmt1(targetPct)}%</span>
-    <span class="val-bar" title="現在 ${fmt1(currentPct)}% vs 目標 ${fmt1(targetPct)}%">
-      <span class="cur" style="width:${curW.toFixed(1)}%"></span>
-      <span class="tgt" style="left:${tgtL.toFixed(1)}%"></span>
-    </span>
-    <span class="${escapeHTML(badge.cls)}">${escapeHTML(badge.text)}</span>
-  </span>`;
+  const scaleMax = targetPct * 2; // 右端 = 適正の2倍
+  const ratio = currentPct / scaleMax; // 1.0 で中央=適正、0.5で左1/4…
+  const fillW = Math.min(100, Math.max(0, ratio * 100));
+  const diff = currentPct - targetPct;
+  const fillCls = diff > 0.5 ? 'over' : diff < -0.5 ? 'under' : 'fit';
+  const curLeft = Math.min(94, Math.max(6, fillW)); // tip ラベルの見切れ防止
+  const overflow = currentPct > scaleMax;
+  const mult = overflow ? currentPct / targetPct : null;
+  const xnum = overflow && mult != null ? `<span class="val-sb-x">× ${mult.toFixed(1)}</span>` : '';
+  const convTxt = convictionLabel(conviction);
+  const convHTML = convTxt ? `<span class="cv">（${escapeHTML(convTxt)}）</span>` : '';
+  return `<div class="val-sb">
+    <div class="val-sb-top"><span class="val-sb-cur ${fillCls}" style="left:${curLeft.toFixed(0)}%">${fmt1(currentPct)}%</span></div>
+    <div class="val-sb-bar"><span class="val-sb-fill ${fillCls}" style="width:${fillW.toFixed(1)}%"></span>${xnum}</div>
+    <div class="val-sb-scale">
+      <span class="end">持たなすぎ</span>
+      <span class="mid"><span class="tri" aria-hidden="true"></span><span class="lab">${fmt1(targetPct)}%${convHTML}</span></span>
+      <span class="end">持ちすぎ</span>
+    </div>
+  </div>`;
 }
 
 /**
@@ -203,66 +227,116 @@ function line3HTML(val) {
 }
 
 /**
- * 総合レンズ専用: トリガー行 HTML を生成する。
- * @param {{ active: Array<{side:string,type:string,action:string,reason:string}>, watching: Array<{side:string,type:string,action:string,note:string}> }} trig
+ * カード上部のアクションバナー HTML を生成する。
+ * トリガーがあればその行動（トリム/積増/監視）、無ければ「維持」。
+ * @param {{ active: Array<{side:string,type:string,action:string,reason:string}>, watching: Array<{side:string,type:string,action:string,note:string}> }|null} trig
  * @returns {string}
  */
-function triggerLineHTML(trig) {
-  if (!trig || (trig.active.length === 0 && trig.watching.length === 0)) return '';
-
-  if (trig.active.length > 0) {
+function bannerHTML(trig) {
+  let kind = 'hold';
+  let glyph = '▪';
+  let action = '維持';
+  let reason = '';
+  if (trig && trig.active.length > 0) {
     const t = trig.active[0];
     if (t.side === 'sell') {
-      return `<div class="val-trig sell">🔴 売り発議: ${escapeHTML(t.action)} <span class="trg-r">(${escapeHTML(t.reason)})</span></div>`;
+      kind = 'sell';
+      glyph = '▼';
+      action = 'トリム';
+    } else {
+      kind = 'buy';
+      glyph = '▲';
+      action = '積増';
     }
-    return `<div class="val-trig buy">🟢 買い余地: ${escapeHTML(t.action)}</div>`;
+    reason = t.reason || t.action || '';
+  } else if (trig && trig.watching.length > 0) {
+    const w = trig.watching[0];
+    kind = 'watch';
+    glyph = '◦';
+    action = '監視';
+    reason = w.note || w.action || '';
   }
-
-  // watching のみ
-  const w = trig.watching[0];
-  return `<div class="val-trig watch">監視中: ${escapeHTML(w.action)}（${escapeHTML(w.note)}）</div>`;
+  const reasonHTML = reason ? `<span class="vb">${escapeHTML(reason)}</span>` : '';
+  return `<div class="val-banner val-banner--${kind}"><span class="va"><span class="gl" aria-hidden="true">${glyph}</span>${action}</span>${reasonHTML}</div>`;
 }
 
 /**
- * 1 銘柄分の行 HTML を生成する（_lens に応じて line3 を切り替える）。
+ * カード下部の判定確度 行 HTML を生成する（confidence が無ければ空文字）。
+ * @param {import('./valuations.js').Verdict|null} verdict
+ * @returns {string}
+ */
+function confidenceHTML(verdict) {
+  if (!verdict || verdict.confidence == null) return '';
+  const lv = verdict.confidence;
+  const dots = lv === '高' ? 3 : lv === '中' ? 2 : 1;
+  let dotsHTML = '';
+  for (let i = 0; i < 3; i++) dotsHTML += `<i class="d${i < dots ? ' on' : ''}"></i>`;
+  const drv =
+    verdict.drivers && verdict.drivers.length
+      ? `<span class="drv">根拠: ${escapeHTML(verdict.drivers.join('・'))}</span>`
+      : '';
+  return `<div class="val-jc"><span class="jc-nm">判定確度</span><span class="jc-dots" aria-label="判定確度 ${escapeHTML(lv)}">${dotsHTML}<span class="lv">${escapeHTML(lv)}</span></span>${drv}</div>`;
+}
+
+/**
+ * 総合レンズ用の等幅チップ（PER / PEG / Fスコア）HTML を生成する。
+ * @param {any|null} val
+ * @returns {string}
+ */
+function totalChipsHTML(val) {
+  const v = (val && val.value) || {};
+  const q = (val && val.quality) || {};
+  const per = `${fmtRaw(v.perTrail)}→${fmtRaw(v.perFwd)}`;
+  return `<div class="val-chips">
+    <span class="val-c"><span class="k">PER</span><b>${escapeHTML(per)}</b></span>
+    <span class="val-c"><span class="k">PEG</span><b>${escapeHTML(fmtRaw(v.peg))}</b></span>
+    <span class="val-c"><span class="k">Fスコア</span><b>${escapeHTML(fmtRaw(q.fScore))}</b></span>
+  </div>`;
+}
+
+/**
+ * 1 銘柄分のカード HTML を生成する。
+ * 構成: アクションバナー → シンボル+verdict → サイズバー → 指標チップ → 判定確度。
  * @param {{ symbol:string, name:string, value:number, ySymbol:string, cat:string, cur:string }} p
  * @param {number} currentPct
  * @param {number|null} targetPct
- * @param {number|null} gap
  * @param {import('./valuations.js').Verdict|null} verdict
  * @param {any|null} val
  * @param {{ active: Array<any>, watching: Array<any> }|null} trig
+ * @param {'probe'|'standard'|'high'|null} conviction
  * @returns {string}
  */
-function rowHTML(p, currentPct, targetPct, gap, verdict, val, trig) {
-  // line 1: シンボル + 銘柄名 + verdict chip
-  const chipHTML =
-    verdict && verdict.class !== 'na'
-      ? `<span class="${chipClass(verdict.class)}" title="${escapeHTML(verdict.drivers.join('・'))}">${escapeHTML(verdict.label)}</span>`
-      : '';
+function rowHTML(p, currentPct, targetPct, verdict, val, trig, conviction) {
+  // アクションバナー（全レンズ共通・常時表示）
+  const banner = bannerHTML(trig);
 
-  const line1 = `<div class="val-r1">
+  // 上段: シンボル + 銘柄名（下揃え）+ verdict chip
+  const chipHTML =
+    verdict && verdict.label && verdict.label !== '-'
+      ? `<span class="${chipClass(verdict)}" title="${escapeHTML(verdict.drivers.join('・'))}">${escapeHTML(verdict.label)}</span>`
+      : '';
+  const head = `<div class="val-head">
     <b class="val-tk">${escapeHTML(p.symbol)}</b>
     <span class="val-nm">${escapeHTML(p.name)}</span>
     ${chipHTML}
   </div>`;
 
-  // line 2: サイズバー（全レンズ共通）
-  const line2 = `<div class="val-r2">${sizeBarHTML(currentPct, targetPct)}</div>`;
+  // サイズバー（全レンズ共通）
+  const size = `<div class="val-size-wrap">${sizeBarHTML(currentPct, targetPct, conviction)}</div>`;
 
-  // line 3: レンズ別メトリクス
-  const line3 = line3HTML(val);
+  // 指標: 総合は PER/PEG/F の等幅チップ、他レンズは従来メトリクス
+  const metrics = _lens === 'total' ? totalChipsHTML(val) : line3HTML(val);
 
-  // トリガー行: 総合レンズのみ表示
-  const trigLine = _lens === 'total' && trig ? triggerLineHTML(trig) : '';
+  // 判定確度（最下部・全レンズ共通）
+  const confLine = confidenceHTML(verdict);
 
-  return `<div class="val-row">${line1}${line2}${line3}${trigLine}</div>`;
+  return `<div class="val-row">${banner}<div class="val-body">${head}${size}${metrics}${confLine}</div></div>`;
 }
 
 /**
  * 現在の _lens に応じて rows を並び替えて返す（元配列は変更しない）。
- * @param {Array<{p:any,currentPct:number,targetPct:number|null,gap:number|null,verdict:any,val:any,trig:any}>} rows
- * @returns {Array<{p:any,currentPct:number,targetPct:number|null,gap:number|null,verdict:any,val:any,trig:any}>}
+ * @param {Array<{p:any,currentPct:number,targetPct:number|null,gap:number|null,verdict:any,val:any,trig:any,conviction?:any}>} rows
+ * @returns {Array<{p:any,currentPct:number,targetPct:number|null,gap:number|null,verdict:any,val:any,trig:any,conviction?:any}>}
  */
 function sortedRows(rows) {
   const copy = rows.slice();
@@ -334,6 +408,24 @@ function lensCap(lens) {
 }
 
 /**
+ * Value タブ下部に常設する用語解説（タップ開閉・CSP安全な native details）。
+ * @returns {string}
+ */
+function glossaryHTML() {
+  return `<details class="val-gloss">
+    <summary>用語解説</summary>
+    <div class="val-gloss-body">
+      <p><b>Verdict（正体）</b>：PERの割安/割高の「位置」と利益の「向き」を合成した結論。本物の割安/割高（行動できる）、見せかけ(フェア)＝割安/割高に見えて実態フェア、罠＝割安の罠/一過性益、中立、-（シクリカル＝PER採点外）の7種。</p>
+      <p><b>PER 例: 52→38（実績→予想）</b>：左＝実績PER（過去12カ月）、右＝予想PER（来期予想）。右が小さい＝来期利益が増える見込み。向きが最重要シグナル。</p>
+      <p><b>PEG</b>：PER ÷ 利益成長率。1未満＝割安寄り、3超＝割高。成長を加味した割高度。</p>
+      <p><b>Fスコア（0〜9点・Piotroski）</b>：収益性・財務・効率の9項目を各1点で採点。7〜9＝健全、0〜2＝危険（罠濃厚）。割安が「本物か罠か」の品質点。</p>
+      <p><b>判定確度</b>：エンジンのVerdict判定がどれだけ信頼できるか（データ充足＋シグナル一致＋境界余裕）。確信度（自分の自信＝サイズ入力）とは別物。</p>
+      <p><b>確信度</b>：自分の主観的な自信。打診/標準/高確信で適正サイズ（%）を決める入力。サイズバーの適正マーカー脇に表示。</p>
+    </div>
+  </details>`;
+}
+
+/**
  * Value タブを描画する。_lens に応じてソート・メトリクスを切り替える。
  * @returns {Promise<void>}
  */
@@ -369,7 +461,7 @@ export async function renderValuationTab() {
   }
 
   // 各銘柄のメトリクスを計算
-  /** @type {Array<{p: any, currentPct: number, targetPct: number|null, gap: number|null, verdict: import('./valuations.js').Verdict|null, val: any|null, tkey: string|null, trig: {active:Array<any>,watching:Array<any>}|null}>} */
+  /** @type {Array<{p: any, currentPct: number, targetPct: number|null, gap: number|null, verdict: import('./valuations.js').Verdict|null, val: any|null, tkey: string|null, trig: {active:Array<any>,watching:Array<any>}|null, conviction: 'probe'|'standard'|'high'|null}>} */
   const rows = positions.map((p) => {
     const currentPct = ((p.value || 0) / denom) * 100;
 
@@ -386,6 +478,7 @@ export async function renderValuationTab() {
 
     const targetPct = tkey != null ? getTargetPct(tkey) : null;
     const gap = targetPct != null ? currentPct - targetPct : null;
+    const conviction = tkey != null ? getConviction(tkey) : null;
 
     let val = getValuation(p.ySymbol);
     // 価格モメンタム（priceMom1Y / pos52w）を履歴から live 補完（null のみ）
@@ -418,7 +511,7 @@ export async function renderValuationTab() {
         })
       : null;
 
-    return { p, currentPct, targetPct, gap, verdict, val, tkey, trig };
+    return { p, currentPct, targetPct, gap, verdict, val, tkey, trig, conviction };
   });
 
   // ヘッダー統計（常に総合ベースで計算）
@@ -456,9 +549,11 @@ export async function renderValuationTab() {
 
   // 現在レンズでソートして行を生成
   const sorted = sortedRows(rows);
-  const rowsHTML = sorted.map((r) => rowHTML(r.p, r.currentPct, r.targetPct, r.gap, r.verdict, r.val, r.trig)).join('');
+  const rowsHTML = sorted
+    .map((r) => rowHTML(r.p, r.currentPct, r.targetPct, r.verdict, r.val, r.trig, r.conviction))
+    .join('');
 
-  wrap.innerHTML = `${statsHTML}${lensHTML}<div class="val-list">${rowsHTML}</div>`;
+  wrap.innerHTML = `${statsHTML}${lensHTML}<div class="val-list">${rowsHTML}</div>${glossaryHTML()}`;
 
   // ピルのクリックで _lens を更新して再描画（CSP 安全な addEventListener）
   wrap.querySelectorAll('.val-seg[data-lens]').forEach((btn) => {
