@@ -74,7 +74,8 @@ export function __setTriggers(obj) {
  *   percentile?: number|null,
  *   peg?: number|null,
  *   themeUsagePct?: number|null,
- *   price?: number|null
+ *   price?: number|null,
+ *   isEtf?: boolean
  * }} TriggerCtx
  */
 
@@ -100,8 +101,10 @@ export function __setTriggers(obj) {
  * 銘柄のトリガーを評価し、抵触中（active）と監視中（watching）に分類する。
  *
  * type 別ルール:
- *   concentration: ctx.themeUsagePct > capPct → active
+ *   concentration: ctx.themeUsagePct > capPct → active（ETF でも active＝PF リスク由来の正当な売り）
  *   valuation sell: percentile >= pctGte OR peg >= pegGte → active
+ *                   ただし ctx.isEtf（proxy ETF）の場合は active に上げず watching に降格
+ *                   （ETF の自前バリュエーションは proxy＝参考情報。§7.5.3 / D-3）
  *   valuation buy:  percentile <= pctLte → active
  *   limit: (dir=below && price<=trigPrice) OR (dir=above && price>=trigPrice) → active
  *   thesis / conditional: 常に watching（自動判定しない）
@@ -151,14 +154,20 @@ export function evaluateTriggers(symbol, ctx) {
       // valuation
       if (type === 'valuation') {
         if (side === 'sell') {
-          // pctGte check
+          // 発火理由を判定（pctGte 優先、次に pegGte）
+          let reason = null;
           if (t.pctGte != null && ctx.percentile != null && ctx.percentile >= t.pctGte) {
-            active.push({ side, type, action, reason: `%タイル${Math.round(ctx.percentile)}≥${t.pctGte}` });
-            continue;
+            reason = `%タイル${Math.round(ctx.percentile)}≥${t.pctGte}`;
+          } else if (t.pegGte != null && ctx.peg != null && ctx.peg >= t.pegGte) {
+            reason = `PEG${ctx.peg.toFixed(1)}≥${t.pegGte}`;
           }
-          // pegGte check
-          if (t.pegGte != null && ctx.peg != null && ctx.peg >= t.pegGte) {
-            active.push({ side, type, action, reason: `PEG${ctx.peg.toFixed(1)}≥${t.pegGte}` });
+          if (reason != null) {
+            // proxy ETF の valuation 売りは自前PERが proxy のため active に上げず watching へ降格
+            if (ctx.isEtf) {
+              watching.push({ side, type, action, note: `ETF proxy（参考）: ${reason}` });
+            } else {
+              active.push({ side, type, action, reason });
+            }
             continue;
           }
         } else {
