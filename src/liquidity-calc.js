@@ -9,12 +9,12 @@
 //
 // 既定パラメータ（呼び出し側で上書き可・要見直し）:
 //   ADV_WINDOW       = 20   直近20営業日（≒1ヶ月）平均出来高
-//   PARTICIPATION    = 0.20 1日に市場の出来高の20%まで捌ける前提
+//   PARTICIPATION    = 0.10 1日に市場の出来高の10%まで捌ける前提（保守的）
 //   ILLIQUID_DAYS    = 5    出口に5営業日(=1週間)超かかる保有を警告
 // ══════════════════════════════════════════════════════════════
 
 export const ADV_WINDOW = 20;
-export const PARTICIPATION = 0.2;
+export const PARTICIPATION = 0.1;
 export const ILLIQUID_DAYS = 5;
 
 /**
