@@ -100,6 +100,27 @@ export function getTargetPct(symbol) {
 }
 
 /**
+ * symbol の確信度（ユーザーの主観的な自信＝サイズ入力）を返す。
+ * テーマ構成銘柄（単一株）のみ対象。コア/守り/テーマETF/override は固定枠のため null。
+ * @param {string} symbol
+ * @returns {'probe'|'standard'|'high'|null}
+ */
+export function getConviction(symbol) {
+  if (!_cfg) return null;
+  // 固定枠（override / core / defensive / テーマETF）は確信度の概念なし
+  if (_cfg.override && _cfg.override[symbol] && _cfg.override[symbol].targetPct != null) return null;
+  const tiers = _cfg.tiers || {};
+  for (const tier of Object.values(tiers)) {
+    if (tier.targets && tier.targets[symbol] != null) return null;
+  }
+  if (_cfg.themeEtfs && _cfg.themeEtfs.includes(symbol)) return null;
+  // テーマ構成銘柄 → conviction（未指定は standard）
+  if (getThemeOf(symbol) === null) return null;
+  const conv = (_cfg.conviction && _cfg.conviction[symbol]) || 'standard';
+  return conv === 'probe' || conv === 'standard' || conv === 'high' ? conv : 'standard';
+}
+
+/**
  * テーマの cap を返す。無ければ null。
  * @param {string} theme
  * @returns {number|null}
