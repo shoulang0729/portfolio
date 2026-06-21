@@ -7,7 +7,7 @@
 // 注: authenticatePasskey は window に登録されるため直接 import しない（循環回避）
 // ══════════════════════════════════════════════════════════════
 
-import { _auth, AUTH_PIN_LEN, AUTH_MAX_FAIL, AUTH_LOCK_SEC, AUTH_SESSION_KEY, AUTH_LS_HASH_KEY, _getActivePinHash, _hashPin, _isLocked, _lockRemain, _formatLockRemain, _saveLockout, isAuthenticated } from './auth-pin.js';
+import { _auth, AUTH_PIN_LEN, AUTH_MAX_FAIL, AUTH_LOCK_SEC, AUTH_SESSION_KEY, AUTH_LS_HASH_KEY, AUTH_FAILS_KEY, _getActivePinHash, _hashPin, _isLocked, _lockRemain, _formatLockRemain, _saveLockout, isAuthenticated } from './auth-pin.js';
 import { _deriveEncKey, _restoreEncKey } from './auth-crypto.js';
 import { WORKER_URL } from './config.js';
 
@@ -109,6 +109,7 @@ async function _submitPin() {
 
   if (hash === activeHash) {
     _auth.fails = 0;
+    localStorage.removeItem(AUTH_FAILS_KEY);
     sessionStorage.setItem(AUTH_SESSION_KEY, '1');
     await _deriveEncKey(_auth.input);
     _shake('success');
@@ -125,6 +126,7 @@ async function _submitPin() {
 
   } else {
     _auth.fails++;
+    localStorage.setItem(AUTH_FAILS_KEY, String(_auth.fails));
     _auth.input = '';
     _updateDots();
     _shake('shake');
