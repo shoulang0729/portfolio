@@ -154,88 +154,108 @@ function sizeBarHTML(currentPct, targetPct, conviction) {
 }
 
 /**
- * line3 メトリクス HTML を現在のレンズに応じて生成する。
- * @param {any|null} val  getValuation() の戻り値（null の場合は '—' のみ）
+ * レンズの並べ替え基準を、カード上で強調する対象に対応づける（純関数・テスト対象）。
+ * @param {string} lens
+ * @returns {{ chip: 'pct'|'f'|null, sizeBar: boolean }}
+ */
+export function sortKeyForLens(lens) {
+  switch (lens) {
+    case 'total':
+      return { chip: null, sizeBar: true }; // gap DESC → サイズバー強調
+    case 'value':
+      return { chip: 'pct', sizeBar: false }; // percentile ASC → %タイルチップ
+    case 'quality':
+      return { chip: 'f', sizeBar: false }; // qScore DESC → Fチップ（代表値）
+    default:
+      return { chip: null, sizeBar: false }; // momentum 等はチップ強調なし（レンズピルで表現）
+  }
+}
+
+/**
+ * 固定コアチップ（PER／PEG／%タイル／Fスコア の4枚・2×2）。レンズに応じて
+ * 並べ替えキーのチップに is-sortkey を付与する。全レンズ同一構成（作り替えない）。
+ * @param {any|null} val
+ * @param {string} lens
  * @returns {string}
  */
-function line3HTML(val) {
-  if (_lens === 'total') {
-    if (!val) return '';
-    const v = val.value || {};
-    const pctTxt = val.percentile != null && isFinite(val.percentile) ? `${Math.round(val.percentile)}%ile` : '—';
-    return `<div class="val-met">
-      <span><b>PER</b> ${escapeHTML(fmtRaw(v.perTrail))}→${escapeHTML(fmtRaw(v.perFwd))}</span>
-      <span><b>PEG</b> ${escapeHTML(fmtRaw(v.peg))}</span>
-      <span><b>%タイル</b> ${escapeHTML(pctTxt)}</span>
-    </div>`;
-  }
+function coreChipsHTML(val, lens) {
+  const v = (val && val.value) || {};
+  const q = (val && val.quality) || {};
+  const sk = sortKeyForLens(lens);
+  const per = `${fmtRaw(v.perTrail)}→${fmtRaw(v.perFwd)}`;
+  const pct = val && val.percentile != null && isFinite(val.percentile) ? `${Math.round(val.percentile)}%ile` : '—';
+  const chip = (id, k, b) =>
+    `<span class="val-c${sk.chip === id ? ' is-sortkey' : ''}"><span class="k">${k}</span><b>${escapeHTML(b)}</b></span>`;
+  return `<div class="val-chips">
+    ${chip('per', 'PER', per)}
+    ${chip('peg', 'PEG', fmtRaw(v.peg))}
+    ${chip('pct', '%タイル', pct)}
+    ${chip('f', 'Fスコア', fmtRaw(q.fScore))}
+  </div>`;
+}
 
-  if (_lens === 'value') {
-    if (!val) return '';
-    const v = val.value || {};
-    const pctTxt = val.percentile != null && isFinite(val.percentile) ? `${Math.round(val.percentile)}%ile` : '—';
-    // D-5: 織り込み成長率（リバースDCF）と目標株価乖離
-    // 1段Gordon は永久一定成長前提＝シクリカルには不適 → cyclical は impliedGrowth を出さない。
-    const ig =
-      v.cyclical === true ? null : impliedGrowth(v.fcfYield, val.quality && val.quality.wacc != null ? val.quality.wacc : null);
-    const igTxt = ig != null && isFinite(ig) ? `${fmt1(ig)}%` : '—';
-    const tg = v.targetGapPct != null && isFinite(v.targetGapPct) ? v.targetGapPct : null;
-    const tgTxt = tg != null ? `${tg >= 0 ? '+' : ''}${fmt1(tg)}%` : '—';
-    const tgCls = tg == null ? '' : tg >= 0 ? ' class="val-mom-up"' : ' class="val-mom-dn"';
-    return `<div class="val-met">
-      <span><b>PER</b> ${escapeHTML(fmtRaw(v.perTrail))}→${escapeHTML(fmtRaw(v.perFwd))}</span>
-      <span><b>PEG</b> ${escapeHTML(fmtRaw(v.peg))}</span>
+/**
+ * 「詳細指標」タップ展開（全レンズ同一内容）。コア4項目（PER/PEG/%タイル/F）は
+ * 重複回避のため載せない。色キュー（ROIC<WACC=赤・Altman Z<3・符号色）は保持。
+ * @param {any|null} val
+ * @returns {string}
+ */
+function detailHTML(val) {
+  if (!val) return '';
+  const v = val.value || {};
+  const q = val.quality || {};
+  const m = val.momentum || {};
+
+  // ── バリュ ──（1段Gordon は永久一定成長前提＝シクリカルには不適 → cyclical は —）
+  const ig = v.cyclical === true ? null : impliedGrowth(v.fcfYield, q.wacc != null ? q.wacc : null);
+  const igTxt = ig != null && isFinite(ig) ? `${fmt1(ig)}%` : '—';
+  const tg = v.targetGapPct != null && isFinite(v.targetGapPct) ? v.targetGapPct : null;
+  const tgTxt = tg != null ? `${tg >= 0 ? '+' : ''}${fmt1(tg)}%` : '—';
+  const tgCls = tg == null ? '' : tg >= 0 ? ' class="val-mom-up"' : ' class="val-mom-dn"';
+  const valueGrp = `<div class="val-met">
       <span><b>EV/EBITDA</b> ${escapeHTML(fmtRaw(v.evEbitda))}</span>
       <span><b>FCF利回り</b> ${escapeHTML(fmtRaw(v.fcfYield))}%</span>
       <span><b>還元</b> ${escapeHTML(fmtRaw(v.shareholderYield))}%</span>
       <span><b>織込成長</b> ${escapeHTML(igTxt)}</span>
       <span><b>目標乖離</b> <span${tgCls}>${escapeHTML(tgTxt)}</span></span>
-      <span><b>%タイル</b> ${escapeHTML(pctTxt)}</span>
     </div>`;
-  }
 
-  if (_lens === 'quality') {
-    if (!val) return '';
-    const q = val.quality || {};
-    // ROIC vs WACC のカラーキュー
-    const roicNum = q.roic != null && isFinite(q.roic) ? q.roic : null;
-    const waccNum = q.wacc != null && isFinite(q.wacc) ? q.wacc : null;
-    const roicBad = roicNum != null && waccNum != null && roicNum < waccNum;
-    const roicStr = `${escapeHTML(fmtRaw(roicNum))}%`;
-    const waccStr = `${escapeHTML(fmtRaw(waccNum))}%`;
-    const roicMetric = roicBad
-      ? `<span class="val-bad">${roicStr} vs WACC ${waccStr}</span>`
-      : `${roicStr} vs WACC ${waccStr}`;
-    // Altman Z のカラーキュー
-    const zNum = q.altmanZ != null && isFinite(q.altmanZ) ? q.altmanZ : null;
-    const zStr = escapeHTML(fmtRaw(zNum));
-    const zMetric = zNum != null && zNum < 3 ? `<span class="val-warn">${zStr}</span>` : zStr;
-    return `<div class="val-met">
+  // ── 品質 ──
+  const roicNum = q.roic != null && isFinite(q.roic) ? q.roic : null;
+  const waccNum = q.wacc != null && isFinite(q.wacc) ? q.wacc : null;
+  const roicBad = roicNum != null && waccNum != null && roicNum < waccNum;
+  const roicStr = `${escapeHTML(fmtRaw(roicNum))}%`;
+  const waccStr = `${escapeHTML(fmtRaw(waccNum))}%`;
+  const roicMetric = roicBad
+    ? `<span class="val-bad">${roicStr} vs WACC ${waccStr}</span>`
+    : `${roicStr} vs WACC ${waccStr}`;
+  const zNum = q.altmanZ != null && isFinite(q.altmanZ) ? q.altmanZ : null;
+  const zStr = escapeHTML(fmtRaw(zNum));
+  const zMetric = zNum != null && zNum < 3 ? `<span class="val-warn">${zStr}</span>` : zStr;
+  const qualGrp = `<div class="val-met">
       <span><b>ROIC</b> ${roicMetric}</span>
       <span><b>粗利/資産</b> ${escapeHTML(fmtRaw(q.grossProf))}</span>
       <span><b>FCF変換</b> ${escapeHTML(fmtRaw(q.fcfConv))}</span>
-      <span><b>F</b> ${escapeHTML(fmtRaw(q.fScore))}</span>
-      <span><b>Z</b> ${zMetric}</span>
-      <span><b>Q</b> ${escapeHTML(fmtRaw(q.qScore))}</span>
+      <span><b>Altman Z</b> ${zMetric}</span>
+      <span><b>Qスコア</b> ${escapeHTML(fmtRaw(q.qScore))}</span>
     </div>`;
-  }
 
-  if (_lens === 'momentum') {
-    if (!val) return '';
-    const m = val.momentum || {};
-    // priceMom1Y の符号別クラス（日本市場慣例: 上昇=赤=up / 下落=緑=down）
-    const mom1y = m.priceMom1Y != null && isFinite(m.priceMom1Y) ? m.priceMom1Y : null;
-    const mom1yStr = mom1y != null ? (mom1y >= 0 ? `+${fmt1(mom1y)}` : fmt1(mom1y)) : '—';
-    const mom1yCls = mom1y == null ? '' : mom1y >= 0 ? ' class="val-mom-up"' : ' class="val-mom-dn"';
-    return `<div class="val-met">
+  // ── モメンタム ──（日本市場慣例: 上昇=赤=up / 下落=緑=down）
+  const mom1y = m.priceMom1Y != null && isFinite(m.priceMom1Y) ? m.priceMom1Y : null;
+  const mom1yStr = mom1y != null ? (mom1y >= 0 ? `+${fmt1(mom1y)}` : fmt1(mom1y)) : '—';
+  const mom1yCls = mom1y == null ? '' : mom1y >= 0 ? ' class="val-mom-up"' : ' class="val-mom-dn"';
+  const momGrp = `<div class="val-met">
       <span><b>改定90d</b> ${escapeHTML(fmtRaw(m.epsRev90d))}%</span>
       <span><b>1Y</b> <span${mom1yCls}>${escapeHTML(mom1yStr)}%</span></span>
       <span><b>52週位置</b> ${escapeHTML(fmtRaw(m.pos52w))}%</span>
       <span><b>対市場</b> ${escapeHTML(fmtRaw(m.rsVsSector))}%</span>
     </div>`;
-  }
 
-  return '';
+  return `<details class="val-detail"><summary>詳細指標</summary>
+    <div class="val-detail-grp"><span class="lab">バリュ</span>${valueGrp}</div>
+    <div class="val-detail-grp"><span class="lab">品質</span>${qualGrp}</div>
+    <div class="val-detail-grp"><span class="lab">モメンタム</span>${momGrp}</div>
+  </details>`;
 }
 
 /**
@@ -291,24 +311,8 @@ function confidenceHTML(verdict) {
 }
 
 /**
- * 総合レンズ用の等幅チップ（PER / PEG / Fスコア）HTML を生成する。
- * @param {any|null} val
- * @returns {string}
- */
-function totalChipsHTML(val) {
-  const v = (val && val.value) || {};
-  const q = (val && val.quality) || {};
-  const per = `${fmtRaw(v.perTrail)}→${fmtRaw(v.perFwd)}`;
-  return `<div class="val-chips">
-    <span class="val-c"><span class="k">PER</span><b>${escapeHTML(per)}</b></span>
-    <span class="val-c"><span class="k">PEG</span><b>${escapeHTML(fmtRaw(v.peg))}</b></span>
-    <span class="val-c"><span class="k">Fスコア</span><b>${escapeHTML(fmtRaw(q.fScore))}</b></span>
-  </div>`;
-}
-
-/**
  * 1 銘柄分のカード HTML を生成する。
- * 構成: アクションバナー → シンボル+verdict → サイズバー → 指標チップ → 判定確度。
+ * 構成: アクションバナー → シンボル+verdict → サイズバー → コアチップ → 判定確度 → 詳細指標。
  * @param {{ symbol:string, name:string, value:number, ySymbol:string, cat:string, cur:string }} p
  * @param {number} currentPct
  * @param {number|null} targetPct
@@ -338,16 +342,19 @@ function rowHTML(p, currentPct, targetPct, verdict, val, trig, conviction) {
     ${chipHTML}${proxyHTML}
   </div>`;
 
-  // サイズバー（全レンズ共通）
-  const size = `<div class="val-size-wrap">${sizeBarHTML(currentPct, targetPct, conviction)}</div>`;
+  // サイズバー（全レンズ共通）。total レンズは並べ替えキー＝サイズ乖離なのでリング強調。
+  const sk = sortKeyForLens(_lens);
+  const size = `<div class="val-size-wrap${sk.sizeBar ? ' is-sortkey' : ''}">${sizeBarHTML(currentPct, targetPct, conviction)}</div>`;
 
-  // 指標: 総合は PER/PEG/F の等幅チップ、他レンズは従来メトリクス
-  const metrics = _lens === 'total' ? totalChipsHTML(val) : line3HTML(val);
+  // 指標段はレンズ非依存に統一: 固定コアチップ4枚＋詳細展開（作り替えない）
+  const metrics = coreChipsHTML(val, _lens);
+  const detail = detailHTML(val);
 
-  // 判定確度（最下部・全レンズ共通）
+  // 判定確度（全レンズ共通）
   const confLine = confidenceHTML(verdict);
 
-  return `<div class="val-row">${banner}<div class="val-body">${head}${size}${metrics}${confLine}</div></div>`;
+  // 並び: banner → head → size → metrics → 判定確度 → detail
+  return `<div class="val-row">${banner}<div class="val-body">${head}${size}${metrics}${confLine}${detail}</div></div>`;
 }
 
 /**

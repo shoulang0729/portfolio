@@ -711,13 +711,36 @@
 .val-sb--na .val-sb-bar { background: var(--surface2); }
 
 /* 指標チップ（総合レンズ: PER / PEG / Fスコア 等幅3分割） */
-.val-chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.val-chips { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
 .val-c {
   background: var(--surface2); border: 1px solid var(--border); border-radius: 7px;
   padding: 4px; text-align: center; font-size: 10px; color: var(--text2); line-height: 1.2;
 }
 .val-c .k { display: block; }
 .val-c b { display: block; color: var(--text); font-weight: 700; font-size: 15px; margin-top: 1px; line-height: 1.05; }
+/* レンズの並べ替えキーに当たるコアチップ／サイズバーをアクセント強調（#443） */
+.val-c.is-sortkey {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.val-size-wrap.is-sortkey {
+  border: 1px solid var(--accent);
+  border-radius: 9px;
+  padding: 5px 7px;
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+
+/* 詳細指標（タップ展開・全レンズ共通の深掘り。native details） */
+.val-detail { margin-top: 8px; border-top: 1px solid var(--border2); }
+.val-detail > summary {
+  padding: 7px 2px 0; font-size: 11px; font-weight: 600; color: var(--text2);
+  cursor: pointer; list-style: none;
+}
+.val-detail > summary::-webkit-details-marker { display: none; }
+.val-detail > summary::before { content: '▸ '; color: var(--text3); }
+.val-detail[open] > summary::before { content: '▾ '; }
+.val-detail-grp { margin-top: 6px; }
+.val-detail-grp .lab { display: block; font-size: 10px; color: var(--text3); font-weight: 600; }
 
 /* 行3: メトリクス */
 .val-met {
