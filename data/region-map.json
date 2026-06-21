@@ -1,0 +1,30 @@
+{
+  "updated": "2026-06-21",
+  "note": "各保有の主地域タグ（直接タグ）。ルックスルー対象（オルカン/ひふみ/ひふみXO）は region-weights.json で按分するため本マップには含めない。タグ: japan/north_america/europe/em_latam/em_asia/china_hk/global/commodity_cash。",
+  "regions": {
+    "1306": "japan",
+    "1615": "japan",
+    "1629": "japan",
+    "200A": "japan",
+    "6301": "japan",
+    "8050": "japan",
+    "9983": "japan",
+    "マイクロSP": "japan",
+    "AAPL": "north_america",
+    "AMZN": "north_america",
+    "GOOGL": "north_america",
+    "MSFT": "north_america",
+    "PLTR": "north_america",
+    "TSLA": "north_america",
+    "SMH": "north_america",
+    "SHLD": "north_america",
+    "XLE": "north_america",
+    "ILF": "em_latam",
+    "COPX": "global",
+    "REMX": "global",
+    "GLDM": "commodity_cash",
+    "SLV": "commodity_cash",
+    "JPST": "commodity_cash",
+    "PIMCO-ST": "commodity_cash"
+  }
+}
