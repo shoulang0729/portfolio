@@ -5423,13 +5423,20 @@ async function loadVerdictOutcomes() {
 function outcomesLoaded() {
   return _loaded4;
 }
-function computeHitRate() {
+function effectiveOutcome(o) {
+  if (o.outcome === "hit" || o.outcome === "miss") return o.outcome;
+  if (o.proposedOutcome === "hit" || o.proposedOutcome === "miss") return o.proposedOutcome;
+  return "pending";
+}
+function computeHitRate(kind) {
   let hits = 0;
   let misses = 0;
   let pending = 0;
   for (const o of _outcomes) {
-    if (o.outcome === "hit") hits++;
-    else if (o.outcome === "miss") misses++;
+    if (kind && (o.kind || "action") !== kind) continue;
+    const eff = effectiveOutcome(o);
+    if (eff === "hit") hits++;
+    else if (eff === "miss") misses++;
     else pending++;
   }
   const resolved = hits + misses;
@@ -5807,8 +5814,10 @@ async function renderValuationTab() {
   const overCount = rows.filter((r) => r.gap != null && r.gap > 0.5).length;
   const cheapCount = rows.filter((r) => r.verdict && r.verdict.class === "cheap_real").length;
   const triggerCount = rows.filter((r) => r.trig && r.trig.active.length > 0).length;
-  const hr = computeHitRate();
-  const hitRateVal = hr.resolved > 0 ? `<span title="${hr.ratePct}%" aria-label="\u7684\u4E2D\u7387${hr.ratePct}%">${hr.hits}-${hr.misses}</span>` : "\u2014";
+  const hrA = computeHitRate("action");
+  const hrV = computeHitRate("verdict");
+  const hrPart = (label, hr) => hr.resolved > 0 ? `<span title="${label} ${hr.ratePct}%" aria-label="${label}\u7684\u4E2D\u7387${hr.ratePct}%">${label}${hr.hits}-${hr.misses}</span>` : `<span>${label}\u2014</span>`;
+  const hitRateVal = `${hrPart("\u767A\u8B70", hrA)}<span class="hr-sep"> / </span>${hrPart("\u5224\u5B9A", hrV)}`;
   const statsHTML = `<div class="val-stats">
     <div class="val-stat"><span class="k">\u904E\u5927\u30DD\u30B8</span><span class="v">${overCount}</span></div>
     <div class="val-stat"><span class="k">\u5272\u5B89\u5019\u88DC</span><span class="v">${cheapCount}</span></div>
