@@ -64,15 +64,20 @@ async function loadRegionData() {
   return _regionData;
 }
 
+/** 地域キー → PALETTE インデックス（固定色） */
+const REGION_PALETTE_ORDER = [
+  'japan', 'north_america', 'europe', 'em_asia', 'china_hk', 'em_latam', 'global', 'commodity_cash', 'unknown',
+];
+
 /**
- * D-6: 真の地域エクスポージャ（ルックスルー）カードを生成する。
- * 筆頭＝日本 真% ｜ ACWIベンチ5% ｜ ホームバイアス +Xpt。
- * @param {Array<{symbol?:string, ySymbol?:string, value?:number|null}>} holdings
+ * D-6: 真の地域エクスポージャ（ルックスルー・全資産）カードを生成する。
+ * hero＋ドーナツ＋凡例＋鮮度ノート。全資産（現金/暗号含む）カバレッジ対応。
+ * @param {Array<{symbol?:string, ySymbol?:string, value?:number|null}>} assets
  * @returns {Promise<HTMLElement>}
  */
-async function buildRegionCard(holdings) {
+async function buildRegionCard(assets) {
   const { regionMap, regionWeights, asOf } = await loadRegionData();
-  const { pct } = computeTrueRegionExposure(holdings, regionMap, regionWeights);
+  const { pct, total } = computeTrueRegionExposure(assets, regionMap, regionWeights);
   const bias = japanHomeBias(pct);
 
   const card = document.createElement('div');
@@ -80,10 +85,10 @@ async function buildRegionCard(holdings) {
 
   const title = document.createElement('div');
   title.className = 'risk-card-title';
-  title.textContent = '地域エクスポージャ（ルックスルー）';
+  title.textContent = '地域（ルックスルー）';
   card.appendChild(title);
 
-  // 筆頭カード: 日本の真% / ベンチ / ホームバイアス
+  // 筆頭インサイト: 日本の真% / ベンチ / ホームバイアス
   const hero = document.createElement('div');
   hero.className = 'region-hero';
   const biasSign = bias.biasPt >= 0 ? '+' : '';
@@ -93,29 +98,84 @@ async function buildRegionCard(holdings) {
     <div class="region-hero-sub">ACWIベンチ ${bias.benchPct}% ｜ ホームバイアス <span class="${biasCls}">${biasSign}${bias.biasPt.toFixed(1)}pt</span></div>`;
   card.appendChild(hero);
 
-  // 全地域の真% リスト（降順）
-  const list = document.createElement('ul');
-  list.className = 'region-list';
-  const rows = Object.entries(pct).sort((a, b) => b[1] - a[1]);
-  for (const [region, p] of rows) {
-    const li = document.createElement('li');
-    li.className = 'region-list-item';
-    const name = document.createElement('span');
-    name.className = 'region-name';
-    name.textContent = REGION_LABELS[region] || region;
-    const val = document.createElement('span');
-    val.className = 'region-pct';
-    val.textContent = `${p.toFixed(1)}%`;
-    li.appendChild(name);
-    li.appendChild(val);
-    list.appendChild(li);
+  // ドーナツ SVG（buildChartCard 相当）
+  const body = document.createElement('div');
+  body.className = 'risk-card-body';
+  card.appendChild(body);
+
+  const slices = Object.entries(pct)
+    .filter(([, v]) => v > 0)
+    .sort((a, b) => {
+      const ia = REGION_PALETTE_ORDER.indexOf(a[0]);
+      const ib = REGION_PALETTE_ORDER.indexOf(b[0]);
+      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    })
+    .map(([key, p]) => ({ key, value: p, pct: p }));
+
+  const colorOf = (key) => {
+    const i = REGION_PALETTE_ORDER.indexOf(key);
+    return i === -1 ? UNKNOWN_COLOR : PALETTE[i % PALETTE.length];
+  };
+
+  if (typeof d3 !== 'undefined' && slices.length > 0) {
+    const size = 168;
+    const radius = size / 2;
+    const svg = d3
+      .select(body)
+      .append('svg')
+      .attr('class', 'risk-donut')
+      .attr('width', size)
+      .attr('height', size)
+      .attr('viewBox', `0 0 ${size} ${size}`)
+      .attr('role', 'img')
+      .attr('aria-label', '地域エクスポージャの構成円グラフ');
+
+    const g = svg.append('g').attr('transform', `translate(${radius},${radius})`);
+    const pie = d3.pie().value((d) => d.value).sort(null);
+    const arc = d3.arc().innerRadius(radius * 0.58).outerRadius(radius - 2);
+
+    g.selectAll('path')
+      .data(pie(slices))
+      .join('path')
+      .attr('d', arc)
+      .attr('fill', (d) => colorOf(d.data.key))
+      .append('title')
+      .text((d) => `${REGION_LABELS[d.data.key] || d.data.key}: ${d.data.pct.toFixed(1)}%`);
+
+    // カバレッジ%を中央表示（全資産のうちタグ判明分）
+    const knownTotal = total;
+    const allAssetsTotal = assets.reduce((s, a) => s + (typeof a.value === 'number' && Number.isFinite(a.value) ? a.value : 0), 0);
+    const coveragePct = allAssetsTotal > 0 ? Math.round((knownTotal / allAssetsTotal) * 100) : 100;
+
+    const center = g.append('text').attr('class', 'risk-donut-center');
+    center.append('tspan').attr('x', 0).attr('dy', '-0.1em').attr('font-size', '13px').attr('font-weight', '700').attr('text-anchor', 'middle').text(`${coveragePct}%`);
+    center.append('tspan').attr('class', 'risk-donut-center-sub').attr('x', 0).attr('dy', '1.3em').attr('font-size', '9px').attr('text-anchor', 'middle').text('判明');
   }
-  card.appendChild(list);
+
+  // 凡例
+  const legend = document.createElement('ul');
+  legend.className = 'risk-legend';
+  for (const s of slices) {
+    const li = document.createElement('li');
+    li.className = 'risk-legend-item';
+    const sw = document.createElement('span');
+    sw.className = 'risk-legend-swatch';
+    sw.style.background = colorOf(s.key);
+    const name = document.createElement('span');
+    name.className = 'risk-legend-name';
+    name.textContent = REGION_LABELS[s.key] || s.key;
+    const val = document.createElement('span');
+    val.className = 'risk-legend-pct';
+    val.textContent = `${s.pct.toFixed(1)}%`;
+    li.append(sw, name, val);
+    legend.appendChild(li);
+  }
+  body.appendChild(legend);
 
   // 鮮度・方式注記
   const note = document.createElement('div');
   note.className = 'risk-coverage-note';
-  note.textContent = `直接タグ＋ルックスルー按分（オルカン/ひふみ/ひふみXO）。地域構成比は静的（鮮度 ${asOf || '—'}・四半期更新）。VGK/2800.HK は未保有＝0%。`;
+  note.textContent = `直接タグ＋ルックスルー按分（オルカン/ひふみ/ひふみXO）、現金・暗号は commodity_cash 計上。地域構成比は静的（鮮度 ${asOf || '—'}・四半期更新）。`;
   card.appendChild(note);
 
   return card;
@@ -546,7 +606,7 @@ function buildRiskOverviewCard() {
     const cr = totals.cashRatio;
     const outOfRange = cr < 5 || cr > 20;
     cashVal.textContent = `${cr.toFixed(1)}%`;
-    cashVal.style.color = outOfRange ? 'var(--up)' : 'var(--text)';
+    cashVal.style.color = outOfRange ? 'var(--warn)' : 'var(--text)';
     if (outOfRange) cashVal.title = cr < 5 ? 'キャッシュ不足（<5%）' : 'キャッシュ過多（>20%）';
   } else {
     cashVal.textContent = '—';
@@ -575,7 +635,7 @@ function buildRiskOverviewCard() {
       if (gap.gapPct != null && gap.gapPct > 0.5) oversizeCount++;
     }
     oversizeVal.textContent = `${oversizeCount} 件`;
-    if (oversizeCount > 0) oversizeVal.style.color = 'var(--up)';
+    if (oversizeCount > 0) oversizeVal.style.color = 'var(--warn)';
   } else {
     oversizeVal.textContent = '—';
   }
@@ -631,7 +691,7 @@ function buildRiskOverviewCard() {
     }
     if (maxLabel) {
       maxConVal.textContent = `${maxLabel} ${maxPct.toFixed(1)}%`;
-      if (maxPct > 20) maxConVal.style.color = 'var(--up)';
+      if (maxPct > 20) maxConVal.style.color = 'var(--warn)';
     } else {
       maxConVal.textContent = '—';
     }
@@ -701,10 +761,51 @@ function buildRiskOverviewCard() {
   }
   card.appendChild(chipsStat);
 
+  // ── 総合判定チップ（閾値抵触があるか1目で）────────────────────────────────
+  const hasAlert = (() => {
+    if (totals) {
+      const cr = totals.cashRatio;
+      if (cr < 5 || cr > 20) return true;
+    }
+    if (taAvailable && denom > 0) {
+      const resolved3 = _resolvePositionTkeys(denom);
+      for (const { tkey, currentPct } of resolved3) {
+        if (!tkey) continue;
+        const gap = computeGap(tkey, currentPct);
+        if (gap.gapPct != null && gap.gapPct > 0.5) return true;
+      }
+      const currentPctBySymbol3 = {};
+      for (const p of positions) {
+        const pct = ((p.value || 0) / denom) * 100;
+        if (p.ySymbol) currentPctBySymbol3[p.ySymbol] = (currentPctBySymbol3[p.ySymbol] || 0) + pct;
+        if (p.symbol && p.symbol !== p.ySymbol) currentPctBySymbol3[p.symbol] = (currentPctBySymbol3[p.symbol] || 0) + pct;
+      }
+      const resolvedForTheme3 = _resolvePositionTkeys(denom);
+      const themes3 = new Set();
+      for (const { tkey } of resolvedForTheme3) {
+        if (!tkey) continue;
+        const th = getThemeOf(tkey);
+        if (th) themes3.add(th);
+      }
+      for (const theme of themes3) {
+        const cap = getThemeCap(theme);
+        if (cap == null) continue;
+        const usage = computeThemeUsage(theme, currentPctBySymbol3);
+        if (usage.used > cap) return true;
+      }
+    }
+    return false;
+  })();
+
+  const judgmentChip = document.createElement('div');
+  judgmentChip.className = `ro-judgment-chip${hasAlert ? ' ro-judgment-warn' : ' ro-judgment-ok'}`;
+  judgmentChip.textContent = hasAlert ? '⚠ 要確認' : '✓ 問題なし';
+  card.insertBefore(judgmentChip, roRow);
+
   // ── 注記 ─────────────────────────────────────────────────────────────────
   const note = document.createElement('div');
   note.className = 'ro-note';
-  note.textContent = '※ ベータ・相関は下段クオンツカード（4b）を参照。ストレス・流動性は 4b+ 予定';
+  note.textContent = '配分ベース指標（履歴不要）。ボラ・DD等の履歴ベース指標は下段クオンツを参照。';
   card.appendChild(note);
 
   return card;
@@ -850,16 +951,32 @@ async function buildQuantCard(posList) {
     return el;
   }
 
-  pfRow.appendChild(_stat('年率ボラ', _pct1(pfVol), (pfVol ?? 0) > 0.2));
+  // ── 小節1: 値動き（年率ボラ・最大DD）──────────────────────────────────────
+  const sec1Title = document.createElement('div');
+  sec1Title.className = 'rq-sec-title';
+  sec1Title.textContent = '値動き';
+  card.appendChild(sec1Title);
+
+  const sec1Hint = document.createElement('div');
+  sec1Hint.className = 'rq-sec-hint';
+  sec1Hint.textContent = '年率ボラ: 大きいほど振れる（20%超注意）／最大DD: 過去最大下落・浅いほど安全';
+  card.appendChild(sec1Hint);
+
+  pfRow.appendChild(_stat('年率ボラ', `${(pfVol ?? 0) > 0.2 ? '⚠ ' : ''}${_pct1(pfVol)}`, (pfVol ?? 0) > 0.2));
   pfRow.appendChild(_stat('最大DD', _pct1(pfMaxDD), true));
   card.appendChild(pfRow);
 
-  // ── ストレス（過去1年の最悪局面・PF）─────────────────────────────────────
+  // ── 小節2: 最悪局面（過去1年の実績）──────────────────────────────────────
   const stressTitle = document.createElement('div');
-  stressTitle.className = 'rq-stat-label';
-  stressTitle.style.marginTop = '8px';
-  stressTitle.textContent = 'ストレス（過去1年の最悪局面・PF）';
+  stressTitle.className = 'rq-sec-title';
+  stressTitle.style.marginTop = '10px';
+  stressTitle.textContent = '最悪局面';
   card.appendChild(stressTitle);
+
+  const stressHint = document.createElement('div');
+  stressHint.className = 'rq-sec-hint';
+  stressHint.textContent = '過去1年の最悪局面（実績）';
+  card.appendChild(stressHint);
 
   const stressRow = document.createElement('div');
   stressRow.className = 'rq-row';
@@ -875,12 +992,19 @@ async function buildQuantCard(posList) {
   covNote.textContent = `${covered.length}銘柄で算出（履歴未取得${excluded}除外）`;
   card.appendChild(covNote);
 
-  // 高相関ペア
-  const corrTitle = document.createElement('div');
-  corrTitle.className = 'rq-stat-label';
-  corrTitle.textContent = '高相関ペア（≥0.85）';
-  card.appendChild(corrTitle);
+  // ── 小節3: 分散・流動性──────────────────────────────────────────────────
+  const sec3Title = document.createElement('div');
+  sec3Title.className = 'rq-sec-title';
+  sec3Title.style.marginTop = '10px';
+  sec3Title.textContent = '分散・流動性';
+  card.appendChild(sec3Title);
 
+  const sec3Hint = document.createElement('div');
+  sec3Hint.className = 'rq-sec-hint';
+  sec3Hint.textContent = '高相関ペア: ほぼ同じ動きの銘柄（少ない=良い）／β: 1超でPFより大きく振れる';
+  card.appendChild(sec3Hint);
+
+  // 高相関ペア
   const corrRow = document.createElement('div');
   corrRow.className = 'rq-row';
   const top5Pairs = corrPairs.slice(0, 5);
@@ -893,10 +1017,10 @@ async function buildQuantCard(posList) {
     for (const { a, b, corr } of top5Pairs) {
       const chip = document.createElement('span');
       chip.className = 'rq-chip';
-      // escapeHTML applied to dynamic symbol strings
-      const escA = escapeHTML(a);
-      const escB = escapeHTML(b);
-      chip.textContent = `${escA}–${escB} ${corr.toFixed(2)}`;
+      const nameA = escapeHTML(nameOfSymbol(a));
+      const nameB = escapeHTML(nameOfSymbol(b));
+      chip.title = `${escapeHTML(a)}–${escapeHTML(b)}`;
+      chip.textContent = `${nameA}–${nameB} ${corr.toFixed(2)}`;
       corrRow.appendChild(chip);
     }
   }
@@ -904,20 +1028,16 @@ async function buildQuantCard(posList) {
 
   // リスク寄与トップ3
   if (top3.length > 0) {
-    const contribTitle = document.createElement('div');
-    contribTitle.className = 'rq-stat-label';
-    contribTitle.style.marginTop = '8px';
-    contribTitle.textContent = 'リスク寄与 Top3（vol×|β|降順）';
-    card.appendChild(contribTitle);
-
     const contribRow = document.createElement('div');
     contribRow.className = 'rq-row';
+    contribRow.style.marginTop = '6px';
     for (const { sym, vol, beta } of top3) {
       const el = document.createElement('div');
       el.className = 'rq-stat';
       const lb = document.createElement('span');
       lb.className = 'rq-stat-label';
-      lb.textContent = escapeHTML(sym);
+      lb.textContent = escapeHTML(nameOfSymbol(sym));
+      lb.title = escapeHTML(sym);
       const vl = document.createElement('span');
       vl.className = 'rq-stat-value';
       const betaStr = beta !== null ? ` β${beta.toFixed(1)}` : '';
@@ -926,11 +1046,14 @@ async function buildQuantCard(posList) {
       el.appendChild(vl);
       contribRow.appendChild(el);
     }
+    const contribHint = document.createElement('div');
+    contribHint.className = 'rq-sec-hint';
+    contribHint.textContent = 'リスク寄与 Top3（vol×|β|降順・PF全体のリスクを押上げる銘柄）';
+    card.appendChild(contribHint);
     card.appendChild(contribRow);
   }
 
   // ── 流動性（出口日数）─────────────────────────────────────────────────────
-  // 履歴に出来高(vol)がある銘柄のみ。出口日数 = 株数 ÷ (ADV × 参加率)。
   const liqHoldings = covered
     .filter((p) => typeof p.shares === 'number' && p.shares > 0 && Array.isArray(hist[p.ySymbol]))
     .map((p) => ({
@@ -941,9 +1064,9 @@ async function buildQuantCard(posList) {
   const liq = computeLiquidity(liqHoldings).filter((x) => x.days != null);
 
   const liqTitle = document.createElement('div');
-  liqTitle.className = 'rq-stat-label';
-  liqTitle.style.marginTop = '8px';
-  liqTitle.textContent = `流動性 出口日数（ADV${ADV_WINDOW}×${Math.round(PARTICIPATION * 100)}%/日）`;
+  liqTitle.className = 'rq-sec-hint';
+  liqTitle.style.marginTop = '4px';
+  liqTitle.textContent = `流動性 出口日数（売り切るのに何営業日かかるか・短い=良い・ADV${ADV_WINDOW}×${Math.round(PARTICIPATION * 100)}%/日）`;
   card.appendChild(liqTitle);
 
   if (liq.length === 0) {
@@ -984,7 +1107,7 @@ async function buildQuantCard(posList) {
   const foot = document.createElement('p');
   foot.className = 'rq-note';
   foot.textContent =
-    '※ベータはポートフォリオ自身への感応度（市場ベンチマーク不要の履歴算出）。ストレスは過去1年の最悪局面（イベント名付きシナリオは将来拡張）。出口日数は株数÷(平均出来高×参加率)の概算。';
+    '※βはポートフォリオ自身への感応度（市場ベンチマーク不要の履歴算出）。最悪局面は過去1年の実績（歴史的危機の再現シナリオはストレスシナリオカードを参照）。出口日数は株数÷(平均出来高×参加率)の概算。';
   card.appendChild(foot);
 
   return card;
@@ -1067,15 +1190,15 @@ export async function renderRiskCharts() {
 
   const grid = document.createElement('div');
   grid.className = 'risk-grid';
-  for (const dim of RISK_DIMENSIONS) {
+  for (const dim of RISK_DIMENSIONS.filter((d) => d !== 'country')) {
     grid.appendChild(buildChartCard(dim, breakdown[dim], sourceSummary[dim]));
   }
   wrap.appendChild(grid);
 
-  // ── 地域エクスポージャ（ルックスルー・D-6）────────────────────────────────
-  // 真の地域配分（特に日本のホームバイアス）を可視化。証券保有のみ対象。
-  wrap.appendChild(await buildRegionCard(positions));
-  // ── /地域エクスポージャ ──────────────────────────────────────────────────
+  // ── 地域（ルックスルー・D-6）────────────────────────────────────────────
+  // 真の地域配分（特に日本のホームバイアス）を可視化。全資産（現金/暗号含む）対象。
+  wrap.appendChild(await buildRegionCard(assets));
+  // ── /地域 ────────────────────────────────────────────────────────────────
 
   // データソース明記（#214）＋ 手動入力データの引用元（現金・ひふみ等）
   const src = document.createElement('div');
