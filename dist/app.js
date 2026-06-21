@@ -6106,46 +6106,47 @@ function detailHTML(val) {
   const q = val.quality || {};
   const m = val.momentum || {};
   const ig = v.cyclical === true ? null : impliedGrowth(v.fcfYield, q.wacc != null ? q.wacc : null);
-  const igTxt = ig != null && isFinite(ig) ? `${fmt1(ig)}%` : "\u2014";
+  const igTxt = ig != null && isFinite(ig) ? `${fmt1(ig)}%${isGrowthOverheated(ig) ? " \u26A0\u671F\u5F85\u904E\u591A" : ""}` : "\u2014";
+  const igCls = isGrowthOverheated(ig) ? ' class="val-warn"' : "";
   const tg = v.targetGapPct != null && isFinite(v.targetGapPct) ? v.targetGapPct : null;
   const tgTxt = tg != null ? `${tg >= 0 ? "+" : ""}${fmt1(tg)}%` : "\u2014";
   const tgCls = tg == null ? "" : tg >= 0 ? ' class="val-mom-up"' : ' class="val-mom-dn"';
   const valueGrp = `<div class="val-met">
-      <span><b>EV/EBITDA</b> ${escapeHTML(fmtRaw(v.evEbitda))}</span>
-      <span><b>FCF\u5229\u56DE\u308A</b> ${escapeHTML(fmtRaw(v.fcfYield))}%</span>
-      <span><b>\u9084\u5143</b> ${escapeHTML(fmtRaw(v.shareholderYield))}%</span>
-      <span><b>\u7E54\u8FBC\u6210\u9577</b> ${escapeHTML(igTxt)}</span>
-      <span><b>\u76EE\u6A19\u4E56\u96E2</b> <span${tgCls}>${escapeHTML(tgTxt)}</span></span>
+      <b>EV/EBITDA</b><span>${escapeHTML(fmtRaw(v.evEbitda))}</span>
+      <b>FCF\u5229\u56DE\u308A</b><span>${escapeHTML(fmtRaw(v.fcfYield))}%</span>
+      <b>\u682A\u4E3B\u9084\u5143</b><span>${escapeHTML(fmtRaw(v.shareholderYield))}%</span>
+      <b>\u7E54\u8FBC\u6210\u9577</b><span${igCls}>${escapeHTML(igTxt)}</span>
+      <b>\u76EE\u6A19\u4E56\u96E2</b><span${tgCls}>${escapeHTML(tgTxt)}</span>
     </div>`;
   const roicNum = q.roic != null && isFinite(q.roic) ? q.roic : null;
   const waccNum = q.wacc != null && isFinite(q.wacc) ? q.wacc : null;
   const roicBad = roicNum != null && waccNum != null && roicNum < waccNum;
-  const roicStr = `${escapeHTML(fmtRaw(roicNum))}%`;
-  const waccStr = `${escapeHTML(fmtRaw(waccNum))}%`;
-  const roicMetric = roicBad ? `<span class="val-bad">${roicStr} vs WACC ${waccStr}</span>` : `${roicStr} vs WACC ${waccStr}`;
+  const roicStr = `${escapeHTML(fmtRaw(roicNum))}% vs WACC ${escapeHTML(fmtRaw(waccNum))}%`;
+  const roicMetric = roicBad ? `<span class="val-bad">${roicStr} \u26A0\u4E0B\u56DE\u308A</span>` : roicStr;
   const zNum = q.altmanZ != null && isFinite(q.altmanZ) ? q.altmanZ : null;
   const zStr = escapeHTML(fmtRaw(zNum));
-  const zMetric = zNum != null && zNum < 3 ? `<span class="val-warn">${zStr}</span>` : zStr;
+  const zMetric = zNum != null && zNum < 3 ? `<span class="val-warn">${zStr} \u26A0&lt;3</span>` : zStr;
   const qualGrp = `<div class="val-met">
-      <span><b>ROIC</b> ${roicMetric}</span>
-      <span><b>\u7C97\u5229/\u8CC7\u7523</b> ${escapeHTML(fmtRaw(q.grossProf))}</span>
-      <span><b>FCF\u5909\u63DB</b> ${escapeHTML(fmtRaw(q.fcfConv))}</span>
-      <span><b>Altman Z</b> ${zMetric}</span>
-      <span><b>Q\u30B9\u30B3\u30A2</b> ${escapeHTML(fmtRaw(q.qScore))}</span>
+      <b>ROIC</b><span>${roicMetric}</span>
+      <b>\u7C97\u5229/\u8CC7\u7523</b><span>${escapeHTML(fmtRaw(q.grossProf))}</span>
+      <b>FCF\u5909\u63DB</b><span>${escapeHTML(fmtRaw(q.fcfConv))}</span>
+      <b>Altman Z</b><span>${zMetric}</span>
+      <b>Q\u30B9\u30B3\u30A2</b><span>${escapeHTML(fmtRaw(q.qScore))}</span>
     </div>`;
   const mom1y = m.priceMom1Y != null && isFinite(m.priceMom1Y) ? m.priceMom1Y : null;
   const mom1yStr = mom1y != null ? mom1y >= 0 ? `+${fmt1(mom1y)}` : fmt1(mom1y) : "\u2014";
   const mom1yCls = mom1y == null ? "" : mom1y >= 0 ? ' class="val-mom-up"' : ' class="val-mom-dn"';
   const momGrp = `<div class="val-met">
-      <span><b>\u6539\u5B9A90d</b> ${escapeHTML(fmtRaw(m.epsRev90d))}%</span>
-      <span><b>1Y</b> <span${mom1yCls}>${escapeHTML(mom1yStr)}%</span></span>
-      <span><b>52\u9031\u4F4D\u7F6E</b> ${escapeHTML(fmtRaw(m.pos52w))}%</span>
-      <span><b>\u5BFE\u5E02\u5834</b> ${escapeHTML(fmtRaw(m.rsVsSector))}%</span>
+      <b>\u6539\u5B9A90d</b><span>${escapeHTML(fmtRaw(m.epsRev90d))}%</span>
+      <b>1Y\u9A30\u843D</b><span${mom1yCls}>${escapeHTML(mom1yStr)}%</span>
+      <b>52\u9031\u4F4D\u7F6E</b><span>${escapeHTML(fmtRaw(m.pos52w))}%</span>
+      <b>\u5BFE\u5E02\u5834</b><span>${escapeHTML(fmtRaw(m.rsVsSector))}%</span>
     </div>`;
+  const grp = (lab, cap, body) => `<div class="val-detail-grp"><span class="lab">${lab}<span class="grp-cap">${cap}</span></span>${body}</div>`;
   return `<details class="val-detail"><summary>\u8A73\u7D30\u6307\u6A19</summary>
-    <div class="val-detail-grp"><span class="lab">\u30D0\u30EA\u30E5</span>${valueGrp}</div>
-    <div class="val-detail-grp"><span class="lab">\u54C1\u8CEA</span>${qualGrp}</div>
-    <div class="val-detail-grp"><span class="lab">\u30E2\u30E1\u30F3\u30BF\u30E0</span>${momGrp}</div>
+    ${grp("\u30D0\u30EA\u30E5", "\u4FA1\u683C\u304C\u5272\u5B89\u304B", valueGrp)}
+    ${grp("\u54C1\u8CEA", "\u7F60\u3067\u306A\u3044\u304B\u30FB\u7A3C\u3050\u529B", qualGrp)}
+    ${grp("\u30E2\u30E1\u30F3\u30BF\u30E0", "\u52E2\u3044\u3068\u5E02\u5834\u5BFE\u6BD4", momGrp)}
   </details>`;
 }
 function bannerHTML(trig) {
@@ -6313,16 +6314,31 @@ async function renderValuationTab() {
   const overCount = rows.filter((r) => r.gap != null && r.gap > 0.5).length;
   const cheapCount = rows.filter((r) => r.verdict && r.verdict.class === "cheap_real").length;
   const triggerCount = rows.filter((r) => r.trig && r.trig.active.length > 0).length;
+  const watchCount = rows.filter((r) => r.trig && r.trig.watching.length > 0).length;
   const hrA = computeHitRate("action");
   const hrV = computeHitRate("verdict");
-  const hrPart = (label, hr) => hr.resolved > 0 ? `<span title="${label} ${hr.ratePct}%" aria-label="${label}\u7684\u4E2D\u7387${hr.ratePct}%">${label}${hr.hits}-${hr.misses}</span>` : `<span>${label}\u2014</span>`;
+  const hrPart = (label, hr) => {
+    if (hr.resolved > 0) {
+      const hot = hr.ratePct != null && hr.ratePct >= 60 ? " hr-hot" : "";
+      return `<span class="hr-p${hot}" title="${label}\u7684\u4E2D\u7387 ${hr.ratePct}%\uFF08hits/\u5224\u5B9A\u6E08\u30FB\u5BFEACWI\u76F8\u5BFE\uFF09" aria-label="${label} ${hr.hits}\u5F53\u305F\u308A ${hr.resolved}\u4EF6\u4E2D">${label} ${hr.hits}/${hr.resolved}</span>`;
+    }
+    if (hr.pending > 0) return `<span class="hr-p">${label} \u5224\u5B9A\u5F85\u3061${hr.pending}</span>`;
+    return `<span class="hr-p">${label}\u2014</span>`;
+  };
   const hitRateVal = `${hrPart("\u767A\u8B70", hrA)}<span class="hr-sep"> / </span>${hrPart("\u5224\u5B9A", hrV)}`;
+  const trigVal = `<span class="hr-p">\u62B5\u89E6${triggerCount}</span><span class="hr-sep">\u30FB</span><span class="hr-p">\u76E3\u8996${watchCount}</span>`;
+  const statsExplain = `<details class="val-stats-help">
+    <summary>\u24D8 \u7D71\u8A08\u306E\u898B\u65B9</summary>
+    <p><b>\u767A\u8B70</b>\uFF1A\u81EA\u5206\u306E\u58F2\u8CB7\u304C\u7D041\u30F6\u6708\u5F8C\u306B\u5BFEACWI\u3067\u6B63\u3057\u304B\u3063\u305F\u304B\uFF08\u5F53\u305F\u308A / \u5224\u5B9A\u6E08\uFF09\u3002</p>
+    <p><b>\u5224\u5B9A</b>\uFF1A\u30A8\u30F3\u30B8\u30F3\u306E cheap/rich \u304C\u7D046\u30F6\u6708\u5F8C\u306B\u5BFEACWI\u3067\u5F53\u305F\u3063\u305F\u304B\u3002</p>
+    <p><b>\u62B5\u89E6/\u76E3\u8996</b>\uFF1A\u4E8B\u524D\u30EB\u30FC\u30EB\u306B\u4ECA\u62B5\u89E6\u3057\u3066\u3044\u308B\u9298\u67C4\u6570 / \u76E3\u8996\u4E2D\u306E\u9298\u67C4\u6570\u3002</p>
+  </details>`;
   const statsHTML = `<div class="val-stats">
     <div class="val-stat"><span class="k">\u904E\u5927\u30DD\u30B8</span><span class="v">${overCount}</span></div>
     <div class="val-stat"><span class="k">\u5272\u5B89\u5019\u88DC</span><span class="v">${cheapCount}</span></div>
     <div class="val-stat"><span class="k">\u7684\u4E2D\u7387</span><span class="v">${hitRateVal}</span></div>
-    <div class="val-stat"><span class="k">\u30C8\u30EA\u30AC\u30FC</span><span class="v">${triggerCount}</span></div>
-  </div>`;
+    <div class="val-stat"><span class="k">\u30C8\u30EA\u30AC\u30FC</span><span class="v">${trigVal}</span></div>
+  </div>${statsExplain}`;
   const lenses = [
     { key: "total", label: "\u7DCF\u5408" },
     { key: "value", label: "\u30D0\u30EA\u30E5" },
