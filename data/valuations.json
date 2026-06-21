@@ -95,7 +95,8 @@
     "debtHeavy": true,
     "cyclical": true,
     "fcfYield": 4.3,
-    "shareholderYield": 4.9
+    "shareholderYield": 4.9,
+    "targetGapPct": -2
    },
    "verdict": {
     "class": "na",
@@ -221,6 +222,9 @@
    "bandNote": "Global X データセンター&デジタルインフラETF(2020設定・履歴薄)。REIT偏重でFFOベースが本来適切なためP/Eは過大に出やすく信頼度低。現アンカー22.3(Yahoo)に対しRobinhood23.95/Investing.com28と source差が大きい。履歴が短く正式な分位は出せないため現値中心の暫定バンド。出典: Yahoo/Robinhood/Investing.com(2026-06取得)。"
   },
   "LITE": {
+   "value": {
+    "targetGapPct": 31
+   },
    "perCurrent": 149.12,
    "bandLow": 20,
    "bandHigh": 90,
@@ -244,6 +248,9 @@
    }
   },
   "CRWD": {
+   "value": {
+    "targetGapPct": 4
+   },
    "perCurrent": 145,
    "bandLow": 70,
    "bandHigh": 150,
@@ -267,6 +274,9 @@
    }
   },
   "PANW": {
+   "value": {
+    "targetGapPct": 8
+   },
    "perCurrent": 250.24,
    "bandLow": 40,
    "bandHigh": 140,
@@ -346,7 +356,7 @@
     "peg": 2.85,
     "evEbitda": 27,
     "debtHeavy": false,
-    "targetGapPct": 5,
+    "targetGapPct": 6,
     "fcfYield": 2.9,
     "shareholderYield": 2.7
    },
@@ -393,7 +403,8 @@
     "evEbitda": 17.3,
     "debtHeavy": true,
     "fcfYield": null,
-    "shareholderYield": -0.9
+    "shareholderYield": -0.9,
+    "targetGapPct": 28
    },
    "verdict": {
     "class": "cheap_fake",
@@ -439,7 +450,8 @@
     "evEbitda": 27.7,
     "debtHeavy": false,
     "fcfYield": 1.4,
-    "shareholderYield": 1.6
+    "shareholderYield": 1.6,
+    "targetGapPct": 18
    },
    "verdict": {
     "class": "fair",
@@ -529,7 +541,8 @@
     "evEbitda": 133,
     "debtHeavy": false,
     "fcfYield": 0.5,
-    "shareholderYield": -0.7
+    "shareholderYield": -0.7,
+    "targetGapPct": 5
    },
    "verdict": {
     "class": "rich_real",
@@ -652,7 +665,8 @@
     "evEbitda": 149,
     "debtHeavy": false,
     "fcfYield": 0.8,
-    "shareholderYield": -3.2
+    "shareholderYield": -3.2,
+    "targetGapPct": 42
    },
    "verdict": {
     "class": "rich_fake",
@@ -722,7 +736,8 @@
     "perFwd": 23,
     "debtHeavy": false,
     "fcfYield": 10.5,
-    "shareholderYield": 1.1
+    "shareholderYield": 1.1,
+    "targetGapPct": 8
    },
    "verdict": {
     "class": "trap",
@@ -766,7 +781,8 @@
     "peg": 5.26,
     "debtHeavy": false,
     "fcfYield": 2.7,
-    "shareholderYield": 0.8
+    "shareholderYield": 0.8,
+    "targetGapPct": -5
    },
    "verdict": {
     "class": "rich_real",
