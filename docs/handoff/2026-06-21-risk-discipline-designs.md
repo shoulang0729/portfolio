@@ -7,6 +7,8 @@
 
 ## D-1 ストレスシナリオ（名前付き歴史イベント）
 
+> ✅ **実装完了（2026-06-21・PR #441 マージ済）**＝`data/stress-events.json`・`src/risk-calc.js`(eventStress)・保有限定5y lazy IDBフェッチ(cache.js)・Risk表示(risk-charts)・テスト。
+
 ### 確定（2026-06-21・ユーザー）
 - **①方式＝A 履歴 replay**：実保有 × 実履歴を、イベントの日付レンジで切って累積。既存エンジン（`alignReturnsByDate`＋`computePortfolioReturns`）流用・捏造ゼロ・手動メンテ無。古い大暴落（ベクトル方式）は次フェーズ。
 - **②履歴の深さ＝4y（推奨・2-3yから補正）**：2024-08 円キャリー巻き戻し / 2025-01 DeepSeek / 2025 関税ショックに加え、2022弱気相場の尾・2023-03 SVB まで拾うには ~4y 必要（2-3y では届かない）。※recent中心で十分なら 3y。
@@ -108,6 +110,8 @@
 - 発議の非価格要素（集中是正・希薄化回避など定性判断）の自動採点＝当面は手動補正に委ねる（proposedOutcome は価格ベースの参考値）。
 
 ## D-6 テーマ枠 × 地域枠の再設計
+
+> ✅ **実装完了（2026-06-21・PR #440 マージ済）**＝`data/region-map.json`・`data/region-weights.json`・`src/region-calc.js`(computeTrueRegionExposure)・Risk地域カード(日本ホームバイアス・risk-charts)・テスト。
 
 ### 前提補正（mf-holdings 正本で裏取り・2026-06-21）
 当初の「VGK/ILF/ハンセンをテーマ扱い＝地域二重計上」という課題設定は現保有では大半が不成立：
