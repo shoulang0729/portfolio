@@ -501,3 +501,87 @@ export function computePortfolioReturns(alignedBySym, weights) {
   }
   return port;
 }
+
+/** Date|string → 'YYYY-MM-DD'。 */
+function _dateStr(d) {
+  return d instanceof Date ? d.toISOString().slice(0, 10) : String(d).slice(0, 10);
+}
+
+/**
+ * 名前付きイベント窓での現PFストレス（履歴 replay・what-if）。
+ * 現ウェイト × 実履歴を [fromDate, toDate] で切って期間累積リターンを返す（D-1）。
+ * 窓内に価格がある銘柄のみで採点し、ウェイトベースのカバレッジ%を併せて返す。
+ *
+ * 注: 既存 alignReturnsByDate は共通日付 >=2 を要求し短窓（DeepSeek 等の2営業日）で
+ * 空になるため、本関数は窓内 >=1 リターン日で動く独自アライメント（積集合）を用いる。
+ *
+ * @param {Record<string, Array<{date: Date|string, close: number}>>} seriesMap  sym → 価格系列（保有限定・5y）
+ * @param {Record<string, number>} weights  sym → ウェイト（正規化前・値ベース）。全保有を渡す（カバレッジ分母）。
+ * @param {string} fromDate  窓の開始日（peak）
+ * @param {string} toDate    窓の終了日（trough）
+ * @returns {{ ret: number|null, coveragePct: number, missing: string[], usableFrom: string|null, usableTo: string|null }}
+ */
+export function eventStress(seriesMap, weights, fromDate, toDate) {
+  const from = Date.parse(fromDate);
+  const to = Date.parse(toDate);
+  const empty = { ret: null, coveragePct: 0, missing: [], usableFrom: null, usableTo: null };
+  if (!weights || Number.isNaN(from) || Number.isNaN(to) || from > to) return empty;
+
+  /** @type {Record<string, Array<{date: Date|string, close: number}>>} 窓内系列 */
+  const windowed = {};
+  let totalW = 0;
+  let coveredW = 0;
+  /** @type {string[]} */
+  const missing = [];
+
+  for (const [sym, w] of Object.entries(weights)) {
+    if (!(w > 0)) continue;
+    totalW += w;
+    const series = seriesMap && seriesMap[sym];
+    const inWin = Array.isArray(series)
+      ? series.filter((p) => {
+          const t = p.date instanceof Date ? p.date.getTime() : Date.parse(p.date);
+          return !Number.isNaN(t) && t >= from && t <= to;
+        })
+      : [];
+    if (inWin.length >= 2) {
+      windowed[sym] = inWin;
+      coveredW += w;
+    } else {
+      missing.push(sym);
+    }
+  }
+
+  const coveragePct = totalW > 0 ? (coveredW / totalW) * 100 : 0;
+  const syms = Object.keys(windowed);
+  if (syms.length === 0) return { ...empty, coveragePct, missing };
+
+  // 窓内日次リターンを sym→{dateStr: r} に。共通日付（積集合）でアライン（>=1 日で可）。
+  /** @type {Record<string, Record<string, number>>} */
+  const bySymDate = {};
+  for (const sym of syms) {
+    bySymDate[sym] = {};
+    for (const { date, r } of dailyReturns(windowed[sym])) bySymDate[sym][_dateStr(date)] = r;
+  }
+  const sets = syms.map((s) => new Set(Object.keys(bySymDate[s])));
+  const commonDates = [...sets[0]].filter((d) => sets.every((set) => set.has(d))).sort();
+  if (commonDates.length < 1) return { ...empty, coveragePct, missing };
+
+  /** @type {Record<string, number[]>} */
+  const alignedBySym = {};
+  for (const sym of syms) alignedBySym[sym] = commonDates.map((d) => bySymDate[sym][d]);
+
+  const port = computePortfolioReturns(alignedBySym, weights);
+  if (port.length === 0) return { ...empty, coveragePct, missing };
+
+  let compound = 1;
+  for (const r of port) compound *= 1 + r;
+
+  return {
+    ret: compound - 1,
+    coveragePct,
+    missing,
+    usableFrom: commonDates[0],
+    usableTo: commonDates[commonDates.length - 1],
+  };
+}

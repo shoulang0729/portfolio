@@ -543,6 +543,19 @@
 }
 .region-name { color: var(--text2); }
 .region-pct { font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+
+/* D-1: ストレスシナリオ表 */
+.stress-card { margin-top: 14px; }
+.stress-table { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+.stress-row {
+  display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center;
+  font-size: 12px; padding: 4px 2px; border-bottom: 1px solid var(--border2);
+}
+.stress-name { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stress-ret { font-weight: 800; font-variant-numeric: tabular-nums; text-align: right; color: var(--text2); }
+.stress-ret.stress-neg { color: var(--neg); }
+.stress-cov { font-size: 10px; color: var(--text3); font-variant-numeric: tabular-nums; text-align: right; }
+.stress-cov.stress-cov-low { color: var(--warn); }
 .risk-summary {
   text-align: center;
   font-size: 12px;
