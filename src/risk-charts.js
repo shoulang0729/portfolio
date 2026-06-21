@@ -21,8 +21,11 @@ import {
   alignReturnsByDate,
   highCorrelationPairs,
   computePortfolioReturns,
+  eventStress,
 } from './risk-calc.js';
 import { getAllHistorical } from './historical-cache.js';
+import { fetchSymbolHistory, batchWithRetry } from './data.js';
+import { state } from './state.js';
 import { computeLiquidity, ILLIQUID_DAYS, ADV_WINDOW, PARTICIPATION } from './liquidity-calc.js';
 import { fmtJPYInt, fmtPctInt, escapeHTML } from './utils.js';
 import { positions } from './positions.js';
@@ -114,6 +117,121 @@ async function buildRegionCard(holdings) {
   note.textContent = `直接タグ＋ルックスルー按分（オルカン/ひふみ/ひふみXO）。地域構成比は静的（鮮度 ${asOf || '—'}・四半期更新）。VGK/2800.HK は未保有＝0%。`;
   card.appendChild(note);
 
+  return card;
+}
+
+// ── D-1 ストレスシナリオ（名前付き歴史イベント）──────────────────────────────
+/** stress-events.json のロードキャッシュ */
+let _stressEvents = null;
+async function loadStressEvents() {
+  if (_stressEvents) return _stressEvents;
+  try {
+    const r = await fetch(`data/stress-events.json?_=${Date.now()}`);
+    const j = r.ok ? await r.json() : null;
+    _stressEvents = (j && Array.isArray(j.events) ? j.events : []);
+  } catch {
+    _stressEvents = [];
+  }
+  return _stressEvents;
+}
+
+/**
+ * ストレス計算用に保有銘柄の 5y 履歴を確保する（lazy・IDB のみ・sessionStorage 不使用）。
+ * 既存 IDB をメモリに反映 → 未取得のみ fetchSymbolHistory('5y') で取得。
+ * @param {string[]} symbols  ySymbol 配列
+ * @returns {Promise<Record<string, Array<{date: Date, close: number}>>>}
+ */
+async function ensureStressHistory(symbols) {
+  // 1. IDB 既存の 5y をメモリに反映（fetchSymbolHistory の skip 判定に使う）
+  let cached = {};
+  try {
+    cached = await getAllHistorical('5y');
+  } catch {
+    cached = {};
+  }
+  if (!state.historicalCache['5y']) state.historicalCache['5y'] = {};
+  for (const [sym, entries] of Object.entries(cached)) state.historicalCache['5y'][sym] = entries;
+
+  // 2. 未取得銘柄のみ lazy fetch（5y は saveCacheToSession でスキップ＝IDB のみ永続）
+  const missing = symbols.filter((s) => !Array.isArray(state.historicalCache['5y'][s]) || state.historicalCache['5y'][s].length < 2);
+  if (missing.length) {
+    await batchWithRetry(missing, (s) => fetchSymbolHistory(s, '5y'), { batchSize: 6, delayMs: 1100 });
+  }
+  return state.historicalCache['5y'] || {};
+}
+
+/**
+ * D-1: 名前付きイベントのストレス表カードを生成する。
+ * 「現PFが当時を再体験したら」の what-if。イベント名｜PF下落%｜カバレッジ%。
+ * @param {Array<{symbol?:string, ySymbol?:string, value?:number|null}>} holdings
+ * @returns {Promise<HTMLElement>}
+ */
+async function buildStressCard(holdings) {
+  const card = document.createElement('div');
+  card.className = 'risk-card stress-card';
+  const title = document.createElement('div');
+  title.className = 'risk-card-title';
+  title.textContent = 'ストレスシナリオ（現PFが当時を再体験したら）';
+  card.appendChild(title);
+
+  const events = await loadStressEvents();
+  if (events.length === 0) {
+    const p = document.createElement('p');
+    p.className = 'risk-coverage-note';
+    p.textContent = 'イベントカタログ未取得。';
+    card.appendChild(p);
+    return card;
+  }
+
+  // 値ベースのウェイト（全保有・カバレッジ分母）
+  /** @type {Record<string, number>} */
+  const weights = {};
+  for (const p of holdings) {
+    if (p.ySymbol) weights[p.ySymbol] = (weights[p.ySymbol] || 0) + (p.value || 0);
+  }
+  const symbols = Object.keys(weights);
+
+  let seriesMap;
+  try {
+    seriesMap = await ensureStressHistory(symbols);
+  } catch {
+    const p = document.createElement('p');
+    p.className = 'risk-coverage-note';
+    p.textContent = '5y履歴の取得に失敗しました（時間をおいて再表示してください）。';
+    card.appendChild(p);
+    return card;
+  }
+
+  // 各イベントを採点して下落大きい順
+  const rows = events
+    .map((ev) => ({ ev, res: eventStress(seriesMap, weights, ev.from, ev.to) }))
+    .sort((a, b) => {
+      const ra = a.res.ret == null ? Infinity : a.res.ret;
+      const rb = b.res.ret == null ? Infinity : b.res.ret;
+      return ra - rb; // 下落（負が大）が上
+    });
+
+  const table = document.createElement('div');
+  table.className = 'stress-table';
+  for (const { ev, res } of rows) {
+    const row = document.createElement('div');
+    row.className = 'stress-row';
+    const lowCov = res.coveragePct < 90;
+    const retTxt = res.ret == null ? '—' : `${(res.ret * 100).toFixed(1)}%`;
+    const retCls = res.ret != null && res.ret < 0 ? 'stress-neg' : '';
+    const covCls = lowCov ? 'stress-cov-low' : '';
+    row.innerHTML = `
+      <span class="stress-name" title="${escapeHTML(`${ev.from}〜${ev.to}${ev.note ? ` / ${ev.note}` : ''}`)}">${escapeHTML(ev.label)}</span>
+      <span class="stress-ret ${retCls}">${escapeHTML(retTxt)}</span>
+      <span class="stress-cov ${covCls}">cov ${Math.round(res.coveragePct)}%${lowCov ? ' ⚠' : ''}</span>`;
+    table.appendChild(row);
+  }
+  card.appendChild(table);
+
+  const note = document.createElement('div');
+  note.className = 'risk-coverage-note';
+  note.textContent = '実履歴 replay × 現ウェイトの what-if（実損益ではない）。窓内に価格が無い保有は除外・再正規化し coverage% に反映（<90% は注意）。履歴は保有限定 5y（IDB）。';
+  card.appendChild(note);
   return card;
 }
 
@@ -889,6 +1007,7 @@ function buildRiskGlossary() {
       <p><b>PFβ（ポートフォリオ・ベータ）</b>：各銘柄がPF全体に対しどれだけ敏感に動くか。市場ベンチマーク不要の履歴算出。</p>
       <p><b>リスク寄与（vol×|β|）</b>：ボラ×ベータ絶対値。PFリスクへの寄与が大きい銘柄ほど上位。</p>
       <p><b>出口日数</b>：保有を捌くのにかかる営業日数＝株数÷(平均出来高ADV×参加率)。5営業日超は流動性リスクとして警告。</p>
+      <p><b>ストレスシナリオ</b>：名前付きの過去暴落（円キャリー巻き戻し/DeepSeek/関税等）を、現在のPFウェイト×実履歴で当時のレンジを再生した「現PFが当時を再体験したら」の下落率。実損益ではない what-if。窓内に価格が無い後発IPO等は除外・再正規化し coverage%（<90%は注意）で明示。</p>
     </div>`;
   return d;
 }
@@ -929,6 +1048,11 @@ export async function renderRiskCharts() {
   // ── クオンツ・リスクカード（Phase 4b）────────────────────────────────────
   wrap.appendChild(await buildQuantCard(positions));
   // ── /クオンツ・リスクカード ──────────────────────────────────────────────
+
+  // ── ストレスシナリオ（名前付き歴史イベント・D-1）──────────────────────────
+  // 保有 5y を lazy 取得（IDB のみ）して現PFの what-if 下落を表示。
+  wrap.appendChild(await buildStressCard(positions));
+  // ── /ストレスシナリオ ────────────────────────────────────────────────────
 
   // 分類状況サマリーバー（#217）。各セグメントをホバーで内訳（銘柄一覧）表示。
   const sumInfo = getClassificationSummary(assets);
