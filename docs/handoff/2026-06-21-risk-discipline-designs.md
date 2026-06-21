@@ -51,6 +51,8 @@
 
 ## D-5 リバースDCF・目標株価乖離（A6）
 
+> ✅ **実装完了（2026-06-21・PR #437 マージ済）**＝`src/reverse-dcf.js`(impliedGrowth)・`data/scheduler/target-gap.mjs`(Yahoo targetMeanPrice→targetGapPct)・valuation-tab表示・テスト。
+
 ### 確定（2026-06-21・推奨ロック）
 - **①リバースDCF＝実装する・1段(Gordon)**。`impliedGrowth = (wacc − fcfYield) / (1 + fcfYield)`。入力は**既存の `value.fcfYield` ＋ WACC（米8%/日6%・確定済）だけ**＝外部データ追加ゼロ。対象は fcfYield を持つ**個別株のみ**（ETF/シクリカルは除外＝quality と同じ）。
   - verdict ドライバ「**期待過多**」：impliedGrowth が妥当域（例: 名目GDP+α、または過去FCF成長/アナリスト成長）を超えたらフラグ。
@@ -77,6 +79,8 @@
 - **低 n の confidence 下げ**：`numberOfAnalystOpinions` が小さい銘柄（例 8050.T=4）は targetGap の信頼度を下げる扱い（D-3 の低confidence と同型）。as-of 無し＝「Yahoo最新・週次更新」運用。
 
 ## D-4 的中率（verdict 答え合わせ）運用フロー（A5/5b）
+
+> ✅ **実装完了（2026-06-21・PR #438 マージ済）**＝`src/verdict-outcomes.js`(kind別hitRate/resolveOutcome)・`data/scheduler/hit-rate.mjs`・verdict-outcomes.json拡張・テスト。
 
 ### 現状
 `data/verdict-outcomes.json`（手動ログ）＋`src/verdict-outcomes.js` の `computeHitRate()` は在る（PR#400）。**欠けているのは pending→hit/miss の判定ルール**（今は人が勘で記入）。ログが**発議(action)と verdict(割安割高)を混在**させている。
