@@ -39,7 +39,9 @@ export function loadCacheFromSession() {
 export function saveCacheToSession() {
   try {
     const obj = { _v: SS_CACHE_VER };
-    for (const range of ['1y', '5y', '10y']) {
+    // 5y はストレス（D-1）用の重い系列（~2MB）。sessionStorage(~5MB) quota を圧迫するため
+    // 永続化は IDB のみとし、sessionStorage には載せない（#428）。
+    for (const range of ['1y', '10y']) {
       obj[range] = {};
       for (const [sym, entries] of Object.entries(state.historicalCache[range] || {})) {
         // Date → ISO string (JSON serializable)
