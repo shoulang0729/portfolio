@@ -5175,6 +5175,23 @@ function _withCacheBust(url) {
   return next.pathname.replace(/^\//, "") + next.search;
 }
 
+// src/reverse-dcf.js
+var IMPLIED_GROWTH_OVERHEAT_PCT = 7;
+function num(x) {
+  return typeof x === "number" && Number.isFinite(x);
+}
+function impliedGrowth(fcfYieldPct, waccPct) {
+  if (!num(fcfYieldPct) || !num(waccPct)) return null;
+  const fy = fcfYieldPct / 100;
+  const r = waccPct / 100;
+  const denom = 1 + fy;
+  if (denom === 0) return null;
+  return (r - fy) / denom * 100;
+}
+function isGrowthOverheated(igPct) {
+  return num(igPct) && igPct > IMPLIED_GROWTH_OVERHEAT_PCT;
+}
+
 // src/valuations.js
 var VAL_URL = "data/valuations.json";
 var _vals = {};
@@ -5227,6 +5244,13 @@ function computeVerdict(v) {
   const base = classifyVerdict(v);
   const pct = v != null && v.percentile != null ? v.percentile : null;
   base.confidence = base.class === "na" || pct == null ? null : computeConfidence(pct, v);
+  if (base.class !== "na") {
+    const fy = v && v.value ? v.value.fcfYield : null;
+    const wacc = v && v.quality ? v.quality.wacc : null;
+    if (isGrowthOverheated(impliedGrowth(fy, wacc))) {
+      base.drivers = [...base.drivers, "\u671F\u5F85\u904E\u591A"];
+    }
+  }
   return base;
 }
 function classifyVerdict(v) {
@@ -5545,12 +5569,19 @@ function line3HTML(val) {
     if (!val) return "";
     const v = val.value || {};
     const pctTxt = val.percentile != null && isFinite(val.percentile) ? `${Math.round(val.percentile)}%ile` : "\u2014";
+    const ig = v.cyclical === true ? null : impliedGrowth(v.fcfYield, val.quality && val.quality.wacc != null ? val.quality.wacc : null);
+    const igTxt = ig != null && isFinite(ig) ? `${fmt1(ig)}%` : "\u2014";
+    const tg = v.targetGapPct != null && isFinite(v.targetGapPct) ? v.targetGapPct : null;
+    const tgTxt = tg != null ? `${tg >= 0 ? "+" : ""}${fmt1(tg)}%` : "\u2014";
+    const tgCls = tg == null ? "" : tg >= 0 ? ' class="val-mom-up"' : ' class="val-mom-dn"';
     return `<div class="val-met">
       <span><b>PER</b> ${escapeHTML(fmtRaw(v.perTrail))}\u2192${escapeHTML(fmtRaw(v.perFwd))}</span>
       <span><b>PEG</b> ${escapeHTML(fmtRaw(v.peg))}</span>
       <span><b>EV/EBITDA</b> ${escapeHTML(fmtRaw(v.evEbitda))}</span>
       <span><b>FCF\u5229\u56DE\u308A</b> ${escapeHTML(fmtRaw(v.fcfYield))}%</span>
       <span><b>\u9084\u5143</b> ${escapeHTML(fmtRaw(v.shareholderYield))}%</span>
+      <span><b>\u7E54\u8FBC\u6210\u9577</b> ${escapeHTML(igTxt)}</span>
+      <span><b>\u76EE\u6A19\u4E56\u96E2</b> <span${tgCls}>${escapeHTML(tgTxt)}</span></span>
       <span><b>%\u30BF\u30A4\u30EB</b> ${escapeHTML(pctTxt)}</span>
     </div>`;
   }
