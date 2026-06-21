@@ -36,6 +36,86 @@ import {
   computeThemeUsage,
   computeGap,
 } from './target-allocation.js';
+import { computeTrueRegionExposure, japanHomeBias, REGION_LABELS } from './region-calc.js';
+
+/** D-6: region-map / region-weights のロードキャッシュ */
+let _regionData = null;
+async function loadRegionData() {
+  if (_regionData) return _regionData;
+  try {
+    const [mapRes, wRes] = await Promise.all([
+      fetch(`data/region-map.json?_=${Date.now()}`),
+      fetch(`data/region-weights.json?_=${Date.now()}`),
+    ]);
+    const mapJson = mapRes.ok ? await mapRes.json() : null;
+    const wJson = wRes.ok ? await wRes.json() : null;
+    _regionData = {
+      regionMap: (mapJson && mapJson.regions) || {},
+      regionWeights: wJson || { lookThrough: {}, weights: {} },
+      asOf: (wJson && wJson.asOf) || null,
+    };
+  } catch {
+    _regionData = { regionMap: {}, regionWeights: { lookThrough: {}, weights: {} }, asOf: null };
+  }
+  return _regionData;
+}
+
+/**
+ * D-6: 真の地域エクスポージャ（ルックスルー）カードを生成する。
+ * 筆頭＝日本 真% ｜ ACWIベンチ5% ｜ ホームバイアス +Xpt。
+ * @param {Array<{symbol?:string, ySymbol?:string, value?:number|null}>} holdings
+ * @returns {Promise<HTMLElement>}
+ */
+async function buildRegionCard(holdings) {
+  const { regionMap, regionWeights, asOf } = await loadRegionData();
+  const { pct } = computeTrueRegionExposure(holdings, regionMap, regionWeights);
+  const bias = japanHomeBias(pct);
+
+  const card = document.createElement('div');
+  card.className = 'risk-card region-card';
+
+  const title = document.createElement('div');
+  title.className = 'risk-card-title';
+  title.textContent = '地域エクスポージャ（ルックスルー）';
+  card.appendChild(title);
+
+  // 筆頭カード: 日本の真% / ベンチ / ホームバイアス
+  const hero = document.createElement('div');
+  hero.className = 'region-hero';
+  const biasSign = bias.biasPt >= 0 ? '+' : '';
+  const biasCls = bias.biasPt >= 0 ? 'region-bias-over' : 'region-bias-under';
+  hero.innerHTML = `
+    <div class="region-hero-main"><span class="region-hero-k">日本 真%</span><span class="region-hero-v">${bias.japanPct.toFixed(1)}%</span></div>
+    <div class="region-hero-sub">ACWIベンチ ${bias.benchPct}% ｜ ホームバイアス <span class="${biasCls}">${biasSign}${bias.biasPt.toFixed(1)}pt</span></div>`;
+  card.appendChild(hero);
+
+  // 全地域の真% リスト（降順）
+  const list = document.createElement('ul');
+  list.className = 'region-list';
+  const rows = Object.entries(pct).sort((a, b) => b[1] - a[1]);
+  for (const [region, p] of rows) {
+    const li = document.createElement('li');
+    li.className = 'region-list-item';
+    const name = document.createElement('span');
+    name.className = 'region-name';
+    name.textContent = REGION_LABELS[region] || region;
+    const val = document.createElement('span');
+    val.className = 'region-pct';
+    val.textContent = `${p.toFixed(1)}%`;
+    li.appendChild(name);
+    li.appendChild(val);
+    list.appendChild(li);
+  }
+  card.appendChild(list);
+
+  // 鮮度・方式注記
+  const note = document.createElement('div');
+  note.className = 'risk-coverage-note';
+  note.textContent = `直接タグ＋ルックスルー按分（オルカン/ひふみ/ひふみXO）。地域構成比は静的（鮮度 ${asOf || '—'}・四半期更新）。VGK/2800.HK は未保有＝0%。`;
+  card.appendChild(note);
+
+  return card;
+}
 
 /** 軸ごとのタイトル */
 const TITLES = {
@@ -878,6 +958,11 @@ export async function renderRiskCharts() {
     grid.appendChild(buildChartCard(dim, breakdown[dim], sourceSummary[dim]));
   }
   wrap.appendChild(grid);
+
+  // ── 地域エクスポージャ（ルックスルー・D-6）────────────────────────────────
+  // 真の地域配分（特に日本のホームバイアス）を可視化。証券保有のみ対象。
+  wrap.appendChild(await buildRegionCard(positions));
+  // ── /地域エクスポージャ ──────────────────────────────────────────────────
 
   // データソース明記（#214）＋ 手動入力データの引用元（現金・ひふみ等）
   const src = document.createElement('div');

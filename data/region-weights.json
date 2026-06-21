@@ -1,0 +1,22 @@
+{
+  "asOf": "2026-06-21",
+  "note": "ルックスルー対象ファンドの地域構成比（静的・四半期手動更新）。鮮度は asOf 参照。案C 限定＝オルカン(ACWI)/ひふみXO(ACWI同比)/ひふみ投信(日本中心)の3本のみ按分。EM は近似で em_asia に寄せた。精密な EM/香港按分は次フェーズ。",
+  "lookThrough": {
+    "オルカン": "ACWI",
+    "ひふみXO": "ACWI",
+    "ひふみ": "ひふみ投信"
+  },
+  "weights": {
+    "ACWI": {
+      "north_america": 63,
+      "japan": 5,
+      "europe": 15,
+      "em_asia": 12,
+      "global": 5
+    },
+    "ひふみ投信": {
+      "japan": 95,
+      "north_america": 5
+    }
+  }
+}
