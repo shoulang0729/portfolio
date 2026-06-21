@@ -4398,7 +4398,126 @@ function computeGap(symbol, currentPct) {
   return { symbol, currentPct, targetPct, gapPct };
 }
 
+// src/region-calc.js
+var REGION_LABELS = {
+  japan: "\u65E5\u672C",
+  north_america: "\u5317\u7C73",
+  europe: "\u6B27\u5DDE",
+  em_latam: "\u4E2D\u5357\u7C73",
+  em_asia: "\u30A2\u30B8\u30A2\u65B0\u8208",
+  china_hk: "\u4E2D\u56FD\u30FB\u9999\u6E2F",
+  global: "\u30B0\u30ED\u30FC\u30D0\u30EB/\u305D\u306E\u4ED6",
+  commodity_cash: "\u30B3\u30E2\u30C7\u30A3\u30C6\u30A3/\u73FE\u91D1",
+  unknown: "\u672A\u5206\u985E"
+};
+var ACWI_JAPAN_PCT = 5;
+function num(x) {
+  return typeof x === "number" && Number.isFinite(x);
+}
+function computeTrueRegionExposure(holdings, regionMap, regionWeights) {
+  const regions = {};
+  const lookThrough = regionWeights && regionWeights.lookThrough || {};
+  const weights = regionWeights && regionWeights.weights || {};
+  const map = regionMap || {};
+  const add = (region, amt) => {
+    if (!num(amt) || amt === 0) return;
+    regions[region] = (regions[region] || 0) + amt;
+  };
+  for (const h of holdings || []) {
+    const amt = num(h && h.value) ? h.value : 0;
+    if (amt === 0) continue;
+    const sym = h.symbol;
+    const ysym = h.ySymbol;
+    const profileId = sym != null && lookThrough[sym] || ysym != null && lookThrough[ysym] || null;
+    if (profileId && weights[profileId]) {
+      const profile = weights[profileId];
+      const sum = Object.values(profile).reduce((s, w) => s + (num(w) ? w : 0), 0);
+      if (sum > 0) {
+        for (const [region, w] of Object.entries(profile)) {
+          if (num(w) && w > 0) add(region, amt * w / sum);
+        }
+        continue;
+      }
+    }
+    const tag = sym != null && map[sym] || ysym != null && map[ysym] || "unknown";
+    add(tag, amt);
+  }
+  const total = Object.values(regions).reduce((s, v) => s + v, 0);
+  const pct = {};
+  if (total > 0) {
+    for (const [region, amt] of Object.entries(regions)) {
+      pct[region] = amt / total * 100;
+    }
+  }
+  return { regions, total, pct };
+}
+function japanHomeBias(pct) {
+  const japanPct = num(pct && pct.japan) ? pct.japan : 0;
+  return { japanPct, benchPct: ACWI_JAPAN_PCT, biasPt: japanPct - ACWI_JAPAN_PCT };
+}
+
 // src/risk-charts.js
+var _regionData = null;
+async function loadRegionData() {
+  if (_regionData) return _regionData;
+  try {
+    const [mapRes, wRes] = await Promise.all([
+      fetch(`data/region-map.json?_=${Date.now()}`),
+      fetch(`data/region-weights.json?_=${Date.now()}`)
+    ]);
+    const mapJson = mapRes.ok ? await mapRes.json() : null;
+    const wJson = wRes.ok ? await wRes.json() : null;
+    _regionData = {
+      regionMap: mapJson && mapJson.regions || {},
+      regionWeights: wJson || { lookThrough: {}, weights: {} },
+      asOf: wJson && wJson.asOf || null
+    };
+  } catch {
+    _regionData = { regionMap: {}, regionWeights: { lookThrough: {}, weights: {} }, asOf: null };
+  }
+  return _regionData;
+}
+async function buildRegionCard(holdings) {
+  const { regionMap, regionWeights, asOf } = await loadRegionData();
+  const { pct } = computeTrueRegionExposure(holdings, regionMap, regionWeights);
+  const bias = japanHomeBias(pct);
+  const card = document.createElement("div");
+  card.className = "risk-card region-card";
+  const title = document.createElement("div");
+  title.className = "risk-card-title";
+  title.textContent = "\u5730\u57DF\u30A8\u30AF\u30B9\u30DD\u30FC\u30B8\u30E3\uFF08\u30EB\u30C3\u30AF\u30B9\u30EB\u30FC\uFF09";
+  card.appendChild(title);
+  const hero = document.createElement("div");
+  hero.className = "region-hero";
+  const biasSign = bias.biasPt >= 0 ? "+" : "";
+  const biasCls = bias.biasPt >= 0 ? "region-bias-over" : "region-bias-under";
+  hero.innerHTML = `
+    <div class="region-hero-main"><span class="region-hero-k">\u65E5\u672C \u771F%</span><span class="region-hero-v">${bias.japanPct.toFixed(1)}%</span></div>
+    <div class="region-hero-sub">ACWI\u30D9\u30F3\u30C1 ${bias.benchPct}% \uFF5C \u30DB\u30FC\u30E0\u30D0\u30A4\u30A2\u30B9 <span class="${biasCls}">${biasSign}${bias.biasPt.toFixed(1)}pt</span></div>`;
+  card.appendChild(hero);
+  const list = document.createElement("ul");
+  list.className = "region-list";
+  const rows = Object.entries(pct).sort((a, b) => b[1] - a[1]);
+  for (const [region, p] of rows) {
+    const li = document.createElement("li");
+    li.className = "region-list-item";
+    const name = document.createElement("span");
+    name.className = "region-name";
+    name.textContent = REGION_LABELS[region] || region;
+    const val = document.createElement("span");
+    val.className = "region-pct";
+    val.textContent = `${p.toFixed(1)}%`;
+    li.appendChild(name);
+    li.appendChild(val);
+    list.appendChild(li);
+  }
+  card.appendChild(list);
+  const note = document.createElement("div");
+  note.className = "risk-coverage-note";
+  note.textContent = `\u76F4\u63A5\u30BF\u30B0\uFF0B\u30EB\u30C3\u30AF\u30B9\u30EB\u30FC\u6309\u5206\uFF08\u30AA\u30EB\u30AB\u30F3/\u3072\u3075\u307F/\u3072\u3075\u307FXO\uFF09\u3002\u5730\u57DF\u69CB\u6210\u6BD4\u306F\u9759\u7684\uFF08\u9BAE\u5EA6 ${asOf || "\u2014"}\u30FB\u56DB\u534A\u671F\u66F4\u65B0\uFF09\u3002VGK/2800.HK \u306F\u672A\u4FDD\u6709\uFF1D0%\u3002`;
+  card.appendChild(note);
+  return card;
+}
 var TITLES = {
   assetClass: "\u30A2\u30BB\u30C3\u30C8\u30AF\u30E9\u30B9",
   currency: "\u901A\u8CA8",
@@ -5006,6 +5125,7 @@ async function renderRiskCharts() {
     grid.appendChild(buildChartCard(dim, breakdown[dim], sourceSummary[dim]));
   }
   wrap.appendChild(grid);
+  wrap.appendChild(await buildRegionCard(positions));
   const src = document.createElement("div");
   src.className = "risk-source";
   const baseSrc = "\u30C7\u30FC\u30BF\u30BD\u30FC\u30B9: \u4FA1\u683C = Finnhub / Yahoo Finance \u30FB \u30A2\u30BB\u30C3\u30C8\u30AF\u30E9\u30B9/\u901A\u8CA8/\u56FD/\u30BB\u30AF\u30BF\u30FC\u5206\u985E = \u9298\u67C4\u30DE\u30B9\u30BF\uFF08positions.js\u30FBconstituents.js\uFF09";
@@ -5177,11 +5297,11 @@ function _withCacheBust(url) {
 
 // src/reverse-dcf.js
 var IMPLIED_GROWTH_OVERHEAT_PCT = 7;
-function num(x) {
+function num2(x) {
   return typeof x === "number" && Number.isFinite(x);
 }
 function impliedGrowth(fcfYieldPct, waccPct) {
-  if (!num(fcfYieldPct) || !num(waccPct)) return null;
+  if (!num2(fcfYieldPct) || !num2(waccPct)) return null;
   const fy = fcfYieldPct / 100;
   const r = waccPct / 100;
   const denom = 1 + fy;
@@ -5189,7 +5309,7 @@ function impliedGrowth(fcfYieldPct, waccPct) {
   return (r - fy) / denom * 100;
 }
 function isGrowthOverheated(igPct) {
-  return num(igPct) && igPct > IMPLIED_GROWTH_OVERHEAT_PCT;
+  return num2(igPct) && igPct > IMPLIED_GROWTH_OVERHEAT_PCT;
 }
 
 // src/valuations.js
