@@ -767,6 +767,30 @@
 .val-gloss-body p { font-size: 11.5px; color: var(--text2); margin: 8px 0 0; line-height: 1.5; }
 .val-gloss-body b { color: var(--text); font-weight: 700; }
 
+/* ── 用語解説 リッチ版（#445・二段アコーディオン: 外側=タブ全体 / 内側=カテゴリ別） ── */
+.gloss {
+  margin-top: 16px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--surface); overflow: hidden;
+}
+.gloss > summary {
+  padding: 10px 14px; font-size: 12px; font-weight: 700; color: var(--text);
+  cursor: pointer; list-style: none;
+}
+.gloss > summary::-webkit-details-marker { display: none; }
+.gloss-body { padding: 0 8px 8px; }
+.gloss-cat { border-top: 1px solid var(--border2); }
+.gloss-cat:first-child { border-top: none; }
+.gloss-cat > summary {
+  padding: 9px 6px; font-size: 11.5px; font-weight: 600; color: var(--text);
+  cursor: pointer; list-style: none;
+}
+.gloss-cat > summary::-webkit-details-marker { display: none; }
+.gloss-cat > summary::before { content: '▸ '; color: var(--text3); }
+.gloss-cat[open] > summary::before { content: '▾ '; }
+.gloss-cat-body { padding: 0 6px 10px; }
+.gloss-cat-body p { font-size: 11.5px; color: var(--text2); margin: 8px 0 0; line-height: 1.5; }
+.gloss-cat-body b { color: var(--text); font-weight: 700; }
+
 /* ── Risk overview (Phase 4 v1) ── */
 .risk-overview {
   background: var(--surface);

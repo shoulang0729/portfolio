@@ -25,6 +25,7 @@ import {
 import { loadMfHoldings, getMfTotals } from './networth.js';
 import { loadValuations, getValuation, computeVerdict, valuationsLoaded } from './valuations.js';
 import { impliedGrowth } from './reverse-dcf.js';
+import { glossaryHTML } from './glossary.js';
 import { loadTriggers, triggersLoaded, getTriggers, evaluateTriggers } from './triggers.js';
 import { loadVerdictOutcomes, outcomesLoaded, computeHitRate } from './verdict-outcomes.js';
 import { getAllHistorical } from './historical-cache.js';
@@ -424,24 +425,6 @@ function lensCap(lens) {
 }
 
 /**
- * Value タブ下部に常設する用語解説（タップ開閉・CSP安全な native details）。
- * @returns {string}
- */
-function glossaryHTML() {
-  return `<details class="val-gloss">
-    <summary>用語解説</summary>
-    <div class="val-gloss-body">
-      <p><b>Verdict（正体）</b>：PERの割安/割高の「位置」と利益の「向き」を合成した結論。本物の割安/割高（行動できる）、見せかけ(フェア)＝割安/割高に見えて実態フェア、罠＝割安の罠/一過性益、中立、-（シクリカル＝PER採点外）の7種。</p>
-      <p><b>PER 例: 52→38（実績→予想）</b>：左＝実績PER（過去12カ月）、右＝予想PER（来期予想）。右が小さい＝来期利益が増える見込み。向きが最重要シグナル。</p>
-      <p><b>PEG</b>：PER ÷ 利益成長率。1未満＝割安寄り、3超＝割高。成長を加味した割高度。</p>
-      <p><b>Fスコア（0〜9点・Piotroski）</b>：収益性・財務・効率の9項目を各1点で採点。7〜9＝健全、0〜2＝危険（罠濃厚）。割安が「本物か罠か」の品質点。</p>
-      <p><b>判定確度</b>：エンジンのVerdict判定がどれだけ信頼できるか（データ充足＋シグナル一致＋境界余裕）。確信度（自分の自信＝サイズ入力）とは別物。</p>
-      <p><b>確信度</b>：自分の主観的な自信。打診/標準/高確信で適正サイズ（%）を決める入力。サイズバーの適正マーカー脇に表示。</p>
-    </div>
-  </details>`;
-}
-
-/**
  * Value タブを描画する。_lens に応じてソート・メトリクスを切り替える。
  * @returns {Promise<void>}
  */
@@ -580,7 +563,7 @@ export async function renderValuationTab() {
     .map((r) => rowHTML(r.p, r.currentPct, r.targetPct, r.verdict, r.val, r.trig, r.conviction))
     .join('');
 
-  wrap.innerHTML = `${statsHTML}${lensHTML}<div class="val-list">${rowsHTML}</div>${glossaryHTML()}`;
+  wrap.innerHTML = `${statsHTML}${lensHTML}<div class="val-list">${rowsHTML}</div>${glossaryHTML('value')}`;
 
   // ピルのクリックで _lens を更新して再描画（CSP 安全な addEventListener）
   wrap.querySelectorAll('.val-seg[data-lens]').forEach((btn) => {
