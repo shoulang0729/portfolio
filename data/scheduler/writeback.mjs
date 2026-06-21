@@ -5,12 +5,14 @@ import { readFileSync, writeFileSync } from 'fs';
 // writeback.mjs ―― valuations.json の単層ブロック（quality / value 等）だけを
 // 元フォーマット（インライン配列・既存インデント）を保ったまま書き換える。
 //
-// JSON.parse → JSON.stringify(doc,2) で全体を書き直すと、手で書かれた
-// インライン配列（"drivers": ["a","b"] 等）が全展開され巨大な無関係 diff に
-// なる。そこで生テキストに対し対象シンボルの該当ブロックだけを差し替える。
+// JSON.parse → JSON.stringify(doc,N) で全体を書き直すと、手書きのインライン配列
+// （"drivers": ["a","b"] 等）が全展開され巨大な無関係 diff になる。そこで生テキストに
+// 対し対象シンボルの該当ブロックだけを差し替える。
 //
+// インデント幅はファイルから動的検出する（別プロセスが 1スペース/2スペース等で
+// 再フォーマットしても追従するため。実際 briefing 生成バッチが 1スペースに再整形した）。
 // 対象ブロックは入れ子のない単層オブジェクト（quality / value）を想定。
-// 既存ブロックがあれば置換、無ければエントリ先頭に挿入する。
+// 既存ブロックがあれば置換、無ければエントリ先頭フィールドとして挿入する。
 // ══════════════════════════════════════════════════════════════
 
 /** 正規表現用にメタ文字をエスケープ。 */
@@ -20,6 +22,7 @@ function escapeRe(s) {
 
 /**
  * 各シンボルの単層ブロック（blockKey）を差し替え／挿入して書き戻す。
+ * インデントは各エントリの実際の字下げから検出する。
  * @param {string} path  valuations.json のパス
  * @param {Record<string, object>} results  { symbol: blockObj }
  * @param {string} blockKey  'quality' | 'value' 等の単層ブロックキー
@@ -30,23 +33,29 @@ export function writeBlocks(path, results, blockKey) {
   let updated = 0;
 
   for (const [sym, block] of Object.entries(results)) {
-    // エントリ開始（4スペースインデントのキー） "SYM": {
-    const keyRe = new RegExp(`\\n    "${escapeRe(sym)}": \\{`);
+    // エントリ開始 "SYM": {（行頭の字下げを捕捉）
+    const keyRe = new RegExp(`\\n([ \\t]*)"${escapeRe(sym)}":\\s*\\{`);
     const km = keyRe.exec(raw);
     if (!km) {
       console.warn(`  [writeback] ${sym}: エントリが見つかりません（スキップ）`);
       continue;
     }
-    const entryOpenEnd = km.index + km[0].length; // "SYM": { の直後
+    const entryIndent = km[1]; // 例: 1スペースファイルなら "  "（2スペース）
+    const entryOpenEnd = km.index + km[0].length;
 
-    // 次のトップレベルキーまでを当該エントリの範囲とする
-    const nextRe = /\n {4}"[^"]+": \{/g;
+    // 同じ字下げの次のキー＝当該エントリの終端
+    const nextRe = new RegExp(`\\n${entryIndent}"[^"]+":\\s*\\{`, 'g');
     nextRe.lastIndex = entryOpenEnd;
     const nm = nextRe.exec(raw);
     const entryEnd = nm ? nm.index : raw.length;
 
-    // 6スペースインデントの値（キー行は8スペース・閉じ } は6スペースになる）
-    const body = JSON.stringify(block, null, 2).replace(/\n/g, '\n      ');
+    // フィールド字下げ（エントリ開始直後の最初の字下げ）からインデント単位を検出
+    const fieldM = /\n([ \t]+)\S/.exec(raw.slice(entryOpenEnd, entryEnd));
+    const fieldIndent = fieldM ? fieldM[1] : `${entryIndent}  `;
+    const unitLen = Math.max(1, fieldIndent.length - entryIndent.length);
+
+    // ブロック値を unit 幅で直列化し、各行頭に fieldIndent を付与（ブロックは入れ子なし）
+    const body = JSON.stringify(block, null, unitLen).replace(/\n/g, `\n${fieldIndent}`);
 
     const bIdx = raw.indexOf(`"${blockKey}":`, entryOpenEnd);
     if (bIdx !== -1 && bIdx < entryEnd) {
@@ -60,7 +69,7 @@ export function writeBlocks(path, results, blockKey) {
       raw = raw.slice(0, braceStart) + body + raw.slice(braceEnd + 1);
     } else {
       // ブロックが無ければエントリ先頭フィールドとして挿入（キー順は JSON 上不問）
-      const insertion = `\n      "${blockKey}": ${body},`;
+      const insertion = `\n${fieldIndent}"${blockKey}": ${body},`;
       raw = raw.slice(0, entryOpenEnd) + insertion + raw.slice(entryOpenEnd);
     }
     updated++;

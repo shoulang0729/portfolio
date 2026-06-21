@@ -174,7 +174,9 @@ function line3HTML(val) {
     const v = val.value || {};
     const pctTxt = val.percentile != null && isFinite(val.percentile) ? `${Math.round(val.percentile)}%ile` : '—';
     // D-5: 織り込み成長率（リバースDCF）と目標株価乖離
-    const ig = impliedGrowth(v.fcfYield, val.quality && val.quality.wacc != null ? val.quality.wacc : null);
+    // 1段Gordon は永久一定成長前提＝シクリカルには不適 → cyclical は impliedGrowth を出さない。
+    const ig =
+      v.cyclical === true ? null : impliedGrowth(v.fcfYield, val.quality && val.quality.wacc != null ? val.quality.wacc : null);
     const igTxt = ig != null && isFinite(ig) ? `${fmt1(ig)}%` : '—';
     const tg = v.targetGapPct != null && isFinite(v.targetGapPct) ? v.targetGapPct : null;
     const tgTxt = tg != null ? `${tg >= 0 ? '+' : ''}${fmt1(tg)}%` : '—';
