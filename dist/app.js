@@ -534,6 +534,7 @@ var _AUTH_PIN_HASH_4DIG = "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f
 var AUTH_SESSION_KEY = "hm-auth-v1";
 var AUTH_LS_HASH_KEY = "hm-pin-hash";
 var AUTH_LOCKOUT_KEY = "hm-lockout";
+var AUTH_FAILS_KEY = "hm-pin-fails";
 var AUTH_PIN_LEN = 6;
 var AUTH_MAX_FAIL = 5;
 var AUTH_LOCK_SEC = 300;
@@ -580,12 +581,19 @@ function _formatLockRemain(seconds) {
 function _saveLockout() {
   if (_auth.lockedUntil != null) {
     localStorage.setItem(AUTH_LOCKOUT_KEY, String(_auth.lockedUntil));
+    localStorage.setItem(AUTH_FAILS_KEY, String(_auth.fails));
   } else {
     localStorage.removeItem(AUTH_LOCKOUT_KEY);
+    localStorage.removeItem(AUTH_FAILS_KEY);
   }
 }
 (function _loadLockout() {
   const stored = localStorage.getItem(AUTH_LOCKOUT_KEY);
+  const storedFails = localStorage.getItem(AUTH_FAILS_KEY);
+  if (storedFails) {
+    const fails = parseInt(storedFails, 10);
+    if (!isNaN(fails)) _auth.fails = fails;
+  }
   if (!stored) return;
   const until = parseInt(stored, 10);
   if (isNaN(until)) {
@@ -596,6 +604,8 @@ function _saveLockout() {
     _auth.lockedUntil = until;
   } else {
     localStorage.removeItem(AUTH_LOCKOUT_KEY);
+    localStorage.removeItem(AUTH_FAILS_KEY);
+    _auth.fails = 0;
   }
 })();
 
@@ -997,6 +1007,7 @@ async function _submitPin() {
   const hash = await _hashPin(_auth.input);
   if (hash === activeHash) {
     _auth.fails = 0;
+    localStorage.removeItem(AUTH_FAILS_KEY);
     sessionStorage.setItem(AUTH_SESSION_KEY, "1");
     await _deriveEncKey(_auth.input);
     _shake("success");
@@ -1014,6 +1025,7 @@ async function _submitPin() {
     }, 350);
   } else {
     _auth.fails++;
+    localStorage.setItem(AUTH_FAILS_KEY, String(_auth.fails));
     _auth.input = "";
     _updateDots();
     _shake("shake");
