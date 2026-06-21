@@ -273,12 +273,12 @@ function _olderAsOf(a, b) {
 
 /**
  * 日次リターン系列を計算する。
- * @param {Array<{date: Date, close: number}>} series  昇順 close 系列
- * @returns {Array<{date: Date, r: number}>}  各営業日のリターン。要素数 <2 なら []。
+ * @param {Array<{date: Date|string, close: number}>} series  昇順 close 系列
+ * @returns {Array<{date: Date|string, r: number}>}  各営業日のリターン。要素数 <2 なら []。
  */
 export function dailyReturns(series) {
   if (!Array.isArray(series) || series.length < 2) return [];
-  /** @type {Array<{date: Date, r: number}>} */
+  /** @type {Array<{date: Date|string, r: number}>} */
   const out = [];
   for (let i = 1; i < series.length; i++) {
     const prev = series[i - 1];
