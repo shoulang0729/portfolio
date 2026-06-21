@@ -24,6 +24,7 @@ import {
 } from './target-allocation.js';
 import { loadMfHoldings, getMfTotals } from './networth.js';
 import { loadValuations, getValuation, computeVerdict, valuationsLoaded } from './valuations.js';
+import { impliedGrowth } from './reverse-dcf.js';
 import { loadTriggers, triggersLoaded, getTriggers, evaluateTriggers } from './triggers.js';
 import { loadVerdictOutcomes, outcomesLoaded, computeHitRate } from './verdict-outcomes.js';
 import { getAllHistorical } from './historical-cache.js';
@@ -172,12 +173,22 @@ function line3HTML(val) {
     if (!val) return '';
     const v = val.value || {};
     const pctTxt = val.percentile != null && isFinite(val.percentile) ? `${Math.round(val.percentile)}%ile` : '—';
+    // D-5: 織り込み成長率（リバースDCF）と目標株価乖離
+    // 1段Gordon は永久一定成長前提＝シクリカルには不適 → cyclical は impliedGrowth を出さない。
+    const ig =
+      v.cyclical === true ? null : impliedGrowth(v.fcfYield, val.quality && val.quality.wacc != null ? val.quality.wacc : null);
+    const igTxt = ig != null && isFinite(ig) ? `${fmt1(ig)}%` : '—';
+    const tg = v.targetGapPct != null && isFinite(v.targetGapPct) ? v.targetGapPct : null;
+    const tgTxt = tg != null ? `${tg >= 0 ? '+' : ''}${fmt1(tg)}%` : '—';
+    const tgCls = tg == null ? '' : tg >= 0 ? ' class="val-mom-up"' : ' class="val-mom-dn"';
     return `<div class="val-met">
       <span><b>PER</b> ${escapeHTML(fmtRaw(v.perTrail))}→${escapeHTML(fmtRaw(v.perFwd))}</span>
       <span><b>PEG</b> ${escapeHTML(fmtRaw(v.peg))}</span>
       <span><b>EV/EBITDA</b> ${escapeHTML(fmtRaw(v.evEbitda))}</span>
       <span><b>FCF利回り</b> ${escapeHTML(fmtRaw(v.fcfYield))}%</span>
       <span><b>還元</b> ${escapeHTML(fmtRaw(v.shareholderYield))}%</span>
+      <span><b>織込成長</b> ${escapeHTML(igTxt)}</span>
+      <span><b>目標乖離</b> <span${tgCls}>${escapeHTML(tgTxt)}</span></span>
       <span><b>%タイル</b> ${escapeHTML(pctTxt)}</span>
     </div>`;
   }
