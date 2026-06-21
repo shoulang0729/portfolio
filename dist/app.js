@@ -1841,7 +1841,7 @@ function loadCacheFromSession() {
 function saveCacheToSession() {
   try {
     const obj = { _v: SS_CACHE_VER };
-    for (const range of ["1y", "5y", "10y"]) {
+    for (const range of ["1y", "10y"]) {
       obj[range] = {};
       for (const [sym, entries] of Object.entries(state.historicalCache[range] || {})) {
         obj[range][sym] = entries.map((e) => ({
@@ -4267,6 +4267,58 @@ function computePortfolioReturns(alignedBySym, weights) {
   }
   return port;
 }
+function _dateStr(d) {
+  return d instanceof Date ? d.toISOString().slice(0, 10) : String(d).slice(0, 10);
+}
+function eventStress(seriesMap, weights, fromDate, toDate) {
+  const from = Date.parse(fromDate);
+  const to = Date.parse(toDate);
+  const empty = { ret: null, coveragePct: 0, missing: [], usableFrom: null, usableTo: null };
+  if (!weights || Number.isNaN(from) || Number.isNaN(to) || from > to) return empty;
+  const windowed = {};
+  let totalW = 0;
+  let coveredW = 0;
+  const missing = [];
+  for (const [sym, w] of Object.entries(weights)) {
+    if (!(w > 0)) continue;
+    totalW += w;
+    const series = seriesMap && seriesMap[sym];
+    const inWin = Array.isArray(series) ? series.filter((p) => {
+      const t = p.date instanceof Date ? p.date.getTime() : Date.parse(p.date);
+      return !Number.isNaN(t) && t >= from && t <= to;
+    }) : [];
+    if (inWin.length >= 2) {
+      windowed[sym] = inWin;
+      coveredW += w;
+    } else {
+      missing.push(sym);
+    }
+  }
+  const coveragePct = totalW > 0 ? coveredW / totalW * 100 : 0;
+  const syms = Object.keys(windowed);
+  if (syms.length === 0) return { ...empty, coveragePct, missing };
+  const bySymDate = {};
+  for (const sym of syms) {
+    bySymDate[sym] = {};
+    for (const { date, r } of dailyReturns(windowed[sym])) bySymDate[sym][_dateStr(date)] = r;
+  }
+  const sets = syms.map((s) => new Set(Object.keys(bySymDate[s])));
+  const commonDates = [...sets[0]].filter((d) => sets.every((set) => set.has(d))).sort();
+  if (commonDates.length < 1) return { ...empty, coveragePct, missing };
+  const alignedBySym = {};
+  for (const sym of syms) alignedBySym[sym] = commonDates.map((d) => bySymDate[sym][d]);
+  const port = computePortfolioReturns(alignedBySym, weights);
+  if (port.length === 0) return { ...empty, coveragePct, missing };
+  let compound = 1;
+  for (const r of port) compound *= 1 + r;
+  return {
+    ret: compound - 1,
+    coveragePct,
+    missing,
+    usableFrom: commonDates[0],
+    usableTo: commonDates[commonDates.length - 1]
+  };
+}
 
 // src/liquidity-calc.js
 var ADV_WINDOW = 20;
@@ -4515,6 +4567,90 @@ async function buildRegionCard(holdings) {
   const note = document.createElement("div");
   note.className = "risk-coverage-note";
   note.textContent = `\u76F4\u63A5\u30BF\u30B0\uFF0B\u30EB\u30C3\u30AF\u30B9\u30EB\u30FC\u6309\u5206\uFF08\u30AA\u30EB\u30AB\u30F3/\u3072\u3075\u307F/\u3072\u3075\u307FXO\uFF09\u3002\u5730\u57DF\u69CB\u6210\u6BD4\u306F\u9759\u7684\uFF08\u9BAE\u5EA6 ${asOf || "\u2014"}\u30FB\u56DB\u534A\u671F\u66F4\u65B0\uFF09\u3002VGK/2800.HK \u306F\u672A\u4FDD\u6709\uFF1D0%\u3002`;
+  card.appendChild(note);
+  return card;
+}
+var _stressEvents = null;
+async function loadStressEvents() {
+  if (_stressEvents) return _stressEvents;
+  try {
+    const r = await fetch(`data/stress-events.json?_=${Date.now()}`);
+    const j = r.ok ? await r.json() : null;
+    _stressEvents = j && Array.isArray(j.events) ? j.events : [];
+  } catch {
+    _stressEvents = [];
+  }
+  return _stressEvents;
+}
+async function ensureStressHistory(symbols) {
+  let cached = {};
+  try {
+    cached = await getAllHistorical("5y");
+  } catch {
+    cached = {};
+  }
+  if (!state.historicalCache["5y"]) state.historicalCache["5y"] = {};
+  for (const [sym, entries] of Object.entries(cached)) state.historicalCache["5y"][sym] = entries;
+  const missing = symbols.filter((s) => !Array.isArray(state.historicalCache["5y"][s]) || state.historicalCache["5y"][s].length < 2);
+  if (missing.length) {
+    await batchWithRetry(missing, (s) => fetchSymbolHistory(s, "5y"), { batchSize: 6, delayMs: 1100 });
+  }
+  return state.historicalCache["5y"] || {};
+}
+async function buildStressCard(holdings) {
+  const card = document.createElement("div");
+  card.className = "risk-card stress-card";
+  const title = document.createElement("div");
+  title.className = "risk-card-title";
+  title.textContent = "\u30B9\u30C8\u30EC\u30B9\u30B7\u30CA\u30EA\u30AA\uFF08\u73FEPF\u304C\u5F53\u6642\u3092\u518D\u4F53\u9A13\u3057\u305F\u3089\uFF09";
+  card.appendChild(title);
+  const events = await loadStressEvents();
+  if (events.length === 0) {
+    const p = document.createElement("p");
+    p.className = "risk-coverage-note";
+    p.textContent = "\u30A4\u30D9\u30F3\u30C8\u30AB\u30BF\u30ED\u30B0\u672A\u53D6\u5F97\u3002";
+    card.appendChild(p);
+    return card;
+  }
+  const weights = {};
+  for (const p of holdings) {
+    if (p.ySymbol) weights[p.ySymbol] = (weights[p.ySymbol] || 0) + (p.value || 0);
+  }
+  const symbols = Object.keys(weights);
+  let seriesMap;
+  try {
+    seriesMap = await ensureStressHistory(symbols);
+  } catch {
+    const p = document.createElement("p");
+    p.className = "risk-coverage-note";
+    p.textContent = "5y\u5C65\u6B74\u306E\u53D6\u5F97\u306B\u5931\u6557\u3057\u307E\u3057\u305F\uFF08\u6642\u9593\u3092\u304A\u3044\u3066\u518D\u8868\u793A\u3057\u3066\u304F\u3060\u3055\u3044\uFF09\u3002";
+    card.appendChild(p);
+    return card;
+  }
+  const rows = events.map((ev) => ({ ev, res: eventStress(seriesMap, weights, ev.from, ev.to) })).sort((a, b) => {
+    const ra = a.res.ret == null ? Infinity : a.res.ret;
+    const rb = b.res.ret == null ? Infinity : b.res.ret;
+    return ra - rb;
+  });
+  const table = document.createElement("div");
+  table.className = "stress-table";
+  for (const { ev, res } of rows) {
+    const row = document.createElement("div");
+    row.className = "stress-row";
+    const lowCov = res.coveragePct < 90;
+    const retTxt = res.ret == null ? "\u2014" : `${(res.ret * 100).toFixed(1)}%`;
+    const retCls = res.ret != null && res.ret < 0 ? "stress-neg" : "";
+    const covCls = lowCov ? "stress-cov-low" : "";
+    row.innerHTML = `
+      <span class="stress-name" title="${escapeHTML(`${ev.from}\u301C${ev.to}${ev.note ? ` / ${ev.note}` : ""}`)}">${escapeHTML(ev.label)}</span>
+      <span class="stress-ret ${retCls}">${escapeHTML(retTxt)}</span>
+      <span class="stress-cov ${covCls}">cov ${Math.round(res.coveragePct)}%${lowCov ? " \u26A0" : ""}</span>`;
+    table.appendChild(row);
+  }
+  card.appendChild(table);
+  const note = document.createElement("div");
+  note.className = "risk-coverage-note";
+  note.textContent = "\u5B9F\u5C65\u6B74 replay \xD7 \u73FE\u30A6\u30A7\u30A4\u30C8\u306E what-if\uFF08\u5B9F\u640D\u76CA\u3067\u306F\u306A\u3044\uFF09\u3002\u7A93\u5185\u306B\u4FA1\u683C\u304C\u7121\u3044\u4FDD\u6709\u306F\u9664\u5916\u30FB\u518D\u6B63\u898F\u5316\u3057 coverage% \u306B\u53CD\u6620\uFF08<90% \u306F\u6CE8\u610F\uFF09\u3002\u5C65\u6B74\u306F\u4FDD\u6709\u9650\u5B9A 5y\uFF08IDB\uFF09\u3002";
   card.appendChild(note);
   return card;
 }
@@ -5078,6 +5214,7 @@ function buildRiskGlossary() {
       <p><b>PF\u03B2\uFF08\u30DD\u30FC\u30C8\u30D5\u30A9\u30EA\u30AA\u30FB\u30D9\u30FC\u30BF\uFF09</b>\uFF1A\u5404\u9298\u67C4\u304CPF\u5168\u4F53\u306B\u5BFE\u3057\u3069\u308C\u3060\u3051\u654F\u611F\u306B\u52D5\u304F\u304B\u3002\u5E02\u5834\u30D9\u30F3\u30C1\u30DE\u30FC\u30AF\u4E0D\u8981\u306E\u5C65\u6B74\u7B97\u51FA\u3002</p>
       <p><b>\u30EA\u30B9\u30AF\u5BC4\u4E0E\uFF08vol\xD7|\u03B2|\uFF09</b>\uFF1A\u30DC\u30E9\xD7\u30D9\u30FC\u30BF\u7D76\u5BFE\u5024\u3002PF\u30EA\u30B9\u30AF\u3078\u306E\u5BC4\u4E0E\u304C\u5927\u304D\u3044\u9298\u67C4\u307B\u3069\u4E0A\u4F4D\u3002</p>
       <p><b>\u51FA\u53E3\u65E5\u6570</b>\uFF1A\u4FDD\u6709\u3092\u634C\u304F\u306E\u306B\u304B\u304B\u308B\u55B6\u696D\u65E5\u6570\uFF1D\u682A\u6570\xF7(\u5E73\u5747\u51FA\u6765\u9AD8ADV\xD7\u53C2\u52A0\u7387)\u30025\u55B6\u696D\u65E5\u8D85\u306F\u6D41\u52D5\u6027\u30EA\u30B9\u30AF\u3068\u3057\u3066\u8B66\u544A\u3002</p>
+      <p><b>\u30B9\u30C8\u30EC\u30B9\u30B7\u30CA\u30EA\u30AA</b>\uFF1A\u540D\u524D\u4ED8\u304D\u306E\u904E\u53BB\u66B4\u843D\uFF08\u5186\u30AD\u30E3\u30EA\u30FC\u5DFB\u304D\u623B\u3057/DeepSeek/\u95A2\u7A0E\u7B49\uFF09\u3092\u3001\u73FE\u5728\u306EPF\u30A6\u30A7\u30A4\u30C8\xD7\u5B9F\u5C65\u6B74\u3067\u5F53\u6642\u306E\u30EC\u30F3\u30B8\u3092\u518D\u751F\u3057\u305F\u300C\u73FEPF\u304C\u5F53\u6642\u3092\u518D\u4F53\u9A13\u3057\u305F\u3089\u300D\u306E\u4E0B\u843D\u7387\u3002\u5B9F\u640D\u76CA\u3067\u306F\u306A\u3044 what-if\u3002\u7A93\u5185\u306B\u4FA1\u683C\u304C\u7121\u3044\u5F8C\u767AIPO\u7B49\u306F\u9664\u5916\u30FB\u518D\u6B63\u898F\u5316\u3057 coverage%\uFF08<90%\u306F\u6CE8\u610F\uFF09\u3067\u660E\u793A\u3002</p>
     </div>`;
   return d;
 }
@@ -5099,6 +5236,7 @@ async function renderRiskCharts() {
   wrap.textContent = "";
   wrap.appendChild(buildRiskOverviewCard());
   wrap.appendChild(await buildQuantCard(positions));
+  wrap.appendChild(await buildStressCard(positions));
   const sumInfo = getClassificationSummary(assets);
   const summary = document.createElement("div");
   summary.className = "risk-summary";
