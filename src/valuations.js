@@ -63,6 +63,7 @@
  */
 
 import { escapeHTML } from './utils.js';
+import { impliedGrowth, isGrowthOverheated } from './reverse-dcf.js';
 
 const VAL_URL = 'data/valuations.json';
 
@@ -171,6 +172,15 @@ export function computeVerdict(v) {
   const base = classifyVerdict(v);
   const pct = v != null && v.percentile != null ? v.percentile : null;
   base.confidence = base.class === 'na' || pct == null ? null : computeConfidence(pct, v);
+  // D-5: リバースDCF の織り込み成長率が過多なら driver「期待過多」を追加する。
+  // 分類本体（classifyVerdict）は無改変・driver の付与のみ。na は対象外。
+  if (base.class !== 'na') {
+    const fy = v && v.value ? v.value.fcfYield : null;
+    const wacc = v && v.quality ? v.quality.wacc : null;
+    if (isGrowthOverheated(impliedGrowth(fy, wacc))) {
+      base.drivers = [...base.drivers, '期待過多'];
+    }
+  }
   return base;
 }
 

@@ -25,6 +25,45 @@ describe('computeVerdict edge cases', () => {
   });
 });
 
+// ── D-5: 期待過多ドライバ（リバースDCF の織り込み成長率が過多）──
+describe('computeVerdict 期待過多 driver (D-5)', () => {
+  it('織り込み成長率が閾値超なら driver「期待過多」が付く', () => {
+    // fcfYield=0.5, wacc=8 → impliedGrowth≈7.46% > 7 → 期待過多
+    const result = computeVerdict({
+      percentile: 50, // fair（非na）
+      value: { fcfYield: 0.5 },
+      quality: { wacc: 8 },
+    });
+    expect(result.class).toBe('fair');
+    expect(result.drivers).toContain('期待過多');
+  });
+
+  it('織り込み成長率が妥当域なら driver は付かない', () => {
+    // fcfYield=5, wacc=8 → impliedGrowth≈2.86% < 7
+    const result = computeVerdict({
+      percentile: 50,
+      value: { fcfYield: 5 },
+      quality: { wacc: 8 },
+    });
+    expect(result.drivers).not.toContain('期待過多');
+  });
+
+  it('na（cyclical）には過多でも driver を付けない', () => {
+    const result = computeVerdict({
+      percentile: 50,
+      value: { fcfYield: 0.5, cyclical: true },
+      quality: { wacc: 8 },
+    });
+    expect(result.class).toBe('na');
+    expect(result.drivers).not.toContain('期待過多');
+  });
+
+  it('fcfYield/wacc が欠ければ driver は付かない', () => {
+    const result = computeVerdict({ percentile: 50, value: { perTrail: 15 } });
+    expect(result.drivers).not.toContain('期待過多');
+  });
+});
+
 // ── MSFT: percentile=0, cheap zone, fwd<trail, debtHeavy=false → cheap_real ──
 describe('computeVerdict MSFT', () => {
   it('cheap_real: low percentile, fwd not rising fast, no debt', () => {
