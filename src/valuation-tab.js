@@ -543,11 +543,14 @@ export async function renderValuationTab() {
   const cheapCount = rows.filter((r) => r.verdict && r.verdict.class === 'cheap_real').length;
   const triggerCount = rows.filter((r) => r.trig && r.trig.active.length > 0).length;
 
-  const hr = computeHitRate();
-  const hitRateVal =
+  // D-4: 的中率を 発議(action) / 判定(verdict) 別に表示する。
+  const hrA = computeHitRate('action');
+  const hrV = computeHitRate('verdict');
+  const hrPart = (label, hr) =>
     hr.resolved > 0
-      ? `<span title="${hr.ratePct}%" aria-label="的中率${hr.ratePct}%">${hr.hits}-${hr.misses}</span>`
-      : '—';
+      ? `<span title="${label} ${hr.ratePct}%" aria-label="${label}的中率${hr.ratePct}%">${label}${hr.hits}-${hr.misses}</span>`
+      : `<span>${label}—</span>`;
+  const hitRateVal = `${hrPart('発議', hrA)}<span class="hr-sep"> / </span>${hrPart('判定', hrV)}`;
   const statsHTML = `<div class="val-stats">
     <div class="val-stat"><span class="k">過大ポジ</span><span class="v">${overCount}</span></div>
     <div class="val-stat"><span class="k">割安候補</span><span class="v">${cheapCount}</span></div>

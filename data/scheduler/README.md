@@ -11,6 +11,7 @@
 | `quality-jp.mjs` | 日本個別株（`.T`・ETF 除外） | EDINET DB API | `quality` |
 | `etf-pe.mjs` | ETF 10銘柄（広域株式＋セクター/テーマ） | Yahoo `summaryDetail.trailingPE`（Worker `/yahoo` 経由） | `value`（perTrail＋perSource） |
 | `target-gap.mjs` | 個別株（quality 持ち・HK 除外） | Yahoo `financialData.targetMeanPrice`（Worker `/yahoo` 経由） | `value.targetGapPct`（既存 value にマージ） |
+| `hit-rate.mjs` | verdict-outcomes の horizon 経過 pending | Yahoo chart（対象＋ACWI・Worker `/yahoo` 経由） | `data/verdict-outcomes.json` の `proposedOutcome`/`resolvedAt` |
 
 `quality-*` は純関数 `src/quality-calc.js` の `computeQuality()` で指標を算出。
 `etf-pe.mjs` は ETF のファンド実績PER を `value.perTrail` に投入し `value.perSource:"fund-trailing"` を立てる
