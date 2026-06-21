@@ -28,6 +28,7 @@ import { fetchSymbolHistory, batchWithRetry } from './data.js';
 import { state } from './state.js';
 import { computeLiquidity, ILLIQUID_DAYS, ADV_WINDOW, PARTICIPATION } from './liquidity-calc.js';
 import { fmtJPYInt, fmtPctInt, escapeHTML } from './utils.js';
+import { glossaryHTML } from './glossary.js';
 import { positions } from './positions.js';
 import { MANUAL_ASSETS, MANUAL_SOURCES } from './manual-assets.js';
 import { getMfManualAssets, getMfSources, getMfTotals } from './networth.js';
@@ -991,25 +992,13 @@ async function buildQuantCard(posList) {
 
 /**
  * Risk タブ下部に常設する用語解説（タップ開閉・CSP安全な native details）。
- * Value タブの .val-gloss と同じスタイルを流用する。
+ * 用語データは glossary-data.js（#445）。glossaryHTML('risk') の文字列から要素化する。
  * @returns {HTMLElement}
  */
 function buildRiskGlossary() {
-  const d = document.createElement('details');
-  d.className = 'val-gloss';
-  d.innerHTML = `<summary>用語解説</summary>
-    <div class="val-gloss-body">
-      <p><b>集中度</b>：1銘柄・1テーマ・1通貨への偏り。致命傷を避けるため上限バンドで管理。</p>
-      <p><b>年率ボラ</b>：日次リターンのばらつき（標準偏差）を年率換算。大きいほど値動きが荒い。</p>
-      <p><b>相関（≥0.85）</b>：2銘柄が一緒に動く度合い（-1〜+1）。高相関ペアばかりだと分散が効かず一緒に下げる。</p>
-      <p><b>最大DD（ドローダウン）</b>：高値から谷までの最大下落率。最も苦しい局面の沈み込み。</p>
-      <p><b>ストレス（最悪1日/1週/1ヶ月/3ヶ月）</b>：過去1年でその期間に被った最悪の下落率。「最悪どれだけ食らうか」の体感。</p>
-      <p><b>PFβ（ポートフォリオ・ベータ）</b>：各銘柄がPF全体に対しどれだけ敏感に動くか。市場ベンチマーク不要の履歴算出。</p>
-      <p><b>リスク寄与（vol×|β|）</b>：ボラ×ベータ絶対値。PFリスクへの寄与が大きい銘柄ほど上位。</p>
-      <p><b>出口日数</b>：保有を捌くのにかかる営業日数＝株数÷(平均出来高ADV×参加率)。5営業日超は流動性リスクとして警告。</p>
-      <p><b>ストレスシナリオ</b>：名前付きの過去暴落（円キャリー巻き戻し/DeepSeek/関税等）を、現在のPFウェイト×実履歴で当時のレンジを再生した「現PFが当時を再体験したら」の下落率。実損益ではない what-if。窓内に価格が無い後発IPO等は除外・再正規化し coverage%（<90%は注意）で明示。</p>
-    </div>`;
-  return d;
+  const tpl = document.createElement('template');
+  tpl.innerHTML = glossaryHTML('risk').trim();
+  return /** @type {HTMLElement} */ (tpl.content.firstElementChild);
 }
 
 // ── once-guard: target-allocation を二重ロードしない ───────────────────────
