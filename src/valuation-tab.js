@@ -24,7 +24,7 @@ import {
 } from './target-allocation.js';
 import { loadMfHoldings, getMfTotals } from './networth.js';
 import { loadValuations, getValuation, computeVerdict, valuationsLoaded } from './valuations.js';
-import { impliedGrowth } from './reverse-dcf.js';
+import { impliedGrowth, isGrowthOverheated } from './reverse-dcf.js';
 import { glossaryHTML } from './glossary.js';
 import { loadTriggers, triggersLoaded, getTriggers, evaluateTriggers } from './triggers.js';
 import { loadVerdictOutcomes, outcomesLoaded, computeHitRate } from './verdict-outcomes.js';
@@ -206,38 +206,39 @@ function detailHTML(val) {
   const q = val.quality || {};
   const m = val.momentum || {};
 
+  // 各指標は `<b>ラベル</b><span>値</span>` のフラットペア（.val-met=2列grid で行高を揃える）。
+  // 閾値は値の隣に記号併記（色だけに頼らない＝色覚配慮）。
+
   // ── バリュ ──（1段Gordon は永久一定成長前提＝シクリカルには不適 → cyclical は —）
   const ig = v.cyclical === true ? null : impliedGrowth(v.fcfYield, q.wacc != null ? q.wacc : null);
-  const igTxt = ig != null && isFinite(ig) ? `${fmt1(ig)}%` : '—';
+  const igTxt = ig != null && isFinite(ig) ? `${fmt1(ig)}%${isGrowthOverheated(ig) ? ' ⚠期待過多' : ''}` : '—';
+  const igCls = isGrowthOverheated(ig) ? ' class="val-warn"' : '';
   const tg = v.targetGapPct != null && isFinite(v.targetGapPct) ? v.targetGapPct : null;
   const tgTxt = tg != null ? `${tg >= 0 ? '+' : ''}${fmt1(tg)}%` : '—';
   const tgCls = tg == null ? '' : tg >= 0 ? ' class="val-mom-up"' : ' class="val-mom-dn"';
   const valueGrp = `<div class="val-met">
-      <span><b>EV/EBITDA</b> ${escapeHTML(fmtRaw(v.evEbitda))}</span>
-      <span><b>FCF利回り</b> ${escapeHTML(fmtRaw(v.fcfYield))}%</span>
-      <span><b>還元</b> ${escapeHTML(fmtRaw(v.shareholderYield))}%</span>
-      <span><b>織込成長</b> ${escapeHTML(igTxt)}</span>
-      <span><b>目標乖離</b> <span${tgCls}>${escapeHTML(tgTxt)}</span></span>
+      <b>EV/EBITDA</b><span>${escapeHTML(fmtRaw(v.evEbitda))}</span>
+      <b>FCF利回り</b><span>${escapeHTML(fmtRaw(v.fcfYield))}%</span>
+      <b>株主還元</b><span>${escapeHTML(fmtRaw(v.shareholderYield))}%</span>
+      <b>織込成長</b><span${igCls}>${escapeHTML(igTxt)}</span>
+      <b>目標乖離</b><span${tgCls}>${escapeHTML(tgTxt)}</span>
     </div>`;
 
   // ── 品質 ──
   const roicNum = q.roic != null && isFinite(q.roic) ? q.roic : null;
   const waccNum = q.wacc != null && isFinite(q.wacc) ? q.wacc : null;
   const roicBad = roicNum != null && waccNum != null && roicNum < waccNum;
-  const roicStr = `${escapeHTML(fmtRaw(roicNum))}%`;
-  const waccStr = `${escapeHTML(fmtRaw(waccNum))}%`;
-  const roicMetric = roicBad
-    ? `<span class="val-bad">${roicStr} vs WACC ${waccStr}</span>`
-    : `${roicStr} vs WACC ${waccStr}`;
+  const roicStr = `${escapeHTML(fmtRaw(roicNum))}% vs WACC ${escapeHTML(fmtRaw(waccNum))}%`;
+  const roicMetric = roicBad ? `<span class="val-bad">${roicStr} ⚠下回り</span>` : roicStr;
   const zNum = q.altmanZ != null && isFinite(q.altmanZ) ? q.altmanZ : null;
   const zStr = escapeHTML(fmtRaw(zNum));
-  const zMetric = zNum != null && zNum < 3 ? `<span class="val-warn">${zStr}</span>` : zStr;
+  const zMetric = zNum != null && zNum < 3 ? `<span class="val-warn">${zStr} ⚠&lt;3</span>` : zStr;
   const qualGrp = `<div class="val-met">
-      <span><b>ROIC</b> ${roicMetric}</span>
-      <span><b>粗利/資産</b> ${escapeHTML(fmtRaw(q.grossProf))}</span>
-      <span><b>FCF変換</b> ${escapeHTML(fmtRaw(q.fcfConv))}</span>
-      <span><b>Altman Z</b> ${zMetric}</span>
-      <span><b>Qスコア</b> ${escapeHTML(fmtRaw(q.qScore))}</span>
+      <b>ROIC</b><span>${roicMetric}</span>
+      <b>粗利/資産</b><span>${escapeHTML(fmtRaw(q.grossProf))}</span>
+      <b>FCF変換</b><span>${escapeHTML(fmtRaw(q.fcfConv))}</span>
+      <b>Altman Z</b><span>${zMetric}</span>
+      <b>Qスコア</b><span>${escapeHTML(fmtRaw(q.qScore))}</span>
     </div>`;
 
   // ── モメンタム ──（日本市場慣例: 上昇=赤=up / 下落=緑=down）
@@ -245,16 +246,19 @@ function detailHTML(val) {
   const mom1yStr = mom1y != null ? (mom1y >= 0 ? `+${fmt1(mom1y)}` : fmt1(mom1y)) : '—';
   const mom1yCls = mom1y == null ? '' : mom1y >= 0 ? ' class="val-mom-up"' : ' class="val-mom-dn"';
   const momGrp = `<div class="val-met">
-      <span><b>改定90d</b> ${escapeHTML(fmtRaw(m.epsRev90d))}%</span>
-      <span><b>1Y</b> <span${mom1yCls}>${escapeHTML(mom1yStr)}%</span></span>
-      <span><b>52週位置</b> ${escapeHTML(fmtRaw(m.pos52w))}%</span>
-      <span><b>対市場</b> ${escapeHTML(fmtRaw(m.rsVsSector))}%</span>
+      <b>改定90d</b><span>${escapeHTML(fmtRaw(m.epsRev90d))}%</span>
+      <b>1Y騰落</b><span${mom1yCls}>${escapeHTML(mom1yStr)}%</span>
+      <b>52週位置</b><span>${escapeHTML(fmtRaw(m.pos52w))}%</span>
+      <b>対市場</b><span>${escapeHTML(fmtRaw(m.rsVsSector))}%</span>
     </div>`;
 
+  // グループ凡例（1行・常時表示でモバイルでも分かる。詳しくは下部の用語解説）
+  const grp = (lab, cap, body) =>
+    `<div class="val-detail-grp"><span class="lab">${lab}<span class="grp-cap">${cap}</span></span>${body}</div>`;
   return `<details class="val-detail"><summary>詳細指標</summary>
-    <div class="val-detail-grp"><span class="lab">バリュ</span>${valueGrp}</div>
-    <div class="val-detail-grp"><span class="lab">品質</span>${qualGrp}</div>
-    <div class="val-detail-grp"><span class="lab">モメンタム</span>${momGrp}</div>
+    ${grp('バリュ', '価格が割安か', valueGrp)}
+    ${grp('品質', '罠でないか・稼ぐ力', qualGrp)}
+    ${grp('モメンタム', '勢いと市場対比', momGrp)}
   </details>`;
 }
 
@@ -532,21 +536,36 @@ export async function renderValuationTab() {
   const overCount = rows.filter((r) => r.gap != null && r.gap > 0.5).length;
   const cheapCount = rows.filter((r) => r.verdict && r.verdict.class === 'cheap_real').length;
   const triggerCount = rows.filter((r) => r.trig && r.trig.active.length > 0).length;
+  const watchCount = rows.filter((r) => r.trig && r.trig.watching.length > 0).length;
 
-  // D-4: 的中率を 発議(action) / 判定(verdict) 別に表示する。
+  // D-4 / #450: 的中率を 発議(action) / 判定(verdict) 別に hits/resolved 表記で表示する。
+  // `-` の引き算誤読を避け、未判定は「判定待ちN」で集計中を明示。率が高いと軽い accent。
   const hrA = computeHitRate('action');
   const hrV = computeHitRate('verdict');
-  const hrPart = (label, hr) =>
-    hr.resolved > 0
-      ? `<span title="${label} ${hr.ratePct}%" aria-label="${label}的中率${hr.ratePct}%">${label}${hr.hits}-${hr.misses}</span>`
-      : `<span>${label}—</span>`;
+  const hrPart = (label, hr) => {
+    if (hr.resolved > 0) {
+      const hot = hr.ratePct != null && hr.ratePct >= 60 ? ' hr-hot' : '';
+      return `<span class="hr-p${hot}" title="${label}的中率 ${hr.ratePct}%（hits/判定済・対ACWI相対）" aria-label="${label} ${hr.hits}当たり ${hr.resolved}件中">${label} ${hr.hits}/${hr.resolved}</span>`;
+    }
+    if (hr.pending > 0) return `<span class="hr-p">${label} 判定待ち${hr.pending}</span>`;
+    return `<span class="hr-p">${label}—</span>`;
+  };
   const hitRateVal = `${hrPart('発議', hrA)}<span class="hr-sep"> / </span>${hrPart('判定', hrV)}`;
+  // トリガー: active=抵触 / watching=監視 を併記（ヘッダ値は抵触＝アクションバナー化する銘柄数）
+  const trigVal = `<span class="hr-p">抵触${triggerCount}</span><span class="hr-sep">・</span><span class="hr-p">監視${watchCount}</span>`;
+  // tap-to-explain（CSP安全な native details・3行）。正本の定義は用語解説「規律」カテゴリ。
+  const statsExplain = `<details class="val-stats-help">
+    <summary>ⓘ 統計の見方</summary>
+    <p><b>発議</b>：自分の売買が約1ヶ月後に対ACWIで正しかったか（当たり / 判定済）。</p>
+    <p><b>判定</b>：エンジンの cheap/rich が約6ヶ月後に対ACWIで当たったか。</p>
+    <p><b>抵触/監視</b>：事前ルールに今抵触している銘柄数 / 監視中の銘柄数。</p>
+  </details>`;
   const statsHTML = `<div class="val-stats">
     <div class="val-stat"><span class="k">過大ポジ</span><span class="v">${overCount}</span></div>
     <div class="val-stat"><span class="k">割安候補</span><span class="v">${cheapCount}</span></div>
     <div class="val-stat"><span class="k">的中率</span><span class="v">${hitRateVal}</span></div>
-    <div class="val-stat"><span class="k">トリガー</span><span class="v">${triggerCount}</span></div>
-  </div>`;
+    <div class="val-stat"><span class="k">トリガー</span><span class="v">${trigVal}</span></div>
+  </div>${statsExplain}`;
 
   // レンズ切替ピル（4つすべて有効）
   const lenses = [
