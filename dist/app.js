@@ -4790,15 +4790,19 @@ async function loadRegionData() {
   }
   return _regionData;
 }
-async function buildRegionCard(holdings) {
+async function buildRegionCard(assets, manualSymbols) {
   const { regionMap, regionWeights, asOf } = await loadRegionData();
-  const { pct } = computeTrueRegionExposure(holdings, regionMap, regionWeights);
+  const augMap = { ...regionMap || {} };
+  for (const s of manualSymbols || []) augMap[s] = "commodity_cash";
+  const { pct } = computeTrueRegionExposure(assets, augMap, regionWeights);
   const bias = japanHomeBias(pct);
+  const unknownPct = typeof pct.unknown === "number" && isFinite(pct.unknown) ? pct.unknown : 0;
+  const coveragePct = Math.max(0, Math.min(100, 100 - unknownPct));
   const card = document.createElement("div");
   card.className = "risk-card region-card";
   const title = document.createElement("div");
   title.className = "risk-card-title";
-  title.textContent = "\u5730\u57DF\u30A8\u30AF\u30B9\u30DD\u30FC\u30B8\u30E3\uFF08\u30EB\u30C3\u30AF\u30B9\u30EB\u30FC\uFF09";
+  title.textContent = "\u5730\u57DF\uFF08\u30EB\u30C3\u30AF\u30B9\u30EB\u30FC\uFF09";
   card.appendChild(title);
   const hero = document.createElement("div");
   hero.className = "region-hero";
@@ -4806,28 +4810,43 @@ async function buildRegionCard(holdings) {
   const biasCls = bias.biasPt >= 0 ? "region-bias-over" : "region-bias-under";
   hero.innerHTML = `
     <div class="region-hero-main"><span class="region-hero-k">\u65E5\u672C \u771F%</span><span class="region-hero-v">${bias.japanPct.toFixed(1)}%</span></div>
-    <div class="region-hero-sub">ACWI\u30D9\u30F3\u30C1 ${bias.benchPct}% \uFF5C \u30DB\u30FC\u30E0\u30D0\u30A4\u30A2\u30B9 <span class="${biasCls}">${biasSign}${bias.biasPt.toFixed(1)}pt</span></div>`;
+    <div class="region-hero-sub">ACWI\u30D9\u30F3\u30C1 ${bias.benchPct}% \uFF5C \u30DB\u30FC\u30E0\u30D0\u30A4\u30A2\u30B9 <span class="${biasCls}">${biasSign}${bias.biasPt.toFixed(1)}pt</span> \uFF5C \u30AB\u30D0\u30EC\u30C3\u30B8 ${coveragePct.toFixed(0)}%</div>`;
   card.appendChild(hero);
-  const list = document.createElement("ul");
-  list.className = "region-list";
-  const rows = Object.entries(pct).sort((a, b) => b[1] - a[1]);
-  for (const [region, p] of rows) {
+  const slices = Object.entries(pct).filter(([, p]) => typeof p === "number" && p > 0).sort((a, b) => b[1] - a[1]).map(([key, p]) => ({ key, pct: p }));
+  const body = document.createElement("div");
+  body.className = "risk-card-body";
+  card.appendChild(body);
+  const size = 168;
+  const radius = size / 2;
+  const svg = d3.select(body).append("svg").attr("class", "risk-donut").attr("width", size).attr("height", size).attr("viewBox", `0 0 ${size} ${size}`).attr("role", "img").attr("aria-label", "\u5730\u57DF\uFF08\u30EB\u30C3\u30AF\u30B9\u30EB\u30FC\uFF09\u306E\u69CB\u6210\u5186\u30B0\u30E9\u30D5");
+  const g = svg.append("g").attr("transform", `translate(${radius},${radius})`);
+  const pie = d3.pie().value((d) => d.pct).sort(null);
+  const arc = d3.arc().innerRadius(radius * 0.58).outerRadius(radius - 2);
+  g.selectAll("path").data(pie(slices)).join("path").attr("d", arc).attr("fill", (d, i) => PALETTE[i % PALETTE.length]).append("title").text((d) => `${REGION_LABELS[d.data.key] || d.data.key}: ${d.data.pct.toFixed(1)}%`);
+  const center = g.append("text").attr("class", "risk-donut-center");
+  center.append("tspan").attr("x", 0).attr("dy", "-0.1em").attr("font-size", "13px").attr("font-weight", "700").attr("text-anchor", "middle").text(`${coveragePct.toFixed(0)}%`);
+  center.append("tspan").attr("class", "risk-donut-center-sub").attr("x", 0).attr("dy", "1.3em").attr("font-size", "9px").attr("text-anchor", "middle").text("\u30AB\u30D0\u30EC\u30C3\u30B8");
+  const legend = document.createElement("ul");
+  legend.className = "risk-legend";
+  slices.forEach((s, i) => {
     const li = document.createElement("li");
-    li.className = "region-list-item";
+    li.className = "risk-legend-item";
+    const sw = document.createElement("span");
+    sw.className = "risk-legend-swatch";
+    sw.style.background = PALETTE[i % PALETTE.length];
     const name = document.createElement("span");
-    name.className = "region-name";
-    name.textContent = REGION_LABELS[region] || region;
-    const val = document.createElement("span");
-    val.className = "region-pct";
-    val.textContent = `${p.toFixed(1)}%`;
-    li.appendChild(name);
-    li.appendChild(val);
-    list.appendChild(li);
-  }
-  card.appendChild(list);
+    name.className = "risk-legend-name";
+    name.textContent = REGION_LABELS[s.key] || s.key;
+    const p = document.createElement("span");
+    p.className = "risk-legend-pct";
+    p.textContent = `${s.pct.toFixed(1)}%`;
+    li.append(sw, name, p);
+    legend.appendChild(li);
+  });
+  body.appendChild(legend);
   const note = document.createElement("div");
   note.className = "risk-coverage-note";
-  note.textContent = `\u76F4\u63A5\u30BF\u30B0\uFF0B\u30EB\u30C3\u30AF\u30B9\u30EB\u30FC\u6309\u5206\uFF08\u30AA\u30EB\u30AB\u30F3/\u3072\u3075\u307F/\u3072\u3075\u307FXO\uFF09\u3002\u5730\u57DF\u69CB\u6210\u6BD4\u306F\u9759\u7684\uFF08\u9BAE\u5EA6 ${asOf || "\u2014"}\u30FB\u56DB\u534A\u671F\u66F4\u65B0\uFF09\u3002VGK/2800.HK \u306F\u672A\u4FDD\u6709\uFF1D0%\u3002`;
+  note.textContent = `\u76F4\u63A5\u30BF\u30B0\uFF0B\u30EB\u30C3\u30AF\u30B9\u30EB\u30FC\u6309\u5206\uFF08\u30AA\u30EB\u30AB\u30F3/\u3072\u3075\u307F/\u3072\u3075\u307FXO\uFF09\u3002\u73FE\u91D1/\u6697\u53F7\u306F \u30B3\u30E2\u30C7\u30A3\u30C6\u30A3/\u73FE\u91D1\u3002\u5730\u57DF\u69CB\u6210\u6BD4\u306F\u9759\u7684\uFF08\u9BAE\u5EA6 ${asOf || "\u2014"}\u30FB\u56DB\u534A\u671F\u66F4\u65B0\uFF09\u3002VGK/2800.HK \u306F\u672A\u4FDD\u6709\uFF1D0%\u3002`;
   card.appendChild(note);
   return card;
 }
@@ -4863,7 +4882,7 @@ async function buildStressCard(holdings) {
   card.className = "risk-card stress-card";
   const title = document.createElement("div");
   title.className = "risk-card-title";
-  title.textContent = "\u30B9\u30C8\u30EC\u30B9\u30B7\u30CA\u30EA\u30AA\uFF08\u73FEPF\u304C\u5F53\u6642\u3092\u518D\u4F53\u9A13\u3057\u305F\u3089\uFF09";
+  title.textContent = "\u6B74\u53F2\u7684\u5371\u6A5F\u306E\u518D\u73FE\uFF08what-if\uFF09";
   card.appendChild(title);
   const events = await loadStressEvents();
   if (events.length === 0) {
@@ -4980,7 +4999,7 @@ function labelOf(dim, key) {
   return LABELS[dim]?.[key] || key;
 }
 function nameOfSymbol(sym) {
-  const p = positions.find((x) => x.symbol === sym);
+  const p = positions.find((x) => x.symbol === sym || x.ySymbol === sym);
   return p?.name || sym;
 }
 var STALE_WARN_DAYS = 14;
@@ -5093,6 +5112,7 @@ function buildRiskOverviewCard() {
   const roRow = document.createElement("div");
   roRow.className = "ro-row";
   card.appendChild(roRow);
+  let breaches = 0;
   const totals = getMfTotals();
   const denom = totals && totals.imported || positions.reduce((s, p) => s + (p.value || 0), 0);
   const cashRatioStat = document.createElement("div");
@@ -5108,7 +5128,10 @@ function buildRiskOverviewCard() {
     const outOfRange = cr < 5 || cr > 20;
     cashVal.textContent = `${cr.toFixed(1)}%`;
     cashVal.style.color = outOfRange ? "var(--up)" : "var(--text)";
-    if (outOfRange) cashVal.title = cr < 5 ? "\u30AD\u30E3\u30C3\u30B7\u30E5\u4E0D\u8DB3\uFF08<5%\uFF09" : "\u30AD\u30E3\u30C3\u30B7\u30E5\u904E\u591A\uFF08>20%\uFF09";
+    if (outOfRange) {
+      cashVal.title = cr < 5 ? "\u30AD\u30E3\u30C3\u30B7\u30E5\u4E0D\u8DB3\uFF08<5%\uFF09" : "\u30AD\u30E3\u30C3\u30B7\u30E5\u904E\u591A\uFF08>20%\uFF09";
+      breaches++;
+    }
   } else {
     cashVal.textContent = "\u2014";
   }
@@ -5135,7 +5158,10 @@ function buildRiskOverviewCard() {
       if (gap.gapPct != null && gap.gapPct > 0.5) oversizeCount++;
     }
     oversizeVal.textContent = `${oversizeCount} \u4EF6`;
-    if (oversizeCount > 0) oversizeVal.style.color = "var(--up)";
+    if (oversizeCount > 0) {
+      oversizeVal.style.color = "var(--up)";
+      breaches++;
+    }
   } else {
     oversizeVal.textContent = "\u2014";
   }
@@ -5182,7 +5208,10 @@ function buildRiskOverviewCard() {
     }
     if (maxLabel) {
       maxConVal.textContent = `${maxLabel} ${maxPct.toFixed(1)}%`;
-      if (maxPct > 20) maxConVal.style.color = "var(--up)";
+      if (maxPct > 20) {
+        maxConVal.style.color = "var(--up)";
+        breaches++;
+      }
     } else {
       maxConVal.textContent = "\u2014";
     }
@@ -5225,6 +5254,7 @@ function buildRiskOverviewCard() {
       ok.textContent = "\u306A\u3057";
       chipsStat.appendChild(ok);
     } else {
+      breaches++;
       const chipsWrap = document.createElement("div");
       chipsWrap.className = "ro-chips-wrap";
       for (const { theme, used, cap } of overThemes) {
@@ -5243,8 +5273,12 @@ function buildRiskOverviewCard() {
   card.appendChild(chipsStat);
   const note = document.createElement("div");
   note.className = "ro-note";
-  note.textContent = "\u203B \u30D9\u30FC\u30BF\u30FB\u76F8\u95A2\u306F\u4E0B\u6BB5\u30AF\u30AA\u30F3\u30C4\u30AB\u30FC\u30C9\uFF084b\uFF09\u3092\u53C2\u7167\u3002\u30B9\u30C8\u30EC\u30B9\u30FB\u6D41\u52D5\u6027\u306F 4b+ \u4E88\u5B9A";
+  note.textContent = "\u203B \u914D\u5206\u30D9\u30FC\u30B9\u306E\u4E00\u76EE\u30C1\u30A7\u30C3\u30AF\u3002\u5024\u52D5\u304D\u30FB\u6700\u60AA\u5C40\u9762\u30FB\u5206\u6563/\u6D41\u52D5\u6027\u306F\u4E0B\u306E\u300C\u30AF\u30AA\u30F3\u30C4\u30FB\u30EA\u30B9\u30AF\u300D\u3078\u3002";
   card.appendChild(note);
+  const verdict = document.createElement("div");
+  verdict.className = breaches === 0 ? "ro-verdict ro-v-ok" : breaches === 1 ? "ro-verdict ro-v-warn" : "ro-verdict ro-v-bad";
+  verdict.textContent = breaches === 0 ? "\u2713 \u30EA\u30B9\u30AF\u4F4E\uFF08\u95BE\u5024\u62B5\u89E6\u306A\u3057\uFF09" : breaches === 1 ? "\u26A0 \u6CE8\u610F 1\u4EF6" : `\u26A0 \u8981\u6CE8\u610F ${breaches}\u4EF6`;
+  card.insertBefore(verdict, roRow);
   return card;
 }
 function _pct1(v, forcePlus = false) {
@@ -5339,14 +5373,26 @@ async function buildQuantCard(posList) {
     el.appendChild(vl);
     return el;
   }
+  function _hint(text) {
+    const h = document.createElement("p");
+    h.className = "rq-hint";
+    h.textContent = text;
+    return h;
+  }
+  const moveTitle = document.createElement("div");
+  moveTitle.className = "rq-stat-label";
+  moveTitle.textContent = "\u5024\u52D5\u304D";
+  card.appendChild(moveTitle);
+  card.appendChild(_hint("\u5E74\u7387\u30DC\u30E9=\u5927\u304D\u3044\u307B\u3069\u632F\u308C\u308B\uFF0820%\u8D85\u6CE8\u610F\uFF09\uFF0F\u6700\u5927DD=\u904E\u53BB\u6700\u5927\u306E\u4E0B\u843D\uFF08\u6D45\u3044\u307B\u3069\u5B89\u5168\uFF09"));
   pfRow.appendChild(_stat("\u5E74\u7387\u30DC\u30E9", _pct1(pfVol), (pfVol ?? 0) > 0.2));
   pfRow.appendChild(_stat("\u6700\u5927DD", _pct1(pfMaxDD), true));
   card.appendChild(pfRow);
   const stressTitle = document.createElement("div");
   stressTitle.className = "rq-stat-label";
   stressTitle.style.marginTop = "8px";
-  stressTitle.textContent = "\u30B9\u30C8\u30EC\u30B9\uFF08\u904E\u53BB1\u5E74\u306E\u6700\u60AA\u5C40\u9762\u30FBPF\uFF09";
+  stressTitle.textContent = "\u904E\u53BB1\u5E74\u306E\u6700\u60AA\u5C40\u9762\uFF08\u5B9F\u7E3E\uFF09";
   card.appendChild(stressTitle);
+  card.appendChild(_hint("\u5404\u671F\u9593\u3067\u6700\u3082\u640D\u3057\u305F\u4E0B\u843D\u5E45\uFF08\u6D45\u3044\u307B\u3069\u826F\u3044\uFF09"));
   const stressRow = document.createElement("div");
   stressRow.className = "rq-row";
   stressRow.appendChild(_stat("\u6700\u60AA1\u65E5", _pct1(pfWorstD), true));
@@ -5362,6 +5408,7 @@ async function buildQuantCard(posList) {
   corrTitle.className = "rq-stat-label";
   corrTitle.textContent = "\u9AD8\u76F8\u95A2\u30DA\u30A2\uFF08\u22650.85\uFF09";
   card.appendChild(corrTitle);
+  card.appendChild(_hint("\u307B\u307C\u540C\u3058\u52D5\u304D\u306E\u30DA\u30A2\uFF1D\u5206\u6563\u4E0D\u8DB3\uFF0F\u03B2=1\u8D85\u3067PF\u5168\u4F53\u3088\u308A\u5927\u304D\u304F\u632F\u308C\u308B"));
   const corrRow = document.createElement("div");
   corrRow.className = "rq-row";
   const top5Pairs = corrPairs.slice(0, 5);
@@ -5374,8 +5421,8 @@ async function buildQuantCard(posList) {
     for (const { a, b, corr } of top5Pairs) {
       const chip = document.createElement("span");
       chip.className = "rq-chip";
-      const escA = escapeHTML(a);
-      const escB = escapeHTML(b);
+      const escA = escapeHTML(nameOfSymbol(a));
+      const escB = escapeHTML(nameOfSymbol(b));
       chip.textContent = `${escA}\u2013${escB} ${corr.toFixed(2)}`;
       corrRow.appendChild(chip);
     }
@@ -5394,7 +5441,7 @@ async function buildQuantCard(posList) {
       el.className = "rq-stat";
       const lb = document.createElement("span");
       lb.className = "rq-stat-label";
-      lb.textContent = escapeHTML(sym);
+      lb.textContent = nameOfSymbol(sym);
       const vl = document.createElement("span");
       vl.className = "rq-stat-value";
       const betaStr = beta !== null ? ` \u03B2${beta.toFixed(1)}` : "";
@@ -5438,7 +5485,7 @@ async function buildQuantCard(posList) {
       el.className = "rq-stat";
       const lb = document.createElement("span");
       lb.className = "rq-stat-label";
-      lb.textContent = escapeHTML(sym);
+      lb.textContent = nameOfSymbol(sym);
       const vl = document.createElement("span");
       const sev = days != null && days > ILLIQUID_DAYS;
       vl.className = `rq-stat-value${sev ? " rq-sev" : ""}`;
@@ -5458,7 +5505,7 @@ async function buildQuantCard(posList) {
   }
   const foot = document.createElement("p");
   foot.className = "rq-note";
-  foot.textContent = "\u203B\u30D9\u30FC\u30BF\u306F\u30DD\u30FC\u30C8\u30D5\u30A9\u30EA\u30AA\u81EA\u8EAB\u3078\u306E\u611F\u5FDC\u5EA6\uFF08\u5E02\u5834\u30D9\u30F3\u30C1\u30DE\u30FC\u30AF\u4E0D\u8981\u306E\u5C65\u6B74\u7B97\u51FA\uFF09\u3002\u30B9\u30C8\u30EC\u30B9\u306F\u904E\u53BB1\u5E74\u306E\u6700\u60AA\u5C40\u9762\uFF08\u30A4\u30D9\u30F3\u30C8\u540D\u4ED8\u304D\u30B7\u30CA\u30EA\u30AA\u306F\u5C06\u6765\u62E1\u5F35\uFF09\u3002\u51FA\u53E3\u65E5\u6570\u306F\u682A\u6570\xF7(\u5E73\u5747\u51FA\u6765\u9AD8\xD7\u53C2\u52A0\u7387)\u306E\u6982\u7B97\u3002";
+  foot.textContent = "\u203B\u30D9\u30FC\u30BF\u306F\u30DD\u30FC\u30C8\u30D5\u30A9\u30EA\u30AA\u81EA\u8EAB\u3078\u306E\u611F\u5FDC\u5EA6\uFF08\u5E02\u5834\u30D9\u30F3\u30C1\u30DE\u30FC\u30AF\u4E0D\u8981\u306E\u5C65\u6B74\u7B97\u51FA\uFF09\u3002\u300C\u904E\u53BB1\u5E74\u306E\u6700\u60AA\u5C40\u9762\u300D\u306F\u5B9F\u7E3E\u306E\u6700\u60AA\u4E0B\u843D\u3001\u5225\u30AB\u30FC\u30C9\u300C\u6B74\u53F2\u7684\u5371\u6A5F\u306E\u518D\u73FE\u300D\u306F\u904E\u53BB\u30A4\u30D9\u30F3\u30C8\u306E what-if\u3002\u51FA\u53E3\u65E5\u6570\u306F\u682A\u6570\xF7(\u5E73\u5747\u51FA\u6765\u9AD8\xD7\u53C2\u52A0\u7387)\u306E\u6982\u7B97\u3002";
   card.appendChild(foot);
   return card;
 }
@@ -5512,10 +5559,12 @@ async function renderRiskCharts() {
   const grid = document.createElement("div");
   grid.className = "risk-grid";
   for (const dim of RISK_DIMENSIONS) {
+    if (dim === "country") continue;
     grid.appendChild(buildChartCard(dim, breakdown[dim], sourceSummary[dim]));
   }
   wrap.appendChild(grid);
-  wrap.appendChild(await buildRegionCard(positions));
+  const manualSymbols = manualAssets.map((a) => a.symbol);
+  wrap.appendChild(await buildRegionCard(assets, manualSymbols));
   const src = document.createElement("div");
   src.className = "risk-source";
   const baseSrc = "\u30C7\u30FC\u30BF\u30BD\u30FC\u30B9: \u4FA1\u683C = Finnhub / Yahoo Finance \u30FB \u30A2\u30BB\u30C3\u30C8\u30AF\u30E9\u30B9/\u901A\u8CA8/\u56FD/\u30BB\u30AF\u30BF\u30FC\u5206\u985E = \u9298\u67C4\u30DE\u30B9\u30BF\uFF08positions.js\u30FBconstituents.js\uFF09";
