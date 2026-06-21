@@ -560,8 +560,8 @@
   text-align: center;
   font-size: 12px;
   color: var(--text);
-  margin-bottom: 12px;
-  padding: 8px 10px;
+  margin: 12px 0;
+  padding: 10px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -947,8 +947,19 @@
   color: var(--text);
 }
 .rq-sev {
-  color: var(--up);
+  color: var(--warn);
 }
+/* クオンツ小節の1行凡例（自己説明・#451） */
+.rq-hint { font-size: 9.5px; color: var(--text3); margin: 2px 0 4px; line-height: 1.4; }
+
+/* リスク要約 総合判定チップ（緑/黄/赤・#451） */
+.ro-verdict {
+  display: inline-block; font-size: 11px; font-weight: 700;
+  padding: 3px 11px; border-radius: 20px; margin-bottom: 8px;
+}
+.ro-v-ok { background: color-mix(in srgb, var(--down) 15%, transparent); color: var(--down); }
+.ro-v-warn { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+.ro-v-bad { background: color-mix(in srgb, var(--up) 16%, transparent); color: var(--up); }
 .rq-ok {
   color: var(--down);
   font-weight: 600;
