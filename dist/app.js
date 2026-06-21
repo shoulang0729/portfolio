@@ -6071,72 +6071,82 @@ function sizeBarHTML(currentPct, targetPct, conviction) {
     </div>
   </div>`;
 }
-function line3HTML(val) {
-  if (_lens === "total") {
-    if (!val) return "";
-    const v = val.value || {};
-    const pctTxt = val.percentile != null && isFinite(val.percentile) ? `${Math.round(val.percentile)}%ile` : "\u2014";
-    return `<div class="val-met">
-      <span><b>PER</b> ${escapeHTML(fmtRaw(v.perTrail))}\u2192${escapeHTML(fmtRaw(v.perFwd))}</span>
-      <span><b>PEG</b> ${escapeHTML(fmtRaw(v.peg))}</span>
-      <span><b>%\u30BF\u30A4\u30EB</b> ${escapeHTML(pctTxt)}</span>
-    </div>`;
+function sortKeyForLens(lens) {
+  switch (lens) {
+    case "total":
+      return { chip: null, sizeBar: true };
+    // gap DESC → サイズバー強調
+    case "value":
+      return { chip: "pct", sizeBar: false };
+    // percentile ASC → %タイルチップ
+    case "quality":
+      return { chip: "f", sizeBar: false };
+    // qScore DESC → Fチップ（代表値）
+    default:
+      return { chip: null, sizeBar: false };
   }
-  if (_lens === "value") {
-    if (!val) return "";
-    const v = val.value || {};
-    const pctTxt = val.percentile != null && isFinite(val.percentile) ? `${Math.round(val.percentile)}%ile` : "\u2014";
-    const ig = v.cyclical === true ? null : impliedGrowth(v.fcfYield, val.quality && val.quality.wacc != null ? val.quality.wacc : null);
-    const igTxt = ig != null && isFinite(ig) ? `${fmt1(ig)}%` : "\u2014";
-    const tg = v.targetGapPct != null && isFinite(v.targetGapPct) ? v.targetGapPct : null;
-    const tgTxt = tg != null ? `${tg >= 0 ? "+" : ""}${fmt1(tg)}%` : "\u2014";
-    const tgCls = tg == null ? "" : tg >= 0 ? ' class="val-mom-up"' : ' class="val-mom-dn"';
-    return `<div class="val-met">
-      <span><b>PER</b> ${escapeHTML(fmtRaw(v.perTrail))}\u2192${escapeHTML(fmtRaw(v.perFwd))}</span>
-      <span><b>PEG</b> ${escapeHTML(fmtRaw(v.peg))}</span>
+}
+function coreChipsHTML(val, lens) {
+  const v = val && val.value || {};
+  const q = val && val.quality || {};
+  const sk = sortKeyForLens(lens);
+  const per = `${fmtRaw(v.perTrail)}\u2192${fmtRaw(v.perFwd)}`;
+  const pct = val && val.percentile != null && isFinite(val.percentile) ? `${Math.round(val.percentile)}%ile` : "\u2014";
+  const chip = (id, k, b) => `<span class="val-c${sk.chip === id ? " is-sortkey" : ""}"><span class="k">${k}</span><b>${escapeHTML(b)}</b></span>`;
+  return `<div class="val-chips">
+    ${chip("per", "PER", per)}
+    ${chip("peg", "PEG", fmtRaw(v.peg))}
+    ${chip("pct", "%\u30BF\u30A4\u30EB", pct)}
+    ${chip("f", "F\u30B9\u30B3\u30A2", fmtRaw(q.fScore))}
+  </div>`;
+}
+function detailHTML(val) {
+  if (!val) return "";
+  const v = val.value || {};
+  const q = val.quality || {};
+  const m = val.momentum || {};
+  const ig = v.cyclical === true ? null : impliedGrowth(v.fcfYield, q.wacc != null ? q.wacc : null);
+  const igTxt = ig != null && isFinite(ig) ? `${fmt1(ig)}%` : "\u2014";
+  const tg = v.targetGapPct != null && isFinite(v.targetGapPct) ? v.targetGapPct : null;
+  const tgTxt = tg != null ? `${tg >= 0 ? "+" : ""}${fmt1(tg)}%` : "\u2014";
+  const tgCls = tg == null ? "" : tg >= 0 ? ' class="val-mom-up"' : ' class="val-mom-dn"';
+  const valueGrp = `<div class="val-met">
       <span><b>EV/EBITDA</b> ${escapeHTML(fmtRaw(v.evEbitda))}</span>
       <span><b>FCF\u5229\u56DE\u308A</b> ${escapeHTML(fmtRaw(v.fcfYield))}%</span>
       <span><b>\u9084\u5143</b> ${escapeHTML(fmtRaw(v.shareholderYield))}%</span>
       <span><b>\u7E54\u8FBC\u6210\u9577</b> ${escapeHTML(igTxt)}</span>
       <span><b>\u76EE\u6A19\u4E56\u96E2</b> <span${tgCls}>${escapeHTML(tgTxt)}</span></span>
-      <span><b>%\u30BF\u30A4\u30EB</b> ${escapeHTML(pctTxt)}</span>
     </div>`;
-  }
-  if (_lens === "quality") {
-    if (!val) return "";
-    const q = val.quality || {};
-    const roicNum = q.roic != null && isFinite(q.roic) ? q.roic : null;
-    const waccNum = q.wacc != null && isFinite(q.wacc) ? q.wacc : null;
-    const roicBad = roicNum != null && waccNum != null && roicNum < waccNum;
-    const roicStr = `${escapeHTML(fmtRaw(roicNum))}%`;
-    const waccStr = `${escapeHTML(fmtRaw(waccNum))}%`;
-    const roicMetric = roicBad ? `<span class="val-bad">${roicStr} vs WACC ${waccStr}</span>` : `${roicStr} vs WACC ${waccStr}`;
-    const zNum = q.altmanZ != null && isFinite(q.altmanZ) ? q.altmanZ : null;
-    const zStr = escapeHTML(fmtRaw(zNum));
-    const zMetric = zNum != null && zNum < 3 ? `<span class="val-warn">${zStr}</span>` : zStr;
-    return `<div class="val-met">
+  const roicNum = q.roic != null && isFinite(q.roic) ? q.roic : null;
+  const waccNum = q.wacc != null && isFinite(q.wacc) ? q.wacc : null;
+  const roicBad = roicNum != null && waccNum != null && roicNum < waccNum;
+  const roicStr = `${escapeHTML(fmtRaw(roicNum))}%`;
+  const waccStr = `${escapeHTML(fmtRaw(waccNum))}%`;
+  const roicMetric = roicBad ? `<span class="val-bad">${roicStr} vs WACC ${waccStr}</span>` : `${roicStr} vs WACC ${waccStr}`;
+  const zNum = q.altmanZ != null && isFinite(q.altmanZ) ? q.altmanZ : null;
+  const zStr = escapeHTML(fmtRaw(zNum));
+  const zMetric = zNum != null && zNum < 3 ? `<span class="val-warn">${zStr}</span>` : zStr;
+  const qualGrp = `<div class="val-met">
       <span><b>ROIC</b> ${roicMetric}</span>
       <span><b>\u7C97\u5229/\u8CC7\u7523</b> ${escapeHTML(fmtRaw(q.grossProf))}</span>
       <span><b>FCF\u5909\u63DB</b> ${escapeHTML(fmtRaw(q.fcfConv))}</span>
-      <span><b>F</b> ${escapeHTML(fmtRaw(q.fScore))}</span>
-      <span><b>Z</b> ${zMetric}</span>
-      <span><b>Q</b> ${escapeHTML(fmtRaw(q.qScore))}</span>
+      <span><b>Altman Z</b> ${zMetric}</span>
+      <span><b>Q\u30B9\u30B3\u30A2</b> ${escapeHTML(fmtRaw(q.qScore))}</span>
     </div>`;
-  }
-  if (_lens === "momentum") {
-    if (!val) return "";
-    const m = val.momentum || {};
-    const mom1y = m.priceMom1Y != null && isFinite(m.priceMom1Y) ? m.priceMom1Y : null;
-    const mom1yStr = mom1y != null ? mom1y >= 0 ? `+${fmt1(mom1y)}` : fmt1(mom1y) : "\u2014";
-    const mom1yCls = mom1y == null ? "" : mom1y >= 0 ? ' class="val-mom-up"' : ' class="val-mom-dn"';
-    return `<div class="val-met">
+  const mom1y = m.priceMom1Y != null && isFinite(m.priceMom1Y) ? m.priceMom1Y : null;
+  const mom1yStr = mom1y != null ? mom1y >= 0 ? `+${fmt1(mom1y)}` : fmt1(mom1y) : "\u2014";
+  const mom1yCls = mom1y == null ? "" : mom1y >= 0 ? ' class="val-mom-up"' : ' class="val-mom-dn"';
+  const momGrp = `<div class="val-met">
       <span><b>\u6539\u5B9A90d</b> ${escapeHTML(fmtRaw(m.epsRev90d))}%</span>
       <span><b>1Y</b> <span${mom1yCls}>${escapeHTML(mom1yStr)}%</span></span>
       <span><b>52\u9031\u4F4D\u7F6E</b> ${escapeHTML(fmtRaw(m.pos52w))}%</span>
       <span><b>\u5BFE\u5E02\u5834</b> ${escapeHTML(fmtRaw(m.rsVsSector))}%</span>
     </div>`;
-  }
-  return "";
+  return `<details class="val-detail"><summary>\u8A73\u7D30\u6307\u6A19</summary>
+    <div class="val-detail-grp"><span class="lab">\u30D0\u30EA\u30E5</span>${valueGrp}</div>
+    <div class="val-detail-grp"><span class="lab">\u54C1\u8CEA</span>${qualGrp}</div>
+    <div class="val-detail-grp"><span class="lab">\u30E2\u30E1\u30F3\u30BF\u30E0</span>${momGrp}</div>
+  </details>`;
 }
 function bannerHTML(trig) {
   let kind = "hold";
@@ -6174,16 +6184,6 @@ function confidenceHTML(verdict) {
   const drv = verdict.drivers && verdict.drivers.length ? `<span class="drv">\u6839\u62E0: ${escapeHTML(verdict.drivers.join("\u30FB"))}</span>` : "";
   return `<div class="val-jc"><span class="jc-nm">\u5224\u5B9A\u78BA\u5EA6</span><span class="jc-dots" aria-label="\u5224\u5B9A\u78BA\u5EA6 ${escapeHTML(lv)}">${dotsHTML}<span class="lv">${escapeHTML(lv)}</span></span>${drv}</div>`;
 }
-function totalChipsHTML(val) {
-  const v = val && val.value || {};
-  const q = val && val.quality || {};
-  const per = `${fmtRaw(v.perTrail)}\u2192${fmtRaw(v.perFwd)}`;
-  return `<div class="val-chips">
-    <span class="val-c"><span class="k">PER</span><b>${escapeHTML(per)}</b></span>
-    <span class="val-c"><span class="k">PEG</span><b>${escapeHTML(fmtRaw(v.peg))}</b></span>
-    <span class="val-c"><span class="k">F\u30B9\u30B3\u30A2</span><b>${escapeHTML(fmtRaw(q.fScore))}</b></span>
-  </div>`;
-}
 function rowHTML(p, currentPct, targetPct, verdict, val, trig, conviction) {
   const banner = bannerHTML(trig);
   const chipHTML = verdict && verdict.label && verdict.label !== "-" ? `<span class="${chipClass(verdict)}" title="${escapeHTML(verdict.drivers.join("\u30FB"))}">${escapeHTML(verdict.label)}</span>` : "";
@@ -6194,10 +6194,12 @@ function rowHTML(p, currentPct, targetPct, verdict, val, trig, conviction) {
     <span class="val-nm">${escapeHTML(p.name)}</span>
     ${chipHTML}${proxyHTML}
   </div>`;
-  const size = `<div class="val-size-wrap">${sizeBarHTML(currentPct, targetPct, conviction)}</div>`;
-  const metrics = _lens === "total" ? totalChipsHTML(val) : line3HTML(val);
+  const sk = sortKeyForLens(_lens);
+  const size = `<div class="val-size-wrap${sk.sizeBar ? " is-sortkey" : ""}">${sizeBarHTML(currentPct, targetPct, conviction)}</div>`;
+  const metrics = coreChipsHTML(val, _lens);
+  const detail = detailHTML(val);
   const confLine = confidenceHTML(verdict);
-  return `<div class="val-row">${banner}<div class="val-body">${head}${size}${metrics}${confLine}</div></div>`;
+  return `<div class="val-row">${banner}<div class="val-body">${head}${size}${metrics}${confLine}${detail}</div></div>`;
 }
 function sortedRows(rows) {
   const copy = rows.slice();
