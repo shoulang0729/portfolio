@@ -37,6 +37,12 @@
 - [ ] `eventStress` に単体テスト（既知系列で累積値・カバレッジ検算）。
 - [ ] computeVerdict 等 他ロジック無改変。
 
+### 調査反映（Issue#428・2026-06-21）★実装方針補正
+- 全保有26銘柄が `range=5y` で取得可（JP含む）。**欠損は後発IPOの 200A.T(2.0y)・SHLD(2.8y) の2本のみ** → `bear-2022`/`svb-2023` で除外・再正規化（coverage% に反映）。recent3イベント（tariff/deepseek/yen-carry）は26/26フルカバー。
+- **`getAllHistorical` の既定 depth を 1y→5y に全体引き上げするのは非推奨**（sessionStorage ~5MB quota 圧迫・ウォッチリストまで5y取る無駄）。
+- **推奨実装＝保有限定 × range=5y × lazy 専用フェッチ**（`fetchStressHistory()` 的）。既存 `historicalCache` の `5y:` バケットを再利用（新インフラ不要）。**書き込みは IDB のみ**（`saveCacheToSession` の sessionStorage フォールバックに 5y は載せない＝quota回避）。Riskタブのストレスカード初表示時に lazy 取得。既存 `1y` 系カード（ボラ/相関/最悪窓）は無改変＝後方互換。
+- ペイロード概算：wire 2.86MB / IDB ≈1.8MB（1y比 ~5倍）。`batchWithRetry` で Yahoo 60req/min 枠内。
+
 ### スコープ外（次フェーズ）
 - 仮想ショックベクトル方式（2008/2020 級を履歴無しで再現）。
 - イベント別の銘柄寄与分解（どの保有が効いたか）。
@@ -64,6 +70,11 @@
 ### スコープ外（次フェーズ）
 - 2段DCF（高成長N年→逓減→終価）。ETF への適用。アナリスト epsRev 連動。
 - **依存**: #427（Yahoo アナリスト目標株価の可用性）。
+
+### 調査反映（Issue#427・2026-06-21）★②自動化 確定
+- Yahoo `financialData.targetMeanPrice` は**個別株で取得可**（米8/8、日3/4）。→ **targetGapPct は全（カバー）銘柄で自動化＝`(targetMeanPrice / currentPrice) − 1`**。quality 系バッチに相乗り（新 `target-gap.mjs` でも可）。
+- **未カバー＝null 継続**：6016.T（小型・アナリスト未カバー、`recommendationKey="none"`）。2800.HK/3033.HK は `quoteType=ETF` で `financialData` 不在＝ETF対象外方針と整合。
+- **低 n の confidence 下げ**：`numberOfAnalystOpinions` が小さい銘柄（例 8050.T=4）は targetGap の信頼度を下げる扱い（D-3 の低confidence と同型）。as-of 無し＝「Yahoo最新・週次更新」運用。
 
 ## D-4 的中率（verdict 答え合わせ）運用フロー（A5/5b）
 
