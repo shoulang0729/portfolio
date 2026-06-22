@@ -143,8 +143,8 @@ if __name__ == "__main__":
   <key>Label</key><string>com.toshio.mf-snapshot</string>
   <key>ProgramArguments</key>
   <array>
-    <string>/usr/bin/python3</string>
-    <string>/Users/toshio/github/portfolio/scripts/fetch_mf.py</string>
+    <string>/Users/shoulang/.mf-snapshot/venv/bin/python</string>  <!-- ★venvのpython(システムpython直は使わない) -->
+    <string>/Users/shoulang/github/portfolio/scripts/fetch_mf.py</string>
     <string>run</string>
   </array>
   <key>StartCalendarInterval</key><dict><key>Hour</key><integer>9</integer><key>Minute</key><integer>0</integer></dict>
@@ -163,8 +163,14 @@ if __name__ == "__main__":
 
 実装と一緒に `scripts/README-mf-snapshot.md` を作り、下記を記載：
 1. Mac mini に `github/portfolio` を clone（git push 認証は既存のものを使用）。
-2. `pip install playwright && python -m playwright install chromium`。
-3. `python scripts/fetch_mf.py setup` → 開いたブラウザで MF にログイン（2FA）→ Enter（プロファイル保存）。
+2. **専用 venv を作る**（macOS はシステム python に直 pip 不可＝PEP668）。`python3` が無ければ先に `xcode-select --install`：
+   ```bash
+   python3 -m venv ~/.mf-snapshot/venv
+   ~/.mf-snapshot/venv/bin/pip install --upgrade pip playwright
+   ~/.mf-snapshot/venv/bin/python -m playwright install chromium
+   ```
+3. `~/.mf-snapshot/venv/bin/python scripts/fetch_mf.py setup` → 開いたブラウザで MF にログイン（2FA）→ Enter（プロファイル保存）。
+   ※以降 `run` も同じ venv python で叩く（launchd plist も venv python を指す＝§3）。
 4. （任意）Telegram 通知を使うなら plist の `TG_*` を設定。
 5. `cp scripts/com.toshio.mf-snapshot.plist ~/Library/LaunchAgents/ && launchctl load ~/Library/LaunchAgents/com.toshio.mf-snapshot.plist`。
 6. 動作確認：`python scripts/fetch_mf.py run` を手動実行→ mf-holdings.json 更新＆push を確認。
