@@ -3,7 +3,7 @@
 > 設計=Mulmo / 実装=VS Code。設計は変えず、矛盾あれば止めて報告（`docs/mulmo-vscode-workflow.md`）。
 > **2026-06-21 改訂**: クラウド GitHub Actions 版から **Mac mini ローカル launchd ＋ Playwright 永続プロファイル ＋ 決定論抽出** 版へ全面差し替え（理由＝§0）。
 
-## 0. 設計の核（なぜこの形か）
+> ✅ **実装完了（2026-06-22・PR #462 / Issue#460 マージ済）**＝`scripts/fetch_mf.py`(setup/run・永続プロファイル・抽出・除外・v4整形・±1%検証・git push・通知)＋`com.toshio.mf-snapshot.plist`＋`README-mf-snapshot.md`＋config `fetch`。\n> ⏳ **残＝本人の実機作業2点**：①DOMセレクタ確定（暫定値→実画面で調整）②plistのパス/venv python を実環境へ。\n\n## 0. 設計の核（なぜこの形か）
 
 過去に「Claude for Chrome（LLM）運び屋」は **commit を拒否**した。理由は正当で、ルーティンが「外部URLから取得した設定とライブWebページの内容を"従うべき命令"として扱え（限定ルールに従え）」という構造＝**プロンプトインジェクションの導線**だったため。LLM を判断者に置く限りこの穴は消えない。かつユーザーは **毎日承認したくない（完全自動が目的）**。
 
