@@ -493,12 +493,20 @@ var state = {
   // 金額マスク状態（既定=マスク・目アイコンで解除）。'0'=解除を永続化
   themeMode: localStorage.getItem("hm-theme") || "auto",
   listSortCol: "1d",
-  // 銘柄リストのデフォルトソート列
+  // （統合前の旧・互換用）銘柄リストのソート列
   listSortDir: "desc",
+  // Historical ＋ Watchlist 統合タブ（#452）。セグメント= all/held/watch（localStorage 永続）。
+  heatSeg: (() => {
+    const s = localStorage.getItem("hm-heat-seg");
+    return s === "held" || s === "watch" || s === "all" ? s : "all";
+  })(),
+  heatSortCol: "1d",
+  // 統合タブのデフォルトソート列
+  heatSortDir: "desc",
   slDetailVisible: false,
   // 詳細列の表示状態（起動時はデフォルト非表示）
   activeTab: "heatmap",
-  // 'heatmap' | 'list' | 'watchlist'
+  // 'heatmap' | 'list' | 'risk' | 'value' | 'briefing'
   lastUpdateText: null,
   // refreshPrices 成功時のステータス文字列（履歴取得後に復元用）
   // ウォッチリスト
@@ -2346,73 +2354,130 @@ function slToggleDetail() {
   }
   requestAnimationFrame(applyStockBars);
 }
-function getPctForPeriod(p, periodId) {
-  if (!p.ySymbol) return null;
-  if (periodId === "1d") return p.dayPct;
-  return getHistoricalChangePct(p.ySymbol, periodId);
-}
 function slMarketLabel(p) {
   if (p.cat === "\u65E5\u672C\u682A\u30FBETF") return "\u6771\u8A3C";
   if (p.cat === "\u6295\u8CC7\u4FE1\u8A17") return "\u6295\u4FE1";
   return "US";
 }
-function renderStockList() {
-  const panel = document.getElementById("panel-list");
-  if (panel?.hidden) return;
-  const wrap = document.getElementById("stock-list-wrap");
-  if (!wrap) return;
-  const maxValue = Math.max(1, ...positions.map((p) => p.value || 0));
-  const items = [...positions].sort((a, b) => {
+function heldRow(p) {
+  return {
+    kind: "held",
+    symbol: p.symbol,
+    histKey: p.ySymbol,
+    // 履歴キャッシュのキー
+    name: p.name,
+    market: slMarketLabel(p),
+    cur: p.cur,
+    price: p.price,
+    value: p.value,
+    shares: p.shares,
+    avgCost: p.avgCost,
+    pnl: p.pnl,
+    pnlPct: p.pnlPct,
+    dayPct: p.dayPct,
+    cat: p.cat
+  };
+}
+function watchRow(item) {
+  const live = state.watchlistPrices[item.symbol];
+  return {
+    kind: "watch",
+    symbol: item.symbol,
+    histKey: item.symbol,
+    // ウォッチは symbol が履歴キー
+    name: item.name || "",
+    market: item.exchange || "",
+    cur: item.cur,
+    price: live?.price ?? null,
+    value: null,
+    shares: null,
+    avgCost: null,
+    pnl: null,
+    pnlPct: null,
+    dayPct: live?.dayPct ?? null,
+    cat: null
+  };
+}
+function heatGetPct(row, periodId) {
+  if (periodId === "1d") return row.dayPct ?? null;
+  return row.histKey ? getHistoricalChangePct(row.histKey, periodId) : null;
+}
+function buildHeatItems() {
+  const seg = state.heatSeg;
+  if (seg === "held") return positions.map(heldRow);
+  if (seg === "watch") return state.watchlist.map(watchRow);
+  const heldKeys = /* @__PURE__ */ new Set();
+  for (const p of positions) {
+    if (p.symbol) heldKeys.add(p.symbol);
+    if (p.ySymbol) heldKeys.add(p.ySymbol);
+  }
+  const watchRows = state.watchlist.filter((w) => !heldKeys.has(w.symbol)).map(watchRow);
+  return [...positions.map(heldRow), ...watchRows];
+}
+var HEAT_HELD_ONLY = ["value", "shares", "avgCost", "pnl", "pnlPct"];
+function sortHeatItems(items) {
+  const col = state.heatSortCol;
+  const dir = state.heatSortDir === "desc" ? -1 : 1;
+  return [...items].sort((a, b) => {
+    if (col === "symbol") return dir * String(a.symbol).localeCompare(String(b.symbol), "ja");
+    if (col === "market") return dir * String(a.market).localeCompare(String(b.market), "ja");
     let va, vb;
-    if (PERIOD_IDS.includes(state.listSortCol)) {
-      va = getPctForPeriod(a, state.listSortCol);
-      vb = getPctForPeriod(b, state.listSortCol);
-    } else if (state.listSortCol === "pnlPct") {
-      va = a.pnlPct;
-      vb = b.pnlPct;
-    } else if (state.listSortCol === "pnl") {
-      va = a.pnl;
-      vb = b.pnl;
-    } else if (state.listSortCol === "value") {
-      va = a.value;
-      vb = b.value;
-    } else if (state.listSortCol === "price") {
+    if (PERIOD_IDS.includes(col)) {
+      va = heatGetPct(a, col);
+      vb = heatGetPct(b, col);
+    } else if (col === "price") {
       va = a.price;
       vb = b.price;
-    } else if (state.listSortCol === "shares") {
-      va = a.shares;
-      vb = b.shares;
-    } else if (state.listSortCol === "avgCost") {
-      va = a.avgCost;
-      vb = b.avgCost;
-    } else if (state.listSortCol === "market") {
-      const cmp = slMarketLabel(a).localeCompare(slMarketLabel(b), "ja");
-      return state.listSortDir === "desc" ? -cmp : cmp;
+    } else if (HEAT_HELD_ONLY.includes(col)) {
+      va = a[col];
+      vb = b[col];
     } else {
       va = a.symbol;
       vb = b.symbol;
     }
-    if (va === null || va === void 0) return 1;
-    if (vb === null || vb === void 0) return -1;
-    return state.listSortDir === "desc" ? vb > va ? 1 : -1 : va > vb ? 1 : -1;
+    const an = va == null;
+    const bn = vb == null;
+    if (an && bn) return 0;
+    if (an) return 1;
+    if (bn) return -1;
+    if (va === vb) return 0;
+    return dir * (va > vb ? 1 : -1);
   });
-  const th = (label, col, align) => makeTh(label, col, align, state.listSortCol, state.listSortDir, "slSort");
+}
+function renderHeatmapList() {
+  const panel = document.getElementById("panel-list");
+  if (panel?.hidden) return;
+  const wrap = document.getElementById("stock-list-wrap");
+  if (!wrap) return;
+  const seg = state.heatSeg;
+  const items = sortHeatItems(buildHeatItems());
+  if (items.length === 0) {
+    const msg = seg === "watch" ? "\u4E0A\u306E\u691C\u7D22\u6B04\u304B\u3089\u9298\u67C4\u3092\u8FFD\u52A0\u3057\u3066\u304F\u3060\u3055\u3044" : seg === "held" ? "\u4FDD\u6709\u9298\u67C4\u304C\u3042\u308A\u307E\u305B\u3093" : "\u9298\u67C4\u304C\u3042\u308A\u307E\u305B\u3093";
+    wrap.innerHTML = `<div class="wl-empty-msg">${msg}</div>`;
+    return;
+  }
+  const maxValue = Math.max(1, ...items.filter((r) => r.kind === "held").map((r) => r.value || 0));
+  const th = (label, col, align) => makeTh(label, col, align, state.heatSortCol, state.heatSortDir, "heatSort");
   const slSgn = (v) => v != null && v < 0 ? "neg" : "";
-  const rows = items.map((p) => {
-    const pnlAmtCls = slSgn(p.pnl);
-    const pnlStr = p.pnl != null ? fmtJPYInt(p.pnl) : "-";
-    const pnlPctStr = p.pnlPct != null ? fmtPctInt(p.pnlPct) : "-";
-    const pnlPctBg = p.pnlPct != null ? getColor(p.pnlPct, "pnl") : null;
+  const showBadge = seg === "all";
+  const rows = items.map((r) => {
+    const isHeld = r.kind === "held";
+    const pnlAmtCls = slSgn(r.pnl);
+    const pnlStr = r.pnl != null ? fmtJPYInt(r.pnl) : "\u2013";
+    const pnlPctStr = r.pnlPct != null ? fmtPctInt(r.pnlPct) : "\u2013";
+    const pnlPctBg = r.pnlPct != null ? getColor(r.pnlPct, "pnl") : null;
     const pnlPctFg = pnlPctBg ? getCellTextColor(pnlPctBg) : null;
-    const valStr = p.value != null ? fmtJPYInt(p.value) : "-";
-    const priceStr = fmtPrice(p.price, p.cur);
-    const costStr = fmtPrice(p.avgCost, p.cur);
-    const sharesStr = fmtShares(p.shares) + (p.cat === "\u6295\u8CC7\u4FE1\u8A17" ? "\u53E3" : "\u682A");
-    const barPct = p.value && maxValue > 0 ? p.value / maxValue : 0;
-    const periodCells = makePeriodCells((periodId) => getPctForPeriod(p, periodId));
-    return `<tr data-bar="${barPct.toFixed(4)}">
-      <td data-col="symbol" class="sl-sym">${escapeHTML(p.symbol)}<span class="sl-inline-name">${escapeHTML(p.name)}</span></td>
-      <td data-col="market"><span class="wl-type-badge">${slMarketLabel(p)}</span></td>
+    const valStr = r.value != null ? fmtJPYInt(r.value) : "\u2013";
+    const priceStr = r.price != null ? fmtPrice(r.price, r.cur) : "\u2013";
+    const costStr = r.avgCost != null ? fmtPrice(r.avgCost, r.cur) : "\u2013";
+    const sharesStr = r.shares != null ? fmtShares(r.shares) + (r.cat === "\u6295\u8CC7\u4FE1\u8A17" ? "\u53E3" : "\u682A") : "\u2013";
+    const barPct = isHeld && r.value && maxValue > 0 ? r.value / maxValue : 0;
+    const periodCells = makePeriodCells((periodId) => heatGetPct(r, periodId));
+    const badge = showBadge ? `<span class="heat-kind heat-kind-${isHeld ? "held" : "watch"}">${isHeld ? "\u4FDD\u6709" : "W"}</span>` : "";
+    const delCell = isHeld ? "" : `<button class="wl-del-btn" data-action="removeFromWatchlist" data-arg="${escapeHTML(r.symbol)}" title="\u30A6\u30A9\u30C3\u30C1\u30EA\u30B9\u30C8\u304B\u3089\u524A\u9664">\xD7</button>`;
+    return `<tr data-bar="${barPct.toFixed(4)}" data-kind="${r.kind}">
+      <td data-col="symbol" class="sl-sym">${badge}${escapeHTML(r.symbol)}<span class="sl-inline-name">${escapeHTML(r.name)}</span></td>
+      <td data-col="market"><span class="wl-type-badge">${escapeHTML(r.market)}</span></td>
       <td data-col="value">${valStr}</td>
       <td data-col="shares">${sharesStr}</td>
       <td data-col="avgCost">${costStr}</td>
@@ -2420,9 +2485,10 @@ function renderStockList() {
       ${periodCells}
       <td data-col="pnl" class="${pnlAmtCls}">${pnlStr}</td>
       <td data-col="pnlPct" class="sl-pct-cell" ${pnlPctBg ? `style="background:${pnlPctBg};color:${pnlPctFg}"` : ""}>${pnlPctStr}</td>
+      <td data-col="del" class="wl-del-cell">${delCell}</td>
     </tr>`;
   }).join("");
-  wrap.innerHTML = `<table class="sl-table">
+  wrap.innerHTML = `<table class="sl-table seg-${seg}">
     <thead><tr>
       ${th('\u30C6\u30A3\u30C3\u30AB\u30FC<br><span class="sl-th-sub">\u9298\u67C4\u540D</span>', "symbol")}
       ${th("\u5E02\u5834", "market", "center")}
@@ -2430,14 +2496,25 @@ function renderStockList() {
       ${th("\u4FDD\u6709\u6570", "shares")}
       ${th("\u53D6\u5F97\u5358\u4FA1", "avgCost")}
       ${th("\u73FE\u5728\u5024", "price")}
-      ${makePeriodHeaderCells(state.listSortCol, state.listSortDir, "slSort")}
+      ${makePeriodHeaderCells(state.heatSortCol, state.heatSortDir, "heatSort")}
       ${th("\u542B\u307F\u640D\u76CA", "pnl")}
       ${th("\u640D\u76CA\u7387", "pnlPct", "center")}
+      <th data-col="del"></th>
     </tr></thead>
     <tbody>${rows}</tbody>
   </table>`;
   updateSlColStyle();
   requestAnimationFrame(applyStockBars);
+}
+function updateHeatControls() {
+  const onList = state.activeTab === "list";
+  document.querySelectorAll(".heat-seg-pill[data-arg]").forEach((b) => {
+    const on = b.dataset.arg === state.heatSeg;
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-selected", String(on));
+  });
+  const wlSearch = document.getElementById("wl-search-wrap");
+  if (wlSearch) wlSearch.hidden = !onList || state.heatSeg === "held";
 }
 function applyStockBars() {
   if (state.activeTab !== "list") return;
@@ -2468,9 +2545,9 @@ function applyStockBars() {
     tr.style.setProperty("--bar-end", `${barEnd.toFixed(1)}px`);
   });
 }
-function slSort(col) {
-  _tableSort("listSortCol", "listSortDir", col);
-  renderStockList();
+function heatSort(col) {
+  _tableSort("heatSortCol", "heatSortDir", col, ["symbol"]);
+  renderHeatmapList();
 }
 
 // src/chart.js
@@ -2764,7 +2841,7 @@ function renderHeatmap() {
   })).filter((g) => g.children.length > 0);
   if (groups.length === 0) {
     svg.append("text").attr("x", W / 2).attr("y", 32).attr("fill", cssVar("--text2")).attr("text-anchor", "middle").attr("font-size", 13).text("\u8868\u793A\u3067\u304D\u308B\u4FDD\u6709\u9298\u67C4\u304C\u3042\u308A\u307E\u305B\u3093");
-    renderStockList();
+    renderHeatmapList();
     return;
   }
   groups.sort(
@@ -2828,7 +2905,7 @@ function renderHeatmap() {
       fitText(symEl, idealSym);
     }
   });
-  renderStockList();
+  renderHeatmapList();
   const tt = document.getElementById("tooltip");
   cells.on("mousemove", function(event, d) {
     const p = d.data;
@@ -3070,13 +3147,13 @@ function addToWatchlist(item) {
   if (state.watchlist.some((w) => w.symbol === item.symbol)) return;
   state.watchlist.push(item);
   saveWatchlist();
-  renderWatchlist();
+  renderHeatmapList();
   fetchWatchlistData();
 }
 function removeFromWatchlist(symbol) {
   state.watchlist = state.watchlist.filter((w) => w.symbol !== symbol);
   saveWatchlist();
-  renderWatchlist();
+  renderHeatmapList();
 }
 async function fetchTickerInfo(symbol) {
   const [chartData, qsData] = await Promise.all([
@@ -3229,78 +3306,8 @@ async function fetchWatchlistData() {
   );
   for (const range of ["1y", "5y", "10y"]) {
     await fetchAllHistorical(range);
-    renderWatchlist();
+    renderHeatmapList();
   }
-}
-function wlSort(col) {
-  _tableSort("wlSortCol", "wlSortDir", col, ["symbol"]);
-  renderWatchlist();
-}
-function wlGetPct(item, periodId) {
-  if (periodId === "1d") return state.watchlistPrices[item.symbol]?.dayPct ?? null;
-  return getHistoricalChangePct(item.symbol, periodId);
-}
-function renderWatchlist() {
-  const panel = document.getElementById("panel-watchlist");
-  if (panel?.hidden) return;
-  const wrap = document.getElementById("watchlist-table-wrap");
-  if (!wrap) return;
-  if (state.watchlist.length === 0) {
-    wrap.innerHTML = '<div class="wl-empty-msg">\u4E0A\u306E\u691C\u7D22\u6B04\u304B\u3089\u9298\u67C4\u3092\u8FFD\u52A0\u3057\u3066\u304F\u3060\u3055\u3044</div>';
-    return;
-  }
-  const sorted = [...state.watchlist].sort((a, b) => {
-    const col = state.wlSortCol;
-    const dir = state.wlSortDir === "desc" ? -1 : 1;
-    let va, vb;
-    if (col === "symbol") {
-      va = a.symbol;
-      vb = b.symbol;
-      return dir * va.localeCompare(vb);
-    }
-    if (col === "market") {
-      va = a.exchange ?? "";
-      vb = b.exchange ?? "";
-      return dir * va.localeCompare(vb);
-    }
-    if (col === "price") {
-      va = state.watchlistPrices[a.symbol]?.price ?? -Infinity;
-      vb = state.watchlistPrices[b.symbol]?.price ?? -Infinity;
-    } else {
-      va = wlGetPct(a, col) ?? -Infinity;
-      vb = wlGetPct(b, col) ?? -Infinity;
-    }
-    return dir * (va > vb ? 1 : va < vb ? -1 : 0);
-  });
-  const th = (label, col, align) => makeTh(label, col, align, state.wlSortCol, state.wlSortDir, "wlSort");
-  const rows = sorted.map((item) => {
-    const live = state.watchlistPrices[item.symbol];
-    const price = live?.price;
-    const priceStr = price != null ? fmtPrice(price, item.cur) : "\u2013";
-    const periodCells = makePeriodCells((periodId) => wlGetPct(item, periodId));
-    const symEsc = escapeHTML(item.symbol);
-    const nameEsc = escapeHTML(item.name || "");
-    const exEsc = escapeHTML(item.exchange || "");
-    return `<tr>
-      <td data-col="symbol" class="sl-sym">${symEsc}<span class="sl-inline-name">${nameEsc}</span></td>
-      <td class="wl-market-cell"><span class="wl-type-badge">${exEsc}</span></td>
-      <td class="wl-price-cell">${priceStr}</td>
-      ${periodCells}
-      <td class="wl-del-cell">
-        <button class="wl-del-btn" data-action="removeFromWatchlist" data-arg="${escapeHTML(item.symbol)}" title="\u30A6\u30A9\u30C3\u30C1\u30EA\u30B9\u30C8\u304B\u3089\u524A\u9664">\xD7</button>
-      </td>
-    </tr>`;
-  }).join("");
-  wrap.innerHTML = `<table class="sl-table wl-table">
-    <thead><tr>
-      ${th('\u30C6\u30A3\u30C3\u30AB\u30FC<br><span class="sl-th-sub">\u9298\u67C4\u540D</span>', "symbol")}
-      ${th("\u5E02\u5834", "market", "center")}
-      ${th("\u73FE\u5728\u5024", "price")}
-      ${makePeriodHeaderCells(state.wlSortCol, state.wlSortDir, "wlSort")}
-      <th></th>
-    </tr></thead>
-    <tbody>${rows}</tbody>
-  </table>`;
 }
 
 // src/networth.js
@@ -3383,11 +3390,8 @@ async function refreshHistoricalAndRender() {
   const results = await Promise.allSettled(["5y", "10y"].map(async (range) => {
     await fetchAllHistorical(range);
     renderStats();
-    renderStockList();
-    if (state.activeTab === "watchlist") {
-      renderWatchlist();
-      updateWatchlistHeight();
-    }
+    renderHeatmapList();
+    if (state.activeTab === "list") updateListHeight();
     if (state.changePeriod && state.changePeriod !== "1d") renderHeatmap();
     return range;
   }));
@@ -3416,15 +3420,6 @@ function updateListHeight() {
   const h = Math.max(160, window.innerHeight - stickyH - padBot - 4);
   wrap.style.maxHeight = `${h}px`;
 }
-function updateWatchlistHeight() {
-  const wrap = document.getElementById("watchlist-table-wrap");
-  if (!wrap) return;
-  const sticky = document.querySelector(".sticky-top");
-  const stickyH = sticky instanceof HTMLElement ? sticky.offsetHeight : 0;
-  const padBot = parseFloat(getComputedStyle(document.body).paddingBottom) || 16;
-  const h = Math.max(160, window.innerHeight - stickyH - padBot - 4);
-  wrap.style.maxHeight = `${h}px`;
-}
 function updateHeatmapHeight() {
   const panel = document.getElementById("panel-heatmap");
   if (!panel || panel.hidden) return;
@@ -3435,10 +3430,6 @@ function updateHeatmapHeight() {
   panel.style.maxHeight = `${h}px`;
 }
 function updateActiveTableHeight() {
-  if (state.activeTab === "watchlist") {
-    updateWatchlistHeight();
-    return;
-  }
   if (state.activeTab === "heatmap") {
     updateHeatmapHeight();
     return;
@@ -6417,6 +6408,7 @@ async function renderValuationTab() {
 
 // src/tabs.js
 function switchTab(name) {
+  if (name === "watchlist") name = "list";
   if (state.activeTab === name) return;
   state.activeTab = name;
   try {
@@ -6425,14 +6417,12 @@ function switchTab(name) {
   }
   const panelHeatmap = document.getElementById("panel-heatmap");
   const panelList = document.getElementById("panel-list");
-  const panelWatchlist = document.getElementById("panel-watchlist");
   const panelRisk = document.getElementById("panel-risk");
   const panelValue = document.getElementById("panel-value");
   const panelBriefing = document.getElementById("panel-briefing");
   const panelAi = document.getElementById("panel-ai");
   if (panelHeatmap) panelHeatmap.hidden = name !== "heatmap";
   if (panelList) panelList.hidden = name !== "list";
-  if (panelWatchlist) panelWatchlist.hidden = name !== "watchlist";
   if (panelRisk) panelRisk.hidden = name !== "risk";
   if (panelValue) panelValue.hidden = name !== "value";
   if (panelBriefing) panelBriefing.hidden = name !== "briefing";
@@ -6443,23 +6433,20 @@ function switchTab(name) {
     b.setAttribute("aria-selected", String(isActive));
   });
   const slControls = document.getElementById("sl-controls");
-  const wlSearch = document.getElementById("wl-search-wrap");
   if (slControls) slControls.hidden = name !== "list";
-  if (wlSearch) wlSearch.hidden = name !== "watchlist";
+  updateHeatControls();
   if (name === "heatmap") {
     renderHeatmap();
     requestAnimationFrame(() => requestAnimationFrame(updateHeatmapHeight));
   }
   if (name === "list") {
-    renderStockList();
+    renderHeatmapList();
     requestAnimationFrame(() => requestAnimationFrame(updateListHeight));
-  }
-  if (name === "watchlist") {
     (async () => {
       await _loadWatchlistFromWorker();
-      renderWatchlist();
-      updateWatchlistHeight();
-      fetchWatchlistData();
+      renderHeatmapList();
+      updateListHeight();
+      if (state.heatSeg !== "held") fetchWatchlistData();
     })();
   }
   if (name === "risk") renderRiskCharts();
@@ -6566,8 +6553,7 @@ function setupEventListeners(applyThemeFn) {
   }
   setupSwipeNav();
   loadValuations().then(() => {
-    renderStockList();
-    renderWatchlist();
+    renderHeatmapList();
   });
   let _resizeRaf = null;
   window.addEventListener("resize", () => {
@@ -6575,10 +6561,9 @@ function setupEventListeners(applyThemeFn) {
     _resizeRaf = requestAnimationFrame(() => {
       _resizeRaf = null;
       renderHeatmap();
-      renderStockList();
+      renderHeatmapList();
       applyStockBars();
       updateListHeight();
-      updateWatchlistHeight();
     });
   });
   window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
@@ -6595,7 +6580,6 @@ function setupEventListeners(applyThemeFn) {
     if (_stickyEl) {
       new ResizeObserver(() => {
         if (state.activeTab === "list") updateListHeight();
-        if (state.activeTab === "watchlist") updateWatchlistHeight();
       }).observe(_stickyEl);
     }
   }
@@ -7227,8 +7211,7 @@ async function _doSavePositions(finalPositions, pinHashOverride, gen) {
     if (!stale()) _renderImportStep("done", `${finalPositions.length}\u9298\u67C4\u3092\u4FDD\u5B58\u3057\u307E\u3057\u305F`);
     setTimeout(() => {
       document.dispatchEvent(new CustomEvent("hm:prices-updated"));
-      renderStockList();
-      renderWatchlist();
+      renderHeatmapList();
       refreshPrices();
     }, 300);
   } catch (e) {
@@ -7944,6 +7927,18 @@ function _setupMobileLayout() {
   if (refreshCtrlGroup) refreshCtrlGroup.style.display = "none";
   stickyTop.querySelectorAll(".controls .divider").forEach((d) => d.style.display = "none");
 }
+function setHeatSeg(seg) {
+  if (seg !== "all" && seg !== "held" && seg !== "watch") return;
+  if (state.heatSeg === seg) return;
+  state.heatSeg = seg;
+  try {
+    localStorage.setItem("hm-heat-seg", seg);
+  } catch {
+  }
+  updateHeatControls();
+  renderHeatmapList();
+  if (seg !== "held") fetchWatchlistData();
+}
 var ACTION_MAP = {
   // app.js
   toggleStats,
@@ -7971,11 +7966,11 @@ var ACTION_MAP = {
   setRange,
   closeModal,
   handleOverlayClick,
-  // stock-list.js
-  slSort,
+  // stock-list.js（統合タブ）
+  heatSort,
   slToggleDetail,
+  setHeatSeg,
   // watchlist.js
-  wlSort,
   onWatchlistSearch,
   removeFromWatchlist,
   wlSelectItem,
@@ -8087,11 +8082,7 @@ function init() {
       }
       await fetchAllHistorical("1y");
       renderStats();
-      renderStockList();
-      if (state.activeTab === "watchlist") {
-        renderWatchlist();
-        updateWatchlistHeight();
-      }
+      renderHeatmapList();
       if (state.changePeriod && state.changePeriod !== "1d") renderHeatmap();
       await refreshHistoricalAndRender();
     } catch (e) {
