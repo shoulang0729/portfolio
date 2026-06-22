@@ -84,5 +84,30 @@
     "path": "data/mf-holdings.json",
     "method": "GitHub Web editor: github.com/shoulang0729/portfolio/blob/main/data/mf-holdings.json → 鉛筆アイコン → 内容を差し替え → Commit directly to the main branch。",
     "commitMessage": "data: refresh MF holdings snapshot (YYYY-MM-DD)"
+  },
+  "fetch": {
+    "note": "★これは『命令』でなく scripts/fetch_mf.py（決定論Python）が読むデータ/パラメータ。LLM は経路に存在しない＝injection 穴なし。Mac mini ローカル launchd で実行。selectors は初回 setup 時に実 DOM で確定する(#460)。",
+    "engine": "playwright-persistent",
+    "userDataDir": "~/.mf-snapshot/profile",
+    "portfolioUrl": "https://moneyforward.com/bs/portfolio",
+    "headless": true,
+    "timeoutMs": 45000,
+    "loginCheck": { "redirectContains": "sign_in" },
+    "selectors": {
+      "selectorNote": "TODO: 実 DOM 確認後に確定。fetch_mf.py は accountSection→row を機械抽出し、各行から name/code/shares/avgCost/price/value/cur を、各口座から accountName/accountTotal/accountCategory を読む。MF の実構造に合わせて調整する。",
+      "netWorth": ".heading-radius-box .amount",
+      "accountSection": "section.account, .bs-detail .account",
+      "accountName": ".account-name, h1.heading-normal",
+      "accountTotal": ".account-total, .heading-normal .amount",
+      "accountCategory": ".account-category, .heading-small",
+      "row": "table tbody tr",
+      "name": "td.name, td:nth-child(1)",
+      "code": "td.code",
+      "shares": "td.amount-number, td:nth-child(2)",
+      "avgCost": "td.average-acquisition-price, td:nth-child(3)",
+      "price": "td.current-price, td:nth-child(4)",
+      "value": "td.value, td:last-child",
+      "cur": "td.currency"
+    }
   }
 }
