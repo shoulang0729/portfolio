@@ -1,5 +1,6 @@
 # Handoff（2026-06-21）: Briefing タブ 仕上げ6点
 
+> ✅ **実装完了（2026-06-21・PR #454 マージ済）**＝Briefing 生成 spec 仕上げ6点を反映（spec/skill 恒久修正＋現号修正の区別）。PM盤面モニタにて完了確認。
 > 設計=Mulmo。実装は VS Code が本 doc を正本に着手（§`mulmo-vscode-workflow.md`）。1タスク=1ブランチ=1PR=1Issue。
 > 参照断面: `data/briefings/2026-06-21-0502.html`（リファレンス）／spec 正本 `docs/briefing-generation-spec.md`／生成スキル `data/skills/briefing-weekly/SKILL.md`（data/.claude 両コピー）。
 

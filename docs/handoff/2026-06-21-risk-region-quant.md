@@ -1,5 +1,6 @@
 # Handoff（2026-06-21）: Risk タブ 地域統合・カード余白・要約/クオンツ明確化
 
+> ✅ **実装完了（2026-06-21・PR #456 マージ済）**＝地域ルックスルー一本化・カード余白対称化・要約/クオンツ自己説明IAを実装。PM盤面モニタにて完了確認。
 > 設計=Mulmo。実装は VS Code が本 doc を正本に着手。1タスク=1ブランチ=1PR=1Issue。
 > ファイル: `src/risk-charts.js`／`src/risk-calc.js`／`src/region-calc.js`／`assets/02-tables.css`（risk CSS ≈427-578, 817-944）。
 
