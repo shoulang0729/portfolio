@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  MF スナップショット自動取得（#460）。毎日 09:00 JST に scripts/fetch_mf.py run を実行。
+  ⚠ パスは実環境に合わせて要修正（README-mf-snapshot.md の手順参照）:
+    - ProgramArguments の python3 は Playwright を入れた python（`which python3` / venv の python）。
+    - fetch_mf.py の絶対パス・ログ出力先・リポジトリ位置を Mac mini の実パスに。
+  launchd はログイン中の GUI セッションで走る（headful が必要なら config.fetch.headless=false）。
+  TG 通知を使わないなら EnvironmentVariables ブロックごと削除可。トークンはここに平文で置くため
+  この plist は ~/Library/LaunchAgents/ にのみ置き、リポジトリには絶対にコミットしない（値は __set_or_omit__ のまま）。
+-->
+<plist version="1.0"><dict>
+  <key>Label</key><string>com.toshio.mf-snapshot</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/python3</string>
+    <string>/Users/toshio/github/portfolio/scripts/fetch_mf.py</string>
+    <string>run</string>
+  </array>
+  <key>StartCalendarInterval</key><dict><key>Hour</key><integer>9</integer><key>Minute</key><integer>0</integer></dict>
+  <key>StandardOutPath</key><string>/Users/toshio/.mf-snapshot/out.log</string>
+  <key>StandardErrorPath</key><string>/Users/toshio/.mf-snapshot/err.log</string>
+  <key>EnvironmentVariables</key><dict>
+    <key>TG_BOT_TOKEN</key><string>__set_or_omit__</string>
+    <key>TG_CHAT</key><string>__set_or_omit__</string>
+  </dict>
+</dict></plist>
