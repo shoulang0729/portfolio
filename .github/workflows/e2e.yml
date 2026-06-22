@@ -12,6 +12,7 @@ jobs:
           node-version: '20'
           cache: 'npm'
       - run: npm ci
+      - run: npm run build     # 最新ソースから dist/app.js を生成（コミット済み dist が古くても e2e は最新を検証）
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
       - uses: actions/upload-artifact@v4

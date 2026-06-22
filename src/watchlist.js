@@ -8,15 +8,8 @@
 // ══════════════════════════════════════════════════════════════
 
 import { state } from './state.js';
-import {
-  escapeHTML,
-  makeTh,
-  getHistoricalChangePct,
-  fmtPrice,
-  _tableSort,
-  makePeriodCells,
-  makePeriodHeaderCells,
-} from './utils.js';
+import { escapeHTML, fmtPrice } from './utils.js';
+import { renderHeatmapList } from './stock-list.js';
 import { fetchViaProxy, fetchLivePrice, fetchAllHistorical, setStatus } from './data.js';
 import { WORKER_URL } from './config.js';
 import { validateWatchlistItem } from './schema.js';
@@ -129,14 +122,14 @@ function addToWatchlist(item) {
   if (state.watchlist.some((w) => w.symbol === item.symbol)) return;
   state.watchlist.push(item);
   saveWatchlist();
-  renderWatchlist();
+  renderHeatmapList();
   fetchWatchlistData();
 }
 
 function removeFromWatchlist(symbol) {
   state.watchlist = state.watchlist.filter((w) => w.symbol !== symbol);
   saveWatchlist();
-  renderWatchlist();
+  renderHeatmapList();
 }
 
 // ══════════════════════════════════════════════
@@ -363,112 +356,12 @@ async function fetchWatchlistData() {
   // → 既に取得済みのシンボルは内部 toFetch で除外されるので無駄打ち無し。
   for (const range of ['1y', '5y', '10y']) {
     await fetchAllHistorical(range);
-    renderWatchlist(); // 各レンジ完了ごとに再描画 → "…" が実値 or "-" に置換
+    renderHeatmapList(); // 各レンジ完了ごとに再描画 → "…" が実値 or "-" に置換（統合タブ）
   }
 }
 
-// ══════════════════════════════════════════════
-// SORT
-// ══════════════════════════════════════════════
-
-function wlSort(col) {
-  _tableSort('wlSortCol', 'wlSortDir', col, ['symbol']);
-  renderWatchlist();
-}
-
-// ══════════════════════════════════════════════
-// RENDER
-// ══════════════════════════════════════════════
-
-/**
- * ウォッチリスト用の期間騰落率取得（1d はライブ価格キャッシュから）
- * @param {*} item - ウォッチリストアイテム
- * @param {string} periodId
- * @returns {number|null}
- */
-function wlGetPct(item, periodId) {
-  if (periodId === '1d') return state.watchlistPrices[item.symbol]?.dayPct ?? null;
-  return getHistoricalChangePct(item.symbol, periodId);
-}
-
-/** ウォッチリストテーブルを描画 */
-export function renderWatchlist() {
-  const panel = document.getElementById('panel-watchlist');
-  if (panel?.hidden) return;
-  const wrap = document.getElementById('watchlist-table-wrap');
-  if (!wrap) return;
-
-  if (state.watchlist.length === 0) {
-    wrap.innerHTML = '<div class="wl-empty-msg">上の検索欄から銘柄を追加してください</div>';
-    return;
-  }
-
-  // ── ソート ──
-  const sorted = [...state.watchlist].sort((a, b) => {
-    const col = state.wlSortCol;
-    const dir = state.wlSortDir === 'desc' ? -1 : 1;
-    let va, vb;
-    if (col === 'symbol') {
-      va = a.symbol;
-      vb = b.symbol;
-      return dir * va.localeCompare(vb);
-    }
-    if (col === 'market') {
-      va = a.exchange ?? '';
-      vb = b.exchange ?? '';
-      return dir * va.localeCompare(vb);
-    }
-    if (col === 'price') {
-      va = state.watchlistPrices[a.symbol]?.price ?? -Infinity;
-      vb = state.watchlistPrices[b.symbol]?.price ?? -Infinity;
-    } else {
-      // 1d + 全履歴期間 → wlGetPct で統一
-      va = wlGetPct(a, col) ?? -Infinity;
-      vb = wlGetPct(b, col) ?? -Infinity;
-    }
-    return dir * (va > vb ? 1 : va < vb ? -1 : 0);
-  });
-
-  // makeTh のカリー版（sortFn・ソート状態をクロージャでキャプチャ）
-  const th = (label, col, align) => makeTh(label, col, align, state.wlSortCol, state.wlSortDir, 'wlSort');
-
-  // ── 行生成 ──
-  const rows = sorted
-    .map((item) => {
-      const live = state.watchlistPrices[item.symbol];
-      const price = live?.price;
-      const priceStr = price != null ? fmtPrice(price, item.cur) : '–';
-
-      // 期間セル群（utils.js の共通ヘルパー。Historical Heatmap と完全同一仕様）
-      // → dataCol が自動で渡るため "…/-" の loading 判定も同一になる
-      const periodCells = makePeriodCells((periodId) => wlGetPct(item, periodId));
-
-      const symEsc = escapeHTML(item.symbol);
-      const nameEsc = escapeHTML(item.name || '');
-      const exEsc = escapeHTML(item.exchange || '');
-      return `<tr>
-      <td data-col="symbol" class="sl-sym">${symEsc}<span class="sl-inline-name">${nameEsc}</span></td>
-      <td class="wl-market-cell"><span class="wl-type-badge">${exEsc}</span></td>
-      <td class="wl-price-cell">${priceStr}</td>
-      ${periodCells}
-      <td class="wl-del-cell">
-        <button class="wl-del-btn" data-action="removeFromWatchlist" data-arg="${escapeHTML(item.symbol)}" title="ウォッチリストから削除">×</button>
-      </td>
-    </tr>`;
-    })
-    .join('');
-
-  wrap.innerHTML = `<table class="sl-table wl-table">
-    <thead><tr>
-      ${th('ティッカー<br><span class="sl-th-sub">銘柄名</span>', 'symbol')}
-      ${th('市場', 'market', 'center')}
-      ${th('現在値', 'price')}
-      ${makePeriodHeaderCells(state.wlSortCol, state.wlSortDir, 'wlSort')}
-      <th></th>
-    </tr></thead>
-    <tbody>${rows}</tbody>
-  </table>`;
-}
+// 描画・ソートは統合タブ（stock-list.js renderHeatmapList / heatSort）に集約。
+// このモジュールは STORAGE / SEARCH / FETCH のデータ層に専念する。
 
 export {
   saveWatchlist,
@@ -476,7 +369,6 @@ export {
   _restoreWatchlistFromSnapshot,
   addToWatchlist,
   removeFromWatchlist,
-  wlSort,
   onWatchlistSearch,
   wlSelectItem,
   fetchWatchlistData,
