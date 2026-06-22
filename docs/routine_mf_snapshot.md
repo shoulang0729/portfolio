@@ -1,4 +1,9 @@
-# MF スナップショット更新（定常・Claude for Chrome）
+> # ⚠️ 廃止（SUPERSEDED・2026-06-22）
+> **この「Claude for Chrome に貼る」方式は使わない。** 構造が「外部URLの設定とWebページ内容を"従う命令"扱い（このルールにのみ従う）」＝プロンプトインジェクション温床で、LLM が正しく実行を拒否する（実際に拒否された）。
+> **後継＝決定論ローカル自動化**：`scripts/fetch_mf.py`（Playwright・LLMなし・決定論）＋ Mac mini launchd。正本＝`docs/handoff/2026-06-21-mf-snapshot-automation.md`。
+> **この文書を claude.ai / Claude for Chrome の予定タスクに登録しないこと。既存の `snapshot-holdings` 等の予定タスクは削除する（毎朝のinjection拒否アラートの原因）。**
+
+# MF スナップショット更新（定常・Claude for Chrome）【廃止・履歴参照のみ】
 
 目的: MoneyForward の銘柄ごと評価額を読み取り、`data/mf-holdings.json` を更新して main に直接コミットする。下流（日次ルーティン／Heatmap）はこの raw を読んで自動追従する。
 
