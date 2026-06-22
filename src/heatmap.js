@@ -9,7 +9,7 @@
 import { state, C } from './state.js';
 import { positions, PERIOD_MAP } from './positions.js';
 import { cssVar, getColor, getDisplayPct, getCellTextColor, getCellTextColorSub, fmtPct, fmtPctInt, fmtPrice, fmtJPY, fmtJPYFull, sgn, escapeHTML } from './utils.js';
-import { renderStockList } from './stock-list.js';
+import { renderHeatmapList } from './stock-list.js';
 import { openChart } from './chart.js';
 
 // ══════════════════════════════════════════════
@@ -105,7 +105,7 @@ function renderHeatmap() {
       .attr('text-anchor', 'middle')
       .attr('font-size', 13)
       .text('表示できる保有銘柄がありません');
-    renderStockList();
+    renderHeatmapList();
     return;
   }
   // グループ自体も円換算合計の高い順に並べる
@@ -201,7 +201,7 @@ function renderHeatmap() {
     }
   });
 
-  renderStockList();
+  renderHeatmapList();
 
   // Interactions
   const tt = document.getElementById('tooltip');

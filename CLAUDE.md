@@ -4,7 +4,7 @@
 
 ## プロジェクト概要
 Finnhub API（優先）+ Yahoo Finance API（フォールバック）を使ったポートフォリオ可視化 Web アプリ。
-Heatmap・Historical Heatmap・Watchlist Historical Heatmap の3タブ構成。
+Heatmap・Historical Heatmap（保有＋ウォッチを統合・セグメントピル[全部/保有/ウォッチ]で切替・#452）の2タブ構成（＋Risk/Value/Briefing）。
 AI相談タブは現在無効化中（ソースは `src/_disabled/` に保管）。
 
 - **本番 URL**: https://shoulang0729.github.io/portfolio/
@@ -42,7 +42,7 @@ AI相談タブは現在無効化中（ソースは `src/_disabled/` に保管）
 │   ├── heatmap.js          # D3.js ヒートマップ描画
 │   ├── chart.js            # D3.js チャート描画
 │   ├── stock-list.js       # Historical Heatmap タブ（銘柄リスト＋期間別騰落率）
-│   ├── watchlist.js        # Watchlist Historical Heatmap タブ
+│   ├── watchlist.js        # ウォッチリスト データ層（STORAGE/SEARCH/FETCH。描画は stock-list.js に統合・#452）
 │   ├── positions-store.js  # KV保存/読込・差分計算
 │   ├── import-parse.js     # マネックスCSV/マネフォ画像パース
 │   ├── import-ui.js        # 取込モーダルUI
@@ -196,9 +196,9 @@ POST /auth/verify                   パスキー検証
 - `data-arg="value"` で引数を渡す。`data-event="input"` で click 以外のイベントを登録
 
 ### ソートの仕組み
-- `state.listSortCol` / `state.listSortDir` で Historical Heatmap のソート状態を管理
-- `state.wlSortCol` / `state.wlSortDir` で Watchlist Historical Heatmap のソート状態を管理
-- ソート comparator は必ず antisymmetric にすること（等値で 0 を返す）
+- `state.heatSortCol` / `state.heatSortDir` で統合 Historical タブ（保有＋ウォッチ）のソート状態を管理（#452。旧 `listSortCol`/`wlSortCol` は廃止）
+- `state.heatSeg`（`all`/`held`/`watch`）でセグメント表示を管理（localStorage `hm-heat-seg` 永続）
+- ソート comparator は必ず antisymmetric にすること（等値で 0 を返す）。null・保有専用列の空値は dir 非依存で末尾固定
 - 文字列ソートは `localeCompare('ja')` を使う
 
 ### 期間カラム
@@ -453,10 +453,10 @@ E2E が CI を blocking すると後続全 PR が止まる。既存バグで E2E
 index.html 内の `?v=YYYYMMDDX` を新しい値に全置換する。CSS・JS・SW 登録 URL（`./sw.js?v=...`）合わせて全箇所を同じ値に揃える。
 `sw.js` の `CACHE` 名は SW 登録 URL の `?v=` から自動生成されるため、`sw.js` 本体の更新は不要（Issue#15 対応・v=20260527B〜）。
 
-### 新しいソート列を追加する（Historical Heatmap）
-1. `stock-list.js` の `slSort()` に case を追加
-2. `slRenderRows()` のテーブルヘッダーに `makeTh('ラベル', 'col-id', 'center', ...)` を追加
-3. 行の `<td data-col="col-id">` を追加
+### 新しいソート列を追加する（統合 Historical タブ）
+1. `stock-list.js` の `sortHeatItems()` に case を追加（comparator は antisymmetric・null 末尾）
+2. `renderHeatmapList()` のテーブルヘッダーに `makeTh('ラベル', 'col-id', 'center', state.heatSortCol, state.heatSortDir, 'heatSort')` を追加
+3. 行の `<td data-col="col-id">` を追加（保有専用なら watch 行は `–`）
 
 ### Finnhub が取れない銘柄への対処
 - `fetchFinnhubQuote` が null を返すと自動で Yahoo Finance にフォールバック

@@ -59,6 +59,29 @@
 }
 .sl-eye-btn:hover { color: var(--text); }
 .sl-eye-btn.hidden { opacity: 0.35; }
+
+/* ── 統合タブ（Historical ＋ Watchlist・#452）── */
+/* セグメントピル［全部／保有／ウォッチ］。左にピル・右に詳細トグル。 */
+.heat-seg { display: inline-flex; gap: 2px; background: var(--surface2); border-radius: 8px; padding: 2px; }
+.sl-controls .sl-eye-btn { margin-left: auto; }
+.heat-seg-pill {
+  background: none; border: none; cursor: pointer; color: var(--text2);
+  font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 6px; line-height: 1;
+}
+.heat-seg-pill.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+/* 区分バッジ（`全部`時のみ・保有=accent / ウォッチ=muted） */
+.heat-kind { font-size: 9px; font-weight: 700; padding: 0 4px; border-radius: 4px; margin-right: 4px; vertical-align: middle; }
+.heat-kind-held { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); }
+.heat-kind-watch { background: var(--surface3); color: var(--text3); }
+/* 削除列（ウォッチ行のみボタンを描画） */
+.sl-table td[data-col="del"] { text-align: center; width: 28px; }
+/* セグメント別 列表示制御: 保有は削除列なし／ウォッチは保有専用列なし */
+.sl-table.seg-held th[data-col="del"], .sl-table.seg-held td[data-col="del"] { display: none; }
+.sl-table.seg-watch th[data-col="value"],   .sl-table.seg-watch td[data-col="value"],
+.sl-table.seg-watch th[data-col="shares"],  .sl-table.seg-watch td[data-col="shares"],
+.sl-table.seg-watch th[data-col="avgCost"], .sl-table.seg-watch td[data-col="avgCost"],
+.sl-table.seg-watch th[data-col="pnl"],     .sl-table.seg-watch td[data-col="pnl"],
+.sl-table.seg-watch th[data-col="pnlPct"],  .sl-table.seg-watch td[data-col="pnlPct"] { display: none; }
 /* ティッカーセル内の銘柄名（PC・スマホ共通表示） */
 .sl-inline-name { display: block; font-size: 10px; color: var(--text2);
   max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;

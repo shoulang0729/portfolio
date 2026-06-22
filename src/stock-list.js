@@ -53,92 +53,167 @@ function slToggleDetail() {
   requestAnimationFrame(applyStockBars);
 }
 
-// 各期間の騰落率を取得
-function getPctForPeriod(p, periodId) {
-  if (!p.ySymbol) return null;
-  if (periodId === '1d') return p.dayPct;
-  return getHistoricalChangePct(p.ySymbol, periodId);
-}
-
-// 市場ラベルを cat から取得
+// 市場ラベルを cat から取得（保有）
 function slMarketLabel(p) {
   if (p.cat === '日本株・ETF') return '東証';
   if (p.cat === '投資信託') return '投信';
   return 'US';
 }
 
-function renderStockList() {
-  const panel = document.getElementById('panel-list');
-  if (panel?.hidden) return;
-  const wrap = document.getElementById('stock-list-wrap');
-  if (!wrap) return;
-  // 時価評価額の最大値（バーグラフ用）
-  const maxValue = Math.max(1, ...positions.map((p) => p.value || 0));
+// ── 統合タブ（Historical ＋ Watchlist・#452）─────────────────────────────────
+// セグメント all/held/watch を 1 テーブルに統合。保有行（kind:'held'）とウォッチ行
+// （kind:'watch'）を共通形に正規化し、同じ期間ヒートマップ/ソートで描画する。
 
-  // ソート
-  const items = [...positions].sort((a, b) => {
+/** 保有銘柄 → 共通行 */
+function heldRow(p) {
+  return {
+    kind: 'held',
+    symbol: p.symbol,
+    histKey: p.ySymbol, // 履歴キャッシュのキー
+    name: p.name,
+    market: slMarketLabel(p),
+    cur: p.cur,
+    price: p.price,
+    value: p.value,
+    shares: p.shares,
+    avgCost: p.avgCost,
+    pnl: p.pnl,
+    pnlPct: p.pnlPct,
+    dayPct: p.dayPct,
+    cat: p.cat,
+  };
+}
+
+/** ウォッチ銘柄 → 共通行（保有専用列は null） */
+function watchRow(item) {
+  const live = state.watchlistPrices[item.symbol];
+  return {
+    kind: 'watch',
+    symbol: item.symbol,
+    histKey: item.symbol, // ウォッチは symbol が履歴キー
+    name: item.name || '',
+    market: item.exchange || '',
+    cur: item.cur,
+    price: live?.price ?? null,
+    value: null,
+    shares: null,
+    avgCost: null,
+    pnl: null,
+    pnlPct: null,
+    dayPct: live?.dayPct ?? null,
+    cat: null,
+  };
+}
+
+/** 共通行の期間騰落率（1d はライブ、他は履歴キャッシュ） */
+function heatGetPct(row, periodId) {
+  if (periodId === '1d') return row.dayPct ?? null;
+  return row.histKey ? getHistoricalChangePct(row.histKey, periodId) : null;
+}
+
+/** セグメントに応じて行集合を構築。`all` は 保有 ∪ (ウォッチ − 保有) で重複は保有優先で1行。 */
+function buildHeatItems() {
+  const seg = state.heatSeg;
+  if (seg === 'held') return positions.map(heldRow);
+  if (seg === 'watch') return state.watchlist.map(watchRow);
+  // all: 保有を全件、ウォッチは保有に無い symbol/ySymbol のみ（重複は保有優先で除外）
+  const heldKeys = new Set();
+  for (const p of positions) {
+    if (p.symbol) heldKeys.add(p.symbol);
+    if (p.ySymbol) heldKeys.add(p.ySymbol);
+  }
+  const watchRows = state.watchlist.filter((w) => !heldKeys.has(w.symbol)).map(watchRow);
+  return [...positions.map(heldRow), ...watchRows];
+}
+
+/** 保有のみで値を持つ列（ウォッチ行は null → ソート末尾固定） */
+const HEAT_HELD_ONLY = ['value', 'shares', 'avgCost', 'pnl', 'pnlPct'];
+
+/** 単一ソート（antisymmetric・null と保有なし行は dir 非依存で末尾） */
+function sortHeatItems(items) {
+  const col = state.heatSortCol;
+  const dir = state.heatSortDir === 'desc' ? -1 : 1;
+  return [...items].sort((a, b) => {
+    if (col === 'symbol') return dir * String(a.symbol).localeCompare(String(b.symbol), 'ja');
+    if (col === 'market') return dir * String(a.market).localeCompare(String(b.market), 'ja');
     let va, vb;
-    if (PERIOD_IDS.includes(state.listSortCol)) {
-      va = getPctForPeriod(a, state.listSortCol);
-      vb = getPctForPeriod(b, state.listSortCol);
-    } else if (state.listSortCol === 'pnlPct') {
-      va = a.pnlPct;
-      vb = b.pnlPct;
-    } else if (state.listSortCol === 'pnl') {
-      va = a.pnl;
-      vb = b.pnl;
-    } else if (state.listSortCol === 'value') {
-      va = a.value;
-      vb = b.value;
-    } else if (state.listSortCol === 'price') {
+    if (PERIOD_IDS.includes(col)) {
+      va = heatGetPct(a, col);
+      vb = heatGetPct(b, col);
+    } else if (col === 'price') {
       va = a.price;
       vb = b.price;
-    } else if (state.listSortCol === 'shares') {
-      va = a.shares;
-      vb = b.shares;
-    } else if (state.listSortCol === 'avgCost') {
-      va = a.avgCost;
-      vb = b.avgCost;
-    } else if (state.listSortCol === 'market') {
-      // localeCompare で正しく 0 を返す（同一市場内での矛盾比較を防ぐ）
-      const cmp = slMarketLabel(a).localeCompare(slMarketLabel(b), 'ja');
-      return state.listSortDir === 'desc' ? -cmp : cmp;
+    } else if (HEAT_HELD_ONLY.includes(col)) {
+      va = a[col];
+      vb = b[col];
     } else {
       va = a.symbol;
       vb = b.symbol;
     }
-    if (va === null || va === undefined) return 1;
-    if (vb === null || vb === undefined) return -1;
-    return state.listSortDir === 'desc' ? (vb > va ? 1 : -1) : va > vb ? 1 : -1;
+    const an = va == null;
+    const bn = vb == null;
+    if (an && bn) return 0;
+    if (an) return 1; // null は常に末尾
+    if (bn) return -1;
+    if (va === vb) return 0;
+    return dir * (va > vb ? 1 : -1);
   });
+}
 
-  // makeTh のカリー版（sortFn・ソート状態をクロージャでキャプチャ）
-  const th = (label, col, align) => makeTh(label, col, align, state.listSortCol, state.listSortDir, 'slSort');
+/** 統合タブ（Historical ＋ Watchlist）を描画する。 */
+function renderHeatmapList() {
+  const panel = document.getElementById('panel-list');
+  if (panel?.hidden) return;
+  const wrap = document.getElementById('stock-list-wrap');
+  if (!wrap) return;
 
-  // 表内のみ：マイナスだけ赤、プラスは無色
+  const seg = state.heatSeg;
+  const items = sortHeatItems(buildHeatItems());
+
+  if (items.length === 0) {
+    const msg =
+      seg === 'watch'
+        ? '上の検索欄から銘柄を追加してください'
+        : seg === 'held'
+          ? '保有銘柄がありません'
+          : '銘柄がありません';
+    wrap.innerHTML = `<div class="wl-empty-msg">${msg}</div>`;
+    return;
+  }
+
+  // バーグラフ用の最大評価額（保有行のみ）
+  const maxValue = Math.max(1, ...items.filter((r) => r.kind === 'held').map((r) => r.value || 0));
+
+  const th = (label, col, align) => makeTh(label, col, align, state.heatSortCol, state.heatSortDir, 'heatSort');
   const slSgn = (v) => (v != null && v < 0 ? 'neg' : '');
+  const showBadge = seg === 'all';
 
   const rows = items
-    .map((p) => {
-      const pnlAmtCls = slSgn(p.pnl);
-      const pnlStr = p.pnl != null ? fmtJPYInt(p.pnl) : '-';
-      const pnlPctStr = p.pnlPct != null ? fmtPctInt(p.pnlPct) : '-';
-      const pnlPctBg = p.pnlPct != null ? getColor(p.pnlPct, 'pnl') : null;
+    .map((r) => {
+      const isHeld = r.kind === 'held';
+      const pnlAmtCls = slSgn(r.pnl);
+      const pnlStr = r.pnl != null ? fmtJPYInt(r.pnl) : '–';
+      const pnlPctStr = r.pnlPct != null ? fmtPctInt(r.pnlPct) : '–';
+      const pnlPctBg = r.pnlPct != null ? getColor(r.pnlPct, 'pnl') : null;
       const pnlPctFg = pnlPctBg ? getCellTextColor(pnlPctBg) : null;
-      const valStr = p.value != null ? fmtJPYInt(p.value) : '-';
-      const priceStr = fmtPrice(p.price, p.cur);
-      const costStr = fmtPrice(p.avgCost, p.cur);
-      const sharesStr = fmtShares(p.shares) + (p.cat === '投資信託' ? '口' : '株');
-      // バーグラフ幅（tr に data-bar-pct で保持、applyStockBars で適用）
-      const barPct = p.value && maxValue > 0 ? p.value / maxValue : 0;
+      const valStr = r.value != null ? fmtJPYInt(r.value) : '–';
+      const priceStr = r.price != null ? fmtPrice(r.price, r.cur) : '–';
+      const costStr = r.avgCost != null ? fmtPrice(r.avgCost, r.cur) : '–';
+      const sharesStr = r.shares != null ? fmtShares(r.shares) + (r.cat === '投資信託' ? '口' : '株') : '–';
+      const barPct = isHeld && r.value && maxValue > 0 ? r.value / maxValue : 0;
+      const periodCells = makePeriodCells((periodId) => heatGetPct(r, periodId));
+      // 区分バッジ（`全部`時のみ・保有=primary / ウォッチ=muted）
+      const badge = showBadge
+        ? `<span class="heat-kind heat-kind-${isHeld ? 'held' : 'watch'}">${isHeld ? '保有' : 'W'}</span>`
+        : '';
+      // 削除×はウォッチ行のみ（保有は削除不可）
+      const delCell = isHeld
+        ? ''
+        : `<button class="wl-del-btn" data-action="removeFromWatchlist" data-arg="${escapeHTML(r.symbol)}" title="ウォッチリストから削除">×</button>`;
 
-      // 期間セル群（utils.js の共通ヘルパー。Watchlist と完全同一仕様）
-      const periodCells = makePeriodCells((periodId) => getPctForPeriod(p, periodId));
-
-      // 列順：ティッカー(+銘柄名) / 市場 / 時価評価額 / 保有数 / 取得単価 / 現在値 / 騰落率×10 / 含み損益 / 損益率
-      return `<tr data-bar="${barPct.toFixed(4)}">
-      <td data-col="symbol" class="sl-sym">${escapeHTML(p.symbol)}<span class="sl-inline-name">${escapeHTML(p.name)}</span></td>
-      <td data-col="market"><span class="wl-type-badge">${slMarketLabel(p)}</span></td>
+      return `<tr data-bar="${barPct.toFixed(4)}" data-kind="${r.kind}">
+      <td data-col="symbol" class="sl-sym">${badge}${escapeHTML(r.symbol)}<span class="sl-inline-name">${escapeHTML(r.name)}</span></td>
+      <td data-col="market"><span class="wl-type-badge">${escapeHTML(r.market)}</span></td>
       <td data-col="value">${valStr}</td>
       <td data-col="shares">${sharesStr}</td>
       <td data-col="avgCost">${costStr}</td>
@@ -146,11 +221,12 @@ function renderStockList() {
       ${periodCells}
       <td data-col="pnl" class="${pnlAmtCls}">${pnlStr}</td>
       <td data-col="pnlPct" class="sl-pct-cell" ${pnlPctBg ? `style="background:${pnlPctBg};color:${pnlPctFg}"` : ''}>${pnlPctStr}</td>
+      <td data-col="del" class="wl-del-cell">${delCell}</td>
     </tr>`;
     })
     .join('');
 
-  wrap.innerHTML = `<table class="sl-table">
+  wrap.innerHTML = `<table class="sl-table seg-${seg}">
     <thead><tr>
       ${th('ティッカー<br><span class="sl-th-sub">銘柄名</span>', 'symbol')}
       ${th('市場', 'market', 'center')}
@@ -158,17 +234,32 @@ function renderStockList() {
       ${th('保有数', 'shares')}
       ${th('取得単価', 'avgCost')}
       ${th('現在値', 'price')}
-      ${makePeriodHeaderCells(state.listSortCol, state.listSortDir, 'slSort')}
+      ${makePeriodHeaderCells(state.heatSortCol, state.heatSortDir, 'heatSort')}
       ${th('含み損益', 'pnl')}
       ${th('損益率', 'pnlPct', 'center')}
+      <th data-col="del"></th>
     </tr></thead>
     <tbody>${rows}</tbody>
   </table>`;
 
-  // 列表示状態を適用
   updateSlColStyle();
-  // バーグラフを非同期で適用（DOM確定後）
   requestAnimationFrame(applyStockBars);
+}
+
+/**
+ * 統合タブのコントロール（セグメントピル active / 検索欄表示）を現在の状態に合わせる。
+ * 検索欄は `保有` では非表示（保有は追加不可）。
+ */
+function updateHeatControls() {
+  const onList = state.activeTab === 'list';
+  document.querySelectorAll('.heat-seg-pill[data-arg]').forEach((b) => {
+    // @ts-ignore HTMLElement
+    const on = b.dataset.arg === state.heatSeg;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-selected', String(on));
+  });
+  const wlSearch = document.getElementById('wl-search-wrap');
+  if (wlSearch) wlSearch.hidden = !onList || state.heatSeg === 'held';
 }
 
 // ── 時価評価額バーグラフ：CSS 変数で reflow 削減 ──
@@ -208,9 +299,17 @@ function applyStockBars() {
   });
 }
 
-function slSort(col) {
-  _tableSort('listSortCol', 'listSortDir', col);
-  renderStockList();
+/** 統合タブのソート切替（単一状態・symbol のみ asc 既定）。 */
+function heatSort(col) {
+  _tableSort('heatSortCol', 'heatSortDir', col, ['symbol']);
+  renderHeatmapList();
 }
 
-export { renderStockList, slSort, slToggleDetail, applyStockBars, updateSlColStyle };
+export {
+  renderHeatmapList,
+  heatSort,
+  updateHeatControls,
+  slToggleDetail,
+  applyStockBars,
+  updateSlColStyle,
+};

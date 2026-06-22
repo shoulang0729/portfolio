@@ -4,12 +4,14 @@ import { stubApis } from './helpers.js';
 test.beforeEach(async ({ page }) => {
   await stubApis(page);
   await page.goto('/');
-  // Watchlist タブに切替
-  await page.locator('[data-tab="watchlist"]').click();
-  await expect(page.locator('#panel-watchlist')).toBeVisible();
+  // 統合タブ（Historical）→ ウォッチセグメントに切替
+  await page.locator('[data-tab="list"]').click();
+  await expect(page.locator('#panel-list')).toBeVisible();
+  await page.locator('.heat-seg-pill[data-arg="watch"]').click();
+  await expect(page.locator('#wl-search-wrap')).toBeVisible();
 });
 
-test('初期状態でウォッチリストが空', async ({ page }) => {
+test('ウォッチセグメント初期状態でウォッチリストが空', async ({ page }) => {
   await expect(page.locator('.wl-empty-msg')).toBeVisible();
 });
 

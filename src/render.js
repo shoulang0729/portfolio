@@ -9,8 +9,7 @@ import { positions } from './positions.js';
 import { state } from './state.js';
 import { fmtYen, maskAmount } from './utils.js';
 import { renderHeatmap } from './heatmap.js';
-import { renderStockList } from './stock-list.js';
-import { renderWatchlist } from './watchlist.js';
+import { renderHeatmapList } from './stock-list.js';
 import { fetchAllHistorical } from './data.js';
 import { setStatus } from './ui-status.js';
 import { getMfTotals } from './networth.js';
@@ -95,11 +94,8 @@ export async function refreshHistoricalAndRender() {
   const results = await Promise.allSettled(['5y', '10y'].map(async range => {
     await fetchAllHistorical(range);
     renderStats();
-    renderStockList();
-    if (state.activeTab === 'watchlist') {
-      renderWatchlist();
-      updateWatchlistHeight();
-    }
+    renderHeatmapList(); // 統合タブ（保有＋ウォッチ）
+    if (state.activeTab === 'list') updateListHeight();
     if (state.changePeriod && state.changePeriod !== '1d') renderHeatmap();
     return range;
   }));
@@ -136,20 +132,6 @@ export function updateListHeight() {
 }
 
 /**
- * ウォッチリストの高さをビューポートに合わせて動的設定
- * @returns {void}
- */
-export function updateWatchlistHeight() {
-  const wrap = document.getElementById('watchlist-table-wrap');
-  if (!wrap) return;
-  const sticky = document.querySelector('.sticky-top');
-  const stickyH = sticky instanceof HTMLElement ? sticky.offsetHeight : 0;
-  const padBot = parseFloat(getComputedStyle(document.body).paddingBottom) || 16;
-  const h = Math.max(160, window.innerHeight - stickyH - padBot - 4);
-  wrap.style.maxHeight = `${h  }px`;
-}
-
-/**
  * Heatmap パネルの高さをビューポートに合わせて内部スクロール化する。
  * list/watchlist と同じく内部スクロールにすることで、body 自体がスクロール
  * せず .sticky-top（ヘッダー＋タブバー）が常に固定される（#215）。
@@ -170,10 +152,6 @@ export function updateHeatmapHeight() {
  * @returns {void}
  */
 export function updateActiveTableHeight() {
-  if (state.activeTab === 'watchlist') {
-    updateWatchlistHeight();
-    return;
-  }
   if (state.activeTab === 'heatmap') {
     updateHeatmapHeight();
     return;

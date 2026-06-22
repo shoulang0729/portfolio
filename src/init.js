@@ -7,11 +7,10 @@
 
 import { state } from './state.js';
 import { renderHeatmap } from './heatmap.js';
-import { renderStockList, applyStockBars } from './stock-list.js';
-import { renderWatchlist } from './watchlist.js';
+import { renderHeatmapList, applyStockBars } from './stock-list.js';
 import { loadValuations } from './valuations.js';
 import { loadChart } from './chart.js';
-import { updateListHeight, updateWatchlistHeight } from './render.js';
+import { updateListHeight } from './render.js';
 import { setupSwipeNav } from './swipe.js';
 
 export function setupEventListeners(applyThemeFn) {
@@ -25,8 +24,7 @@ export function setupEventListeners(applyThemeFn) {
   // PER採点ストア（data/valuations.json）を読み込み、保有テーブル/ウォッチを再描画。
   // 失敗してもセルは「–」になるだけで他機能には影響しない。
   loadValuations().then(() => {
-    renderStockList();
-    renderWatchlist();
+    renderHeatmapList();
   });
 
   let _resizeRaf = null;
@@ -34,7 +32,7 @@ export function setupEventListeners(applyThemeFn) {
     if (_resizeRaf) cancelAnimationFrame(_resizeRaf);
     _resizeRaf = requestAnimationFrame(() => {
       _resizeRaf = null;
-      renderHeatmap(); renderStockList(); applyStockBars(); updateListHeight(); updateWatchlistHeight();
+      renderHeatmap(); renderHeatmapList(); applyStockBars(); updateListHeight();
     });
   });
 
@@ -53,7 +51,6 @@ export function setupEventListeners(applyThemeFn) {
     if (_stickyEl) {
       new ResizeObserver(() => {
         if (state.activeTab === 'list') updateListHeight();
-        if (state.activeTab === 'watchlist') updateWatchlistHeight();
       }).observe(_stickyEl);
     }
   }

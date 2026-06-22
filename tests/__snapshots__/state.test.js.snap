@@ -16,6 +16,9 @@ exports[`state.js > state (initial values) > state matches snapshot 1`] = `
     "USDJPY": null,
     "ts": 0,
   },
+  "heatSeg": "all",
+  "heatSortCol": "1d",
+  "heatSortDir": "desc",
   "historicalAttempted": {},
   "historicalCache": {
     "10y": {},
