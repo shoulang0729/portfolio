@@ -197,3 +197,42 @@ if __name__ == "__main__":
 - 既存 Chrome 運び屋ルーティン（`docs/routine_mf_snapshot.md`）の撤去可否はユーザー判断（当面は併存→ローカル自動が安定したら撤去）。
 - Mulmo PM モニタで `mf-holdings.json` の鮮度監視（N日更新なし→アラート）＝別タスクで追加可。
 - cookie/プロファイルの自動リフレッシュ（現状は稀な手動再ログイン）。
+
+---
+
+## 7. 実DOM確定 & 改修指示（2026-06-22・実機headfulで確認）★scrape/build/verify を作り直す
+
+初回 run が「口座を1件も抽出できず」で停止（＝安全に未push）。実機 headful で MF `/bs/portfolio` を確認した結果、**当初想定（口座セクション単位）が誤りで、実構造は「資産種類別テーブル＋保有金融機関は列」**だった。下記に作り直す。
+
+### 7.1 確定した DOM 構造
+- **headless はブロックされる**（空ページ）。→ `fetch.headless = false` に固定（launchd は GUI ログインセッションで headful 実行）。`settleMs`≈5000 待つ。
+- **資産総額**：本文テキストに `資産総額： 585,034,186円`。→ 正規表現 `資産総額[：:]\s*([0-9,]+)` で取得（DOM class に依存しない）。
+- **内訳サマリ表**＝`table.table-bordered` で **table-{depo,eq,mf,pns…} 接尾辞が無い**もの（3列：カテゴリ名／円／％）。**種類別チェックサムに使う**（例：株式(現物)=338,454,356円）。
+- **保有テーブル（処理対象）**：列は0始まりインデックス。
+  | テーブル | `selector` | kind | 列マップ |
+  |---|---|---|---|
+  | 預金・現金・暗号資産 | `table.table-bordered.table-depo` | `depo` | name=0(種類・名称), value=1(残高), institution=2 |
+  | 株式(現物) | `table.table-bordered.table-eq` | `eq` | code=0, name=1, shares=2, avgCost=3, price=4(現在値), value=5(評価額), institution=9 |
+  | 投資信託 | `table.table-bordered.table-mf` | `mf` | name=0, shares=1, avgCost=2, price=3(基準価額), value=4(評価額), institution=8 |
+- **無視/除外**：`table.table-condensed`（カレンダー部品・多数）＝完全無視。`table-pns`（保険/年金/ポイント）＝**年金/保険/ポイント除外ルールに合致＝スキップ**。内訳サマリ表＝保有として取り込まない（照合専用）。
+- 行は `tbody tr`。各セルは `td:nth(i)` の inner_text。金額は `[^\d-]` 除去で整数化。
+
+### 7.2 cat / シンボル / 通貨
+- **cat**：`depo`→ 名称に ビットコイン/イーサリアム/暗号 を含めば`暗号資産`、他は`現金・預金`。`eq`→ code が4桁数字なら`日本株・ETF`＋`ySymbol="<code>.T"`、英字ティッカーなら`米国株・ETF`＋`ySymbol=ティッカー`、code空（持株会等）は institution 除外で大半が落ちる。`mf`→`投資信託`（code無し・name基準）。
+- **通貨**：`/bs/portfolio` の 評価額/残高 は**すべて円換算表示**。→ `cur="JPY"` で統一（value は円）。`imported=Σ(円)` と整合。
+- **institution**：各行の 保有金融機関 列。`exclude.accounts` の部分一致（`マネックスCRYPT` は完全名）で行ごとに除外判定。
+
+### 7.3 checksum 改修（口座別→種類別）
+MF のこのページに**口座別合計は無い**ので、当初の「口座ごと±1%」は**種類別±1%**に置換：
+- (1) `imported == Σ(holdings.value)` 厳密一致。
+- (2') **種類別**：Σ(`table-eq` 取込行) ≈ サマリ「株式(現物)」値 ±1%、Σ(`table-mf`) ≈ 「投資信託」±1%、Σ(取込`depo`) ≈ 「預金・現金・暗号資産」±1%（除外口座=Suica等を引いた値で照合）。
+- (3) `mfNetWorth(資産総額) − Σ(除外分: 年金/保険/ポイント＋持株会等除外口座) ≈ imported` ±1%。
+- いずれか外れたら **書かず・push せず・通知**（既存どおり）。
+- 参考実測（2026-06-22）：資産総額 585,034,186 / 株式(現物) 338,454,356 / 投資信託 130,537,011 / 預金・現金・暗号資産 73,515,659。
+
+### 7.4 受け入れ基準（追加）
+- [ ] `headless:false` で MF が描画され、`table-eq/table-mf/table-depo` から保有が抽出される。
+- [ ] `table-pns`/`table-condensed`/内訳サマリは取り込まない。
+- [ ] institution は行の 保有金融機関 列から取得し、除外判定が効く（持株会/Suica/相対契約 等が落ちる）。
+- [ ] 種類別チェックサム（7.3）が通り、外れたら未push＋通知。
+- [ ] v4 スキーマ・load-bearing 5項目は不変。
