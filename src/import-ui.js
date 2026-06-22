@@ -14,8 +14,7 @@ import { canonicalizeFundPosition } from './funds.js';
 import { savePositionsToKV, computeImportDiff, mergeDuplicatePositions } from './positions-store.js';
 import { clearCacheSession, clearHistoricalIDB, refreshPrices } from './data.js';
 import { parseManexFiles, parseMoneyForwardImage } from './import-parse.js';
-import { renderStockList } from './stock-list.js';
-import { renderWatchlist } from './watchlist.js';
+import { renderHeatmapList } from './stock-list.js';
 import { _hashPin } from './auth-pin.js';
 
 let _importState = { source: null, parsed: [], current: [], pendingPositions: [] };
@@ -285,8 +284,7 @@ async function _doSavePositions(finalPositions, pinHashOverride, gen) {
     if (!stale()) _renderImportStep('done', `${finalPositions.length}銘柄を保存しました`);
     setTimeout(() => {
       document.dispatchEvent(new CustomEvent('hm:prices-updated'));
-      renderStockList();
-      renderWatchlist();
+      renderHeatmapList();
       refreshPrices();
     }, 300);
   } catch (e) {

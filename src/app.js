@@ -19,12 +19,23 @@ import { switchTab } from './tabs.js';
 import { reloadBriefing } from './briefing.js';
 import { loadMfHoldings } from './networth.js';
 import { setupEventListeners } from './init.js';
-import { renderStockList, slSort, slToggleDetail, updateSlColStyle } from './stock-list.js';
-import { renderWatchlist, wlSort, onWatchlistSearch, removeFromWatchlist, wlSelectItem } from './watchlist.js';
+import {
+  renderHeatmapList,
+  heatSort,
+  updateHeatControls,
+  slToggleDetail,
+  updateSlColStyle,
+} from './stock-list.js';
+import {
+  onWatchlistSearch,
+  removeFromWatchlist,
+  wlSelectItem,
+  fetchWatchlistData,
+} from './watchlist.js';
 import { loadPositionsFromKV } from './positions-store.js';
 import { openImportModal, closeImportModal, openManagePositionsModal, handleImportOverlayClick, handleManexFileSelect, handleMoneyForwardImageSelect, focusImportFileInput, _renderImportStep, _confirmImport, _retryWithPin } from './import-ui.js';
 import { showConfirm, showAlert } from './modal.js';
-import { renderStats, refreshHistoricalAndRender, setupPriceUpdateListener, hideHeatmapSkeleton, updateActiveTableHeight, updateWatchlistHeight } from './render.js';
+import { renderStats, refreshHistoricalAndRender, setupPriceUpdateListener, hideHeatmapSkeleton, updateActiveTableHeight } from './render.js';
 import { toggleHmMenu, closeHmMenu } from './menu.js';
 import { loadTopHoldings } from './data-topholdings.js';
 import { loadStockProfiles } from './data-stock-profile.js';
@@ -360,6 +371,24 @@ function _setupMobileLayout() {
   // ── 5. 凡例バーはpanel-heatmap内footerに残す（タブ連動のため移動しない） ──
 }
 
+/**
+ * 統合タブのセグメント切替（全部/保有/ウォッチ・#452）。
+ * state.heatSeg を更新・永続化し、コントロールと表を再描画する。
+ * @param {'all'|'held'|'watch'} seg
+ */
+function setHeatSeg(seg) {
+  if (seg !== 'all' && seg !== 'held' && seg !== 'watch') return;
+  if (state.heatSeg === seg) return;
+  state.heatSeg = seg;
+  try {
+    localStorage.setItem('hm-heat-seg', seg);
+  } catch {}
+  updateHeatControls();
+  renderHeatmapList();
+  // ウォッチを含むセグメントは最新データを取得（完了後に再描画される）
+  if (seg !== 'held') fetchWatchlistData();
+}
+
 // ── data-action ディスパッチャ用アクションマップ ──
 const ACTION_MAP = {
   // app.js
@@ -375,10 +404,10 @@ const ACTION_MAP = {
   registerPasskey, authenticatePasskey,
   // chart.js
   setRange, closeModal, handleOverlayClick,
-  // stock-list.js
-  slSort, slToggleDetail,
+  // stock-list.js（統合タブ）
+  heatSort, slToggleDetail, setHeatSeg,
   // watchlist.js
-  wlSort, onWatchlistSearch, removeFromWatchlist, wlSelectItem,
+  onWatchlistSearch, removeFromWatchlist, wlSelectItem,
   // import-ui.js
   openImportModal, closeImportModal, openManagePositionsModal,
   handleImportOverlayClick, handleManexFileSelect, handleMoneyForwardImageSelect,
@@ -518,11 +547,7 @@ function init() {
       // 1y は最優先で取得（UIの初期表示に必要）
       await fetchAllHistorical('1y');
       renderStats();
-      renderStockList();
-      if (state.activeTab === 'watchlist') {
-        renderWatchlist();
-        updateWatchlistHeight();
-      }
+      renderHeatmapList(); // 統合タブ（保有＋ウォッチ）
       if (state.changePeriod && state.changePeriod !== '1d') renderHeatmap();
 
       // 5y / 10y は並列で取得（完了ごとに描画、片方失敗してももう片方は描画する）
