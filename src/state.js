@@ -34,6 +34,9 @@
  * @property {string} themeMode
  * @property {string} listSortCol
  * @property {'asc'|'desc'} listSortDir
+ * @property {'all'|'held'|'watch'} heatSeg
+ * @property {string} heatSortCol
+ * @property {'asc'|'desc'} heatSortDir
  * @property {boolean} slDetailVisible
  * @property {string} activeTab
  * @property {string|null} lastUpdateText
@@ -105,10 +108,17 @@ const state = {
   currentRange:     '3m',
   statsMasked:      localStorage.getItem('hm-stats-masked') !== '0',  // 金額マスク状態（既定=マスク・目アイコンで解除）。'0'=解除を永続化
   themeMode:        localStorage.getItem('hm-theme') || 'auto',
-  listSortCol:      '1d',       // 銘柄リストのデフォルトソート列
+  listSortCol:      '1d',       // （統合前の旧・互換用）銘柄リストのソート列
   listSortDir:      'desc',
+  // Historical ＋ Watchlist 統合タブ（#452）。セグメント= all/held/watch（localStorage 永続）。
+  heatSeg:          (() => {
+    const s = localStorage.getItem('hm-heat-seg');
+    return s === 'held' || s === 'watch' || s === 'all' ? s : 'all';
+  })(),
+  heatSortCol:      '1d',       // 統合タブのデフォルトソート列
+  heatSortDir:      'desc',
   slDetailVisible:  false,      // 詳細列の表示状態（起動時はデフォルト非表示）
-  activeTab:        'heatmap',  // 'heatmap' | 'list' | 'watchlist'
+  activeTab:        'heatmap',  // 'heatmap' | 'list' | 'risk' | 'value' | 'briefing'
   lastUpdateText:   null,       // refreshPrices 成功時のステータス文字列（履歴取得後に復元用）
   // ウォッチリスト
   watchlist:        (() => {

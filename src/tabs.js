@@ -8,9 +8,9 @@
 
 import { state } from './state.js';
 import { renderHeatmap } from './heatmap.js';
-import { renderStockList } from './stock-list.js';
-import { renderWatchlist, fetchWatchlistData, _loadWatchlistFromWorker } from './watchlist.js';
-import { updateListHeight, updateWatchlistHeight, updateHeatmapHeight } from './render.js';
+import { renderHeatmapList, updateHeatControls } from './stock-list.js';
+import { fetchWatchlistData, _loadWatchlistFromWorker } from './watchlist.js';
+import { updateListHeight, updateHeatmapHeight } from './render.js';
 import { renderRiskCharts } from './risk-charts.js';
 import { renderBriefing } from './briefing.js';
 import { renderValuationTab } from './valuation-tab.js';
@@ -21,6 +21,8 @@ import { renderValuationTab } from './valuation-tab.js';
  * @returns {void}
  */
 export function switchTab(name) {
+  // 統合（#452）: 旧 'watchlist' タブは 'list'（統合タブ）に正規化する。
+  if (name === 'watchlist') name = 'list';
   if (state.activeTab === name) return;
   state.activeTab = name;
   try {
@@ -29,14 +31,12 @@ export function switchTab(name) {
 
   const panelHeatmap = document.getElementById('panel-heatmap');
   const panelList = document.getElementById('panel-list');
-  const panelWatchlist = document.getElementById('panel-watchlist');
   const panelRisk = document.getElementById('panel-risk');
   const panelValue = document.getElementById('panel-value');
   const panelBriefing = document.getElementById('panel-briefing');
   const panelAi = document.getElementById('panel-ai');
   if (panelHeatmap) panelHeatmap.hidden = name !== 'heatmap';
   if (panelList) panelList.hidden = name !== 'list';
-  if (panelWatchlist) panelWatchlist.hidden = name !== 'watchlist';
   if (panelRisk) panelRisk.hidden = name !== 'risk';
   if (panelValue) panelValue.hidden = name !== 'value';
   if (panelBriefing) panelBriefing.hidden = name !== 'briefing';
@@ -50,11 +50,10 @@ export function switchTab(name) {
     b.setAttribute('aria-selected', String(isActive));
   });
 
-  // sticky-top 内のタブ別サブコントロールを切替
+  // sticky-top 内のサブコントロール（セグメントピル＋詳細トグル＋検索）を切替
   const slControls = document.getElementById('sl-controls');
-  const wlSearch = document.getElementById('wl-search-wrap');
   if (slControls) slControls.hidden = name !== 'list';
-  if (wlSearch) wlSearch.hidden = name !== 'watchlist';
+  updateHeatControls(); // 検索欄の表示・ピル active を現在の状態に合わせる
 
   if (name === 'heatmap') {
     renderHeatmap();
@@ -62,16 +61,14 @@ export function switchTab(name) {
   }
 
   if (name === 'list') {
-    renderStockList();
+    // 保有を即描画 → ウォッチを worker から読込んで再描画（二段でチラつきを抑える）。
+    renderHeatmapList();
     requestAnimationFrame(() => requestAnimationFrame(updateListHeight));
-  }
-
-  if (name === 'watchlist') {
     (async () => {
       await _loadWatchlistFromWorker();
-      renderWatchlist();
-      updateWatchlistHeight();
-      fetchWatchlistData();
+      renderHeatmapList();
+      updateListHeight();
+      if (state.heatSeg !== 'held') fetchWatchlistData();
     })();
   }
 
