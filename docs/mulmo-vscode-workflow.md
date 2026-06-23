@@ -32,6 +32,7 @@ Toshio → Mulmo（設計・指示書）→ VS Code（実装）→ PR → Toshio
 - **② 事前レビュー（大規模・破壊的・load-bearing）** — 影響が広い／ロールバックしづらい／load-bearing を触る変更は、**Toshio の事前目視レビュー後にマージ**。迷ったらこちら。
 - **Mulmo はコード PR をマージしない。** Mulmo の役割は「設計供給」＋「**完了把握（read-only モニタリング）**」＝定期的に Issue / PR / commit を読み、実装完了を検知したら設計正本（handoff doc）に完了スタンプ＋Wiki 更新＋次の設計を供給。判断が要るもの・CI red の滞留だけ Toshio へエスカレーション。
 - ※Mulmo 自身の `docs/` PR（設計レーン内）は Mulmo が管理してよい＝実装レーンへの"戻り"ではない。
+- **Mulmo はコード（`src/` / `scripts/` / テスト等）を直接書かない・修正しない（自明な1行でも）。** コード修正が要るときは Issue 化し、**ユーザーに「Issue #XXX を VS Code に投げて」と明示リマインドする**。VS Code は**ユーザーが起動して Issue を渡した時だけ**動く＝**dispatch のトリガーはユーザー**。Mulmo が代わりに書くと一方通行が濁る（2026-06-23 確定。例外的 hotfix も今後しない）。
 
 ---
 
