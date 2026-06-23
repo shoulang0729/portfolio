@@ -80,9 +80,14 @@ def _norm(s):
 
 
 def _cells(tr):
-    """行 (tr) の td テキスト配列を 0 始まりで返す。"""
-    tds = tr.locator("td")
-    return [tds.nth(i).inner_text().strip() for i in range(tds.count())]
+    """行 (tr) のセルテキスト配列を DOM 順・0 始まりで返す（#469）。
+
+    内訳サマリ表は category 名が <th>（行見出し）・円/% が <td> の混在のため
+    th と td の両方を DOM 順で読む。保有テーブル(eq/mf/depo)のデータ行は td のみ
+    （th 無し）なので列インデックスは不変。
+    """
+    cells = tr.locator("th, td")
+    return [cells.nth(i).inner_text().strip() for i in range(cells.count())]
 
 
 def _at(cells, idx):
