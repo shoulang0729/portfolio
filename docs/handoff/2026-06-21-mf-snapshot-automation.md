@@ -200,6 +200,7 @@ if __name__ == "__main__":
 
 ---
 
+> 🎉 **実機検証 完了（2026-06-23）**＝Mac mini ローカル run が抽出→種類別チェックサム通過→commit→push 成功。origin/main `b09fdd1`＝asOf 2026-06-23 / mfNetWorth 585,034,186 / imported 540,500,188 / 49 holdings。残＝launchd登録（無人化）＋無人push認証のkeychainキャッシュ。
 > ✅ **§7改修 実装完了（2026-06-23・PR #467 / Closes #466）**＝scrape/build/verify を資産種類別テーブル方式に刷新・`fetch.dom`列マップ・headless:false・種類別checksum・テスト11件green・CodeRabbit実バグ(summaryセレクタ自己矛盾)修正込み。残＝Mac miniで run の実機確認(§7.4)。
 
 ## 7. 実DOM確定 & 改修指示（2026-06-22・実機headfulで確認）★scrape/build/verify を作り直す
