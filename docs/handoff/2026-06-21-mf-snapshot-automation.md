@@ -200,6 +200,8 @@ if __name__ == "__main__":
 
 ---
 
+> ✅ **§7改修 実装完了（2026-06-23・PR #467 / Closes #466）**＝scrape/build/verify を資産種類別テーブル方式に刷新・`fetch.dom`列マップ・headless:false・種類別checksum・テスト11件green・CodeRabbit実バグ(summaryセレクタ自己矛盾)修正込み。残＝Mac miniで run の実機確認(§7.4)。
+
 ## 7. 実DOM確定 & 改修指示（2026-06-22・実機headfulで確認）★scrape/build/verify を作り直す
 
 初回 run が「口座を1件も抽出できず」で停止（＝安全に未push）。実機 headful で MF `/bs/portfolio` を確認した結果、**当初想定（口座セクション単位）が誤りで、実構造は「資産種類別テーブル＋保有金融機関は列」**だった。下記に作り直す。
