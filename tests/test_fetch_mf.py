@@ -168,5 +168,46 @@ class TestKindByCat(unittest.TestCase):
         self.assertEqual(m["暗号資産"], "depo")
 
 
+class _FakeLoc:
+    def __init__(self, texts):
+        self._t = texts
+
+    def count(self):
+        return len(self._t)
+
+    def nth(self, i):
+        txt = self._t[i]
+
+        class _C:
+            def inner_text(self_inner):
+                return txt
+
+        return _C()
+
+
+class _FakeTr:
+    """tr.locator(sel) を模した最小スタブ。"""
+
+    def __init__(self, by_selector):
+        self._m = by_selector
+
+    def locator(self, sel):
+        return _FakeLoc(self._m.get(sel, []))
+
+
+class TestCells(unittest.TestCase):
+    """#469: 内訳サマリ行は category が <th>・円/% が <td> の混在。
+    _cells は th と td を DOM 順で読む必要がある（td のみだと category が落ちる）。"""
+
+    def test_summary_row_reads_th_and_td(self):
+        tr = _FakeTr({"th, td": ["株式(現物)", "338,454,356円", "57.85%"]})
+        self.assertEqual(fetch_mf._cells(tr), ["株式(現物)", "338,454,356円", "57.85%"])
+
+    def test_asset_row_td_only_unchanged(self):
+        # 保有テーブルのデータ行は td のみ＝列インデックス不変
+        tr = _FakeTr({"th, td": ["", "NTTデータグループ", "1", "4,400,412"]})
+        self.assertEqual(fetch_mf._cells(tr), ["", "NTTデータグループ", "1", "4,400,412"])
+
+
 if __name__ == "__main__":
     unittest.main()
