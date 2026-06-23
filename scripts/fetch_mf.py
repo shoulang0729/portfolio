@@ -80,9 +80,20 @@ def _norm(s):
 
 
 def _cells(tr):
-    """行 (tr) の td テキスト配列を 0 始まりで返す。"""
+    """行 (tr) の td テキスト配列を 0 始まりで返す（保有テーブルのデータ行は td のみ）。"""
     tds = tr.locator("td")
     return [tds.nth(i).inner_text().strip() for i in range(tds.count())]
+
+
+def _cells_th(tr):
+    """行 (tr) の th＋td テキスト配列を DOM 順で返す。
+
+    内訳サマリ表は **category 名が `<th>`（行見出し）**・円/％が `<td>`（#469）。
+    td のみの `_cells` だと labelCol=0 が金額を指してしまうため、サマリ読みは
+    th を含めて DOM 順で取得する（保有テーブルは td のみなので影響しない）。
+    """
+    cells = tr.locator("th, td")
+    return [cells.nth(i).inner_text().strip() for i in range(cells.count())]
 
 
 def _at(cells, idx):
@@ -135,7 +146,7 @@ def _scrape_summary(page, spec):
     for i in range(tables.count()):
         trs = tables.nth(i).locator("tbody tr")
         for j in range(trs.count()):
-            cells = _cells(trs.nth(j))
+            cells = _cells_th(trs.nth(j))  # category は <th>（#469）
             label = _norm(_at(cells, lc))
             amt = parse_amount(_at(cells, ac))
             if label and amt and label not in out:

@@ -158,6 +158,75 @@ class TestVerify(unittest.TestCase):
             fetch_mf.verify(self.c, doc_bad, self.rows, self.summary)
 
 
+class _Loc:
+    """超小型の Playwright Locator 模倣（_scrape_summary が使う API だけ）。
+
+    items   : nth(i)/count() が返す同種要素の集合
+    text    : inner_text() が返す文字列
+    children: locator(selector) → 子 _Loc の辞書
+    """
+    def __init__(self, items=None, text=None, children=None):
+        self._items = items or []
+        self._text = text or ""
+        self._children = children or {}
+
+    def count(self):
+        return len(self._items)
+
+    def nth(self, i):
+        return self._items[i]
+
+    def inner_text(self):
+        return self._text
+
+    def locator(self, sel):
+        return self._children.get(sel, _Loc())
+
+
+def _cell(text):
+    return _Loc(text=text)
+
+
+def _row(cells_by_tag):
+    """cells_by_tag = list[(tag, text)] を DOM 順で持つ行。
+
+    'th, td' セレクタは tag に関係なく DOM 順で全セルを返す（実 Playwright と同じ）。
+    """
+    ordered = [_cell(t) for _, t in cells_by_tag]
+    tds = [_cell(t) for tag, t in cells_by_tag if tag == "td"]
+    return _Loc(children={"th, td": _Loc(items=ordered), "td": _Loc(items=tds)})
+
+
+def _table(rows):
+    return _Loc(children={"tbody tr": _Loc(items=rows)})
+
+
+class TestScrapeSummary(unittest.TestCase):
+    """#469: サマリ行は category が <th>・円/％が <td>。th を含めて読めること。"""
+
+    def setUp(self):
+        self.spec = _load_config()["fetch"]["dom"]["summaryTable"]
+
+    def test_th_category_is_read(self):
+        rows = [
+            _row([("th", "株式(現物)"), ("td", "338,454,356円"), ("td", "57.85%")]),
+            _row([("th", "投資信託"), ("td", "130,537,011円"), ("td", "22.31%")]),
+            _row([("th", "預金・現金・暗号資産"), ("td", "73,515,659円"), ("td", "12.57%")]),
+        ]
+        page = _Loc(children={self.spec["selector"]: _Loc(items=[_table(rows)])})
+        summary = fetch_mf._scrape_summary(page, self.spec)
+        self.assertEqual(summary[fetch_mf._norm("株式(現物)")], 338_454_356)
+        self.assertEqual(summary[fetch_mf._norm("投資信託")], 130_537_011)
+        self.assertEqual(summary[fetch_mf._norm("預金・現金・暗号資産")], 73_515_659)
+
+    def test_td_only_row_would_lose_label(self):
+        # 旧バグの回帰防止: td のみ(th無し)だと labelCol=0 が金額になりキーが populate されない
+        rows = [_row([("td", "338,454,356円"), ("td", "57.85%")])]
+        page = _Loc(children={self.spec["selector"]: _Loc(items=[_table(rows)])})
+        summary = fetch_mf._scrape_summary(page, self.spec)
+        self.assertNotIn(fetch_mf._norm("株式(現物)"), summary)  # ラベルが数値→キーにならない
+
+
 class TestKindByCat(unittest.TestCase):
     def test_mapping_from_config(self):
         m = fetch_mf._kind_by_cat_map(_load_config())
