@@ -86,28 +86,52 @@
     "commitMessage": "data: refresh MF holdings snapshot (YYYY-MM-DD)"
   },
   "fetch": {
-    "note": "★これは『命令』でなく scripts/fetch_mf.py（決定論Python）が読むデータ/パラメータ。LLM は経路に存在しない＝injection 穴なし。Mac mini ローカル launchd で実行。selectors は初回 setup 時に実 DOM で確定する(#460)。",
+    "note": "★これは『命令』でなく scripts/fetch_mf.py（決定論Python）が読むデータ/パラメータ。LLM は経路に存在しない＝injection 穴なし。Mac mini ローカル launchd で実行。DOM 構造は handoff §7（2026-06-22 実機 headful で確定）。資産種類別テーブル＋保有金融機関は列。",
     "engine": "playwright-persistent",
     "userDataDir": "~/.mf-snapshot/profile",
     "portfolioUrl": "https://moneyforward.com/bs/portfolio",
-    "headless": true,
+    "headless": false,
+    "settleMs": 5000,
     "timeoutMs": 45000,
     "loginCheck": { "redirectContains": "sign_in" },
-    "selectors": {
-      "selectorNote": "TODO: 実 DOM 確認後に確定。fetch_mf.py は accountSection→row を機械抽出し、各行から name/code/shares/avgCost/price/value/cur を、各口座から accountName/accountTotal/accountCategory を読む。MF の実構造に合わせて調整する。",
-      "netWorth": ".heading-radius-box .amount",
-      "accountSection": "section.account, .bs-detail .account",
-      "accountName": ".account-name, h1.heading-normal",
-      "accountTotal": ".account-total, .heading-normal .amount",
-      "accountCategory": ".account-category, .heading-small",
-      "row": "table tbody tr",
-      "name": "td.name, td:nth-child(1)",
-      "code": "td.code",
-      "shares": "td.amount-number, td:nth-child(2)",
-      "avgCost": "td.average-acquisition-price, td:nth-child(3)",
-      "price": "td.current-price, td:nth-child(4)",
-      "value": "td.value, td:last-child",
-      "cur": "td.currency"
+    "dom": {
+      "domNote": "handoff §7.1 で実機確定。headless はブロックされ空ページ→headless:false 固定（launchd は GUI ログインセッションで headful 実行）。資産総額は本文テキストを正規表現で取得（DOM class 非依存）。保有は資産種類別テーブルを 0始まり列インデックスで抽出し、保有金融機関は行の列から取る。",
+      "netWorthRegex": "資産総額[：:]\\s*([0-9,]+)",
+      "summaryTable": {
+        "selector": "table.table-bordered:not([class*=table-])",
+        "selectorNote": "内訳サマリ表＝table-bordered で table-{depo,eq,mf,pns…} 接尾辞が無いもの。3列: カテゴリ名(0)/円(1)/％(2)。種類別チェックサムの照合専用（保有としては取り込まない）。",
+        "labelCol": 0,
+        "amountCol": 1
+      },
+      "tables": [
+        {
+          "kind": "eq",
+          "selector": "table.table-bordered.table-eq",
+          "rawCategory": "株式(現物)",
+          "cols": { "code": 0, "name": 1, "shares": 2, "avgCost": 3, "price": 4, "value": 5, "institution": 9 },
+          "summaryLabel": "株式(現物)"
+        },
+        {
+          "kind": "mf",
+          "selector": "table.table-bordered.table-mf",
+          "rawCategory": "投資信託",
+          "cols": { "name": 0, "shares": 1, "avgCost": 2, "price": 3, "value": 4, "institution": 8 },
+          "summaryLabel": "投資信託"
+        },
+        {
+          "kind": "depo",
+          "selector": "table.table-bordered.table-depo",
+          "rawCategory": "預金・現金",
+          "cols": { "name": 0, "value": 1, "institution": 2 },
+          "summaryLabel": "預金・現金・暗号資産",
+          "cryptoKeywords": ["ビットコイン", "イーサリアム", "暗号"],
+          "cryptoRawCategory": "暗号資産"
+        }
+      ],
+      "ignore": {
+        "selectors": ["table.table-condensed", "table.table-bordered.table-pns"],
+        "note": "table-condensed=カレンダー部品（完全無視）。table-pns=保険/年金/ポイント（年金/保険/ポイント除外ルールに合致＝スキップ）。"
+      }
     }
   }
 }
