@@ -98,8 +98,8 @@
       "domNote": "handoff §7.1 で実機確定。headless はブロックされ空ページ→headless:false 固定（launchd は GUI ログインセッションで headful 実行）。資産総額は本文テキストを正規表現で取得（DOM class 非依存）。保有は資産種類別テーブルを 0始まり列インデックスで抽出し、保有金融機関は行の列から取る。",
       "netWorthRegex": "資産総額[：:]\\s*([0-9,]+)",
       "summaryTable": {
-        "selector": "table.table-bordered:not([class*=table-])",
-        "selectorNote": "内訳サマリ表＝table-bordered で table-{depo,eq,mf,pns…} 接尾辞が無いもの。3列: カテゴリ名(0)/円(1)/％(2)。種類別チェックサムの照合専用（保有としては取り込まない）。",
+        "selector": "table.table-bordered:not(.table-eq):not(.table-mf):not(.table-depo):not(.table-pns):not(.table-condensed)",
+        "selectorNote": "内訳サマリ表＝table-bordered で table-{depo,eq,mf,pns,condensed} 接尾辞が無いもの。3列: カテゴリ名(0)/円(1)/％(2)。種類別チェックサムの照合専用（保有としては取り込まない）。★[class*=table-] 方式は table-bordered 自身も弾いて空になるため、既知の接尾辞を個別 :not() で除外する。",
         "labelCol": 0,
         "amountCol": 1
       },
