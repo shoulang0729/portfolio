@@ -34,3 +34,58 @@
 ## ブランチ／PR／Issue
 - 調査は実装不要（コード変更最小・あれば spike ブランチ）。**結論は本 doc 追記＋ Issue コメント**。
 - 本実装は別 Issue（`feat/sector-median-benchmark`）として後続で起票。
+
+---
+
+## 調査結果（2026-06-25 / 実測スパイク・#492）
+
+**経路**: Worker `/finnhub` proxy（`/stock/peers`・`/stock/metric?metric=all`）。`/private/tmp/peer_median.py` で peer 中央値を実計算。
+
+### 代表銘柄の実測（peers 件数・metric 充足・中央値可否）
+| ticker | 種別 | peers | metric keys | 中央値計算 |
+|---|---|---|---|---|
+| AAPL | 米株 | **12** | 133 | ✅ peer 12/12 充足 |
+| NVDA | 米株 | **11** | 133 | ✅ peer 11/11 充足 |
+| 9983.T（TYO:9983） | 日本株 | **0** | **0** | ❌ |
+| 6301.T（TYO:6301） | 日本株 | **0** | **0** | ❌ |
+| 7203.T トヨタ（TYO:/.T/.TYO/TSE:/裸 全形式） | 日本株 | **0** | **0** | ❌（形式問題ではない） |
+| SMH / ACWI | ETF | **0** | – | ❌（ETF は構造上 peer 無し） |
+| TM（トヨタ US ADR） | 米国ADR | 9 | 131 | ✅ |
+| ASML（ADR） | 米国ADR | 3 | 133 | ✅ |
+
+### 結論
+1. **Finnhub の peers/metric は米株（と米国上場 ADR）専用。日本株(.T)は peers も metric も全形式で空**＝Finnhub 現プランに日本株ファンダ無し。シンボル変換の問題ではない（トヨタを5形式で確認）。
+2. **米株は peer 中央値が綺麗に出る**（実測）:
+   - AAPL: peTTM 中央値 **35.6**（self 35.7）/ evEbitda **25.3**（27.6）/ grossMargin **40.8**（47.9）/ pb **7.5**
+   - NVDA: peTTM 中央値 **61.1**（self **30.3**＝同業より割安）/ evEbitda **53.3**（29.2）/ grossMargin **57.3**（74.2）
+3. **peer 比較できる指標（米株）**: `peTTM` / `evEbitdaTTM` / `grossMarginTTM` / `pbQuarterly`。
+   FCF 利回りの直接 % は無いが `currentEv/freeCashFlowTTM`・`pfcfShareTTM`（P/FCF）で代替可。**取れない指標は破線を出さない**方針で OK。
+
+### コスト・バッチ頻度
+- 1 銘柄 = `peers` 1 + `metric` ×N（N≈11）≒ **12 コール**。保有の米個別株は AAPL/AMZN/GOOGL/MSFT/PLTR/TSLA の **6 銘柄 → ≒72 コール**。
+- Finnhub 無料 60/分 をわずかに超える → **スロットル（〜2分に分割）or peer 重複の dedupe** で収まる。
+- セクター中央値は動きが遅い → **週次バッチ推奨**（既存 quality バッチ/Worker に相乗り）。日次相乗りでも可だが不要。
+
+### 格納スキーマ案（確定提案・load-bearing 不変・追加のみ）
+```jsonc
+valuations[sym].sectorMedian = {
+  "per": 35.6, "evEbitda": 25.3, "grossMargin": 40.8, "pb": 7.5,
+  "n": 12,                      // サンプル数。n<3 の指標は出力しない
+  "source": "finnhub-peers",    // finnhub-peers | etf-proxy | static
+  "asOf": "2026-06-25"
+}
+```
+
+### フォールバック設計（日本株・ETF は Finnhub 空）
+- **MVP 推奨＝グレースフル縮退**: 日本株・ETF は **peer 破線を出さない**（バーの他比較①〜④はそのまま）。データが無いものを無理に出さない。
+- 次点: `data/sector-medians.json`（業種×指標の中央値・半期手動）を後フェーズで。日本株を埋めたくなったら。
+- 限定的: 流動性ある **米国 ADR がある外国株のみ ADR 代理**（TM 等）。手動マッピング・ROI 低 → 初期スコープ外。
+
+### 鮮度の見せ方
+- 破線ラベルに `同業(n=12)`。`source` バッジ（finnhub/static）。`asOf` が古い時は控えめ表示。
+
+### 推奨ロードマップ
+- **Phase 1（本実装 Issue）**: Finnhub peers→metric を**週次バッチ**で米個別株のみ中央値化 → `valuations[sym].sectorMedian` 格納 → Value 詳細バーに **米株のみ peer 破線**を描画。日本株/ETF は破線なし（縮退）。
+- **Phase 2（別途）**: 日本株を `sector-medians.json` 静的表で補完するか判断。
+
+→ 本実装は別 Issue を起票（`feat/sector-median-benchmark`）。
