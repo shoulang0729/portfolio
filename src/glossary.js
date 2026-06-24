@@ -11,6 +11,18 @@
 import { GLOSSARY } from './glossary-data.js';
 import { escapeHTML } from './utils.js';
 
+const _byKey = new Map();
+for (const cat of GLOSSARY) for (const t of cat.terms) if (t.key) _byKey.set(t.key, t);
+
+/**
+ * 用語キーから { term, desc } を返す（見つからなければ null）。
+ * @param {string} key
+ * @returns {{term:string,desc:string}|null}
+ */
+export function glossaryTermByKey(key) {
+  return _byKey.get(key) || null;
+}
+
 /**
  * 指定タブ用の用語解説 HTML を返す（二段アコーディオン）。
  * tab='value' なら tab:'both'＋'value' カテゴリ、'risk' なら 'both'＋'risk' カテゴリ。

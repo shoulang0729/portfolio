@@ -12,7 +12,7 @@
 // ══════════════════════════════════════════════════════════════
 
 /**
- * @typedef {{ term: string, desc: string }} GlossaryTerm
+ * @typedef {{ term: string, desc: string, key?: string }} GlossaryTerm
  * @typedef {{ id: string, title: string, tab: 'value'|'risk'|'both', terms: GlossaryTerm[] }} GlossaryCategory
  */
 
@@ -45,13 +45,15 @@ export const GLOSSARY = [
       {
         term: 'PER（trail→fwd）',
         desc: '株価収益率。trail=実績／fwd=予想。右（fwd）が小さい＝来期利益が増える見込み。向きが最重要。',
+        key: 'per',
       },
-      { term: 'PEG', desc: 'PER ÷ 利益成長率。1未満＝割安寄り、3超＝割高。成長を加味した割高度。' },
-      { term: 'EV/EBITDA', desc: '企業価値 ÷ 償却前営業利益。負債込みで見る割安度。' },
-      { term: 'FCF利回り', desc: 'フリーキャッシュフロー ÷ 時価総額。現金を生む力に対する割安度。' },
+      { term: 'PEG', desc: 'PER ÷ 利益成長率。1未満＝割安寄り、3超＝割高。成長を加味した割高度。', key: 'peg' },
+      { term: 'EV/EBITDA', desc: '企業価値 ÷ 償却前営業利益。負債込みで見る割安度。', key: 'evEbitda' },
+      { term: 'FCF利回り', desc: 'フリーキャッシュフロー ÷ 時価総額。現金を生む力に対する割安度。', key: 'fcfYield' },
       {
         term: '%タイル',
         desc: 'その銘柄自身の過去PERバンドの中で今が何%の位置か。低い＝過去比で割安。',
+        key: 'percentile',
       },
       {
         term: 'verdict（判定）',
@@ -64,10 +66,17 @@ export const GLOSSARY = [
       {
         term: 'リバースDCF / 織り込み成長率',
         desc: '今の株価が「年何%のFCF成長」を前提にしているかを逆算。(WACC − FCF利回り) ÷ (1 + FCF利回り)。妥当域より高い＝市場が期待を盛りすぎ（期待過多）のサイン。個別株のみ・参考値。',
+        key: 'impliedGrowth',
       },
       {
         term: '目標株価乖離（targetGap）',
         desc: 'アナリスト平均目標株価と現値の差（%）。プラス大＝上値余地が見込まれている。アナリスト数が少ない銘柄は信頼度低め。',
+        key: 'targetGap',
+      },
+      {
+        term: '株主還元',
+        desc: '配当＋自社株買いで毎年株主に戻す現金の利回り。高いほど手厚い（3%超で厚い）。',
+        key: 'shareholderYield',
       },
       {
         term: 'ETF proxy',
@@ -83,26 +92,31 @@ export const GLOSSARY = [
       {
         term: 'ROIC',
         desc: '投下資本利益率。ROIC > WACC なら価値創造、下回ると稼ぐほど価値破壊。',
+        key: 'roic',
       },
       { term: 'WACC', desc: '加重平均資本コスト。ROIC が超えるべきハードル。' },
       {
         term: 'グロス収益性（Novy-Marx）',
         desc: '粗利 ÷ 総資産。質の高い割安株を見抜く学術指標。',
+        key: 'grossProfitability',
       },
       {
         term: 'FCF変換率',
         desc: '純利益がどれだけ実際の現金（FCF）になるか。低い＝利益が見かけ倒しの疑い。',
+        key: 'fcfConversion',
       },
       {
         term: 'F-Score（0〜9・Piotroski）',
         desc: '収益性・財務・効率の9項目を各1点。7〜9＝健全、0〜2＝危険（罠濃厚）。',
+        key: 'fScore',
       },
       {
         term: 'Altman Z',
         desc: '倒産確率の合成指標。3超＝安全圏／1.8未満＝危険ゾーン。',
+        key: 'altmanZ',
       },
       { term: 'インタレストカバレッジ', desc: '営業利益 ÷ 支払利息。借金の利払い余力。' },
-      { term: 'Qスコア（0〜9）', desc: '上記を束ねた品質スコア。' },
+      { term: 'Qスコア（0〜9）', desc: '上記を束ねた品質スコア。', key: 'qScore' },
     ],
   },
   {
@@ -110,18 +124,21 @@ export const GLOSSARY = [
     title: '③ モメンタム（勢い）',
     tab: 'value',
     terms: [
-      { term: 'priceMom1Y（1Y騰落率）', desc: '直近1年の単純リターン（%）。' },
+      { term: 'priceMom1Y（1Y騰落率）', desc: '直近1年の単純リターン（%）。', key: 'priceMom1Y' },
       {
         term: 'pos52w（52週位置）',
         desc: '52週レンジ内の現在位置（0%=安値・100%=高値）。',
+        key: 'pos52w',
       },
       {
         term: 'epsRev90d（業績改定）',
         desc: '直近90日でアナリストEPS予想が上方/下方修正された度合い。プラス＝期待が上向き。',
+        key: 'epsRev90d',
       },
       {
         term: 'rsVsSector（対市場 相対強さ）',
         desc: '世界株ACWIと比べた値動きの強さ。地合いでなく個別の強さを見る。',
+        key: 'rsVsSector',
       },
     ],
   },
@@ -133,10 +150,22 @@ export const GLOSSARY = [
       {
         term: '売りトリガー3種',
         desc: 'テーゼ崩壊売り／目標到達売り／バンド・リバランス売り。事前に決めて売り遅れを防ぐ。',
+        key: 'sellTriggers',
       },
       {
         term: '的中率（hit-rate）',
         desc: '過去の判断が当たったかの学習ループ。発議とverdictを別建てで採点。',
+        key: 'hitRate',
+      },
+      {
+        term: '過大ポジ',
+        desc: '今のサイズが適正比率を超えている保有の本数。減らす候補の数。',
+        key: 'overweightCount',
+      },
+      {
+        term: '割安候補',
+        desc: '判定エンジンが「割安（cheap）」と見ている銘柄の本数。買い増し検討の母数。',
+        key: 'cheapCount',
       },
       {
         term: '発議の的中',
