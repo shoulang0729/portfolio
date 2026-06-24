@@ -200,6 +200,7 @@ if __name__ == "__main__":
 
 ---
 
+> 🚀 **無人運用 稼働開始（2026-06-25）**＝Mac mini に launchd `com.toshio.mf-snapshot`(毎朝09:00 JST) 登録済み・git remote を SSH化(`git@github.com`・PAT不要/無期限)・`ssh -T` 認証OK・launchd経由の実走で取得→SSH push 成功(origin `40a587e` asOf 2026-06-25 / imported 530,893,757 / 49)。**MF取込は Mac mini 1本に統一・承認ゼロで毎朝自動更新。** 前提＝Mac miniはログイン状態で常時起動(headful)。
 > 🎉 **実機検証 完了（2026-06-23）**＝Mac mini ローカル run が抽出→種類別チェックサム通過→commit→push 成功。origin/main `b09fdd1`＝asOf 2026-06-23 / mfNetWorth 585,034,186 / imported 540,500,188 / 49 holdings。残＝launchd登録（無人化）＋無人push認証のkeychainキャッシュ。
 > ✅ **§7改修 実装完了（2026-06-23・PR #467 / Closes #466）**＝scrape/build/verify を資産種類別テーブル方式に刷新・`fetch.dom`列マップ・headless:false・種類別checksum・テスト11件green・CodeRabbit実バグ(summaryセレクタ自己矛盾)修正込み。残＝Mac miniで run の実機確認(§7.4)。
 
