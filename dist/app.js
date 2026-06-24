@@ -4189,21 +4189,6 @@ function betaTo(ri, rref) {
   if (cv2 === null || cv2 === 0) return null;
   return cv / cv2;
 }
-function worstReturn(returnsArr) {
-  if (!Array.isArray(returnsArr) || returnsArr.length === 0) return null;
-  return Math.min(...returnsArr);
-}
-function worstWindow(returnsArr, k) {
-  if (!Array.isArray(returnsArr) || returnsArr.length < k || k <= 0) return null;
-  let worst = Infinity;
-  for (let i = 0; i <= returnsArr.length - k; i++) {
-    let compound = 1;
-    for (let j = i; j < i + k; j++) compound *= 1 + returnsArr[j];
-    const ret = compound - 1;
-    if (ret < worst) worst = ret;
-  }
-  return worst === Infinity ? null : worst;
-}
 function alignReturnsByDate(seriesMap) {
   const empty = { dates: [], bySym: {} };
   if (!seriesMap || typeof seriesMap !== "object") return empty;
@@ -4826,18 +4811,25 @@ async function buildRegionCard(assets, manualSymbols) {
   const coveragePct = Math.max(0, Math.min(100, 100 - unknownPct));
   const card = document.createElement("div");
   card.className = "risk-card region-card";
-  const title = document.createElement("div");
-  title.className = "risk-card-title";
-  title.textContent = "\u5730\u57DF\uFF08\u30EB\u30C3\u30AF\u30B9\u30EB\u30FC\uFF09";
-  card.appendChild(title);
-  const hero = document.createElement("div");
-  hero.className = "region-hero";
+  const japanPct = bias.japanPct;
+  const benchPct = bias.benchPct;
+  const maxScale = Math.max(50, japanPct * 1.1, benchPct * 1.1);
+  const wYou = Math.min(100, japanPct / maxScale * 100);
+  const wBench = Math.min(100, benchPct / maxScale * 100);
   const biasSign = bias.biasPt >= 0 ? "+" : "";
-  const biasCls = bias.biasPt >= 0 ? "region-bias-over" : "region-bias-under";
-  hero.innerHTML = `
-    <div class="region-hero-main"><span class="region-hero-k">\u65E5\u672C \u771F%</span><span class="region-hero-v">${bias.japanPct.toFixed(1)}%</span></div>
-    <div class="region-hero-sub">ACWI\u30D9\u30F3\u30C1 ${bias.benchPct}% \uFF5C \u30DB\u30FC\u30E0\u30D0\u30A4\u30A2\u30B9 <span class="${biasCls}">${biasSign}${bias.biasPt.toFixed(1)}pt</span> \uFF5C \u30AB\u30D0\u30EC\u30C3\u30B8 ${coveragePct.toFixed(0)}%</div>`;
-  card.appendChild(hero);
+  const ratio = benchPct > 0 ? japanPct / benchPct : null;
+  const ratioTxt = ratio != null ? `\u4E16\u754C\u5E73\u5747\u306E<b>\u7D04${ratio.toFixed(ratio >= 10 ? 0 : 1)}\u500D</b>\u3001` : "";
+  const tiltDir = bias.biasPt >= 0 ? "\u65E5\u672C\u306B\u5927\u304D\u304F\u50BE\u3051\u3066\u3044\u308B" : "\u65E5\u672C\u3092\u4E16\u754C\u5E73\u5747\u3088\u308A\u63A7\u3048\u3081\u306B\u3057\u3066\u3044\u308B";
+  card.insertAdjacentHTML(
+    "beforeend",
+    `<div class="risk-card-title">${ric("i-globe")}\u5730\u57DF\u306E\u50BE\u304D<span class="rtag">\u30EB\u30C3\u30AF\u30B9\u30EB\u30FC\u30FB\u5168\u8CC7\u7523</span></div>
+    <p class="rgn-lead">\u5168\u4E16\u754C\u30D5\u30A1\u30F3\u30C9\u3092\u5730\u57DF\u5206\u89E3\u3057\u305F<b>\u672C\u5F53\u306E\u65E5\u672C\u6BD4\u7387</b>\u3092\u4E16\u754C\u5E73\u5747\u3068\u4E26\u3079\u308B\u3002<span class="ihelp" title="\u771F\u306E\u5730\u57DF%\uFF08\u30EB\u30C3\u30AF\u30B9\u30EB\u30FC\uFF09\uFF1D\u5168\u4E16\u754C\u30D5\u30A1\u30F3\u30C9\u3092\u5730\u57DF\u69CB\u6210\u6BD4\u3067\u5206\u89E3\u3057PF\u5168\u4F53\u306E\u672C\u5F53\u306E\u5730\u57DF\u914D\u5206\u3092\u51FA\u3059\u3002\u65E5\u672C\uFF1DACWI\u51855%\uFF0B1306\uFF0B\u3072\u3075\u307F\uFF0B\u65E5\u672C\u500B\u5225\u3002">?</span></p>
+    <div class="rcmp">
+      <div class="rcmp-row"><span class="rcmp-k">\u3042\u306A\u305F\u306EPF<span class="s">\u65E5\u672C\uFF08\u771F\u306E\u5730\u57DF%\uFF09</span></span><span class="rcmp-t"><span class="rcmp-f you" style="width:${wYou.toFixed(0)}%"></span></span><span class="rcmp-v">${japanPct.toFixed(1)}%</span></div>
+      <div class="rcmp-row"><span class="rcmp-k">\u4E16\u754C\u5E73\u5747<span class="s">ACWI\u306E\u65E5\u672C%</span></span><span class="rcmp-t"><span class="rcmp-f bench" style="width:${wBench.toFixed(0)}%"></span></span><span class="rcmp-v bench">${benchPct.toFixed(1)}%</span></div>
+    </div>
+    <div class="rcmp-cap">\u30DB\u30FC\u30E0\u30D0\u30A4\u30A2\u30B9 <b>${biasSign}${bias.biasPt.toFixed(1)}pt</b><span class="ihelp" title="\u81EA\u56FD(\u65E5\u672C)\u3078\u306E\u504F\u308A\uFF1D\u771F\u306E\u65E5\u672C% \u2212 \u30D9\u30F3\u30C1(ACWI 5%)\u3002\u610F\u56F3\u7684\u306A\u50BE\u3051\u304B\u3092\u78BA\u8A8D\u3002">?</span> \uFF1D${ratioTxt}${tiltDir}\u3002\u610F\u56F3\u7684\u306A\u3089\u554F\u984C\u306A\u3057\u3001\u7121\u610F\u8B58\u306A\u3089\u662F\u6B63\u306E\u691C\u8A0E\u6750\u6599\u3002</div>`
+  );
   const slices = Object.entries(pct).filter(([, p]) => typeof p === "number" && p > 0).sort((a, b) => b[1] - a[1]).map(([key, p]) => ({ key, pct: p }));
   const body = document.createElement("div");
   body.className = "risk-card-body";
@@ -4902,63 +4894,6 @@ async function ensureStressHistory(symbols) {
     await batchWithRetry(missing, (s) => fetchSymbolHistory(s, "5y"), { batchSize: 6, delayMs: 1100 });
   }
   return state.historicalCache["5y"] || {};
-}
-async function buildStressCard(holdings) {
-  const card = document.createElement("div");
-  card.className = "risk-card stress-card";
-  const title = document.createElement("div");
-  title.className = "risk-card-title";
-  title.textContent = "\u6B74\u53F2\u7684\u5371\u6A5F\u306E\u518D\u73FE\uFF08what-if\uFF09";
-  card.appendChild(title);
-  const events = await loadStressEvents();
-  if (events.length === 0) {
-    const p = document.createElement("p");
-    p.className = "risk-coverage-note";
-    p.textContent = "\u30A4\u30D9\u30F3\u30C8\u30AB\u30BF\u30ED\u30B0\u672A\u53D6\u5F97\u3002";
-    card.appendChild(p);
-    return card;
-  }
-  const weights = {};
-  for (const p of holdings) {
-    if (p.ySymbol) weights[p.ySymbol] = (weights[p.ySymbol] || 0) + (p.value || 0);
-  }
-  const symbols = Object.keys(weights);
-  let seriesMap;
-  try {
-    seriesMap = await ensureStressHistory(symbols);
-  } catch {
-    const p = document.createElement("p");
-    p.className = "risk-coverage-note";
-    p.textContent = "5y\u5C65\u6B74\u306E\u53D6\u5F97\u306B\u5931\u6557\u3057\u307E\u3057\u305F\uFF08\u6642\u9593\u3092\u304A\u3044\u3066\u518D\u8868\u793A\u3057\u3066\u304F\u3060\u3055\u3044\uFF09\u3002";
-    card.appendChild(p);
-    return card;
-  }
-  const rows = events.map((ev) => ({ ev, res: eventStress(seriesMap, weights, ev.from, ev.to) })).sort((a, b) => {
-    const ra = a.res.ret == null ? Infinity : a.res.ret;
-    const rb = b.res.ret == null ? Infinity : b.res.ret;
-    return ra - rb;
-  });
-  const table = document.createElement("div");
-  table.className = "stress-table";
-  for (const { ev, res } of rows) {
-    const row = document.createElement("div");
-    row.className = "stress-row";
-    const lowCov = res.coveragePct < 90;
-    const retTxt = res.ret == null ? "\u2014" : `${(res.ret * 100).toFixed(1)}%`;
-    const retCls = res.ret != null && res.ret < 0 ? "stress-neg" : "";
-    const covCls = lowCov ? "stress-cov-low" : "";
-    row.innerHTML = `
-      <span class="stress-name" title="${escapeHTML(`${ev.from}\u301C${ev.to}${ev.note ? ` / ${ev.note}` : ""}`)}">${escapeHTML(ev.label)}</span>
-      <span class="stress-ret ${retCls}">${escapeHTML(retTxt)}</span>
-      <span class="stress-cov ${covCls}">cov ${Math.round(res.coveragePct)}%${lowCov ? " \u26A0" : ""}</span>`;
-    table.appendChild(row);
-  }
-  card.appendChild(table);
-  const note = document.createElement("div");
-  note.className = "risk-coverage-note";
-  note.textContent = "\u5B9F\u5C65\u6B74 replay \xD7 \u73FE\u30A6\u30A7\u30A4\u30C8\u306E what-if\uFF08\u5B9F\u640D\u76CA\u3067\u306F\u306A\u3044\uFF09\u3002\u7A93\u5185\u306B\u4FA1\u683C\u304C\u7121\u3044\u4FDD\u6709\u306F\u9664\u5916\u30FB\u518D\u6B63\u898F\u5316\u3057 coverage% \u306B\u53CD\u6620\uFF08<90% \u306F\u6CE8\u610F\uFF09\u3002\u5C65\u6B74\u306F\u4FDD\u6709\u9650\u5B9A 5y\uFF08IDB\uFF09\u3002";
-  card.appendChild(note);
-  return card;
 }
 var TITLES = {
   assetClass: "\u30A2\u30BB\u30C3\u30C8\u30AF\u30E9\u30B9",
@@ -5129,182 +5064,183 @@ function _resolvePositionTkeys(denom) {
     return { p, tkey, currentPct };
   });
 }
+function ric(id, sm) {
+  return `<svg class="ric${sm ? " ric-sm" : ""}" aria-hidden="true"><use href="#${id}"/></svg>`;
+}
 function buildRiskOverviewCard() {
   const card = document.createElement("div");
   card.className = "risk-overview";
-  const h4 = document.createElement("h4");
-  h4.textContent = "\u30EA\u30B9\u30AF\u8981\u7D04\uFF08\u81F4\u547D\u50B7\u56DE\u907F\uFF09";
-  card.appendChild(h4);
-  const roRow = document.createElement("div");
-  roRow.className = "ro-row";
-  card.appendChild(roRow);
-  let breaches = 0;
   const totals = getMfTotals();
   const denom = totals && totals.imported || positions.reduce((s, p) => s + (p.value || 0), 0);
-  const cashRatioStat = document.createElement("div");
-  cashRatioStat.className = "ro-stat";
-  const cashLabel = document.createElement("div");
-  cashLabel.className = "ro-stat-label";
-  cashLabel.textContent = "\u6295\u8CC7\u7528\u30AD\u30E3\u30C3\u30B7\u30E5\u6BD4\u7387";
-  cashRatioStat.appendChild(cashLabel);
-  const cashVal = document.createElement("div");
-  cashVal.className = "ro-stat-value";
+  const taAvailable = denom > 0;
+  let breaches = 0;
+  let cashVal = "\u2014";
+  let cashOut = false;
   if (totals) {
     const cr = totals.cashRatio;
-    const outOfRange = cr < 5 || cr > 20;
-    cashVal.textContent = `${cr.toFixed(1)}%`;
-    cashVal.style.color = outOfRange ? "var(--up)" : "var(--text)";
-    if (outOfRange) {
-      cashVal.title = cr < 5 ? "\u30AD\u30E3\u30C3\u30B7\u30E5\u4E0D\u8DB3\uFF08<5%\uFF09" : "\u30AD\u30E3\u30C3\u30B7\u30E5\u904E\u591A\uFF08>20%\uFF09";
-      breaches++;
-    }
-  } else {
-    cashVal.textContent = "\u2014";
+    cashOut = cr < 5 || cr > 20;
+    cashVal = `${cr.toFixed(1)}%`;
+    if (cashOut) breaches++;
   }
-  cashRatioStat.appendChild(cashVal);
-  roRow.appendChild(cashRatioStat);
-  const taAvailable = (
-    /** @type {boolean} */
-    denom > 0
-  );
-  const oversizeStat = document.createElement("div");
-  oversizeStat.className = "ro-stat";
-  const oversizeLabel = document.createElement("div");
-  oversizeLabel.className = "ro-stat-label";
-  oversizeLabel.textContent = "\u904E\u5927\u30DD\u30B8";
-  oversizeStat.appendChild(oversizeLabel);
-  const oversizeVal = document.createElement("div");
-  oversizeVal.className = "ro-stat-value";
+  const resolved = taAvailable ? _resolvePositionTkeys(denom) : [];
+  const themeUsedPct = {};
+  const themeMembers = {};
+  for (const { p, tkey, currentPct } of resolved) {
+    if (!tkey) continue;
+    const theme = getThemeOf(tkey);
+    if (!theme) continue;
+    themeUsedPct[theme] = (themeUsedPct[theme] || 0) + currentPct;
+    (themeMembers[theme] = themeMembers[theme] || []).push({ name: p.name || p.symbol || "", pct: currentPct });
+  }
+  let maxLabel = null;
+  let maxPct = 0;
+  let maxMembers = [];
+  for (const [theme, used] of Object.entries(themeUsedPct)) {
+    if (used > maxPct) {
+      maxPct = used;
+      maxLabel = theme;
+      maxMembers = (themeMembers[theme] || []).slice().sort((a, b) => b.pct - a.pct);
+    }
+  }
   if (taAvailable) {
-    const resolved = _resolvePositionTkeys(denom);
-    let oversizeCount = 0;
-    for (const { tkey, currentPct } of resolved) {
-      if (!tkey) continue;
-      const gap = computeGap(tkey, currentPct);
-      if (gap.gapPct != null && gap.gapPct > 0.5) oversizeCount++;
-    }
-    oversizeVal.textContent = `${oversizeCount} \u4EF6`;
-    if (oversizeCount > 0) {
-      oversizeVal.style.color = "var(--up)";
-      breaches++;
-    }
-  } else {
-    oversizeVal.textContent = "\u2014";
-  }
-  oversizeStat.appendChild(oversizeVal);
-  roRow.appendChild(oversizeStat);
-  const maxConStat = document.createElement("div");
-  maxConStat.className = "ro-stat";
-  const maxConLabel = document.createElement("div");
-  maxConLabel.className = "ro-stat-label";
-  maxConLabel.textContent = "\u6700\u5927\u96C6\u4E2D";
-  maxConStat.appendChild(maxConLabel);
-  const maxConVal = document.createElement("div");
-  maxConVal.className = "ro-stat-value";
-  if (taAvailable && denom > 0) {
-    const currentPctBySymbol = {};
-    for (const p of positions) {
-      const pct = (p.value || 0) / denom * 100;
-      if (p.ySymbol) currentPctBySymbol[p.ySymbol] = (currentPctBySymbol[p.ySymbol] || 0) + pct;
-      if (p.symbol && p.symbol !== p.ySymbol) currentPctBySymbol[p.symbol] = (currentPctBySymbol[p.symbol] || 0) + pct;
-    }
-    let maxLabel = null;
-    let maxPct = 0;
-    const themeUsedPct = {};
-    const resolved2 = _resolvePositionTkeys(denom);
-    for (const { tkey, currentPct } of resolved2) {
-      if (!tkey) continue;
-      const theme = getThemeOf(tkey);
-      if (theme) {
-        themeUsedPct[theme] = (themeUsedPct[theme] || 0) + currentPct;
-      }
-    }
-    for (const [theme, used] of Object.entries(themeUsedPct)) {
-      if (used > maxPct) {
-        maxPct = used;
-        maxLabel = escapeHTML(theme);
-      }
-    }
     for (const p of positions) {
       const pct = (p.value || 0) / denom * 100;
       if (pct > maxPct) {
         maxPct = pct;
-        maxLabel = escapeHTML(p.name || p.symbol || "");
+        maxLabel = p.name || p.symbol || "";
+        maxMembers = [{ name: p.name || p.symbol || "", pct }];
       }
     }
-    if (maxLabel) {
-      maxConVal.textContent = `${maxLabel} ${maxPct.toFixed(1)}%`;
-      if (maxPct > 20) {
-        maxConVal.style.color = "var(--up)";
-        breaches++;
-      }
-    } else {
-      maxConVal.textContent = "\u2014";
-    }
-  } else {
-    maxConVal.textContent = "\u2014";
   }
-  maxConStat.appendChild(maxConVal);
-  roRow.appendChild(maxConStat);
-  const chipsStat = document.createElement("div");
-  chipsStat.className = "ro-stat ro-stat-chips";
-  const chipsLabel = document.createElement("div");
-  chipsLabel.className = "ro-stat-label";
-  chipsLabel.textContent = "\u30C6\u30FC\u30DE\u4E0A\u9650\u8D85\u904E";
-  chipsStat.appendChild(chipsLabel);
-  if (taAvailable && denom > 0) {
-    const currentPctBySymbol2 = {};
-    for (const p of positions) {
-      const pct = (p.value || 0) / denom * 100;
-      if (p.ySymbol) currentPctBySymbol2[p.ySymbol] = (currentPctBySymbol2[p.ySymbol] || 0) + pct;
-      if (p.symbol && p.symbol !== p.ySymbol)
-        currentPctBySymbol2[p.symbol] = (currentPctBySymbol2[p.symbol] || 0) + pct;
+  const concOver = taAvailable && maxPct > 20;
+  if (concOver) breaches++;
+  const overPos = [];
+  for (const { p, tkey, currentPct } of resolved) {
+    if (!tkey) continue;
+    const gap = computeGap(tkey, currentPct);
+    if (gap.gapPct != null && gap.gapPct > 0.5) {
+      overPos.push({ name: p.name || p.symbol || "", cur: currentPct, target: gap.targetPct, pt: gap.gapPct });
     }
-    const resolvedForTheme = _resolvePositionTkeys(denom);
-    const themes = /* @__PURE__ */ new Set();
-    for (const { tkey } of resolvedForTheme) {
-      if (!tkey) continue;
+  }
+  overPos.sort((a, b) => b.pt - a.pt);
+  if (overPos.length > 0) breaches++;
+  const curPctBySym = {};
+  for (const p of positions) {
+    const pct = taAvailable ? (p.value || 0) / denom * 100 : 0;
+    if (p.ySymbol) curPctBySym[p.ySymbol] = (curPctBySym[p.ySymbol] || 0) + pct;
+    if (p.symbol && p.symbol !== p.ySymbol) curPctBySym[p.symbol] = (curPctBySym[p.symbol] || 0) + pct;
+  }
+  const themesSet = /* @__PURE__ */ new Set();
+  for (const { tkey } of resolved) {
+    if (tkey) {
       const th = getThemeOf(tkey);
-      if (th) themes.add(th);
+      if (th) themesSet.add(th);
     }
-    const overThemes = [];
-    for (const theme of themes) {
+  }
+  const overThemes = [];
+  if (taAvailable) {
+    for (const theme of themesSet) {
       const cap = getThemeCap(theme);
       if (cap == null) continue;
-      const usage = computeThemeUsage(theme, currentPctBySymbol2);
+      const usage = computeThemeUsage(theme, curPctBySym);
       if (usage.used > cap) overThemes.push({ theme, used: usage.used, cap });
     }
-    if (overThemes.length === 0) {
-      const ok = document.createElement("span");
-      ok.className = "ro-ok";
-      ok.textContent = "\u306A\u3057";
-      chipsStat.appendChild(ok);
-    } else {
-      breaches++;
-      const chipsWrap = document.createElement("div");
-      chipsWrap.className = "ro-chips-wrap";
-      for (const { theme, used, cap } of overThemes) {
-        const chip = document.createElement("span");
-        chip.className = "ro-chip";
-        chip.textContent = `${escapeHTML(theme)} ${used.toFixed(1)}%>${cap}%`;
-        chipsWrap.appendChild(chip);
-      }
-      chipsStat.appendChild(chipsWrap);
-    }
-  } else {
-    const dash = document.createElement("span");
-    dash.textContent = "\u2014";
-    chipsStat.appendChild(dash);
   }
-  card.appendChild(chipsStat);
-  const note = document.createElement("div");
-  note.className = "ro-note";
-  note.textContent = "\u203B \u914D\u5206\u30D9\u30FC\u30B9\u306E\u4E00\u76EE\u30C1\u30A7\u30C3\u30AF\u3002\u5024\u52D5\u304D\u30FB\u6700\u60AA\u5C40\u9762\u30FB\u5206\u6563/\u6D41\u52D5\u6027\u306F\u4E0B\u306E\u300C\u30AF\u30AA\u30F3\u30C4\u30FB\u30EA\u30B9\u30AF\u300D\u3078\u3002";
-  card.appendChild(note);
-  const verdict = document.createElement("div");
-  verdict.className = breaches === 0 ? "ro-verdict ro-v-ok" : breaches === 1 ? "ro-verdict ro-v-warn" : "ro-verdict ro-v-bad";
-  verdict.textContent = breaches === 0 ? "\u2713 \u30EA\u30B9\u30AF\u4F4E\uFF08\u95BE\u5024\u62B5\u89E6\u306A\u3057\uFF09" : breaches === 1 ? "\u26A0 \u6CE8\u610F 1\u4EF6" : `\u26A0 \u8981\u6CE8\u610F ${breaches}\u4EF6`;
-  card.insertBefore(verdict, roRow);
+  if (overThemes.length > 0) breaches++;
+  const vCls = breaches === 0 ? "ok" : breaches === 1 ? "warn" : "bad";
+  const vt = breaches === 0 ? "\u30EA\u30B9\u30AF\u4F4E \u2014 \u95BE\u5024\u62B5\u89E6\u306A\u3057" : breaches === 1 ? "\u6CE8\u610F \u2014 1\u4EF6\u304C\u57FA\u6E96\u30AA\u30FC\u30D0\u30FC" : `\u8981\u6CE8\u610F \u2014 ${breaches}\u4EF6\u304C\u57FA\u6E96\u30AA\u30FC\u30D0\u30FC`;
+  const subBits = [];
+  if (cashOut) subBits.push("\u30AD\u30E3\u30C3\u30B7\u30E5\u6BD4\u7387\u304C\u7BC4\u56F2\u5916");
+  if (concOver) subBits.push("\u96C6\u4E2D\u304C\u9AD8\u3044");
+  if (overPos.length) subBits.push(`\u904E\u5927\u30DD\u30B8${overPos.length}\u4EF6`);
+  if (overThemes.length) subBits.push("\u30C6\u30FC\u30DE\u4E0A\u9650\u8D85\u904E");
+  const vs = subBits.length ? `${subBits.join("\u30FB")}\u3002\u5024\u52D5\u304D\u306F\u4E0B\u306E\u30AF\u30AA\u30F3\u30C4\u3078\u3002` : "\u96C6\u4E2D\u30FB\u904E\u5927\u30DD\u30B8\u30FB\u30AD\u30E3\u30C3\u30B7\u30E5\u30FB\u30C6\u30FC\u30DE\u4E0A\u9650\u3059\u3079\u3066\u9069\u6B63\u570F\u3002\u5024\u52D5\u304D\u306F\u4E0B\u306E\u30AF\u30AA\u30F3\u30C4\u3078\u3002";
+  const rmrow = (icon, label, pillCls, pillTxt, valHTML, valWarn, holdsHTML, cap) => `
+    <div class="rmrow">
+      <div class="rmic">${ric(icon)}</div>
+      <div class="rmbody">
+        <div class="rml1"><span class="rml">${escapeHTML(label)}</span><span class="rpill ${pillCls}">${escapeHTML(pillTxt)}</span><span class="rmv${valWarn ? " warn" : ""}">${valHTML}</span></div>
+        ${holdsHTML ? `<div class="rholds">${holdsHTML}</div>` : ""}
+        <div class="rmcap">${escapeHTML(cap)}</div>
+      </div>
+    </div>`;
+  const cashRow = rmrow(
+    "i-coin",
+    "\u6295\u8CC7\u7528\u30AD\u30E3\u30C3\u30B7\u30E5\u6BD4\u7387",
+    cashOut ? "warn" : "ok",
+    cashOut ? "\u7BC4\u56F2\u5916" : "\u9069\u6B63",
+    escapeHTML(cashVal),
+    cashOut,
+    "",
+    "\u6295\u8CC7\u8CC7\u7523\u306E\u3046\u3061\u73FE\u91D1\u30025\u301C20%\u304C\u9069\u6B63\u30EC\u30F3\u30B8\u3002"
+  );
+  const concHolds = taAvailable && maxMembers.length ? maxMembers.slice(0, 4).map((m) => `<span class="htag">${escapeHTML(m.name)} <b>${m.pct.toFixed(1)}%</b></span>`).join("") : "";
+  const concVal = taAvailable && maxLabel ? `${escapeHTML(maxLabel)} ${maxPct.toFixed(1)}%` : "\u2014";
+  const concRow = rmrow(
+    "i-target",
+    "\u6700\u5927\u96C6\u4E2D\uFF08\u30C6\u30FC\u30DE\uFF09",
+    concOver ? "bad" : "ok",
+    concOver ? "\u9AD8\u3044" : "\u9069\u6B63",
+    concVal,
+    concOver,
+    concHolds,
+    "\u6700\u3082\u504F\u3063\u305F\u30C6\u30FC\u30DE\u300220%\u8D85\u3067\u8D64\u3002\u69CB\u6210\u9298\u67C4\u3092\u8868\u793A\u3002"
+  );
+  let overVal = "0\u4EF6";
+  let overHolds = "";
+  let overPill = "ok";
+  let overPillTxt = "\u306A\u3057";
+  let overWarn = false;
+  if (overPos.length) {
+    const top = overPos[0];
+    overVal = `+${top.pt.toFixed(1)}pt`;
+    overWarn = true;
+    overPill = "warn";
+    overPillTxt = `${overPos.length}\u4EF6`;
+    const tags = overPos.slice(0, 2).map(
+      (o) => `<span class="htag hot">${escapeHTML(o.name)} <b>\u76EE\u6A19${o.target != null ? o.target.toFixed(0) : "\u2014"}%\u2192${o.cur.toFixed(1)}%</b></span>`
+    ).join("");
+    overHolds = tags + (overPos.length > 2 ? `<span class="htag">\u4ED6${overPos.length - 2}\u4EF6</span>` : "");
+  }
+  const overRow = rmrow(
+    "i-expand",
+    "\u904E\u5927\u30DD\u30B8\uFF08\u76EE\u6A19\u8D85\u904E\uFF09",
+    overPill,
+    overPillTxt,
+    overVal,
+    overWarn,
+    overHolds,
+    "\u76EE\u6A19\u914D\u5206\u309250%\u4EE5\u4E0A\u8D85\u3048\u305F\u9298\u67C4\u3002\u30B5\u30A4\u30BA\u898B\u76F4\u3057\u306E\u5019\u88DC\u3002"
+  );
+  let themeVal = "0\u4EF6";
+  let themeHolds = "";
+  let themePill = "ok";
+  let themePillTxt = "\u306A\u3057";
+  let themeWarn = false;
+  if (overThemes.length) {
+    themeVal = `${overThemes.length}\u4EF6`;
+    themeWarn = true;
+    themePill = "bad";
+    themePillTxt = `${overThemes.length}\u4EF6`;
+    themeHolds = overThemes.map((o) => `<span class="htag hot">${escapeHTML(o.theme)} <b>${o.used.toFixed(1)}%&gt;${o.cap}%</b></span>`).join("");
+  }
+  const themeRow = rmrow(
+    "i-layers",
+    "\u30C6\u30FC\u30DE\u4E0A\u9650\u8D85\u904E",
+    themePill,
+    themePillTxt,
+    themeVal,
+    themeWarn,
+    themeHolds,
+    "\u4E0A\u9650\u3092\u8D85\u3048\u305F\u30C6\u30FC\u30DE\u3002\u306A\u3057\uFF1D\u5065\u5168\u3002"
+  );
+  card.innerHTML = `
+    <div class="risk-card-title">${ric("i-shield")}\u30EA\u30B9\u30AF\u8981\u7D04<span class="rtag">\u81F4\u547D\u50B7\u3092\u907F\u3051\u3089\u308C\u3066\u3044\u308B\u304B</span></div>
+    <div class="rv ${vCls}">
+      <div class="rv-badge">${ric(breaches === 0 ? "i-shield" : "i-warn")}</div>
+      <div><div class="rv-t">${escapeHTML(vt)}</div><div class="rv-s">${escapeHTML(vs)}</div></div>
+    </div>
+    ${cashRow}${concRow}${overRow}${themeRow}`;
   return card;
 }
 function _pct1(v, forcePlus = false) {
@@ -5312,18 +5248,86 @@ function _pct1(v, forcePlus = false) {
   const s = `${(v * 100).toFixed(1)}%`;
   return forcePlus && v > 0 ? `+${s}` : s;
 }
+function _rqNote(msg) {
+  const p = document.createElement("p");
+  p.className = "rq-note";
+  p.textContent = msg;
+  return p;
+}
+function fmtEventPeriod(from, to) {
+  const f = new Date(from);
+  const t = new Date(to);
+  if (Number.isNaN(f.getTime()) || Number.isNaN(t.getTime())) return "";
+  const fy = f.getFullYear();
+  const ty = t.getFullYear();
+  const fm = f.getMonth() + 1;
+  const tm = t.getMonth() + 1;
+  if (fy === ty && fm === tm) return `${fy}\u5E74${fm}\u6708`;
+  if (fy === ty) return `${fy}\u5E74${fm}\u301C${tm}\u6708`;
+  return `${fy}\u5E74${fm}\u6708\u301C${ty}\u5E74${tm}\u6708`;
+}
+async function _appendEventStress(card, holdings) {
+  const lead = document.createElement("p");
+  lead.className = "q-lead";
+  lead.innerHTML = "\u6642\u9593\u7A93\uFF081\u65E5/1\u9031\u2026\u9577\u3044\u307B\u3069\u6DF1\u3044\u306E\u306F\u5F53\u305F\u308A\u524D\uFF09\u3092\u3084\u3081\u3001<b>\u540D\u524D\u306E\u3042\u308B\u5B9F\u969B\u306E\u5371\u6A5F</b>\u3092\u73FEPF\u306E\u30A6\u30A7\u30A4\u30C8\u3067\u518D\u73FE\u3002\u5404\u30A4\u30D9\u30F3\u30C8\u306F\u72EC\u7ACB\u30B7\u30CA\u30EA\u30AA\u3067\u300C<b>\u4F55\u306B\u5F31\u3044\u304B</b>\u300D\u304C\u898B\u3048\u308B\u3002\u4E0B\u843D\u306E\u5927\u304D\u3044\u9806\u3002";
+  card.appendChild(lead);
+  const events = await loadStressEvents();
+  if (events.length === 0) {
+    card.appendChild(_rqNote("\u30A4\u30D9\u30F3\u30C8\u30AB\u30BF\u30ED\u30B0\u672A\u53D6\u5F97\u3002"));
+    return;
+  }
+  const weights = {};
+  for (const p of holdings) {
+    if (p.ySymbol) weights[p.ySymbol] = (weights[p.ySymbol] || 0) + (p.value || 0);
+  }
+  let seriesMap;
+  try {
+    seriesMap = await ensureStressHistory(Object.keys(weights));
+  } catch {
+    card.appendChild(_rqNote("5y\u5C65\u6B74\u306E\u53D6\u5F97\u306B\u5931\u6557\u3057\u307E\u3057\u305F\uFF08\u6642\u9593\u3092\u304A\u3044\u3066\u518D\u8868\u793A\u3057\u3066\u304F\u3060\u3055\u3044\uFF09\u3002"));
+    return;
+  }
+  const rows = events.map((ev) => ({ ev, res: eventStress(seriesMap, weights, ev.from, ev.to) })).sort((a, b) => (a.res.ret == null ? Infinity : a.res.ret) - (b.res.ret == null ? Infinity : b.res.ret));
+  const maxAbs = Math.max(1e-4, ...rows.map((r) => r.res.ret == null ? 0 : Math.abs(r.res.ret)));
+  for (const { ev, res } of rows) {
+    const has = res.ret != null;
+    const lowCov = res.coveragePct < 90;
+    const w = has ? Math.min(100, Math.abs(res.ret) / maxAbs * 100) : 0;
+    const retTxt = has ? `${(res.ret * 100).toFixed(1)}%` : "\u2014";
+    const el = document.createElement("div");
+    el.className = "rev";
+    el.innerHTML = `
+      <div class="rev-en"><span class="rev-nm">${escapeHTML(ev.label)}</span><span class="rev-dt">${escapeHTML(fmtEventPeriod(ev.from, ev.to))}</span></div>
+      <div class="rev-v">${escapeHTML(retTxt)}</div>
+      <div class="rev-track">${has ? `<span class="rev-fill" style="width:${w.toFixed(0)}%"></span>` : ""}</div>
+      <div class="rev-cov${lowCov ? " low" : ""}">cov ${Math.round(res.coveragePct)}%${lowCov ? " \u26A0" : ""}</div>`;
+    const en = el.querySelector(".rev-en");
+    if (en) en.setAttribute("title", `${ev.from}\u301C${ev.to}${ev.note ? ` / ${ev.note}` : ""}`);
+    card.appendChild(el);
+  }
+  const deepest = rows.find((r) => r.res.ret != null);
+  const cap = document.createElement("p");
+  cap.className = "rev-cap";
+  if (deepest) {
+    cap.innerHTML = `\u8AAD\u307F\u7B4B\uFF1A\u6700\u3082\u6DF1\u3044\u306E\u306F <b>${escapeHTML(deepest.ev.label)}</b>\uFF08${(deepest.res.ret * 100).toFixed(1)}%\uFF09\u3002\u5404\u30A4\u30D9\u30F3\u30C8\u306F\u72EC\u7ACB\u306E what-if \u518D\u73FE\u3002cov\uFF1D\u5F53\u6642\u306B\u4FA1\u683C\u30C7\u30FC\u30BF\u306E\u3042\u3063\u305F\u4FDD\u6709\u306E\u6BD4\u7387\u3002`;
+  } else {
+    cap.textContent = "\u7A93\u5185\u306B\u4FA1\u683C\u306E\u3042\u308B\u4FDD\u6709\u304C\u307E\u3060\u5C11\u306A\u304F\u3001\u30A4\u30D9\u30F3\u30C8\u518D\u73FE\u3092\u7B97\u51FA\u3067\u304D\u307E\u305B\u3093\u3002";
+  }
+  card.appendChild(cap);
+}
 async function buildQuantCard(posList) {
   const card = document.createElement("div");
   card.className = "risk-quant";
-  const title = document.createElement("h4");
-  title.textContent = "\u30AF\u30AA\u30F3\u30C4\u30FB\u30EA\u30B9\u30AF\uFF08\u904E\u53BB1\u5E74\u30FB\u5C65\u6B74\u30D9\u30FC\u30B9\uFF09";
-  card.appendChild(title);
+  card.insertAdjacentHTML(
+    "beforeend",
+    `<div class="risk-card-title">${ric("i-history")}\u30AF\u30AA\u30F3\u30C4\u30FB\u30EA\u30B9\u30AF<span class="rtag">\u73FEPF\u3067\u904E\u53BB\u5371\u6A5F\u3092\u518D\u73FE</span></div>`
+  );
+  await _appendEventStress(card, posList);
   function _fallback(msg) {
-    const p = document.createElement("p");
-    p.className = "rq-note";
-    p.style.color = "var(--text2)";
-    p.textContent = msg;
-    card.appendChild(p);
+    const block = document.createElement("div");
+    block.className = "q-block";
+    block.appendChild(_rqNote(msg));
+    card.appendChild(block);
     return card;
   }
   let hist;
@@ -5358,10 +5362,6 @@ async function buildQuantCard(posList) {
   const aligned = alignReturnsByDate(seriesMap);
   const portReturns = computePortfolioReturns(aligned.bySym, normWeights);
   const pfVol = annualizedVol(portReturns);
-  const pfWorstD = worstReturn(portReturns);
-  const pfWorstW = worstWindow(portReturns, 5);
-  const pfWorstM = worstWindow(portReturns, 21);
-  const pfWorstQ = worstWindow(portReturns, 63);
   let _cum = 100;
   const pfSeriesLinear = portReturns.map((r, i) => {
     _cum *= 1 + r;
@@ -5382,101 +5382,26 @@ async function buildQuantCard(posList) {
     const rb = b.vol * Math.abs(b.beta ?? 1);
     return rb - ra;
   });
-  const top3 = perHolding.slice(0, 3);
   const excluded = posList.length - covered.length;
-  const pfRow = document.createElement("div");
-  pfRow.className = "rq-row";
-  function _stat(label, valText, isSev = false) {
-    const el = document.createElement("div");
-    el.className = "rq-stat";
-    const lb = document.createElement("span");
-    lb.className = "rq-stat-label";
-    lb.textContent = label;
-    const vl = document.createElement("span");
-    vl.className = `rq-stat-value${isSev ? " rq-sev" : ""}`;
-    vl.textContent = valText;
-    el.appendChild(lb);
-    el.appendChild(vl);
-    return el;
-  }
-  function _hint(text) {
-    const h = document.createElement("p");
-    h.className = "rq-hint";
-    h.textContent = text;
-    return h;
-  }
-  const moveTitle = document.createElement("div");
-  moveTitle.className = "rq-stat-label";
-  moveTitle.textContent = "\u5024\u52D5\u304D";
-  card.appendChild(moveTitle);
-  card.appendChild(_hint("\u5E74\u7387\u30DC\u30E9=\u5927\u304D\u3044\u307B\u3069\u632F\u308C\u308B\uFF0820%\u8D85\u6CE8\u610F\uFF09\uFF0F\u6700\u5927DD=\u904E\u53BB\u6700\u5927\u306E\u4E0B\u843D\uFF08\u6D45\u3044\u307B\u3069\u5B89\u5168\uFF09"));
-  pfRow.appendChild(_stat("\u5E74\u7387\u30DC\u30E9", _pct1(pfVol), (pfVol ?? 0) > 0.2));
-  pfRow.appendChild(_stat("\u6700\u5927DD", _pct1(pfMaxDD), true));
-  card.appendChild(pfRow);
-  const stressTitle = document.createElement("div");
-  stressTitle.className = "rq-stat-label";
-  stressTitle.style.marginTop = "8px";
-  stressTitle.textContent = "\u904E\u53BB1\u5E74\u306E\u6700\u60AA\u5C40\u9762\uFF08\u5B9F\u7E3E\uFF09";
-  card.appendChild(stressTitle);
-  card.appendChild(_hint("\u5404\u671F\u9593\u3067\u6700\u3082\u640D\u3057\u305F\u4E0B\u843D\u5E45\uFF08\u6D45\u3044\u307B\u3069\u826F\u3044\uFF09"));
-  const stressRow = document.createElement("div");
-  stressRow.className = "rq-row";
-  stressRow.appendChild(_stat("\u6700\u60AA1\u65E5", _pct1(pfWorstD), true));
-  stressRow.appendChild(_stat("\u6700\u60AA1\u9031", _pct1(pfWorstW), true));
-  stressRow.appendChild(_stat("\u6700\u60AA1\u30F6\u6708", _pct1(pfWorstM), true));
-  stressRow.appendChild(_stat("\u6700\u60AA3\u30F6\u6708", _pct1(pfWorstQ), true));
-  card.appendChild(stressRow);
-  const covNote = document.createElement("p");
-  covNote.className = "rq-note";
-  covNote.textContent = `${covered.length}\u9298\u67C4\u3067\u7B97\u51FA\uFF08\u5C65\u6B74\u672A\u53D6\u5F97${excluded}\u9664\u5916\uFF09`;
-  card.appendChild(covNote);
-  const corrTitle = document.createElement("div");
-  corrTitle.className = "rq-stat-label";
-  corrTitle.textContent = "\u9AD8\u76F8\u95A2\u30DA\u30A2\uFF08\u22650.85\uFF09";
-  card.appendChild(corrTitle);
-  card.appendChild(_hint("\u307B\u307C\u540C\u3058\u52D5\u304D\u306E\u30DA\u30A2\uFF1D\u5206\u6563\u4E0D\u8DB3\uFF0F\u03B2=1\u8D85\u3067PF\u5168\u4F53\u3088\u308A\u5927\u304D\u304F\u632F\u308C\u308B"));
-  const corrRow = document.createElement("div");
-  corrRow.className = "rq-row";
-  const top5Pairs = corrPairs.slice(0, 5);
-  if (top5Pairs.length === 0) {
-    const okChip = document.createElement("span");
-    okChip.className = "rq-chip rq-ok";
-    okChip.textContent = "\u306A\u3057";
-    corrRow.appendChild(okChip);
-  } else {
-    for (const { a, b, corr } of top5Pairs) {
-      const chip = document.createElement("span");
-      chip.className = "rq-chip";
-      const escA = escapeHTML(nameOfSymbol(a));
-      const escB = escapeHTML(nameOfSymbol(b));
-      chip.textContent = `${escA}\u2013${escB} ${corr.toFixed(2)}`;
-      corrRow.appendChild(chip);
-    }
-  }
-  card.appendChild(corrRow);
-  if (top3.length > 0) {
-    const contribTitle = document.createElement("div");
-    contribTitle.className = "rq-stat-label";
-    contribTitle.style.marginTop = "8px";
-    contribTitle.textContent = "\u30EA\u30B9\u30AF\u5BC4\u4E0E Top3\uFF08vol\xD7|\u03B2|\u964D\u9806\uFF09";
-    card.appendChild(contribTitle);
-    const contribRow = document.createElement("div");
-    contribRow.className = "rq-row";
-    for (const { sym, vol, beta } of top3) {
-      const el = document.createElement("div");
-      el.className = "rq-stat";
-      const lb = document.createElement("span");
-      lb.className = "rq-stat-label";
-      lb.textContent = nameOfSymbol(sym);
-      const vl = document.createElement("span");
-      vl.className = "rq-stat-value";
-      const betaStr = beta !== null ? ` \u03B2${beta.toFixed(1)}` : "";
-      vl.textContent = `vol ${_pct1(vol)}${betaStr}`;
-      el.appendChild(lb);
-      el.appendChild(vl);
-      contribRow.appendChild(el);
-    }
-    card.appendChild(contribRow);
+  card.insertAdjacentHTML(
+    "beforeend",
+    `<div class="q-sub">
+      <div class="q-stat2"><div class="qsl">${ric("i-pulse", true)}\u5E74\u7387\u30DC\u30E9<span class="ihelp" title="\u65E5\u6B21\u9A30\u843D\u306E\u3070\u3089\u3064\u304D\xD7\u221A252\u30021\u5E74\u3042\u305F\u308A\u306E\u5024\u52D5\u304D\u306E\u6FC0\u3057\u3055\u3002">?</span></div><div class="qsv">${escapeHTML(_pct1(pfVol))}</div><div class="qsc">\u53C2\u8003\u5024\uFF08\u904E\u53BB1\u5E74\u306E\u632F\u308C\u5E45\uFF09</div></div>
+      <div class="q-stat2"><div class="qsl">${ric("i-history", true)}\u6700\u5927DD<span class="ihelp" title="\u6700\u5927\u30C9\u30ED\u30FC\u30C0\u30A6\u30F3\u3002\u904E\u53BB\u306E\u30D4\u30FC\u30AF\u304B\u3089\u8C37\u307E\u3067\u306E\u6700\u5927\u4E0B\u843D\u3002">?</span></div><div class="qsv">${escapeHTML(_pct1(pfMaxDD))}</div><div class="qsc">\u53C2\u8003\u5024\uFF08\u904E\u53BB1\u5E74\u306E\u6700\u5927\u4E0B\u843D\uFF09</div></div>
+    </div>`
+  );
+  const contribs = perHolding.map((h) => ({ sym: h.sym, c: (h.vol ?? 0) * Math.abs(h.beta ?? 1) }));
+  const sumC = contribs.reduce((s, x) => s + x.c, 0) || 1;
+  const maxC = Math.max(1e-4, ...contribs.map((x) => x.c));
+  const top3c = [...contribs].sort((a, b) => b.c - a.c).slice(0, 3);
+  if (top3c.length > 0) {
+    const contribHTML = top3c.map(
+      (x) => `<div class="contrib"><span class="ck">${escapeHTML(nameOfSymbol(x.sym))}</span><span class="ct"><span class="cf" style="width:${(x.c / maxC * 100).toFixed(0)}%"></span></span><span class="cv">${Math.round(x.c / sumC * 100)}%</span></div>`
+    ).join("");
+    card.insertAdjacentHTML(
+      "beforeend",
+      `<div class="q-block"><div class="q-bhd">${ric("i-pulse", true)}\u30EA\u30B9\u30AF\u5BC4\u4E0E Top3 <span class="rq-muted">\uFF08PF\u5168\u4F53\u306E\u632F\u308C\u3092\u62BC\u3057\u4E0A\u3052\u308B\u9806\uFF09</span></div>${contribHTML}</div>`
+    );
   }
   const liqHoldings = covered.filter((p) => typeof p.shares === "number" && p.shares > 0 && Array.isArray(hist[p.ySymbol])).map((p) => ({
     sym: (
@@ -5493,46 +5418,25 @@ async function buildQuantCard(posList) {
     ]
   }));
   const liq = computeLiquidity(liqHoldings).filter((x) => x.days != null);
-  const liqTitle = document.createElement("div");
-  liqTitle.className = "rq-stat-label";
-  liqTitle.style.marginTop = "8px";
-  liqTitle.textContent = `\u6D41\u52D5\u6027 \u51FA\u53E3\u65E5\u6570\uFF08ADV${ADV_WINDOW}\xD7${Math.round(PARTICIPATION * 100)}%/\u65E5\uFF09`;
-  card.appendChild(liqTitle);
-  if (liq.length === 0) {
-    const liqNote = document.createElement("p");
-    liqNote.className = "rq-note";
-    liqNote.textContent = "\u51FA\u6765\u9AD8\u30C7\u30FC\u30BF\u672A\u53D6\u5F97\uFF08\u4FA1\u683C\u66F4\u65B0\u5F8C\u306B\u84C4\u7A4D\u3055\u308C\u7B97\u51FA\u3055\u308C\u307E\u3059\uFF09";
-    card.appendChild(liqNote);
-  } else {
-    const liqRow = document.createElement("div");
-    liqRow.className = "rq-row";
-    for (const { sym, days } of liq.slice(0, 5)) {
-      const el = document.createElement("div");
-      el.className = "rq-stat";
-      const lb = document.createElement("span");
-      lb.className = "rq-stat-label";
-      lb.textContent = nameOfSymbol(sym);
-      const vl = document.createElement("span");
-      const sev = days != null && days > ILLIQUID_DAYS;
-      vl.className = `rq-stat-value${sev ? " rq-sev" : ""}`;
-      vl.textContent = days != null ? `${days < 1 ? days.toFixed(1) : Math.round(days)}\u65E5` : "\u2014";
-      el.appendChild(lb);
-      el.appendChild(vl);
-      liqRow.appendChild(el);
-    }
-    card.appendChild(liqRow);
-    const illiquidCount = liq.filter((x) => x.days != null && x.days > ILLIQUID_DAYS).length;
-    if (illiquidCount > 0) {
-      const liqWarn = document.createElement("p");
-      liqWarn.className = "rq-note";
-      liqWarn.textContent = `\u51FA\u53E3\u306B${ILLIQUID_DAYS}\u55B6\u696D\u65E5\u8D85\u304B\u304B\u308B\u4FDD\u6709 ${illiquidCount}\u4EF6`;
-      card.appendChild(liqWarn);
-    }
-  }
-  const foot = document.createElement("p");
-  foot.className = "rq-note";
-  foot.textContent = "\u203B\u30D9\u30FC\u30BF\u306F\u30DD\u30FC\u30C8\u30D5\u30A9\u30EA\u30AA\u81EA\u8EAB\u3078\u306E\u611F\u5FDC\u5EA6\uFF08\u5E02\u5834\u30D9\u30F3\u30C1\u30DE\u30FC\u30AF\u4E0D\u8981\u306E\u5C65\u6B74\u7B97\u51FA\uFF09\u3002\u300C\u904E\u53BB1\u5E74\u306E\u6700\u60AA\u5C40\u9762\u300D\u306F\u5B9F\u7E3E\u306E\u6700\u60AA\u4E0B\u843D\u3001\u5225\u30AB\u30FC\u30C9\u300C\u6B74\u53F2\u7684\u5371\u6A5F\u306E\u518D\u73FE\u300D\u306F\u904E\u53BB\u30A4\u30D9\u30F3\u30C8\u306E what-if\u3002\u51FA\u53E3\u65E5\u6570\u306F\u682A\u6570\xF7(\u5E73\u5747\u51FA\u6765\u9AD8\xD7\u53C2\u52A0\u7387)\u306E\u6982\u7B97\u3002";
-  card.appendChild(foot);
+  const longest = liq.length ? [...liq].sort((a, b) => (b.days ?? 0) - (a.days ?? 0))[0] : null;
+  const topPair = corrPairs[0] || null;
+  const corrDn = topPair ? `${escapeHTML(nameOfSymbol(topPair.a))} \xD7 ${escapeHTML(nameOfSymbol(topPair.b))}\uFF08\u76F8\u95A2 ${topPair.corr.toFixed(2)}\u30FB\u307B\u307C\u540C\u3058\u52D5\u304D\uFF09` : "\u9AD8\u76F8\u95A2\u30DA\u30A2\u306A\u3057\uFF1D\u5206\u6563\u304C\u52B9\u3044\u3066\u3044\u308B";
+  const longSev = longest && longest.days > ILLIQUID_DAYS;
+  const liqDv = longest ? `${longest.days < 1 ? longest.days.toFixed(1) : Math.round(longest.days)}\u65E5` : "\u2014";
+  const liqDn = longest ? `${escapeHTML(nameOfSymbol(longest.sym))}\u3002${longSev ? "\u26A0\u51FA\u53E3\u306B\u6642\u9593\u304C\u304B\u304B\u308B" : "\u77ED\u3044\uFF1D\u6D41\u52D5\u6027\u826F\u597D"}\u3002` : "\u51FA\u6765\u9AD8\u30C7\u30FC\u30BF\u672A\u53D6\u5F97\uFF08\u4FA1\u683C\u66F4\u65B0\u5F8C\u306B\u7B97\u51FA\uFF09";
+  card.insertAdjacentHTML(
+    "beforeend",
+    `<div class="q-block"><div class="q-bhd">${ric("i-link", true)}\u5206\u6563\u30FB\u6D41\u52D5\u6027</div>
+      <div class="divchips">
+        <div class="divchip"><div class="dl">\u9AD8\u76F8\u95A2\u30DA\u30A2\uFF08\u22650.85\uFF09</div><div class="dv">${corrPairs.length ? `${corrPairs.length}\u7D44` : "\u306A\u3057"}</div><div class="dn">${corrDn}</div></div>
+        <div class="divchip"><div class="dl">\u51FA\u53E3\u65E5\u6570\uFF08\u58F2\u308A\u5207\u308A\u30FB\u6700\u9577\uFF09</div><div class="dv${longSev ? " rq-sev" : ""}">${escapeHTML(liqDv)}</div><div class="dn">${liqDn}</div></div>
+      </div>
+    </div>`
+  );
+  card.insertAdjacentHTML(
+    "beforeend",
+    `<p class="rq-note">\u203B \u30D9\u30FC\u30BF\u306FPF\u81EA\u8EAB\u3078\u306E\u611F\u5FDC\u5EA6\uFF08\u5E02\u5834\u30D9\u30F3\u30C1\u30DE\u30FC\u30AF\u4E0D\u8981\uFF09\u3002\u5E74\u7387\u30DC\u30E9\uFF0F\u6700\u5927DD\u306F\u904E\u53BB1\u5E74\u306E\u53C2\u8003\u5024\uFF08\u9069\u6B63\u30D0\u30F3\u30C9\u306F\u793A\u3055\u306A\u3044\uFF09\u3002\u51FA\u53E3\u65E5\u6570\uFF1D\u682A\u6570\xF7(\u5E73\u5747\u51FA\u6765\u9AD8\xD7\u53C2\u52A0\u7387)\u306E\u6982\u7B97\u3002${covered.length}\u9298\u67C4\u3067\u7B97\u51FA\uFF08\u5C65\u6B74\u672A\u53D6\u5F97${excluded}\u9664\u5916\uFF09\u3002</p>`
+  );
   return card;
 }
 function buildRiskGlossary() {
@@ -5561,7 +5465,6 @@ async function renderRiskCharts() {
   wrap.textContent = "";
   wrap.appendChild(buildRiskOverviewCard());
   wrap.appendChild(await buildQuantCard(positions));
-  wrap.appendChild(await buildStressCard(positions));
   const sumInfo = getClassificationSummary(assets);
   const summary = document.createElement("div");
   summary.className = "risk-summary";
