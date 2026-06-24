@@ -176,6 +176,17 @@ class TestParseAmount(unittest.TestCase):
         self.assertEqual(fetch_mf.parse_amount("－"), 0)  # 全角マイナス単独
 
 
+class TestPushRetry(unittest.TestCase):
+    """#490: push レース時の pull --rebase リトライ設定。"""
+
+    def test_retries_configured(self):
+        self.assertGreaterEqual(fetch_mf.PUSH_RETRIES, 2)
+
+    def test_rebase_in_progress_is_false_when_clean(self):
+        # 通常状態（rebase していない）では False
+        self.assertFalse(fetch_mf._rebase_in_progress())
+
+
 class TestKindByCat(unittest.TestCase):
     def test_mapping_from_config(self):
         m = fetch_mf._kind_by_cat_map(_load_config())
