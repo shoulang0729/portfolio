@@ -259,7 +259,7 @@ function _renderChartStats(points, avgCost, cur, maStyles) {
 function openChart(pos) {
   state.currentPos = pos;
   const proxyNote = pos.isProxy
-    ? ` <span class="modal-sym" style="color:#e3b341">※ ${  pos.proxyName  }</span>`
+    ? ` <span class="modal-sym" style="color:#e3b341">※ ${escapeHTML(pos.proxyName)}</span>`
     : ` <span class="modal-sym">${escapeHTML(pos.symbol)}</span>`;
   document.getElementById('modal-title').innerHTML = escapeHTML(pos.name) + proxyNote;
   updateRangeBtns();
