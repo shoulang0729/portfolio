@@ -2670,7 +2670,7 @@ function _renderChartStats(points, avgCost, cur, maStyles) {
 }
 function openChart(pos) {
   state.currentPos = pos;
-  const proxyNote = pos.isProxy ? ` <span class="modal-sym" style="color:#e3b341">\u203B ${pos.proxyName}</span>` : ` <span class="modal-sym">${escapeHTML(pos.symbol)}</span>`;
+  const proxyNote = pos.isProxy ? ` <span class="modal-sym" style="color:#e3b341">\u203B ${escapeHTML(pos.proxyName)}</span>` : ` <span class="modal-sym">${escapeHTML(pos.symbol)}</span>`;
   document.getElementById("modal-title").innerHTML = escapeHTML(pos.name) + proxyNote;
   updateRangeBtns();
   document.getElementById("modal-overlay").style.display = "flex";
@@ -3200,6 +3200,7 @@ function onWatchlistSearch(eventOrQuery) {
   const q = typeof eventOrQuery === "string" ? eventOrQuery : eventOrQuery?.target?.value ?? "";
   clearTimeout(_wlSearchTimer);
   const dropdown = document.getElementById("wl-search-dropdown");
+  if (!dropdown) return;
   if (!q.trim()) {
     dropdown.hidden = true;
     return;
@@ -6587,7 +6588,9 @@ function setupSwipeNav() {
 // src/init.js
 function setupEventListeners(applyThemeFn) {
   if (typeof d3 === "undefined") {
-    document.getElementById("d3-load-error").style.display = "flex";
+    const d3Err = document.getElementById("d3-load-error");
+    if (d3Err) d3Err.style.display = "flex";
+    else console.error("D3 \u672A\u30ED\u30FC\u30C9\uFF08d3-load-error \u8981\u7D20\u3082\u7121\u3057\uFF09");
     return;
   }
   setupSwipeNav();
