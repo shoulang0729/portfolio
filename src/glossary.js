@@ -11,6 +11,19 @@
 import { GLOSSARY } from './glossary-data.js';
 import { escapeHTML } from './utils.js';
 
+/** key→term の早見表（valuation-tab.js のⓘが使う・#475）。key 重複は最後勝ち。 */
+const _byKey = new Map();
+for (const cat of GLOSSARY) for (const t of cat.terms) if (t.key) _byKey.set(t.key, t);
+
+/**
+ * 用語キーから { term, desc } を返す（見つからなければ null）。
+ * @param {string} key
+ * @returns {import('./glossary-data.js').GlossaryTerm | null}
+ */
+export function glossaryTermByKey(key) {
+  return _byKey.get(key) || null;
+}
+
 /**
  * 指定タブ用の用語解説 HTML を返す（二段アコーディオン）。
  * tab='value' なら tab:'both'＋'value' カテゴリ、'risk' なら 'both'＋'risk' カテゴリ。
