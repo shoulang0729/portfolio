@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Riskタブ 信号機案 v3</title>
+<style>
+:root{
+  --bg:#f7f2ee; --surface:#fffdfb; --surface2:#f3ece5; --surface3:#ece2d8;
+  --border:#e3d8cc; --border2:#efe7dd; --text:#2a2521; --text2:#7c7167; --text3:#a99e92;
+  --accent:#cc785c; --ok:#5b8a5a; --warn:#c79a3a; --neg:#c2603f;
+  --okbg:#eaf1e8; --warnbg:#f6eed9; --negbg:#f7e7df;
+  --shadow:0 1px 3px rgba(60,40,25,.07),0 1px 2px rgba(60,40,25,.05);
+}
+[data-theme="dark"]{
+  --bg:#1c1917; --surface:#262220; --surface2:#2e2a27; --surface3:#393330;
+  --border:#3a342f; --border2:#332e2a; --text:#ece5dd; --text2:#a99e92; --text3:#7c7167;
+  --accent:#e0916f; --ok:#7aa978; --warn:#d8b25a; --neg:#dd7a55;
+  --okbg:#23302a; --warnbg:#332d1f; --negbg:#352620;
+  --shadow:0 1px 3px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Hiragino Sans',Arial,sans-serif;
+  font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:600px;margin:0 auto;padding:18px 16px 80px}
+h1{font-size:19px;margin:0 0 4px}
+.sub{color:var(--text2);font-size:12px;margin:0 0 16px}
+.toolbar{display:flex;gap:8px;margin-bottom:18px}
+.btn{background:var(--surface);border:1px solid var(--border);color:var(--text);
+  border-radius:8px;padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer}
+.btn:hover{background:var(--surface3)}
+.note-box{background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:11px 13px;font-size:11.5px;color:var(--text2);margin-bottom:16px}
+.note-box b{color:var(--accent)}
+.fix{background:var(--okbg);border:1px solid var(--ok);border-radius:9px;padding:9px 12px;
+  font-size:11.5px;margin-bottom:18px}
+.fix b{color:var(--ok)}
+
+.ic{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;
+  stroke-linecap:round;stroke-linejoin:round;flex:none}
+.ic-sm{width:14px;height:14px}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  padding:15px;margin:13px 0;box-shadow:var(--shadow)}
+.card-ttl{font-size:14px;font-weight:700;margin:0 0 12px;display:flex;align-items:center;gap:8px}
+.card-ttl .ic{color:var(--accent)}
+.card-ttl .tag{margin-left:auto;font-size:10.5px;font-weight:600;color:var(--text3);
+  background:var(--surface2);border-radius:20px;padding:3px 10px}
+.muted{color:var(--text2)} .small{font-size:11px}
+
+.verdict{border-radius:11px;padding:13px 15px;display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.verdict.warn{background:var(--warnbg)}
+.verdict .badge{width:40px;height:40px;border-radius:12px;flex:none;display:flex;align-items:center;justify-content:center;background:var(--warn)}
+.verdict .badge .ic{color:#fff;width:22px;height:22px;stroke-width:2}
+.verdict .vt{font-weight:800;font-size:15px}
+.verdict .vs{font-size:11.5px;color:var(--text2);margin-top:1px}
+
+.mrow{display:flex;align-items:flex-start;gap:11px;padding:11px 0;border-top:1px solid var(--border2)}
+.mrow:first-of-type{border-top:none}
+.mrow .mic{width:30px;height:30px;border-radius:9px;background:var(--surface2);
+  display:flex;align-items:center;justify-content:center;flex:none}
+.mrow .mic .ic{color:var(--text2)}
+.mrow .body{flex:1;min-width:0}
+.mrow .l1{display:flex;align-items:baseline;gap:7px}
+.mrow .ml{font-size:12px;font-weight:600;color:var(--text2)}
+.mrow .mv{font-size:16px;font-weight:800;margin-left:auto}
+.mrow .mv.warn{color:var(--warn)}
+.mrow .pill{font-size:10px;font-weight:700;border-radius:20px;padding:2px 8px}
+.pill.ok{background:var(--okbg);color:var(--ok)} .pill.warn{background:var(--warnbg);color:var(--warn)}
+.mrow .holds{margin-top:5px;display:flex;flex-wrap:wrap;gap:5px}
+.htag{font-size:10.5px;background:var(--surface2);border:1px solid var(--border2);
+  border-radius:7px;padding:2px 7px;color:var(--text);white-space:nowrap}
+.htag b{font-weight:800}
+.htag.hot{border-color:var(--neg);color:var(--neg)}
+.mrow .cap{font-size:10.5px;color:var(--text3);margin-top:4px}
+.ihelp{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;
+  border-radius:50%;background:var(--surface3);color:var(--text2);font-size:9px;font-weight:700;
+  cursor:help;vertical-align:middle;border:1px solid var(--border)}
+
+/* クオンツ：イベント版 下落の深さ */
+.q-lead{font-size:12px;color:var(--text2);margin:0 0 13px}
+.q-lead b{color:var(--text);font-weight:800}
+.ev{display:grid;grid-template-columns:1fr 58px;gap:4px 9px;align-items:center;margin:11px 0}
+.ev .en{font-size:11.5px;font-weight:600;display:flex;align-items:center;gap:6px;min-width:0}
+.ev .en .dt{font-size:10px;color:var(--text3);font-weight:400}
+.ev .ev-tag{font-size:9.5px;font-weight:700;color:var(--neg);background:var(--negbg);border-radius:5px;padding:1px 6px}
+.ev .evv{font-size:13.5px;font-weight:800;color:var(--neg);text-align:right;font-variant-numeric:tabular-nums}
+.ev .track{grid-column:1 / -1;height:13px;background:var(--surface2);border-radius:5px;overflow:hidden}
+.ev .fill{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,var(--warn),var(--neg))}
+.ev .cov{font-size:9.5px;color:var(--text3);grid-column:1 / -1;margin-top:-1px}
+.ev-cap{font-size:10.5px;color:var(--text3);margin:9px 0 0;padding-top:9px;border-top:1px dashed var(--border2)}
+
+.q-sub{display:flex;gap:10px;margin:15px 0 0}
+.q-stat{flex:1;background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:10px 11px}
+.q-stat .qsl{font-size:10.5px;color:var(--text2);display:flex;align-items:center;gap:4px}
+.q-stat .qsv{font-size:18px;font-weight:800;margin-top:2px}
+.q-stat .qsc{font-size:10px;color:var(--text3);margin-top:2px}
+
+.q-block{margin-top:16px;border-top:1px solid var(--border2);padding-top:13px}
+.q-bhd{font-size:12px;font-weight:700;margin:0 0 9px;display:flex;align-items:center;gap:6px}
+.q-bhd .ic{color:var(--text2)}
+.contrib{display:grid;grid-template-columns:108px 1fr 40px;align-items:center;gap:9px;margin:6px 0}
+.contrib .ck{font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.contrib .ct{height:9px;background:var(--surface2);border-radius:5px;overflow:hidden}
+.contrib .cf{display:block;height:100%;border-radius:5px;background:var(--accent)}
+.contrib .cv{font-size:11px;color:var(--text2);text-align:right}
+.divchips{display:flex;gap:8px;flex-wrap:wrap}
+.divchip{background:var(--surface2);border:1px solid var(--border2);border-radius:9px;padding:7px 10px;font-size:11px;flex:1;min-width:150px}
+.divchip .dl{font-size:10px;color:var(--text2)}
+.divchip .dv{font-weight:800;margin-top:1px}
+.divchip .dn{font-size:10px;color:var(--text3);margin-top:1px}
+
+/* 日本真%：比較バー（display:block で修正） */
+.cmp{margin:6px 0 0}
+.cmp .crow{display:grid;grid-template-columns:96px 1fr 56px;align-items:center;gap:10px;margin:9px 0}
+.cmp .ck{font-size:11.5px;font-weight:600}
+.cmp .ck .s{display:block;font-size:10px;color:var(--text3);font-weight:400}
+.cmp .ct{height:20px;background:var(--surface2);border-radius:6px;overflow:hidden}
+.cmp .cf{display:block;height:100%;border-radius:6px}
+.cmp .cf.you{background:var(--accent)} .cmp .cf.bench{background:var(--text3)}
+.cmp .cv{font-size:14px;font-weight:800;text-align:right;font-variant-numeric:tabular-nums}
+.cmp-cap{background:var(--surface2);border-radius:9px;padding:9px 11px;margin-top:11px;font-size:12px}
+.cmp-cap b{color:var(--accent);font-weight:800}
+.tiehint{font-size:10.5px;color:var(--text3);margin-top:8px}
+
+.gloss{margin-top:13px;border:1px solid var(--border);border-radius:10px;background:var(--surface2);overflow:hidden}
+.gloss summary{cursor:pointer;padding:11px 13px;font-weight:600;font-size:12px;list-style:none;display:flex;align-items:center;gap:7px}
+.gloss summary::-webkit-details-marker{display:none}
+.gloss summary .ic{color:var(--accent)}
+.gloss .gbody{padding:2px 13px 12px}
+.gloss p{margin:7px 0;font-size:12px}
+.gloss b{color:var(--accent)}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7 2.6v6c0 4.4-3 7.2-7 8.4-4-1.2-7-4-7-8.4v-6L12 3z"/><path d="M9 11.8l2.1 2.1 4-4.2"/></symbol>
+  <symbol id="i-pulse" viewBox="0 0 24 24"><path d="M3 13.5h3.2l2.3-7.2 3.3 12.4 2.4-8.2 1.4 3h5"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4"/><path d="M3.6 12h16.8M12 3.6c2.6 2.4 2.6 14.4 0 16.8M12 3.6c-2.6 2.4-2.6 14.4 0 16.8"/></symbol>
+  <symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.2"/><path d="M12 7.6v8.8M9 12.3h6M9 14.4h6M12 7.6l-3 3.4M12 7.6l3 3.4"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.2"/><circle cx="12" cy="12" r="3.6"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-expand" viewBox="0 0 24 24"><path d="M4 9V4.5h4.5M20 9V4.5h-4.5M4 15v4.5h4.5M20 15v4.5h-4.5"/><path d="M9.5 12h5"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3.6l8.4 4.2L12 12 3.6 7.8 12 3.6z"/><path d="M3.6 12L12 16.2 20.4 12M3.6 16.2L12 20.4l8.4-4.2"/></symbol>
+  <symbol id="i-history" viewBox="0 0 24 24"><path d="M4.5 12a7.5 7.5 0 107.5-7.5A7.5 7.5 0 005 8.5M4.5 4.5v4h4"/><path d="M12 8.2v4.3l2.8 1.8"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><path d="M9.5 14.5l5-5"/><path d="M8 12l-2.2 2.2a3.1 3.1 0 004.4 4.4L12 16.6M16 12l2.2-2.2a3.1 3.1 0 00-4.4-4.4L12 7.4"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M5 4.5h10.5a2 2 0 012 2V20a1.6 1.6 0 00-1.6-1.6H5V4.5z"/><path d="M5 4.5v15.4"/></symbol>
+  <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 4.2l8.4 14.6H3.6L12 4.2z"/><path d="M12 10v4.2M12 16.8v.1"/></symbol>
+</defs></svg>
+
+<div class="wrap">
+  <h1>Risk タブ — 信号機案 v3</h1>
+  <p class="sub">前回の指摘2点を反映。サンプルは実保有＋実イベントカタログ（stress-events.json）ベース。</p>
+  <div class="toolbar">
+    <button class="btn" onclick="var d=document.documentElement;d.setAttribute('data-theme', d.getAttribute('data-theme')==='dark'?'light':'dark')">🌓 ライト/ダーク切替</button>
+  </div>
+
+  <div class="fix">
+    <b>修正① 比較バーが空だった件</b>＝塗りが <code>&lt;span&gt;</code> のままで幅指定が効かないCSSバグでした（モック側のミス）。<code>display:block</code> で修正済み。
+    データは既存 <code>japanHomeBias()</code> が日本真%・ベンチ5%・バイアスptを算出済み＝<b>結線すれば実値で描画されます</b>（下の③で実際に塗られた状態）。
+  </div>
+
+  <!-- ① リスク要約（v2から据え置き・銘柄名つき信号機） -->
+  <div class="card">
+    <div class="card-ttl"><svg class="ic"><use href="#i-shield"/></svg>リスク要約<span class="tag">致命傷を避けられているか</span></div>
+    <div class="verdict warn">
+      <div class="badge"><svg class="ic"><use href="#i-warn"/></svg></div>
+      <div><div class="vt">注意 — 1件が基準オーバー</div><div class="vs">過大ポジが1件。集中は適正圏。値動きは下のクオンツへ。</div></div>
+    </div>
+    <div class="mrow">
+      <div class="mic"><svg class="ic"><use href="#i-coin"/></svg></div>
+      <div class="body"><div class="l1"><span class="ml">投資用キャッシュ比率</span><span class="pill ok">適正</span><span class="mv">11.2%</span></div>
+        <div class="cap">投資資産のうち現金。5〜20%が適正レンジ。</div></div>
+    </div>
+    <div class="mrow">
+      <div class="mic"><svg class="ic"><use href="#i-target"/></svg></div>
+      <div class="body"><div class="l1"><span class="ml">最大集中（テーマ）</span><span class="pill ok">適正</span><span class="mv">半導体 16.6%</span></div>
+        <div class="holds"><span class="htag">SMH <b>9.4%</b></span><span class="htag">200A 日経半導体 <b>7.2%</b></span></div>
+        <div class="cap">最も偏ったテーマ。20%超で赤。単一の筆頭はオルカン 13.4%。</div></div>
+    </div>
+    <div class="mrow">
+      <div class="mic"><svg class="ic"><use href="#i-expand"/></svg></div>
+      <div class="body"><div class="l1"><span class="ml">過大ポジ（目標超過）</span><span class="pill warn">1件</span><span class="mv warn">+5.1pt</span></div>
+        <div class="holds"><span class="htag hot">200A 日経半導体ETF <b>目標7%→12.1%</b></span></div>
+        <div class="cap">目標配分を50%以上超えた銘柄。サイズ見直しの候補。</div></div>
+    </div>
+    <div class="mrow">
+      <div class="mic"><svg class="ic"><use href="#i-layers"/></svg></div>
+      <div class="body"><div class="l1"><span class="ml">テーマ上限超過</span><span class="pill ok">なし</span><span class="mv">0件</span></div>
+        <div class="cap">上限を超えたテーマ。なし＝健全。</div></div>
+    </div>
+  </div>
+
+  <!-- ② クオンツ・リスク（刷新：イベント別 下落の深さ） -->
+  <div class="card">
+    <div class="card-ttl"><svg class="ic"><use href="#i-history"/></svg>クオンツ・リスク<span class="tag">現PFで過去危機を再現</span></div>
+    <p class="q-lead">時間窓（1日/1週…長いほど深いのは当たり前）をやめ、<b>名前のある実際の危機</b>を現PFのウェイトで再現。各イベントは独立シナリオなので「<b>何に弱いか</b>」が見える。下落の大きい順。</p>
+
+    <div class="ev">
+      <div class="en">2022 利上げ弱気（秋）<span class="dt">22/08–10</span></div><div class="evv">-12.1%</div>
+      <div class="track"><span class="fill" style="width:100%"></span></div><div class="cov">cov 86% ⚠（一部銘柄が当時未上場）</div>
+    </div>
+    <div class="ev">
+      <div class="en">DeepSeek 半導体急落 <span class="ev-tag">半導体偏重が直撃</span></div><div class="evv">-9.4%</div>
+      <div class="track"><span class="fill" style="width:78%"></span></div><div class="cov">cov 100% ／ 25/01・わずか2営業日でこの下落</div>
+    </div>
+    <div class="ev">
+      <div class="en">円キャリー巻き戻し<span class="dt">24/08</span></div><div class="evv">-8.7%</div>
+      <div class="track"><span class="fill" style="width:72%"></span></div><div class="cov">cov 96%</div>
+    </div>
+    <div class="ev">
+      <div class="en">関税ショック 2025<span class="dt">25/04</span></div><div class="evv">-7.9%</div>
+      <div class="track"><span class="fill" style="width:65%"></span></div><div class="cov">cov 100%</div>
+    </div>
+    <div class="ev">
+      <div class="en">SVB破綻・地銀不安<span class="dt">23/03</span></div><div class="evv">-3.2%</div>
+      <div class="track"><span class="fill" style="width:26%"></span></div><div class="cov">cov 92%</div>
+    </div>
+    <p class="ev-cap">読み筋：半導体（SMH＋200A≈17%）に偏るため、<b>DeepSeekのような半導体ショックで特に深く沈む</b>。広い金利・景気イベントは分散が一部効く。cov＝当時値が取れた保有の比率。</p>
+
+    <div class="q-sub">
+      <div class="q-stat"><div class="qsl"><svg class="ic ic-sm"><use href="#i-pulse"/></svg>年率ボラ<span class="ihelp" title="日次騰落のばらつき×√252。1年あたりの値動きの激しさ。">?</span></div><div class="qsv">17.8%</div><div class="qsc">参考値（過去1年の振れ幅）</div></div>
+      <div class="q-stat"><div class="qsl"><svg class="ic ic-sm"><use href="#i-history"/></svg>最大DD<span class="ihelp" title="最大ドローダウン。過去のピークから谷までの最大下落。">?</span></div><div class="qsv">-22.4%</div><div class="qsc">参考値（過去1年の最大下落）</div></div>
+    </div>
+
+    <div class="q-block">
+      <div class="q-bhd"><svg class="ic ic-sm"><use href="#i-pulse"/></svg>リスク寄与 Top3 <span class="muted small">（PF全体の振れを押し上げる順）</span></div>
+      <div class="contrib"><span class="ck">SMH 半導体ETF</span><span class="ct"><span class="cf" style="width:100%"></span></span><span class="cv">28%</span></div>
+      <div class="contrib"><span class="ck">200A 日経半導体</span><span class="ct"><span class="cf" style="width:74%"></span></span><span class="cv">21%</span></div>
+      <div class="contrib"><span class="ck">9983 ファストリ</span><span class="ct"><span class="cf" style="width:41%"></span></span><span class="cv">12%</span></div>
+    </div>
+
+    <div class="q-block">
+      <div class="q-bhd"><svg class="ic ic-sm"><use href="#i-link"/></svg>分散・流動性</div>
+      <div class="divchips">
+        <div class="divchip"><div class="dl">高相関ペア（≥0.85）</div><div class="dv">1組</div><div class="dn">SMH × 200A（相関 0.93・ほぼ同じ動き）</div></div>
+        <div class="divchip"><div class="dl">出口日数（売り切り・最長）</div><div class="dv">3.2日</div><div class="dn">9983 ファストリ。短い＝流動性良好。</div></div>
+      </div>
+    </div>
+    <p class="ev-cap" style="border-top:none;padding-top:0">※ 現状この内容は別カード「歴史的危機の再現」と重複します。<b>イベント版に一本化すると、その別カードは廃止できます</b>（設計判断：統合する想定）。</p>
+  </div>
+
+  <!-- ③ 日本真%（比較バー・修正後＝実際に塗られた状態） -->
+  <div class="card">
+    <div class="card-ttl"><svg class="ic"><use href="#i-globe"/></svg>地域の傾き<span class="tag">ルックスルー・全資産</span></div>
+    <p class="q-lead">全世界ファンドを地域分解した<b>本当の日本比率</b>を世界平均と並べる。
+      <span class="ihelp" title="真の地域%（ルックスルー）＝全世界ファンドを地域構成比で分解しPF全体の本当の地域配分を出す。日本＝ACWI内5%＋1306＋ひふみ＋日本個別。">?</span></p>
+    <div class="cmp">
+      <div class="crow"><span class="ck">あなたのPF<span class="s">日本 真の%</span></span><span class="ct"><span class="cf you" style="width:82%"></span></span><span class="cv">41.3%</span></div>
+      <div class="crow"><span class="ck">世界平均<span class="s">ACWIの日本%</span></span><span class="ct"><span class="cf bench" style="width:10%"></span></span><span class="cv" style="color:var(--text2)">5.0%</span></div>
+    </div>
+    <div class="cmp-cap">
+      ホームバイアス <b>+36.3pt</b><span class="ihelp" title="自国(日本)への偏り＝真の日本% − ベンチ(ACWI 5%)。意図的な傾けかを確認。">?</span>
+      ＝世界平均の<b>約8倍</b>、日本に大きく傾けている。意図的なら問題なし、無意識なら是正の検討材料。
+    </div>
+    <p class="tiehint">この下に従来どおり地域構成ドーナツ（北米/欧州/新興 等）が続く。カバレッジ 92%（現金/暗号含む）。</p>
+    <details class="gloss">
+      <summary><svg class="ic ic-sm"><use href="#i-book"/></svg>用語解説（タップで開く）— Valueタブと同一</summary>
+      <div class="gbody">
+        <p><b>真の地域%（ルックスルー）</b>：全世界ファンドを地域構成比で分解し、PF全体の本当の地域配分を出す。例＝日本は ACWI内5% ＋ 1306 ＋ ひふみ ＋ 日本個別 が積み上がる。</p>
+        <p><b>ホームバイアス</b>：自国（日本）に偏る傾向。真の日本% − ベンチ(ACWI 5%) で何pt 上乗せかを表示。</p>
+      </div>
+    </details>
+  </div>
+
+  <p class="sub" style="margin-top:30px">▶ これでOKなら実装指示書（handoff doc）＋Issueへ。論点：<b>クオンツをイベント版に一本化 → 既存「歴史的危機の再現」カードを統合（廃止）してよいか</b>。</p>
+</div>
+</body>
+</html>
