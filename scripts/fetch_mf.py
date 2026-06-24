@@ -52,17 +52,31 @@ def notify(msg):
         except Exception:
             pass
     print(f"[NOTIFY] {msg}", file=sys.stderr)
+    # msg にはサマリ/口座名などページ由来値が入りうるため、AppleScript 文字列へ
+    # 直挿しせず argv 経由で渡す（" や改行による破壊・注入を防ぐ・#481）。
     subprocess.run(
-        ["osascript", "-e", f'display notification "{msg}" with title "MF snapshot"'],
+        ["osascript",
+         "-e", "on run argv",
+         "-e", 'display notification (item 1 of argv) with title "MF snapshot"',
+         "-e", "end run",
+         msg],
         check=False,
     )
 
 
 # ── パース ───────────────────────────────────────────────────────────────────
 def parse_amount(t):
-    """『¥1,234,567』『1,234,567 円』等 → int（円）。符号は保持。空/非数は 0。"""
+    """『¥1,234,567』『1,234,567 円』等 → int（円）。符号は保持。空/非数は 0。
+
+    parse_num と対称に int() を保護する（#480）。想定外文字（中黒ダッシュ等が
+    途中に混じった "1234-567" 等）でも例外を投げず 0 を返す（無人運用での無音
+    クラッシュ防止）。
+    """
     s = re.sub(r"[^\d-]", "", t or "")
-    return int(s) if s and s != "-" else 0
+    try:
+        return int(s) if s and s != "-" else 0
+    except ValueError:
+        return 0
 
 
 def parse_num(t):
@@ -243,7 +257,8 @@ def _resolve_cat(raw_category, row, cat_map):
     if raw_category == "株式(現物)":
         code = str(row.get("code", "")).strip()
         is_jp = bool(re.fullmatch(r"\d{4}", code)) or code.endswith(".T")
-        return cat_map["株式(現物)_JP"] if is_jp else cat_map["株式(現物)_US"]
+        key = "株式(現物)_JP" if is_jp else "株式(現物)_US"
+        return cat_map.get(key, "その他")  # config 編集でキー欠落時も KeyError にしない（#482）
     return cat_map.get(raw_category, "その他")
 
 
@@ -396,32 +411,53 @@ def verify(c, doc, rows, summary):
 
 
 # ── 出力＆無人 commit/push（成功時のみ・承認不要） ─────────────────────────────
+def _git(*args, check=False):
+    return subprocess.run(["git", "-C", ROOT, *args], check=check)
+
+
 def git_commit_push():
+    """成功時のみ無人 commit&push。失敗は原状復帰して通知（#479 H2）。
+
+    - commit は data/mf-holdings.json にパス限定（事前ステージの巻き込み防止・#482 L3）。
+    - pull --rebase / push は staged 有無に関わらず実行＝前回 push 失敗で宙吊りの
+      ローカル commit も回収する。
+    - 失敗時は `git rebase --abort` で中断状態を残さず、notify して exit(5)。
+    """
     today = datetime.date.today().isoformat()
-    subprocess.run(["git", "-C", ROOT, "add", "data/mf-holdings.json"], check=True)
-    if subprocess.run(["git", "-C", ROOT, "diff", "--cached", "--quiet"]).returncode == 0:
-        print("変更なし（commit せず）")
-        return
-    subprocess.run(
-        ["git", "-C", ROOT, "commit", "-m", f"data: refresh MF holdings snapshot ({today})"],
-        check=True,
-    )
-    subprocess.run(["git", "-C", ROOT, "pull", "--rebase", "origin", "main"], check=True)
-    subprocess.run(["git", "-C", ROOT, "push", "origin", "main"], check=True)  # Mac の既存 git 認証で無人 push
+    _git("add", "data/mf-holdings.json", check=True)
+    if _git("diff", "--cached", "--quiet").returncode != 0:
+        _git("commit", "--only", "data/mf-holdings.json",
+             "-m", f"data: refresh MF holdings snapshot ({today})", check=True)
+    else:
+        print("ステージ変更なし（未push commit があれば push のみ実施）")
+    try:
+        _git("pull", "--rebase", "origin", "main", check=True)
+        _git("push", "origin", "main", check=True)  # Mac の既存 git 認証で無人 push
+    except subprocess.CalledProcessError as e:
+        _git("rebase", "--abort")  # 中断状態を残さない（次回 run を壊さない）
+        notify(f"git 同期に失敗（{type(e).__name__}）。ローカル commit は残置・次回 run で再 push を試みる。手動 push も可。")
+        sys.exit(5)
 
 
 def do_run(c):
-    net, rows, summary = with_page(c, headless=c["fetch"]["headless"], fn=lambda pg: scrape(pg, c))
-    if not rows:
-        notify("保有行を1件も抽出できず。fetch.dom（種類別テーブルのセレクタ/列マップ §7.1）を確認。")
-        sys.exit(3)
-    doc = build(c, net, rows)
-    verify(c, doc, rows, summary)  # 失敗時 exit(>=2)＝コミットしない
-    with open(OUT, "w", encoding="utf-8") as f:
-        json.dump(doc, f, ensure_ascii=False, indent=2)
-        f.write("\n")
-    git_commit_push()
-    print(f"OK imported={doc['totals']['imported']:,} holdings={len(doc['holdings'])}")
+    """無人 run。想定外例外も必ず notify して中止する（無音失敗を作らない・#479 H1）。"""
+    try:
+        net, rows, summary = with_page(c, headless=c["fetch"]["headless"], fn=lambda pg: scrape(pg, c))
+        if not rows:
+            notify("保有行を1件も抽出できず。fetch.dom（種類別テーブルのセレクタ/列マップ §7.1）を確認。")
+            sys.exit(3)
+        doc = build(c, net, rows)
+        verify(c, doc, rows, summary)  # 失敗時 exit(>=2)＝コミットしない
+        with open(OUT, "w", encoding="utf-8") as f:
+            json.dump(doc, f, ensure_ascii=False, indent=2)
+            f.write("\n")
+        git_commit_push()
+        print(f"OK imported={doc['totals']['imported']:,} holdings={len(doc['holdings'])}")
+    except SystemExit:
+        raise  # notify 済みの意図的 exit（2/3/5）はそのまま伝播
+    except Exception as e:
+        notify(f"想定外エラーで中止: {type(e).__name__}: {e}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

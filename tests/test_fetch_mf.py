@@ -158,6 +158,24 @@ class TestVerify(unittest.TestCase):
             fetch_mf.verify(self.c, doc_bad, self.rows, self.summary)
 
 
+class TestParseAmount(unittest.TestCase):
+    """#480: parse_amount は int() を保護し、想定外文字でも例外を投げず 0 を返す。"""
+
+    def test_normal(self):
+        self.assertEqual(fetch_mf.parse_amount("1,234,567円"), 1234567)
+        self.assertEqual(fetch_mf.parse_amount("¥338,454,356"), 338454356)
+
+    def test_negative(self):
+        self.assertEqual(fetch_mf.parse_amount("-500"), -500)
+
+    def test_garbage_returns_zero_not_crash(self):
+        # 旧バグ: "1234-567" で int() が ValueError → 無人クラッシュ
+        self.assertEqual(fetch_mf.parse_amount("1,234-567"), 0)
+        self.assertEqual(fetch_mf.parse_amount("abc"), 0)
+        self.assertEqual(fetch_mf.parse_amount(""), 0)
+        self.assertEqual(fetch_mf.parse_amount("－"), 0)  # 全角マイナス単独
+
+
 class TestKindByCat(unittest.TestCase):
     def test_mapping_from_config(self):
         m = fetch_mf._kind_by_cat_map(_load_config())
