@@ -206,6 +206,7 @@ function onWatchlistSearch(eventOrQuery) {
   const q = typeof eventOrQuery === 'string' ? eventOrQuery : (eventOrQuery?.target?.value ?? '');
   clearTimeout(_wlSearchTimer);
   const dropdown = document.getElementById('wl-search-dropdown');
+  if (!dropdown) return; // 統合タブ構成で要素不在の経路がある（#484）
   if (!q.trim()) {
     dropdown.hidden = true;
     return;

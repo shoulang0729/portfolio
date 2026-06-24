@@ -15,7 +15,9 @@ import { setupSwipeNav } from './swipe.js';
 
 export function setupEventListeners(applyThemeFn) {
   if (typeof d3 === 'undefined') {
-    document.getElementById('d3-load-error').style.display = 'flex';
+    const d3Err = document.getElementById('d3-load-error');
+    if (d3Err) d3Err.style.display = 'flex';
+    else console.error('D3 未ロード（d3-load-error 要素も無し）');
     return;
   }
 
