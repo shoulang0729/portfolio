@@ -461,10 +461,30 @@
   flex-direction: column;
 }
 .risk-card-title {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--text);
-  margin-bottom: 6px;
+  margin: 0 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.risk-card-title .ric { color: var(--accent); }
+.risk-card-title .rtag {
+  margin-left: auto; font-size: 10.5px; font-weight: 600; color: var(--text3);
+  background: var(--surface2); border-radius: 20px; padding: 3px 10px;
+}
+/* 自前アイコン（絵文字廃止・stroke統一・#488） */
+.ric {
+  width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7;
+  stroke-linecap: round; stroke-linejoin: round; flex: none; vertical-align: middle;
+}
+.ric-sm { width: 14px; height: 14px; }
+/* ⓘヘルプグリフ（title ツールチップ） */
+.ihelp {
+  display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px;
+  border-radius: 50%; background: var(--surface3); color: var(--text2); font-size: 9px; font-weight: 700;
+  cursor: help; vertical-align: middle; border: 1px solid var(--border); margin-left: 3px;
 }
 .risk-source-badge {
   display: flex;
@@ -549,16 +569,22 @@
 
 /* D-6: 地域エクスポージャ（ルックスルー）カード */
 .region-card { margin-top: 14px; }
-.region-hero {
-  background: var(--surface2); border: 1px solid var(--border);
-  border-radius: 10px; padding: 12px 14px; margin: 4px 0 10px;
-}
-.region-hero-main { display: flex; align-items: baseline; justify-content: space-between; }
-.region-hero-k { font-size: 12px; color: var(--text2); font-weight: 600; }
-.region-hero-v { font-size: 24px; font-weight: 800; color: var(--text); line-height: 1; }
-.region-hero-sub { margin-top: 6px; font-size: 11px; color: var(--text2); }
-.region-bias-over { color: var(--accent); font-weight: 700; }
-.region-bias-under { color: var(--text2); font-weight: 700; }
+/* 地域 hero 比較バー（あなたのPF vs 世界平均・#488 §4） */
+.rgn-lead { font-size: 12px; color: var(--text2); margin: 0 0 11px; line-height: 1.5; }
+.rgn-lead b { color: var(--text); font-weight: 800; }
+.rcmp { margin: 6px 0 0; }
+.rcmp-row { display: grid; grid-template-columns: 96px 1fr 56px; align-items: center; gap: 10px; margin: 9px 0; }
+.rcmp-k { font-size: 11.5px; font-weight: 600; color: var(--text); }
+.rcmp-k .s { display: block; font-size: 10px; color: var(--text3); font-weight: 400; }
+.rcmp-t { height: 20px; background: var(--surface2); border-radius: 6px; overflow: hidden; }
+/* ★塗りは display:block（インライン span のままだと width が効かず潰れる・モックで踏んだバグ） */
+.rcmp-f { display: block; height: 100%; border-radius: 6px; }
+.rcmp-f.you { background: var(--accent); }
+.rcmp-f.bench { background: var(--text3); }
+.rcmp-v { font-size: 14px; font-weight: 800; text-align: right; font-variant-numeric: tabular-nums; color: var(--text); }
+.rcmp-v.bench { color: var(--text2); }
+.rcmp-cap { background: var(--surface2); border-radius: 9px; padding: 9px 11px; margin-top: 11px; font-size: 12px; color: var(--text2); }
+.rcmp-cap b { color: var(--accent); font-weight: 800; }
 .region-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
 .region-list-item {
   display: flex; justify-content: space-between; align-items: center;
@@ -566,19 +592,7 @@
 }
 .region-name { color: var(--text2); }
 .region-pct { font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
-
-/* D-1: ストレスシナリオ表 */
-.stress-card { margin-top: 14px; }
-.stress-table { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
-.stress-row {
-  display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center;
-  font-size: 12px; padding: 4px 2px; border-bottom: 1px solid var(--border2);
-}
-.stress-name { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.stress-ret { font-weight: 800; font-variant-numeric: tabular-nums; text-align: right; color: var(--text2); }
-.stress-ret.stress-neg { color: var(--neg); }
-.stress-cov { font-size: 10px; color: var(--text3); font-variant-numeric: tabular-nums; text-align: right; }
-.stress-cov.stress-cov-low { color: var(--warn); }
+/* （旧 .stress-* カードは②クオンツへ統合し撤去・#488） */
 .risk-summary {
   text-align: center;
   font-size: 12px;
@@ -882,131 +896,79 @@
   padding: 14px 16px 10px;
   margin-bottom: 16px;
 }
-.risk-overview h4 {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--accent);
-  margin: 0 0 10px;
-  letter-spacing: 0.02em;
-}
-.ro-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px 24px;
-  margin-bottom: 10px;
-}
-.ro-stat {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 90px;
-}
-.ro-stat-label {
-  font-size: 10px;
-  color: var(--text2);
-  white-space: nowrap;
-}
-.ro-stat-value {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text);
-}
-.ro-stat-chips {
-  min-width: 160px;
-  flex: 1 1 auto;
-}
-.ro-chips-wrap {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 3px;
-}
-.ro-chip {
-  display: inline-block;
-  font-size: 10.5px;
-  font-weight: 600;
-  color: var(--up);
-  background: color-mix(in srgb, var(--up) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--up) 30%, transparent);
-  border-radius: 20px;
-  padding: 1px 7px;
-}
-.ro-ok {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--down);
-  margin-top: 3px;
-  display: inline-block;
-}
-.ro-note {
-  font-size: 10px;
-  color: var(--text2);
-  margin-top: 6px;
-}
-/* ── /Risk overview (Phase 4 v1) ── */
-/* ── /Value タブ: トリガー行 ── */
+/* ── ①リスク要約 信号機（#488）── */
+.rv { border-radius: 11px; padding: 13px 15px; display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.rv.ok { background: color-mix(in srgb, var(--down) 14%, transparent); }
+.rv.warn { background: color-mix(in srgb, var(--warn) 16%, transparent); }
+.rv.bad { background: color-mix(in srgb, var(--neg) 16%, transparent); }
+.rv-badge { width: 40px; height: 40px; border-radius: 12px; flex: none; display: flex; align-items: center; justify-content: center; }
+.rv.ok .rv-badge { background: var(--down); }
+.rv.warn .rv-badge { background: var(--warn); }
+.rv.bad .rv-badge { background: var(--neg); }
+.rv-badge .ric { color: #fff; width: 22px; height: 22px; stroke-width: 2; }
+.rv-t { font-weight: 800; font-size: 15px; color: var(--text); }
+.rv-s { font-size: 11.5px; color: var(--text2); margin-top: 1px; }
+.rmrow { display: flex; align-items: flex-start; gap: 11px; padding: 11px 0; border-top: 1px solid var(--border2); }
+.rmrow:first-of-type { border-top: none; }
+.rmic { width: 30px; height: 30px; border-radius: 9px; background: var(--surface2); display: flex; align-items: center; justify-content: center; flex: none; }
+.rmic .ric { color: var(--text2); }
+.rmbody { flex: 1; min-width: 0; }
+.rml1 { display: flex; align-items: baseline; gap: 7px; }
+.rml { font-size: 12px; font-weight: 600; color: var(--text2); }
+.rmv { font-size: 16px; font-weight: 800; margin-left: auto; color: var(--text); }
+.rmv.warn { color: var(--warn); }
+.rpill { font-size: 10px; font-weight: 700; border-radius: 20px; padding: 2px 8px; }
+.rpill.ok { background: color-mix(in srgb, var(--down) 16%, transparent); color: var(--down); }
+.rpill.warn { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+.rpill.bad { background: color-mix(in srgb, var(--neg) 16%, transparent); color: var(--neg); }
+.rholds { margin-top: 5px; display: flex; flex-wrap: wrap; gap: 5px; }
+.htag { font-size: 10.5px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 7px; padding: 2px 7px; color: var(--text); white-space: nowrap; }
+.htag b { font-weight: 800; }
+.htag.hot { border-color: var(--neg); color: var(--neg); }
+.rmcap { font-size: 10.5px; color: var(--text3); margin-top: 4px; }
 
-/* ── Risk quant (Phase 4b) ── */
+/* ── ②クオンツ・リスク（イベント別下落・#488）── */
 .risk-quant {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 14px 16px 10px;
-  margin-bottom: 12px;
+  border-radius: 12px;
+  padding: 15px 16px;
+  margin-bottom: 13px;
 }
-.risk-quant h4 {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text);
-  margin: 0 0 10px;
-}
-.rq-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 16px;
-  margin-bottom: 8px;
-}
-.rq-stat {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.rq-stat-label {
-  font-size: 10px;
-  color: var(--text2);
-}
-.rq-stat-value {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text);
-}
-.rq-chip {
-  display: inline-block;
-  font-size: 10.5px;
-  background: var(--surface2);
-  border: 1px solid var(--border2);
-  border-radius: 20px;
-  padding: 1px 8px;
-  color: var(--text);
-}
-.rq-sev {
-  color: var(--warn);
-}
-/* クオンツ小節の1行凡例（自己説明・#451） */
-.rq-hint { font-size: 9.5px; color: var(--text3); margin: 2px 0 4px; line-height: 1.4; }
-
-/* リスク要約 総合判定チップ（緑/黄/赤・#451） */
-.ro-verdict {
-  display: inline-block; font-size: 11px; font-weight: 700;
-  padding: 3px 11px; border-radius: 20px; margin-bottom: 8px;
-}
-.ro-v-ok { background: color-mix(in srgb, var(--down) 15%, transparent); color: var(--down); }
-.ro-v-warn { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
-.ro-v-bad { background: color-mix(in srgb, var(--up) 16%, transparent); color: var(--up); }
-.rq-ok {
-  color: var(--down);
-  font-weight: 600;
-}
+.q-lead { font-size: 12px; color: var(--text2); margin: 0 0 13px; line-height: 1.5; }
+.q-lead b { color: var(--text); font-weight: 800; }
+.rev { display: grid; grid-template-columns: 1fr 58px; gap: 4px 9px; align-items: center; margin: 11px 0; }
+.rev-en { font-size: 11.5px; font-weight: 600; display: flex; align-items: center; gap: 6px; min-width: 0; color: var(--text); }
+.rev-nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rev-dt { font-size: 10px; color: var(--text3); font-weight: 400; flex: none; }
+.rev-v { font-size: 13.5px; font-weight: 800; color: var(--neg); text-align: right; font-variant-numeric: tabular-nums; }
+.rev-track { grid-column: 1 / -1; height: 13px; background: var(--surface2); border-radius: 5px; overflow: hidden; }
+.rev-fill { display: block; height: 100%; border-radius: 5px; background: linear-gradient(90deg, var(--warn), var(--neg)); }
+.rev-cov { font-size: 9.5px; color: var(--text3); grid-column: 1 / -1; margin-top: -1px; }
+.rev-cov.low { color: var(--warn); }
+.rev-cap { font-size: 10.5px; color: var(--text3); margin: 9px 0 0; padding-top: 9px; border-top: 1px dashed var(--border2); line-height: 1.5; }
+.rev-cap b { color: var(--text); }
+.q-sub { display: flex; gap: 10px; margin: 15px 0 0; }
+.q-stat2 { flex: 1; background: var(--surface2); border: 1px solid var(--border2); border-radius: 10px; padding: 10px 11px; }
+.q-stat2 .qsl { font-size: 10.5px; color: var(--text2); display: flex; align-items: center; gap: 4px; }
+.q-stat2 .qsv { font-size: 18px; font-weight: 800; margin-top: 2px; color: var(--text); }
+.q-stat2 .qsc { font-size: 10px; color: var(--text3); margin-top: 2px; }
+.q-block { margin-top: 16px; border-top: 1px solid var(--border2); padding-top: 13px; }
+.q-bhd { font-size: 12px; font-weight: 700; color: var(--text); margin: 0 0 9px; display: flex; align-items: center; gap: 6px; }
+.q-bhd .ric { color: var(--text2); }
+.rq-muted { color: var(--text2); font-size: 11px; font-weight: 400; }
+.contrib { display: grid; grid-template-columns: 120px 1fr 40px; align-items: center; gap: 9px; margin: 6px 0; }
+.contrib .ck { font-size: 11px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.contrib .ct { height: 9px; background: var(--surface2); border-radius: 5px; overflow: hidden; }
+.contrib .cf { display: block; height: 100%; border-radius: 5px; background: var(--accent); }
+.contrib .cv { font-size: 11px; color: var(--text2); text-align: right; }
+.divchips { display: flex; gap: 8px; flex-wrap: wrap; }
+.divchip { background: var(--surface2); border: 1px solid var(--border2); border-radius: 9px; padding: 7px 10px; font-size: 11px; flex: 1; min-width: 150px; }
+.divchip .dl { font-size: 10px; color: var(--text2); }
+.divchip .dv { font-weight: 800; margin-top: 1px; color: var(--text); }
+.divchip .dv.rq-sev { color: var(--warn); }
+.divchip .dn { font-size: 10px; color: var(--text3); margin-top: 1px; }
+.rq-sev { color: var(--warn); }
 .rq-note {
   font-size: 10px;
   color: var(--text2);

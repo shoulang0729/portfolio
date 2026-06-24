@@ -42,6 +42,21 @@
 </head>
 <body>
 
+<!-- アイコンスプライト（絵文字廃止・stroke統一の自前SVG・#488）。各所から <svg class="ric"><use href="#i-…"/> で参照。 -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7 2.6v6c0 4.4-3 7.2-7 8.4-4-1.2-7-4-7-8.4v-6L12 3z"/><path d="M9 11.8l2.1 2.1 4-4.2"/></symbol>
+  <symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.2"/><path d="M12 7.6v8.8M9 12.3h6M9 14.4h6M12 7.6l-3 3.4M12 7.6l3 3.4"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.2"/><circle cx="12" cy="12" r="3.6"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-expand" viewBox="0 0 24 24"><path d="M4 9V4.5h4.5M20 9V4.5h-4.5M4 15v4.5h4.5M20 15v4.5h-4.5"/><path d="M9.5 12h5"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3.6l8.4 4.2L12 12 3.6 7.8 12 3.6z"/><path d="M3.6 12L12 16.2 20.4 12M3.6 16.2L12 20.4l8.4-4.2"/></symbol>
+  <symbol id="i-history" viewBox="0 0 24 24"><path d="M4.5 12a7.5 7.5 0 107.5-7.5A7.5 7.5 0 005 8.5M4.5 4.5v4h4"/><path d="M12 8.2v4.3l2.8 1.8"/></symbol>
+  <symbol id="i-pulse" viewBox="0 0 24 24"><path d="M3 13.5h3.2l2.3-7.2 3.3 12.4 2.4-8.2 1.4 3h5"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><path d="M9.5 14.5l5-5"/><path d="M8 12l-2.2 2.2a3.1 3.1 0 004.4 4.4L12 16.6M16 12l2.2-2.2a3.1 3.1 0 00-4.4-4.4L12 7.4"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4"/><path d="M3.6 12h16.8M12 3.6c2.6 2.4 2.6 14.4 0 16.8M12 3.6c-2.6 2.4-2.6 14.4 0 16.8"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M5 4.5h10.5a2 2 0 012 2V20a1.6 1.6 0 00-1.6-1.6H5V4.5z"/><path d="M5 4.5v15.4"/></symbol>
+  <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 4.2l8.4 14.6H3.6L12 4.2z"/><path d="M12 10v4.2M12 16.8v.1"/></symbol>
+</defs></svg>
+
 <div id="d3-load-error" style="display:none">
   <h2>⚠️ グラフライブラリの読み込みに失敗</h2>
   <p>D3.js の読み込みに失敗しました。<br>インターネット接続を確認するか、<strong>Safari ブラウザで直接開いてください</strong>。</p>
