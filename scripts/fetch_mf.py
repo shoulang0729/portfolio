@@ -19,6 +19,7 @@ import os
 import re
 import sys
 import json
+import time
 import subprocess
 import datetime
 import urllib.request
@@ -415,13 +416,25 @@ def _git(*args, check=False):
     return subprocess.run(["git", "-C", ROOT, *args], check=check)
 
 
+def _rebase_in_progress():
+    """rebase 進行中か（.git/rebase-merge・rebase-apply の有無で判定）。"""
+    gitdir = os.path.join(ROOT, ".git")
+    return any(os.path.isdir(os.path.join(gitdir, d)) for d in ("rebase-merge", "rebase-apply"))
+
+
+PUSH_RETRIES = 3  # push がレース（ref ロック）で弾かれた時の再試行回数
+
+
 def git_commit_push():
-    """成功時のみ無人 commit&push。失敗は原状復帰して通知（#479 H2）。
+    """成功時のみ無人 commit&push。失敗は原状復帰して通知（#479 H2 / #490）。
 
     - commit は data/mf-holdings.json にパス限定（事前ステージの巻き込み防止・#482 L3）。
     - pull --rebase / push は staged 有無に関わらず実行＝前回 push 失敗で宙吊りの
       ローカル commit も回収する。
-    - 失敗時は `git rebase --abort` で中断状態を残さず、notify して exit(5)。
+    - **push がレース（ref ロック）で弾かれたら pull --rebase からリトライ**して
+      transient な競合を自動吸収する（#490）。
+    - pull --rebase のコンフリクトは自動解決しない。rebase 進行中のときだけ
+      `rebase --abort` し、notify して exit(5)。
     """
     today = datetime.date.today().isoformat()
     _git("add", "data/mf-holdings.json", check=True)
@@ -430,13 +443,22 @@ def git_commit_push():
              "-m", f"data: refresh MF holdings snapshot ({today})", check=True)
     else:
         print("ステージ変更なし（未push commit があれば push のみ実施）")
-    try:
-        _git("pull", "--rebase", "origin", "main", check=True)
-        _git("push", "origin", "main", check=True)  # Mac の既存 git 認証で無人 push
-    except subprocess.CalledProcessError as e:
-        _git("rebase", "--abort")  # 中断状態を残さない（次回 run を壊さない）
-        notify(f"git 同期に失敗（{type(e).__name__}）。ローカル commit は残置・次回 run で再 push を試みる。手動 push も可。")
-        sys.exit(5)
+
+    for attempt in range(1, PUSH_RETRIES + 1):
+        # 最新 origin に追従（成功する限りリトライ間で取り直す）
+        if _git("pull", "--rebase", "origin", "main").returncode != 0:
+            if _rebase_in_progress():
+                _git("rebase", "--abort")  # コンフリクトは自動マージしない
+            notify("git pull --rebase に失敗（コンフリクト等）。ローカル commit は残置・手動対応を。")
+            sys.exit(5)
+        if _git("push", "origin", "main").returncode == 0:
+            return  # 成功（Mac の既存 git 認証で無人 push）
+        # push 失敗＝レースで origin が動いた可能性 → バックオフして pull からやり直す
+        print(f"push 競合（{attempt}/{PUSH_RETRIES}）。pull --rebase からリトライ")
+        time.sleep(2 * attempt)
+
+    notify(f"git push が {PUSH_RETRIES} 回競合して未push。ローカル commit は残置・次回 run で再試行。手動 push も可。")
+    sys.exit(5)
 
 
 def do_run(c):
