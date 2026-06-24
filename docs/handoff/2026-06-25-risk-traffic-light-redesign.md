@@ -131,4 +131,4 @@ function fmtEventPeriod(from, to){
 - `dist/app.js`（CI自動ビルド）。
 
 ## ブランチ／PR／Issue
-- ブランチ `feat/risk-traffic-light`、base `main`、squash マージ。`Closes #<本Issue>`。
+- ブランチ `feat/risk-traffic-light`、base `main`、squash マージ。`Closes #488`。
