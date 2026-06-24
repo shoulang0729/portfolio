@@ -16,8 +16,6 @@ import {
   annualizedVol,
   maxDrawdown,
   betaTo,
-  worstReturn,
-  worstWindow,
   alignReturnsByDate,
   highCorrelationPairs,
   computePortfolioReturns,
@@ -26,7 +24,7 @@ import {
 import { getAllHistorical } from './historical-cache.js';
 import { fetchSymbolHistory, batchWithRetry } from './data.js';
 import { state } from './state.js';
-import { computeLiquidity, ILLIQUID_DAYS, ADV_WINDOW, PARTICIPATION } from './liquidity-calc.js';
+import { computeLiquidity, ILLIQUID_DAYS } from './liquidity-calc.js';
 import { fmtJPYInt, fmtPctInt, escapeHTML } from './utils.js';
 import { glossaryHTML } from './glossary.js';
 import { positions } from './positions.js';
@@ -84,20 +82,28 @@ async function buildRegionCard(assets, manualSymbols) {
   const card = document.createElement('div');
   card.className = 'risk-card region-card';
 
-  const title = document.createElement('div');
-  title.className = 'risk-card-title';
-  title.textContent = '地域（ルックスルー）';
-  card.appendChild(title);
-
-  // 筆頭インサイト: 日本の真% / ベンチ / ホームバイアス / カバレッジ
-  const hero = document.createElement('div');
-  hero.className = 'region-hero';
+  // ── タイトル＋比較バー hero（あなたのPF vs 世界平均・#488 §4）──
+  // ★塗りは CSS で display:block（インライン span のままだと width が効かず潰れる）。
+  const japanPct = bias.japanPct;
+  const benchPct = bias.benchPct;
+  const maxScale = Math.max(50, japanPct * 1.1, benchPct * 1.1);
+  const wYou = Math.min(100, (japanPct / maxScale) * 100);
+  const wBench = Math.min(100, (benchPct / maxScale) * 100);
   const biasSign = bias.biasPt >= 0 ? '+' : '';
-  const biasCls = bias.biasPt >= 0 ? 'region-bias-over' : 'region-bias-under';
-  hero.innerHTML = `
-    <div class="region-hero-main"><span class="region-hero-k">日本 真%</span><span class="region-hero-v">${bias.japanPct.toFixed(1)}%</span></div>
-    <div class="region-hero-sub">ACWIベンチ ${bias.benchPct}% ｜ ホームバイアス <span class="${biasCls}">${biasSign}${bias.biasPt.toFixed(1)}pt</span> ｜ カバレッジ ${coveragePct.toFixed(0)}%</div>`;
-  card.appendChild(hero);
+  const ratio = benchPct > 0 ? japanPct / benchPct : null;
+  const ratioTxt = ratio != null ? `世界平均の<b>約${ratio.toFixed(ratio >= 10 ? 0 : 1)}倍</b>、` : '';
+  const tiltDir = bias.biasPt >= 0 ? '日本に大きく傾けている' : '日本を世界平均より控えめにしている';
+
+  card.insertAdjacentHTML(
+    'beforeend',
+    `<div class="risk-card-title">${ric('i-globe')}地域の傾き<span class="rtag">ルックスルー・全資産</span></div>
+    <p class="rgn-lead">全世界ファンドを地域分解した<b>本当の日本比率</b>を世界平均と並べる。<span class="ihelp" title="真の地域%（ルックスルー）＝全世界ファンドを地域構成比で分解しPF全体の本当の地域配分を出す。日本＝ACWI内5%＋1306＋ひふみ＋日本個別。">?</span></p>
+    <div class="rcmp">
+      <div class="rcmp-row"><span class="rcmp-k">あなたのPF<span class="s">日本（真の地域%）</span></span><span class="rcmp-t"><span class="rcmp-f you" style="width:${wYou.toFixed(0)}%"></span></span><span class="rcmp-v">${japanPct.toFixed(1)}%</span></div>
+      <div class="rcmp-row"><span class="rcmp-k">世界平均<span class="s">ACWIの日本%</span></span><span class="rcmp-t"><span class="rcmp-f bench" style="width:${wBench.toFixed(0)}%"></span></span><span class="rcmp-v bench">${benchPct.toFixed(1)}%</span></div>
+    </div>
+    <div class="rcmp-cap">ホームバイアス <b>${biasSign}${bias.biasPt.toFixed(1)}pt</b><span class="ihelp" title="自国(日本)への偏り＝真の日本% − ベンチ(ACWI 5%)。意図的な傾けかを確認。">?</span> ＝${ratioTxt}${tiltDir}。意図的なら問題なし、無意識なら是正の検討材料。</div>`
+  );
 
   // ドーナツ＋凡例（curated「国・地域」ドーナツを置換＝広域ファンドを地域へ按分済み）
   const slices = Object.entries(pct)
@@ -222,80 +228,8 @@ async function ensureStressHistory(symbols) {
   return state.historicalCache['5y'] || {};
 }
 
-/**
- * D-1: 名前付きイベントのストレス表カードを生成する。
- * 「現PFが当時を再体験したら」の what-if。イベント名｜PF下落%｜カバレッジ%。
- * @param {Array<{symbol?:string, ySymbol?:string, value?:number|null}>} holdings
- * @returns {Promise<HTMLElement>}
- */
-async function buildStressCard(holdings) {
-  const card = document.createElement('div');
-  card.className = 'risk-card stress-card';
-  const title = document.createElement('div');
-  title.className = 'risk-card-title';
-  title.textContent = '歴史的危機の再現（what-if）';
-  card.appendChild(title);
-
-  const events = await loadStressEvents();
-  if (events.length === 0) {
-    const p = document.createElement('p');
-    p.className = 'risk-coverage-note';
-    p.textContent = 'イベントカタログ未取得。';
-    card.appendChild(p);
-    return card;
-  }
-
-  // 値ベースのウェイト（全保有・カバレッジ分母）
-  /** @type {Record<string, number>} */
-  const weights = {};
-  for (const p of holdings) {
-    if (p.ySymbol) weights[p.ySymbol] = (weights[p.ySymbol] || 0) + (p.value || 0);
-  }
-  const symbols = Object.keys(weights);
-
-  let seriesMap;
-  try {
-    seriesMap = await ensureStressHistory(symbols);
-  } catch {
-    const p = document.createElement('p');
-    p.className = 'risk-coverage-note';
-    p.textContent = '5y履歴の取得に失敗しました（時間をおいて再表示してください）。';
-    card.appendChild(p);
-    return card;
-  }
-
-  // 各イベントを採点して下落大きい順
-  const rows = events
-    .map((ev) => ({ ev, res: eventStress(seriesMap, weights, ev.from, ev.to) }))
-    .sort((a, b) => {
-      const ra = a.res.ret == null ? Infinity : a.res.ret;
-      const rb = b.res.ret == null ? Infinity : b.res.ret;
-      return ra - rb; // 下落（負が大）が上
-    });
-
-  const table = document.createElement('div');
-  table.className = 'stress-table';
-  for (const { ev, res } of rows) {
-    const row = document.createElement('div');
-    row.className = 'stress-row';
-    const lowCov = res.coveragePct < 90;
-    const retTxt = res.ret == null ? '—' : `${(res.ret * 100).toFixed(1)}%`;
-    const retCls = res.ret != null && res.ret < 0 ? 'stress-neg' : '';
-    const covCls = lowCov ? 'stress-cov-low' : '';
-    row.innerHTML = `
-      <span class="stress-name" title="${escapeHTML(`${ev.from}〜${ev.to}${ev.note ? ` / ${ev.note}` : ''}`)}">${escapeHTML(ev.label)}</span>
-      <span class="stress-ret ${retCls}">${escapeHTML(retTxt)}</span>
-      <span class="stress-cov ${covCls}">cov ${Math.round(res.coveragePct)}%${lowCov ? ' ⚠' : ''}</span>`;
-    table.appendChild(row);
-  }
-  card.appendChild(table);
-
-  const note = document.createElement('div');
-  note.className = 'risk-coverage-note';
-  note.textContent = '実履歴 replay × 現ウェイトの what-if（実損益ではない）。窓内に価格が無い保有は除外・再正規化し coverage% に反映（<90% は注意）。履歴は保有限定 5y（IDB）。';
-  card.appendChild(note);
-  return card;
-}
+// buildStressCard は ②クオンツ・リスク（_appendEventStress）へ統合・廃止（#488）。
+// loadStressEvents / ensureStressHistory / eventStress は②から流用するため存続。
 
 /** 軸ごとのタイトル */
 const TITLES = {
@@ -573,221 +507,237 @@ function _resolvePositionTkeys(denom) {
   });
 }
 
+/** 自前アイコン参照（絵文字廃止・#488）。`<svg class="ric"><use href="#i-…"/>` 文字列を返す。 */
+function ric(id, sm) {
+  return `<svg class="ric${sm ? ' ric-sm' : ''}" aria-hidden="true"><use href="#${id}"/></svg>`;
+}
+
 /**
- * リスク要約カード（致命傷回避サーフェス）を生成する。
+ * リスク要約カード（信号機・銘柄名つき・#488）を生成する。
+ * 総合判定バナー＋4行（アイコン/ラベル/状態ピル/値/該当銘柄/一言）。
  * @returns {HTMLElement}
  */
 function buildRiskOverviewCard() {
   const card = document.createElement('div');
   card.className = 'risk-overview';
 
-  // タイトル
-  const h4 = document.createElement('h4');
-  h4.textContent = 'リスク要約（致命傷回避）';
-  card.appendChild(h4);
-
-  const roRow = document.createElement('div');
-  roRow.className = 'ro-row';
-  card.appendChild(roRow);
-
-  // 閾値抵触の数（先頭の総合判定チップ用）。各指標ブロックで加算する。
-  let breaches = 0;
-
-  // 分母を確定（MF実値 → positions 合計フォールバック）
   const totals = getMfTotals();
   const denom = (totals && totals.imported) || positions.reduce((s, p) => s + (p.value || 0), 0);
+  const taAvailable = denom > 0;
+  let breaches = 0;
 
-  // ── 1. キャッシュ比率 ────────────────────────────────────────────────────
-  const cashRatioStat = document.createElement('div');
-  cashRatioStat.className = 'ro-stat';
-  const cashLabel = document.createElement('div');
-  cashLabel.className = 'ro-stat-label';
-  cashLabel.textContent = '投資用キャッシュ比率';
-  cashRatioStat.appendChild(cashLabel);
-  const cashVal = document.createElement('div');
-  cashVal.className = 'ro-stat-value';
+  // 1. キャッシュ比率（5–20% 適正）
+  let cashVal = '—';
+  let cashOut = false;
   if (totals) {
     const cr = totals.cashRatio;
-    const outOfRange = cr < 5 || cr > 20;
-    cashVal.textContent = `${cr.toFixed(1)}%`;
-    cashVal.style.color = outOfRange ? 'var(--up)' : 'var(--text)';
-    if (outOfRange) {
-      cashVal.title = cr < 5 ? 'キャッシュ不足（<5%）' : 'キャッシュ過多（>20%）';
-      breaches++;
-    }
-  } else {
-    cashVal.textContent = '—';
+    cashOut = cr < 5 || cr > 20;
+    cashVal = `${cr.toFixed(1)}%`;
+    if (cashOut) breaches++;
   }
-  cashRatioStat.appendChild(cashVal);
-  roRow.appendChild(cashRatioStat);
 
-  // 以下の指標は target-allocation が必要。未ロード時はグレースフルデグレード。
-  const taAvailable = /** @type {boolean} */ (denom > 0);
+  const resolved = taAvailable ? _resolvePositionTkeys(denom) : [];
 
-  // ── 2. 過大ポジション（gapPct > 0.5）────────────────────────────────────
-  const oversizeStat = document.createElement('div');
-  oversizeStat.className = 'ro-stat';
-  const oversizeLabel = document.createElement('div');
-  oversizeLabel.className = 'ro-stat-label';
-  oversizeLabel.textContent = '過大ポジ';
-  oversizeStat.appendChild(oversizeLabel);
-  const oversizeVal = document.createElement('div');
-  oversizeVal.className = 'ro-stat-value';
+  // 2. 最大集中（テーマ／単銘柄）＋構成銘柄
+  /** @type {Record<string, number>} */
+  const themeUsedPct = {};
+  /** @type {Record<string, Array<{name:string, pct:number}>>} */
+  const themeMembers = {};
+  for (const { p, tkey, currentPct } of resolved) {
+    if (!tkey) continue;
+    const theme = getThemeOf(tkey);
+    if (!theme) continue;
+    themeUsedPct[theme] = (themeUsedPct[theme] || 0) + currentPct;
+    (themeMembers[theme] = themeMembers[theme] || []).push({ name: p.name || p.symbol || '', pct: currentPct });
+  }
+  /** @type {string|null} */
+  let maxLabel = null;
+  let maxPct = 0;
+  /** @type {Array<{name:string, pct:number}>} */
+  let maxMembers = [];
+  for (const [theme, used] of Object.entries(themeUsedPct)) {
+    if (used > maxPct) {
+      maxPct = used;
+      maxLabel = theme;
+      maxMembers = (themeMembers[theme] || []).slice().sort((a, b) => b.pct - a.pct);
+    }
+  }
+  // 単銘柄が最大なら銘柄名で
   if (taAvailable) {
-    const resolved = _resolvePositionTkeys(denom);
-    let oversizeCount = 0;
-    for (const { tkey, currentPct } of resolved) {
-      if (!tkey) continue;
-      const gap = computeGap(tkey, currentPct);
-      if (gap.gapPct != null && gap.gapPct > 0.5) oversizeCount++;
-    }
-    oversizeVal.textContent = `${oversizeCount} 件`;
-    if (oversizeCount > 0) {
-      oversizeVal.style.color = 'var(--up)';
-      breaches++;
-    }
-  } else {
-    oversizeVal.textContent = '—';
-  }
-  oversizeStat.appendChild(oversizeVal);
-  roRow.appendChild(oversizeStat);
-
-  // ── 3. 最大集中（テーマ or 単銘柄）─────────────────────────────────────
-  const maxConStat = document.createElement('div');
-  maxConStat.className = 'ro-stat';
-  const maxConLabel = document.createElement('div');
-  maxConLabel.className = 'ro-stat-label';
-  maxConLabel.textContent = '最大集中';
-  maxConStat.appendChild(maxConLabel);
-  const maxConVal = document.createElement('div');
-  maxConVal.className = 'ro-stat-value';
-  if (taAvailable && denom > 0) {
-    // テーマ別集計
-    /** @type {Record<string, number>} */
-    const currentPctBySymbol = {};
-    for (const p of positions) {
-      const pct = ((p.value || 0) / denom) * 100;
-      if (p.ySymbol) currentPctBySymbol[p.ySymbol] = (currentPctBySymbol[p.ySymbol] || 0) + pct;
-      if (p.symbol && p.symbol !== p.ySymbol) currentPctBySymbol[p.symbol] = (currentPctBySymbol[p.symbol] || 0) + pct;
-    }
-    /** @type {string|null} */
-    let maxLabel = null;
-    let maxPct = 0;
-    // themeCaps は getThemeCap を通じてアクセスする。既知テーマ一覧は getThemeOf から逆引き不可なので
-    // positions から tkey を解決し、テーマ別に合算する。
-    /** @type {Record<string, number>} */
-    const themeUsedPct = {};
-    const resolved2 = _resolvePositionTkeys(denom);
-    for (const { tkey, currentPct } of resolved2) {
-      if (!tkey) continue;
-      const theme = getThemeOf(tkey);
-      if (theme) {
-        themeUsedPct[theme] = (themeUsedPct[theme] || 0) + currentPct;
-      }
-    }
-    for (const [theme, used] of Object.entries(themeUsedPct)) {
-      if (used > maxPct) {
-        maxPct = used;
-        maxLabel = escapeHTML(theme);
-      }
-    }
-    // 単銘柄も確認（テーマ未分類）
     for (const p of positions) {
       const pct = ((p.value || 0) / denom) * 100;
       if (pct > maxPct) {
         maxPct = pct;
-        maxLabel = escapeHTML(p.name || p.symbol || '');
+        maxLabel = p.name || p.symbol || '';
+        maxMembers = [{ name: p.name || p.symbol || '', pct }];
       }
     }
-    if (maxLabel) {
-      maxConVal.textContent = `${maxLabel} ${maxPct.toFixed(1)}%`;
-      if (maxPct > 20) {
-        maxConVal.style.color = 'var(--up)';
-        breaches++;
-      }
-    } else {
-      maxConVal.textContent = '—';
-    }
-  } else {
-    maxConVal.textContent = '—';
   }
-  maxConStat.appendChild(maxConVal);
-  roRow.appendChild(maxConStat);
+  const concOver = taAvailable && maxPct > 20;
+  if (concOver) breaches++;
 
-  // ── 4. テーマ上限超過チップ ──────────────────────────────────────────────
-  const chipsStat = document.createElement('div');
-  chipsStat.className = 'ro-stat ro-stat-chips';
-  const chipsLabel = document.createElement('div');
-  chipsLabel.className = 'ro-stat-label';
-  chipsLabel.textContent = 'テーマ上限超過';
-  chipsStat.appendChild(chipsLabel);
-
-  if (taAvailable && denom > 0) {
-    /** @type {Record<string, number>} */
-    const currentPctBySymbol2 = {};
-    for (const p of positions) {
-      const pct = ((p.value || 0) / denom) * 100;
-      if (p.ySymbol) currentPctBySymbol2[p.ySymbol] = (currentPctBySymbol2[p.ySymbol] || 0) + pct;
-      if (p.symbol && p.symbol !== p.ySymbol)
-        currentPctBySymbol2[p.symbol] = (currentPctBySymbol2[p.symbol] || 0) + pct;
+  // 3. 過大ポジ（gapPct = current − target が 0.5pt 超）
+  /** @type {Array<{name:string, cur:number, target:number|null, pt:number}>} */
+  const overPos = [];
+  for (const { p, tkey, currentPct } of resolved) {
+    if (!tkey) continue;
+    const gap = computeGap(tkey, currentPct);
+    if (gap.gapPct != null && gap.gapPct > 0.5) {
+      overPos.push({ name: p.name || p.symbol || '', cur: currentPct, target: gap.targetPct, pt: gap.gapPct });
     }
+  }
+  overPos.sort((a, b) => b.pt - a.pt);
+  if (overPos.length > 0) breaches++;
 
-    // 全 positions のテーマを収集してユニークなテーマセットを得る
-    const resolvedForTheme = _resolvePositionTkeys(denom);
-    /** @type {Set<string>} */
-    const themes = new Set();
-    for (const { tkey } of resolvedForTheme) {
-      if (!tkey) continue;
+  // 4. テーマ上限超過
+  /** @type {Record<string, number>} */
+  const curPctBySym = {};
+  for (const p of positions) {
+    const pct = taAvailable ? ((p.value || 0) / denom) * 100 : 0;
+    if (p.ySymbol) curPctBySym[p.ySymbol] = (curPctBySym[p.ySymbol] || 0) + pct;
+    if (p.symbol && p.symbol !== p.ySymbol) curPctBySym[p.symbol] = (curPctBySym[p.symbol] || 0) + pct;
+  }
+  /** @type {Set<string>} */
+  const themesSet = new Set();
+  for (const { tkey } of resolved) {
+    if (tkey) {
       const th = getThemeOf(tkey);
-      if (th) themes.add(th);
+      if (th) themesSet.add(th);
     }
-
-    /** @type {Array<{theme: string, used: number, cap: number}>} */
-    const overThemes = [];
-    for (const theme of themes) {
+  }
+  /** @type {Array<{theme:string, used:number, cap:number}>} */
+  const overThemes = [];
+  if (taAvailable) {
+    for (const theme of themesSet) {
       const cap = getThemeCap(theme);
       if (cap == null) continue;
-      const usage = computeThemeUsage(theme, currentPctBySymbol2);
+      const usage = computeThemeUsage(theme, curPctBySym);
       if (usage.used > cap) overThemes.push({ theme, used: usage.used, cap });
     }
-
-    if (overThemes.length === 0) {
-      const ok = document.createElement('span');
-      ok.className = 'ro-ok';
-      ok.textContent = 'なし';
-      chipsStat.appendChild(ok);
-    } else {
-      breaches++;
-      const chipsWrap = document.createElement('div');
-      chipsWrap.className = 'ro-chips-wrap';
-      for (const { theme, used, cap } of overThemes) {
-        const chip = document.createElement('span');
-        chip.className = 'ro-chip';
-        chip.textContent = `${escapeHTML(theme)} ${used.toFixed(1)}%>${cap}%`;
-        chipsWrap.appendChild(chip);
-      }
-      chipsStat.appendChild(chipsWrap);
-    }
-  } else {
-    const dash = document.createElement('span');
-    dash.textContent = '—';
-    chipsStat.appendChild(dash);
   }
-  card.appendChild(chipsStat);
+  if (overThemes.length > 0) breaches++;
 
-  // ── 注記 ─────────────────────────────────────────────────────────────────
-  const note = document.createElement('div');
-  note.className = 'ro-note';
-  note.textContent = '※ 配分ベースの一目チェック。値動き・最悪局面・分散/流動性は下の「クオンツ・リスク」へ。';
-  card.appendChild(note);
+  // ── 総合判定バナー（緑/黄/赤） ──
+  const vCls = breaches === 0 ? 'ok' : breaches === 1 ? 'warn' : 'bad';
+  const vt =
+    breaches === 0
+      ? 'リスク低 — 閾値抵触なし'
+      : breaches === 1
+        ? '注意 — 1件が基準オーバー'
+        : `要注意 — ${breaches}件が基準オーバー`;
+  const subBits = [];
+  if (cashOut) subBits.push('キャッシュ比率が範囲外');
+  if (concOver) subBits.push('集中が高い');
+  if (overPos.length) subBits.push(`過大ポジ${overPos.length}件`);
+  if (overThemes.length) subBits.push('テーマ上限超過');
+  const vs = subBits.length
+    ? `${subBits.join('・')}。値動きは下のクオンツへ。`
+    : '集中・過大ポジ・キャッシュ・テーマ上限すべて適正圏。値動きは下のクオンツへ。';
 
-  // 総合判定チップ（先頭・緑/黄/赤）＝閾値抵触の有無が一目で分かる
-  const verdict = document.createElement('div');
-  verdict.className =
-    breaches === 0 ? 'ro-verdict ro-v-ok' : breaches === 1 ? 'ro-verdict ro-v-warn' : 'ro-verdict ro-v-bad';
-  verdict.textContent =
-    breaches === 0 ? '✓ リスク低（閾値抵触なし）' : breaches === 1 ? '⚠ 注意 1件' : `⚠ 要注意 ${breaches}件`;
-  card.insertBefore(verdict, roRow);
+  // ── 行ヘルパー ──
+  const rmrow = (icon, label, pillCls, pillTxt, valHTML, valWarn, holdsHTML, cap) => `
+    <div class="rmrow">
+      <div class="rmic">${ric(icon)}</div>
+      <div class="rmbody">
+        <div class="rml1"><span class="rml">${escapeHTML(label)}</span><span class="rpill ${pillCls}">${escapeHTML(pillTxt)}</span><span class="rmv${valWarn ? ' warn' : ''}">${valHTML}</span></div>
+        ${holdsHTML ? `<div class="rholds">${holdsHTML}</div>` : ''}
+        <div class="rmcap">${escapeHTML(cap)}</div>
+      </div>
+    </div>`;
+
+  const cashRow = rmrow(
+    'i-coin',
+    '投資用キャッシュ比率',
+    cashOut ? 'warn' : 'ok',
+    cashOut ? '範囲外' : '適正',
+    escapeHTML(cashVal),
+    cashOut,
+    '',
+    '投資資産のうち現金。5〜20%が適正レンジ。'
+  );
+
+  const concHolds =
+    taAvailable && maxMembers.length
+      ? maxMembers
+          .slice(0, 4)
+          .map((m) => `<span class="htag">${escapeHTML(m.name)} <b>${m.pct.toFixed(1)}%</b></span>`)
+          .join('')
+      : '';
+  const concVal = taAvailable && maxLabel ? `${escapeHTML(maxLabel)} ${maxPct.toFixed(1)}%` : '—';
+  const concRow = rmrow(
+    'i-target',
+    '最大集中（テーマ）',
+    concOver ? 'bad' : 'ok',
+    concOver ? '高い' : '適正',
+    concVal,
+    concOver,
+    concHolds,
+    '最も偏ったテーマ。20%超で赤。構成銘柄を表示。'
+  );
+
+  let overVal = '0件';
+  let overHolds = '';
+  let overPill = 'ok';
+  let overPillTxt = 'なし';
+  let overWarn = false;
+  if (overPos.length) {
+    const top = overPos[0];
+    overVal = `+${top.pt.toFixed(1)}pt`;
+    overWarn = true;
+    overPill = 'warn';
+    overPillTxt = `${overPos.length}件`;
+    const tags = overPos
+      .slice(0, 2)
+      .map(
+        (o) =>
+          `<span class="htag hot">${escapeHTML(o.name)} <b>目標${o.target != null ? o.target.toFixed(0) : '—'}%→${o.cur.toFixed(1)}%</b></span>`
+      )
+      .join('');
+    overHolds = tags + (overPos.length > 2 ? `<span class="htag">他${overPos.length - 2}件</span>` : '');
+  }
+  const overRow = rmrow(
+    'i-expand',
+    '過大ポジ（目標超過）',
+    overPill,
+    overPillTxt,
+    overVal,
+    overWarn,
+    overHolds,
+    '目標配分を50%以上超えた銘柄。サイズ見直しの候補。'
+  );
+
+  let themeVal = '0件';
+  let themeHolds = '';
+  let themePill = 'ok';
+  let themePillTxt = 'なし';
+  let themeWarn = false;
+  if (overThemes.length) {
+    themeVal = `${overThemes.length}件`;
+    themeWarn = true;
+    themePill = 'bad';
+    themePillTxt = `${overThemes.length}件`;
+    themeHolds = overThemes
+      .map((o) => `<span class="htag hot">${escapeHTML(o.theme)} <b>${o.used.toFixed(1)}%&gt;${o.cap}%</b></span>`)
+      .join('');
+  }
+  const themeRow = rmrow(
+    'i-layers',
+    'テーマ上限超過',
+    themePill,
+    themePillTxt,
+    themeVal,
+    themeWarn,
+    themeHolds,
+    '上限を超えたテーマ。なし＝健全。'
+  );
+
+  card.innerHTML = `
+    <div class="risk-card-title">${ric('i-shield')}リスク要約<span class="rtag">致命傷を避けられているか</span></div>
+    <div class="rv ${vCls}">
+      <div class="rv-badge">${ric(breaches === 0 ? 'i-shield' : 'i-warn')}</div>
+      <div><div class="rv-t">${escapeHTML(vt)}</div><div class="rv-s">${escapeHTML(vs)}</div></div>
+    </div>
+    ${cashRow}${concRow}${overRow}${themeRow}`;
 
   return card;
 }
@@ -806,6 +756,98 @@ function _pct1(v, forcePlus = false) {
   return forcePlus && v > 0 ? `+${s}` : s;
 }
 
+/** rq-note 段落を返す（履歴未取得等の案内）。 */
+function _rqNote(msg) {
+  const p = document.createElement('p');
+  p.className = 'rq-note';
+  p.textContent = msg;
+  return p;
+}
+
+/**
+ * イベント日付を「YYYY年M月／YYYY年M〜M月／YYYY年M月〜YYYY年M月」表記にする（#488 §2-2）。
+ * @param {string} from YYYY-MM-DD
+ * @param {string} to   YYYY-MM-DD
+ * @returns {string}
+ */
+function fmtEventPeriod(from, to) {
+  const f = new Date(from);
+  const t = new Date(to);
+  if (Number.isNaN(f.getTime()) || Number.isNaN(t.getTime())) return '';
+  const fy = f.getFullYear();
+  const ty = t.getFullYear();
+  const fm = f.getMonth() + 1;
+  const tm = t.getMonth() + 1;
+  if (fy === ty && fm === tm) return `${fy}年${fm}月`;
+  if (fy === ty) return `${fy}年${fm}〜${tm}月`;
+  return `${fy}年${fm}月〜${ty}年${tm}月`;
+}
+
+/**
+ * §2-1 イベント別「下落の深さ」を card に追記する（5y 履歴 × eventStress・深い順）。
+ * 別カード buildStressCard を②へ統合したもの。
+ * @param {HTMLElement} card
+ * @param {Array<{ySymbol?:string, value?:number}>} holdings
+ * @returns {Promise<void>}
+ */
+async function _appendEventStress(card, holdings) {
+  const lead = document.createElement('p');
+  lead.className = 'q-lead';
+  lead.innerHTML =
+    '時間窓（1日/1週…長いほど深いのは当たり前）をやめ、<b>名前のある実際の危機</b>を現PFのウェイトで再現。各イベントは独立シナリオで「<b>何に弱いか</b>」が見える。下落の大きい順。';
+  card.appendChild(lead);
+
+  const events = await loadStressEvents();
+  if (events.length === 0) {
+    card.appendChild(_rqNote('イベントカタログ未取得。'));
+    return;
+  }
+  /** @type {Record<string, number>} */
+  const weights = {};
+  for (const p of holdings) {
+    if (p.ySymbol) weights[p.ySymbol] = (weights[p.ySymbol] || 0) + (p.value || 0);
+  }
+  let seriesMap;
+  try {
+    seriesMap = await ensureStressHistory(Object.keys(weights));
+  } catch {
+    card.appendChild(_rqNote('5y履歴の取得に失敗しました（時間をおいて再表示してください）。'));
+    return;
+  }
+
+  const rows = events
+    .map((ev) => ({ ev, res: eventStress(seriesMap, weights, ev.from, ev.to) }))
+    .sort((a, b) => (a.res.ret == null ? Infinity : a.res.ret) - (b.res.ret == null ? Infinity : b.res.ret));
+  const maxAbs = Math.max(0.0001, ...rows.map((r) => (r.res.ret == null ? 0 : Math.abs(r.res.ret))));
+
+  for (const { ev, res } of rows) {
+    const has = res.ret != null;
+    const lowCov = res.coveragePct < 90;
+    const w = has ? Math.min(100, (Math.abs(res.ret) / maxAbs) * 100) : 0;
+    const retTxt = has ? `${(res.ret * 100).toFixed(1)}%` : '—';
+    const el = document.createElement('div');
+    el.className = 'rev';
+    el.innerHTML = `
+      <div class="rev-en"><span class="rev-nm">${escapeHTML(ev.label)}</span><span class="rev-dt">${escapeHTML(fmtEventPeriod(ev.from, ev.to))}</span></div>
+      <div class="rev-v">${escapeHTML(retTxt)}</div>
+      <div class="rev-track">${has ? `<span class="rev-fill" style="width:${w.toFixed(0)}%"></span>` : ''}</div>
+      <div class="rev-cov${lowCov ? ' low' : ''}">cov ${Math.round(res.coveragePct)}%${lowCov ? ' ⚠' : ''}</div>`;
+    const en = el.querySelector('.rev-en');
+    if (en) en.setAttribute('title', `${ev.from}〜${ev.to}${ev.note ? ` / ${ev.note}` : ''}`);
+    card.appendChild(el);
+  }
+
+  const deepest = rows.find((r) => r.res.ret != null);
+  const cap = document.createElement('p');
+  cap.className = 'rev-cap';
+  if (deepest) {
+    cap.innerHTML = `読み筋：最も深いのは <b>${escapeHTML(deepest.ev.label)}</b>（${(deepest.res.ret * 100).toFixed(1)}%）。各イベントは独立の what-if 再現。cov＝当時に価格データのあった保有の比率。`;
+  } else {
+    cap.textContent = '窓内に価格のある保有がまだ少なく、イベント再現を算出できません。';
+  }
+  card.appendChild(cap);
+}
+
 /**
  * クオンツ・リスクカードを非同期で生成する。
  * 履歴データが未取得の場合は案内メッセージのみのカードを返す。
@@ -816,17 +858,20 @@ async function buildQuantCard(posList) {
   const card = document.createElement('div');
   card.className = 'risk-quant';
 
-  const title = document.createElement('h4');
-  title.textContent = 'クオンツ・リスク（過去1年・履歴ベース）';
-  card.appendChild(title);
+  card.insertAdjacentHTML(
+    'beforeend',
+    `<div class="risk-card-title">${ric('i-history')}クオンツ・リスク<span class="rtag">現PFで過去危機を再現</span></div>`
+  );
 
-  /** 案内メッセージを出してカードを返す内部ヘルパー */
+  // §2-1 イベント別「下落の深さ」（5y・stress-events 流用。別カードは②へ統合・廃止）
+  await _appendEventStress(card, posList);
+
+  // 参考スタッツ／寄与／分散は 1y 履歴ベース。未取得なら案内のみ追記して返す。
   function _fallback(msg) {
-    const p = document.createElement('p');
-    p.className = 'rq-note';
-    p.style.color = 'var(--text2)';
-    p.textContent = msg;
-    card.appendChild(p);
+    const block = document.createElement('div');
+    block.className = 'q-block';
+    block.appendChild(_rqNote(msg));
+    card.appendChild(block);
     return card;
   }
 
@@ -873,12 +918,8 @@ async function buildQuantCard(posList) {
   const aligned = alignReturnsByDate(seriesMap);
   const portReturns = computePortfolioReturns(aligned.bySym, normWeights);
 
-  // ポートフォリオ指標
+  // ポートフォリオ指標（参考値）
   const pfVol = annualizedVol(portReturns);
-  const pfWorstD = worstReturn(portReturns);
-  const pfWorstW = worstWindow(portReturns, 5); // 最悪1週(5営業日)
-  const pfWorstM = worstWindow(portReturns, 21); // 最悪1ヶ月(21営業日)
-  const pfWorstQ = worstWindow(portReturns, 63); // 最悪3ヶ月(63営業日)
 
   // PF 最大 DD: portReturns から累積系列を O(n) で再構築して maxDrawdown へ
   let _cum = 100;
@@ -907,128 +948,38 @@ async function buildQuantCard(posList) {
     const rb = b.vol * Math.abs(b.beta ?? 1);
     return rb - ra;
   });
-  const top3 = perHolding.slice(0, 3);
-
   const excluded = posList.length - covered.length;
 
-  // ── DOM 構築 ──────────────────────────────────────────────────────────────
+  // ── §2-3 参考スタッツ＋寄与＋分散（1y 履歴ベース・DOM 構築）─────────────────
 
-  // PF 行
-  const pfRow = document.createElement('div');
-  pfRow.className = 'rq-row';
+  // 参考値（恣意的な"適正≤20%"バンドは出さない）: 年率ボラ／最大DD
+  card.insertAdjacentHTML(
+    'beforeend',
+    `<div class="q-sub">
+      <div class="q-stat2"><div class="qsl">${ric('i-pulse', true)}年率ボラ<span class="ihelp" title="日次騰落のばらつき×√252。1年あたりの値動きの激しさ。">?</span></div><div class="qsv">${escapeHTML(_pct1(pfVol))}</div><div class="qsc">参考値（過去1年の振れ幅）</div></div>
+      <div class="q-stat2"><div class="qsl">${ric('i-history', true)}最大DD<span class="ihelp" title="最大ドローダウン。過去のピークから谷までの最大下落。">?</span></div><div class="qsv">${escapeHTML(_pct1(pfMaxDD))}</div><div class="qsc">参考値（過去1年の最大下落）</div></div>
+    </div>`
+  );
 
-  /** @param {string} label @param {string} valText @param {boolean} [isSev] */
-  function _stat(label, valText, isSev = false) {
-    const el = document.createElement('div');
-    el.className = 'rq-stat';
-    const lb = document.createElement('span');
-    lb.className = 'rq-stat-label';
-    lb.textContent = label;
-    const vl = document.createElement('span');
-    vl.className = `rq-stat-value${isSev ? ' rq-sev' : ''}`;
-    vl.textContent = valText;
-    el.appendChild(lb);
-    el.appendChild(vl);
-    return el;
+  // リスク寄与 Top3（寄与 = vol×|β|。最大寄与=バー100%、値は全体に占めるシェア%）
+  const contribs = perHolding.map((h) => ({ sym: h.sym, c: (h.vol ?? 0) * Math.abs(h.beta ?? 1) }));
+  const sumC = contribs.reduce((s, x) => s + x.c, 0) || 1;
+  const maxC = Math.max(0.0001, ...contribs.map((x) => x.c));
+  const top3c = [...contribs].sort((a, b) => b.c - a.c).slice(0, 3);
+  if (top3c.length > 0) {
+    const contribHTML = top3c
+      .map(
+        (x) =>
+          `<div class="contrib"><span class="ck">${escapeHTML(nameOfSymbol(x.sym))}</span><span class="ct"><span class="cf" style="width:${((x.c / maxC) * 100).toFixed(0)}%"></span></span><span class="cv">${Math.round((x.c / sumC) * 100)}%</span></div>`
+      )
+      .join('');
+    card.insertAdjacentHTML(
+      'beforeend',
+      `<div class="q-block"><div class="q-bhd">${ric('i-pulse', true)}リスク寄与 Top3 <span class="rq-muted">（PF全体の振れを押し上げる順）</span></div>${contribHTML}</div>`
+    );
   }
 
-  /** @param {string} text 小節の1行凡例（自己説明） */
-  function _hint(text) {
-    const h = document.createElement('p');
-    h.className = 'rq-hint';
-    h.textContent = text;
-    return h;
-  }
-
-  // ── 値動き ──
-  const moveTitle = document.createElement('div');
-  moveTitle.className = 'rq-stat-label';
-  moveTitle.textContent = '値動き';
-  card.appendChild(moveTitle);
-  card.appendChild(_hint('年率ボラ=大きいほど振れる（20%超注意）／最大DD=過去最大の下落（浅いほど安全）'));
-  pfRow.appendChild(_stat('年率ボラ', _pct1(pfVol), (pfVol ?? 0) > 0.2));
-  pfRow.appendChild(_stat('最大DD', _pct1(pfMaxDD), true));
-  card.appendChild(pfRow);
-
-  // ── 最悪局面（実績）─────────────────────────────────────
-  const stressTitle = document.createElement('div');
-  stressTitle.className = 'rq-stat-label';
-  stressTitle.style.marginTop = '8px';
-  stressTitle.textContent = '過去1年の最悪局面（実績）';
-  card.appendChild(stressTitle);
-  card.appendChild(_hint('各期間で最も損した下落幅（浅いほど良い）'));
-
-  const stressRow = document.createElement('div');
-  stressRow.className = 'rq-row';
-  stressRow.appendChild(_stat('最悪1日', _pct1(pfWorstD), true));
-  stressRow.appendChild(_stat('最悪1週', _pct1(pfWorstW), true));
-  stressRow.appendChild(_stat('最悪1ヶ月', _pct1(pfWorstM), true));
-  stressRow.appendChild(_stat('最悪3ヶ月', _pct1(pfWorstQ), true));
-  card.appendChild(stressRow);
-
-  // カバレッジ注記
-  const covNote = document.createElement('p');
-  covNote.className = 'rq-note';
-  covNote.textContent = `${covered.length}銘柄で算出（履歴未取得${excluded}除外）`;
-  card.appendChild(covNote);
-
-  // ── 分散・流動性 ──
-  const corrTitle = document.createElement('div');
-  corrTitle.className = 'rq-stat-label';
-  corrTitle.textContent = '高相関ペア（≥0.85）';
-  card.appendChild(corrTitle);
-  card.appendChild(_hint('ほぼ同じ動きのペア＝分散不足／β=1超でPF全体より大きく振れる'));
-
-  const corrRow = document.createElement('div');
-  corrRow.className = 'rq-row';
-  const top5Pairs = corrPairs.slice(0, 5);
-  if (top5Pairs.length === 0) {
-    const okChip = document.createElement('span');
-    okChip.className = 'rq-chip rq-ok';
-    okChip.textContent = 'なし';
-    corrRow.appendChild(okChip);
-  } else {
-    for (const { a, b, corr } of top5Pairs) {
-      const chip = document.createElement('span');
-      chip.className = 'rq-chip';
-      // 生ティッカーでなく銘柄名で表示（escapeHTML 適用）
-      const escA = escapeHTML(nameOfSymbol(a));
-      const escB = escapeHTML(nameOfSymbol(b));
-      chip.textContent = `${escA}–${escB} ${corr.toFixed(2)}`;
-      corrRow.appendChild(chip);
-    }
-  }
-  card.appendChild(corrRow);
-
-  // リスク寄与トップ3
-  if (top3.length > 0) {
-    const contribTitle = document.createElement('div');
-    contribTitle.className = 'rq-stat-label';
-    contribTitle.style.marginTop = '8px';
-    contribTitle.textContent = 'リスク寄与 Top3（vol×|β|降順）';
-    card.appendChild(contribTitle);
-
-    const contribRow = document.createElement('div');
-    contribRow.className = 'rq-row';
-    for (const { sym, vol, beta } of top3) {
-      const el = document.createElement('div');
-      el.className = 'rq-stat';
-      const lb = document.createElement('span');
-      lb.className = 'rq-stat-label';
-      lb.textContent = nameOfSymbol(sym);
-      const vl = document.createElement('span');
-      vl.className = 'rq-stat-value';
-      const betaStr = beta !== null ? ` β${beta.toFixed(1)}` : '';
-      vl.textContent = `vol ${_pct1(vol)}${betaStr}`;
-      el.appendChild(lb);
-      el.appendChild(vl);
-      contribRow.appendChild(el);
-    }
-    card.appendChild(contribRow);
-  }
-
-  // ── 流動性（出口日数）─────────────────────────────────────────────────────
-  // 履歴に出来高(vol)がある銘柄のみ。出口日数 = 株数 ÷ (ADV × 参加率)。
+  // 分散・流動性（高相関ペア＋出口日数・最長。名称化）
   const liqHoldings = covered
     .filter((p) => typeof p.shares === 'number' && p.shares > 0 && Array.isArray(hist[p.ySymbol]))
     .map((p) => ({
@@ -1037,53 +988,31 @@ async function buildQuantCard(posList) {
       series: hist[/** @type {string} */ (p.ySymbol)],
     }));
   const liq = computeLiquidity(liqHoldings).filter((x) => x.days != null);
-
-  const liqTitle = document.createElement('div');
-  liqTitle.className = 'rq-stat-label';
-  liqTitle.style.marginTop = '8px';
-  liqTitle.textContent = `流動性 出口日数（ADV${ADV_WINDOW}×${Math.round(PARTICIPATION * 100)}%/日）`;
-  card.appendChild(liqTitle);
-
-  if (liq.length === 0) {
-    const liqNote = document.createElement('p');
-    liqNote.className = 'rq-note';
-    liqNote.textContent = '出来高データ未取得（価格更新後に蓄積され算出されます）';
-    card.appendChild(liqNote);
-  } else {
-    const liqRow = document.createElement('div');
-    liqRow.className = 'rq-row';
-    // 捌きにくい順に最大5件
-    for (const { sym, days } of liq.slice(0, 5)) {
-      const el = document.createElement('div');
-      el.className = 'rq-stat';
-      const lb = document.createElement('span');
-      lb.className = 'rq-stat-label';
-      lb.textContent = nameOfSymbol(sym);
-      const vl = document.createElement('span');
-      const sev = days != null && days > ILLIQUID_DAYS;
-      vl.className = `rq-stat-value${sev ? ' rq-sev' : ''}`;
-      vl.textContent = days != null ? `${days < 1 ? days.toFixed(1) : Math.round(days)}日` : '—';
-      el.appendChild(lb);
-      el.appendChild(vl);
-      liqRow.appendChild(el);
-    }
-    card.appendChild(liqRow);
-
-    const illiquidCount = liq.filter((x) => x.days != null && x.days > ILLIQUID_DAYS).length;
-    if (illiquidCount > 0) {
-      const liqWarn = document.createElement('p');
-      liqWarn.className = 'rq-note';
-      liqWarn.textContent = `出口に${ILLIQUID_DAYS}営業日超かかる保有 ${illiquidCount}件`;
-      card.appendChild(liqWarn);
-    }
-  }
+  const longest = liq.length ? [...liq].sort((a, b) => (b.days ?? 0) - (a.days ?? 0))[0] : null;
+  const topPair = corrPairs[0] || null;
+  const corrDn = topPair
+    ? `${escapeHTML(nameOfSymbol(topPair.a))} × ${escapeHTML(nameOfSymbol(topPair.b))}（相関 ${topPair.corr.toFixed(2)}・ほぼ同じ動き）`
+    : '高相関ペアなし＝分散が効いている';
+  const longSev = longest && longest.days > ILLIQUID_DAYS;
+  const liqDv = longest ? `${longest.days < 1 ? longest.days.toFixed(1) : Math.round(longest.days)}日` : '—';
+  const liqDn = longest
+    ? `${escapeHTML(nameOfSymbol(longest.sym))}。${longSev ? '⚠出口に時間がかかる' : '短い＝流動性良好'}。`
+    : '出来高データ未取得（価格更新後に算出）';
+  card.insertAdjacentHTML(
+    'beforeend',
+    `<div class="q-block"><div class="q-bhd">${ric('i-link', true)}分散・流動性</div>
+      <div class="divchips">
+        <div class="divchip"><div class="dl">高相関ペア（≥0.85）</div><div class="dv">${corrPairs.length ? `${corrPairs.length}組` : 'なし'}</div><div class="dn">${corrDn}</div></div>
+        <div class="divchip"><div class="dl">出口日数（売り切り・最長）</div><div class="dv${longSev ? ' rq-sev' : ''}">${escapeHTML(liqDv)}</div><div class="dn">${liqDn}</div></div>
+      </div>
+    </div>`
+  );
 
   // 脚注
-  const foot = document.createElement('p');
-  foot.className = 'rq-note';
-  foot.textContent =
-    '※ベータはポートフォリオ自身への感応度（市場ベンチマーク不要の履歴算出）。「過去1年の最悪局面」は実績の最悪下落、別カード「歴史的危機の再現」は過去イベントの what-if。出口日数は株数÷(平均出来高×参加率)の概算。';
-  card.appendChild(foot);
+  card.insertAdjacentHTML(
+    'beforeend',
+    `<p class="rq-note">※ ベータはPF自身への感応度（市場ベンチマーク不要）。年率ボラ／最大DDは過去1年の参考値（適正バンドは示さない）。出口日数＝株数÷(平均出来高×参加率)の概算。${covered.length}銘柄で算出（履歴未取得${excluded}除外）。</p>`
+  );
 
   return card;
 }
@@ -1136,10 +1065,7 @@ export async function renderRiskCharts() {
   wrap.appendChild(await buildQuantCard(positions));
   // ── /クオンツ・リスクカード ──────────────────────────────────────────────
 
-  // ── ストレスシナリオ（名前付き歴史イベント・D-1）──────────────────────────
-  // 保有 5y を lazy 取得（IDB のみ）して現PFの what-if 下落を表示。
-  wrap.appendChild(await buildStressCard(positions));
-  // ── /ストレスシナリオ ────────────────────────────────────────────────────
+  // ストレスは②クオンツ・リスクへ統合（別カード廃止・#488）。
 
   // 分類状況サマリーバー（#217）。各セグメントをホバーで内訳（銘柄一覧）表示。
   const sumInfo = getClassificationSummary(assets);
