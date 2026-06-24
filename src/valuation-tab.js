@@ -25,7 +25,7 @@ import {
 import { loadMfHoldings, getMfTotals } from './networth.js';
 import { loadValuations, getValuation, computeVerdict, valuationsLoaded } from './valuations.js';
 import { impliedGrowth, isGrowthOverheated } from './reverse-dcf.js';
-import { glossaryHTML } from './glossary.js';
+import { glossaryHTML, glossaryTermByKey } from './glossary.js';
 import { loadTriggers, triggersLoaded, getTriggers, evaluateTriggers } from './triggers.js';
 import { loadVerdictOutcomes, outcomesLoaded, computeHitRate } from './verdict-outcomes.js';
 import { getAllHistorical } from './historical-cache.js';
@@ -154,6 +154,31 @@ function sizeBarHTML(currentPct, targetPct, conviction) {
 }
 
 /**
+ * 用語チップ（ⓘタップでその場に解説アコーディオンを開く・#475）。
+ * glossary に解説があれば native details（ⓘ付き）、無ければプレーン表示（ⓘ無し）にフォールバック。
+ * valueHTML は呼び出し側が組む（色クラス付き span を許容＝アプリ内由来の値のみ）。プレーン文字列は
+ * 呼び出し側で escapeHTML 済みを渡すこと。
+ * @param {string} cls   ルート class（'val-card' | 'val-c' | 'val-stat'）
+ * @param {string} title ラベル
+ * @param {string} valueHTML 数値部の HTML
+ * @param {string} key   glossary キー
+ * @param {string} [extraSummaryCls] summary 追加 class（is-sortkey 等）
+ * @returns {string}
+ */
+function termChip(cls, title, valueHTML, key, extraSummaryCls = '') {
+  const t = glossaryTermByKey(key);
+  const sCls = extraSummaryCls ? ` ${extraSummaryCls}` : '';
+  if (!t) {
+    // 解説なし → details にせずプレーン（壊れたⓘを出さない）
+    return `<div class="${cls}${sCls}"><span class="t">${escapeHTML(title)}</span><span class="v">${valueHTML}</span></div>`;
+  }
+  return `<details class="${cls}">
+    <summary class="${cls}-h${sCls}" aria-label="${escapeHTML(title)} の説明を開く"><span class="t">${escapeHTML(title)}</span><span class="v">${valueHTML}</span><span class="ti" aria-hidden="true">ⓘ</span></summary>
+    <p class="${cls}-x">${escapeHTML(t.desc)}</p>
+  </details>`;
+}
+
+/**
  * レンズの並べ替え基準を、カード上で強調する対象に対応づける（純関数・テスト対象）。
  * @param {string} lens
  * @returns {{ chip: 'pct'|'f'|null, sizeBar: boolean }}
@@ -184,13 +209,13 @@ function coreChipsHTML(val, lens) {
   const sk = sortKeyForLens(lens);
   const per = `${fmtRaw(v.perTrail)}→${fmtRaw(v.perFwd)}`;
   const pct = val && val.percentile != null && isFinite(val.percentile) ? `${Math.round(val.percentile)}%ile` : '—';
-  const chip = (id, k, b) =>
-    `<span class="val-c${sk.chip === id ? ' is-sortkey' : ''}"><span class="k">${k}</span><b>${escapeHTML(b)}</b></span>`;
+  // 各チップ = ⓘ付き termChip。ソートキー強調 is-sortkey は位置 id（per/peg/pct/f）で付与・維持。
+  const skCls = (posId) => (sk.chip === posId ? 'is-sortkey' : '');
   return `<div class="val-chips">
-    ${chip('per', 'PER', per)}
-    ${chip('peg', 'PEG', fmtRaw(v.peg))}
-    ${chip('pct', '%タイル', pct)}
-    ${chip('f', 'Fスコア', fmtRaw(q.fScore))}
+    ${termChip('val-c', 'PER', escapeHTML(per), 'per', skCls('per'))}
+    ${termChip('val-c', 'PEG', escapeHTML(fmtRaw(v.peg)), 'peg', skCls('peg'))}
+    ${termChip('val-c', '%タイル', escapeHTML(pct), 'percentile', skCls('pct'))}
+    ${termChip('val-c', 'Fスコア', escapeHTML(fmtRaw(q.fScore)), 'fScore', skCls('f'))}
   </div>`;
 }
 
@@ -206,22 +231,25 @@ function detailHTML(val) {
   const q = val.quality || {};
   const m = val.momentum || {};
 
-  // 各指標は `<b>ラベル</b><span>値</span>` のフラットペア（.val-met=2列grid で行高を揃える）。
-  // 閾値は値の隣に記号併記（色だけに頼らない＝色覚配慮）。
+  // 各指標 = 独立チップカード（termChip('val-card', …)・タイトル左/数値右・ⓘタップ解説）。
+  // 閾値は値の隣に記号併記（色だけに頼らない＝色覚配慮・#450 を維持）。色付き span はそのまま valueHTML へ。
 
   // ── バリュ ──（1段Gordon は永久一定成長前提＝シクリカルには不適 → cyclical は —）
   const ig = v.cyclical === true ? null : impliedGrowth(v.fcfYield, q.wacc != null ? q.wacc : null);
   const igTxt = ig != null && isFinite(ig) ? `${fmt1(ig)}%${isGrowthOverheated(ig) ? ' ⚠期待過多' : ''}` : '—';
-  const igCls = isGrowthOverheated(ig) ? ' class="val-warn"' : '';
+  const igHTML = isGrowthOverheated(ig) ? `<span class="val-warn">${escapeHTML(igTxt)}</span>` : escapeHTML(igTxt);
   const tg = v.targetGapPct != null && isFinite(v.targetGapPct) ? v.targetGapPct : null;
   const tgTxt = tg != null ? `${tg >= 0 ? '+' : ''}${fmt1(tg)}%` : '—';
-  const tgCls = tg == null ? '' : tg >= 0 ? ' class="val-mom-up"' : ' class="val-mom-dn"';
-  const valueGrp = `<div class="val-met">
-      <b>EV/EBITDA</b><span>${escapeHTML(fmtRaw(v.evEbitda))}</span>
-      <b>FCF利回り</b><span>${escapeHTML(fmtRaw(v.fcfYield))}%</span>
-      <b>株主還元</b><span>${escapeHTML(fmtRaw(v.shareholderYield))}%</span>
-      <b>織込成長</b><span${igCls}>${escapeHTML(igTxt)}</span>
-      <b>目標乖離</b><span${tgCls}>${escapeHTML(tgTxt)}</span>
+  const tgHTML =
+    tg == null
+      ? escapeHTML(tgTxt)
+      : `<span class="${tg >= 0 ? 'val-mom-up' : 'val-mom-dn'}">${escapeHTML(tgTxt)}</span>`;
+  const valueGrp = `<div class="val-cards">
+      ${termChip('val-card', 'EV/EBITDA', escapeHTML(fmtRaw(v.evEbitda)), 'evEbitda')}
+      ${termChip('val-card', 'FCF利回り', `${escapeHTML(fmtRaw(v.fcfYield))}%`, 'fcfYield')}
+      ${termChip('val-card', '株主還元', `${escapeHTML(fmtRaw(v.shareholderYield))}%`, 'shareholderYield')}
+      ${termChip('val-card', '織込成長', igHTML, 'impliedGrowth')}
+      ${termChip('val-card', '目標乖離', tgHTML, 'targetGap')}
     </div>`;
 
   // ── 品質 ──
@@ -229,27 +257,30 @@ function detailHTML(val) {
   const waccNum = q.wacc != null && isFinite(q.wacc) ? q.wacc : null;
   const roicBad = roicNum != null && waccNum != null && roicNum < waccNum;
   const roicStr = `${escapeHTML(fmtRaw(roicNum))}% vs WACC ${escapeHTML(fmtRaw(waccNum))}%`;
-  const roicMetric = roicBad ? `<span class="val-bad">${roicStr} ⚠下回り</span>` : roicStr;
+  const roicHTML = roicBad ? `<span class="val-bad">${roicStr} ⚠下回り</span>` : roicStr;
   const zNum = q.altmanZ != null && isFinite(q.altmanZ) ? q.altmanZ : null;
   const zStr = escapeHTML(fmtRaw(zNum));
-  const zMetric = zNum != null && zNum < 3 ? `<span class="val-warn">${zStr} ⚠&lt;3</span>` : zStr;
-  const qualGrp = `<div class="val-met">
-      <b>ROIC</b><span>${roicMetric}</span>
-      <b>粗利/資産</b><span>${escapeHTML(fmtRaw(q.grossProf))}</span>
-      <b>FCF変換</b><span>${escapeHTML(fmtRaw(q.fcfConv))}</span>
-      <b>Altman Z</b><span>${zMetric}</span>
-      <b>Qスコア</b><span>${escapeHTML(fmtRaw(q.qScore))}</span>
+  const zHTML = zNum != null && zNum < 3 ? `<span class="val-warn">${zStr} ⚠&lt;3</span>` : zStr;
+  const qualGrp = `<div class="val-cards">
+      ${termChip('val-card', 'ROIC', roicHTML, 'roic')}
+      ${termChip('val-card', '粗利/資産', escapeHTML(fmtRaw(q.grossProf)), 'grossProfitability')}
+      ${termChip('val-card', 'FCF変換', escapeHTML(fmtRaw(q.fcfConv)), 'fcfConversion')}
+      ${termChip('val-card', 'Altman Z', zHTML, 'altmanZ')}
+      ${termChip('val-card', 'Qスコア', escapeHTML(fmtRaw(q.qScore)), 'qScore')}
     </div>`;
 
   // ── モメンタム ──（日本市場慣例: 上昇=赤=up / 下落=緑=down）
   const mom1y = m.priceMom1Y != null && isFinite(m.priceMom1Y) ? m.priceMom1Y : null;
   const mom1yStr = mom1y != null ? (mom1y >= 0 ? `+${fmt1(mom1y)}` : fmt1(mom1y)) : '—';
-  const mom1yCls = mom1y == null ? '' : mom1y >= 0 ? ' class="val-mom-up"' : ' class="val-mom-dn"';
-  const momGrp = `<div class="val-met">
-      <b>改定90d</b><span>${escapeHTML(fmtRaw(m.epsRev90d))}%</span>
-      <b>1Y騰落</b><span${mom1yCls}>${escapeHTML(mom1yStr)}%</span>
-      <b>52週位置</b><span>${escapeHTML(fmtRaw(m.pos52w))}%</span>
-      <b>対市場</b><span>${escapeHTML(fmtRaw(m.rsVsSector))}%</span>
+  const mom1yHTML =
+    mom1y == null
+      ? `${escapeHTML('—')}`
+      : `<span class="${mom1y >= 0 ? 'val-mom-up' : 'val-mom-dn'}">${escapeHTML(mom1yStr)}%</span>`;
+  const momGrp = `<div class="val-cards">
+      ${termChip('val-card', '改定90d', `${escapeHTML(fmtRaw(m.epsRev90d))}%`, 'epsRev90d')}
+      ${termChip('val-card', '1Y騰落', mom1yHTML, 'priceMom1Y')}
+      ${termChip('val-card', '52週位置', `${escapeHTML(fmtRaw(m.pos52w))}%`, 'pos52w')}
+      ${termChip('val-card', '対市場', `${escapeHTML(fmtRaw(m.rsVsSector))}%`, 'rsVsSector')}
     </div>`;
 
   // グループ凡例（1行・常時表示でモバイルでも分かる。詳しくは下部の用語解説）
@@ -553,19 +584,13 @@ export async function renderValuationTab() {
   const hitRateVal = `${hrPart('発議', hrA)}<span class="hr-sep"> / </span>${hrPart('判定', hrV)}`;
   // トリガー: active=抵触 / watching=監視 を併記（ヘッダ値は抵触＝アクションバナー化する銘柄数）
   const trigVal = `<span class="hr-p">抵触${triggerCount}</span><span class="hr-sep">・</span><span class="hr-p">監視${watchCount}</span>`;
-  // tap-to-explain（CSP安全な native details・3行）。正本の定義は用語解説「規律」カテゴリ。
-  const statsExplain = `<details class="val-stats-help">
-    <summary>ⓘ 統計の見方</summary>
-    <p><b>発議</b>：自分の売買が約1ヶ月後に対ACWIで正しかったか（当たり / 判定済）。</p>
-    <p><b>判定</b>：エンジンの cheap/rich が約6ヶ月後に対ACWIで当たったか。</p>
-    <p><b>抵触/監視</b>：事前ルールに今抵触している銘柄数 / 監視中の銘柄数。</p>
-  </details>`;
+  // 各統計に個別ⓘ（termChip）。旧「ⓘ 統計の見方」単独 details は撤去し各統計へ集約（#475）。
   const statsHTML = `<div class="val-stats">
-    <div class="val-stat"><span class="k">過大ポジ</span><span class="v">${overCount}</span></div>
-    <div class="val-stat"><span class="k">割安候補</span><span class="v">${cheapCount}</span></div>
-    <div class="val-stat"><span class="k">的中率</span><span class="v">${hitRateVal}</span></div>
-    <div class="val-stat"><span class="k">トリガー</span><span class="v">${trigVal}</span></div>
-  </div>${statsExplain}`;
+    ${termChip('val-stat', '過大ポジ', escapeHTML(String(overCount)), 'overweightCount')}
+    ${termChip('val-stat', '割安候補', escapeHTML(String(cheapCount)), 'cheapCount')}
+    ${termChip('val-stat', '的中率', hitRateVal, 'hitRate')}
+    ${termChip('val-stat', 'トリガー', trigVal, 'sellTriggers')}
+  </div>`;
 
   // レンズ切替ピル（4つすべて有効）
   const lenses = [
