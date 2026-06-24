@@ -4376,13 +4376,20 @@ var GLOSSARY = [
     terms: [
       {
         term: "PER\uFF08trail\u2192fwd\uFF09",
+        key: "per",
         desc: "\u682A\u4FA1\u53CE\u76CA\u7387\u3002trail=\u5B9F\u7E3E\uFF0Ffwd=\u4E88\u60F3\u3002\u53F3\uFF08fwd\uFF09\u304C\u5C0F\u3055\u3044\uFF1D\u6765\u671F\u5229\u76CA\u304C\u5897\u3048\u308B\u898B\u8FBC\u307F\u3002\u5411\u304D\u304C\u6700\u91CD\u8981\u3002"
       },
-      { term: "PEG", desc: "PER \xF7 \u5229\u76CA\u6210\u9577\u7387\u30021\u672A\u6E80\uFF1D\u5272\u5B89\u5BC4\u308A\u30013\u8D85\uFF1D\u5272\u9AD8\u3002\u6210\u9577\u3092\u52A0\u5473\u3057\u305F\u5272\u9AD8\u5EA6\u3002" },
-      { term: "EV/EBITDA", desc: "\u4F01\u696D\u4FA1\u5024 \xF7 \u511F\u5374\u524D\u55B6\u696D\u5229\u76CA\u3002\u8CA0\u50B5\u8FBC\u307F\u3067\u898B\u308B\u5272\u5B89\u5EA6\u3002" },
-      { term: "FCF\u5229\u56DE\u308A", desc: "\u30D5\u30EA\u30FC\u30AD\u30E3\u30C3\u30B7\u30E5\u30D5\u30ED\u30FC \xF7 \u6642\u4FA1\u7DCF\u984D\u3002\u73FE\u91D1\u3092\u751F\u3080\u529B\u306B\u5BFE\u3059\u308B\u5272\u5B89\u5EA6\u3002" },
+      { term: "PEG", key: "peg", desc: "PER \xF7 \u5229\u76CA\u6210\u9577\u7387\u30021\u672A\u6E80\uFF1D\u5272\u5B89\u5BC4\u308A\u30013\u8D85\uFF1D\u5272\u9AD8\u3002\u6210\u9577\u3092\u52A0\u5473\u3057\u305F\u5272\u9AD8\u5EA6\u3002" },
+      { term: "EV/EBITDA", key: "evEbitda", desc: "\u4F01\u696D\u4FA1\u5024 \xF7 \u511F\u5374\u524D\u55B6\u696D\u5229\u76CA\u3002\u8CA0\u50B5\u8FBC\u307F\u3067\u898B\u308B\u5272\u5B89\u5EA6\u3002" },
+      { term: "FCF\u5229\u56DE\u308A", key: "fcfYield", desc: "\u30D5\u30EA\u30FC\u30AD\u30E3\u30C3\u30B7\u30E5\u30D5\u30ED\u30FC \xF7 \u6642\u4FA1\u7DCF\u984D\u3002\u73FE\u91D1\u3092\u751F\u3080\u529B\u306B\u5BFE\u3059\u308B\u5272\u5B89\u5EA6\u3002" },
+      {
+        term: "\u682A\u4E3B\u9084\u5143",
+        key: "shareholderYield",
+        desc: "\u914D\u5F53\uFF0B\u81EA\u793E\u682A\u8CB7\u3044\u3067\u6BCE\u5E74\u682A\u4E3B\u306B\u623B\u3059\u73FE\u91D1\u306E\u5229\u56DE\u308A\u3002\u9AD8\u3044\u307B\u3069\u624B\u539A\u3044\uFF083%\u8D85\u3067\u539A\u3044\uFF09\u3002"
+      },
       {
         term: "%\u30BF\u30A4\u30EB",
+        key: "percentile",
         desc: "\u305D\u306E\u9298\u67C4\u81EA\u8EAB\u306E\u904E\u53BBPER\u30D0\u30F3\u30C9\u306E\u4E2D\u3067\u4ECA\u304C\u4F55%\u306E\u4F4D\u7F6E\u304B\u3002\u4F4E\u3044\uFF1D\u904E\u53BB\u6BD4\u3067\u5272\u5B89\u3002"
       },
       {
@@ -4395,10 +4402,12 @@ var GLOSSARY = [
       },
       {
         term: "\u30EA\u30D0\u30FC\u30B9DCF / \u7E54\u308A\u8FBC\u307F\u6210\u9577\u7387",
+        key: "impliedGrowth",
         desc: "\u4ECA\u306E\u682A\u4FA1\u304C\u300C\u5E74\u4F55%\u306EFCF\u6210\u9577\u300D\u3092\u524D\u63D0\u306B\u3057\u3066\u3044\u308B\u304B\u3092\u9006\u7B97\u3002(WACC \u2212 FCF\u5229\u56DE\u308A) \xF7 (1 + FCF\u5229\u56DE\u308A)\u3002\u59A5\u5F53\u57DF\u3088\u308A\u9AD8\u3044\uFF1D\u5E02\u5834\u304C\u671F\u5F85\u3092\u76DB\u308A\u3059\u304E\uFF08\u671F\u5F85\u904E\u591A\uFF09\u306E\u30B5\u30A4\u30F3\u3002\u500B\u5225\u682A\u306E\u307F\u30FB\u53C2\u8003\u5024\u3002"
       },
       {
         term: "\u76EE\u6A19\u682A\u4FA1\u4E56\u96E2\uFF08targetGap\uFF09",
+        key: "targetGap",
         desc: "\u30A2\u30CA\u30EA\u30B9\u30C8\u5E73\u5747\u76EE\u6A19\u682A\u4FA1\u3068\u73FE\u5024\u306E\u5DEE\uFF08%\uFF09\u3002\u30D7\u30E9\u30B9\u5927\uFF1D\u4E0A\u5024\u4F59\u5730\u304C\u898B\u8FBC\u307E\u308C\u3066\u3044\u308B\u3002\u30A2\u30CA\u30EA\u30B9\u30C8\u6570\u304C\u5C11\u306A\u3044\u9298\u67C4\u306F\u4FE1\u983C\u5EA6\u4F4E\u3081\u3002"
       },
       {
@@ -4414,27 +4423,32 @@ var GLOSSARY = [
     terms: [
       {
         term: "ROIC",
+        key: "roic",
         desc: "\u6295\u4E0B\u8CC7\u672C\u5229\u76CA\u7387\u3002ROIC > WACC \u306A\u3089\u4FA1\u5024\u5275\u9020\u3001\u4E0B\u56DE\u308B\u3068\u7A3C\u3050\u307B\u3069\u4FA1\u5024\u7834\u58CA\u3002"
       },
       { term: "WACC", desc: "\u52A0\u91CD\u5E73\u5747\u8CC7\u672C\u30B3\u30B9\u30C8\u3002ROIC \u304C\u8D85\u3048\u308B\u3079\u304D\u30CF\u30FC\u30C9\u30EB\u3002" },
       {
         term: "\u30B0\u30ED\u30B9\u53CE\u76CA\u6027\uFF08Novy-Marx\uFF09",
+        key: "grossProfitability",
         desc: "\u7C97\u5229 \xF7 \u7DCF\u8CC7\u7523\u3002\u8CEA\u306E\u9AD8\u3044\u5272\u5B89\u682A\u3092\u898B\u629C\u304F\u5B66\u8853\u6307\u6A19\u3002"
       },
       {
         term: "FCF\u5909\u63DB\u7387",
+        key: "fcfConversion",
         desc: "\u7D14\u5229\u76CA\u304C\u3069\u308C\u3060\u3051\u5B9F\u969B\u306E\u73FE\u91D1\uFF08FCF\uFF09\u306B\u306A\u308B\u304B\u3002\u4F4E\u3044\uFF1D\u5229\u76CA\u304C\u898B\u304B\u3051\u5012\u3057\u306E\u7591\u3044\u3002"
       },
       {
         term: "F-Score\uFF080\u301C9\u30FBPiotroski\uFF09",
+        key: "fScore",
         desc: "\u53CE\u76CA\u6027\u30FB\u8CA1\u52D9\u30FB\u52B9\u7387\u306E9\u9805\u76EE\u3092\u54041\u70B9\u30027\u301C9\uFF1D\u5065\u5168\u30010\u301C2\uFF1D\u5371\u967A\uFF08\u7F60\u6FC3\u539A\uFF09\u3002"
       },
       {
         term: "Altman Z",
+        key: "altmanZ",
         desc: "\u5012\u7523\u78BA\u7387\u306E\u5408\u6210\u6307\u6A19\u30023\u8D85\uFF1D\u5B89\u5168\u570F\uFF0F1.8\u672A\u6E80\uFF1D\u5371\u967A\u30BE\u30FC\u30F3\u3002"
       },
       { term: "\u30A4\u30F3\u30BF\u30EC\u30B9\u30C8\u30AB\u30D0\u30EC\u30C3\u30B8", desc: "\u55B6\u696D\u5229\u76CA \xF7 \u652F\u6255\u5229\u606F\u3002\u501F\u91D1\u306E\u5229\u6255\u3044\u4F59\u529B\u3002" },
-      { term: "Q\u30B9\u30B3\u30A2\uFF080\u301C9\uFF09", desc: "\u4E0A\u8A18\u3092\u675F\u306D\u305F\u54C1\u8CEA\u30B9\u30B3\u30A2\u3002" }
+      { term: "Q\u30B9\u30B3\u30A2\uFF080\u301C9\uFF09", key: "qScore", desc: "\u4E0A\u8A18\u3092\u675F\u306D\u305F\u54C1\u8CEA\u30B9\u30B3\u30A2\u3002" }
     ]
   },
   {
@@ -4442,17 +4456,20 @@ var GLOSSARY = [
     title: "\u2462 \u30E2\u30E1\u30F3\u30BF\u30E0\uFF08\u52E2\u3044\uFF09",
     tab: "value",
     terms: [
-      { term: "priceMom1Y\uFF081Y\u9A30\u843D\u7387\uFF09", desc: "\u76F4\u8FD11\u5E74\u306E\u5358\u7D14\u30EA\u30BF\u30FC\u30F3\uFF08%\uFF09\u3002" },
+      { term: "priceMom1Y\uFF081Y\u9A30\u843D\u7387\uFF09", key: "priceMom1Y", desc: "\u76F4\u8FD11\u5E74\u306E\u5358\u7D14\u30EA\u30BF\u30FC\u30F3\uFF08%\uFF09\u3002" },
       {
         term: "pos52w\uFF0852\u9031\u4F4D\u7F6E\uFF09",
+        key: "pos52w",
         desc: "52\u9031\u30EC\u30F3\u30B8\u5185\u306E\u73FE\u5728\u4F4D\u7F6E\uFF080%=\u5B89\u5024\u30FB100%=\u9AD8\u5024\uFF09\u3002"
       },
       {
         term: "epsRev90d\uFF08\u696D\u7E3E\u6539\u5B9A\uFF09",
+        key: "epsRev90d",
         desc: "\u76F4\u8FD190\u65E5\u3067\u30A2\u30CA\u30EA\u30B9\u30C8EPS\u4E88\u60F3\u304C\u4E0A\u65B9/\u4E0B\u65B9\u4FEE\u6B63\u3055\u308C\u305F\u5EA6\u5408\u3044\u3002\u30D7\u30E9\u30B9\uFF1D\u671F\u5F85\u304C\u4E0A\u5411\u304D\u3002"
       },
       {
         term: "rsVsSector\uFF08\u5BFE\u5E02\u5834 \u76F8\u5BFE\u5F37\u3055\uFF09",
+        key: "rsVsSector",
         desc: "\u4E16\u754C\u682AACWI\u3068\u6BD4\u3079\u305F\u5024\u52D5\u304D\u306E\u5F37\u3055\u3002\u5730\u5408\u3044\u3067\u306A\u304F\u500B\u5225\u306E\u5F37\u3055\u3092\u898B\u308B\u3002"
       }
     ]
@@ -4464,11 +4481,23 @@ var GLOSSARY = [
     terms: [
       {
         term: "\u58F2\u308A\u30C8\u30EA\u30AC\u30FC3\u7A2E",
+        key: "sellTriggers",
         desc: "\u30C6\u30FC\u30BC\u5D29\u58CA\u58F2\u308A\uFF0F\u76EE\u6A19\u5230\u9054\u58F2\u308A\uFF0F\u30D0\u30F3\u30C9\u30FB\u30EA\u30D0\u30E9\u30F3\u30B9\u58F2\u308A\u3002\u4E8B\u524D\u306B\u6C7A\u3081\u3066\u58F2\u308A\u9045\u308C\u3092\u9632\u3050\u3002"
       },
       {
         term: "\u7684\u4E2D\u7387\uFF08hit-rate\uFF09",
+        key: "hitRate",
         desc: "\u904E\u53BB\u306E\u5224\u65AD\u304C\u5F53\u305F\u3063\u305F\u304B\u306E\u5B66\u7FD2\u30EB\u30FC\u30D7\u3002\u767A\u8B70\u3068verdict\u3092\u5225\u5EFA\u3066\u3067\u63A1\u70B9\u3002"
+      },
+      {
+        term: "\u904E\u5927\u30DD\u30B8",
+        key: "overweightCount",
+        desc: "\u4ECA\u306E\u30B5\u30A4\u30BA\u304C\u9069\u6B63\u6BD4\u7387\u3092\u8D85\u3048\u3066\u3044\u308B\u4FDD\u6709\u306E\u672C\u6570\u3002\u6E1B\u3089\u3059\u5019\u88DC\u306E\u6570\u3002"
+      },
+      {
+        term: "\u5272\u5B89\u5019\u88DC",
+        key: "cheapCount",
+        desc: "\u5224\u5B9A\u30A8\u30F3\u30B8\u30F3\u304C\u300C\u5272\u5B89\uFF08cheap\uFF09\u300D\u3068\u898B\u3066\u3044\u308B\u9298\u67C4\u306E\u672C\u6570\u3002\u8CB7\u3044\u5897\u3057\u691C\u8A0E\u306E\u6BCD\u6570\u3002"
       },
       {
         term: "\u767A\u8B70\u306E\u7684\u4E2D",
@@ -4594,6 +4623,11 @@ var GLOSSARY = [
 ];
 
 // src/glossary.js
+var _byKey = /* @__PURE__ */ new Map();
+for (const cat of GLOSSARY) for (const t of cat.terms) if (t.key) _byKey.set(t.key, t);
+function glossaryTermByKey(key) {
+  return _byKey.get(key) || null;
+}
 function glossaryHTML(tab) {
   const cats = GLOSSARY.filter((c) => c.tab === "both" || c.tab === tab);
   const catsHTML = cats.map((cat) => {
@@ -6111,6 +6145,17 @@ function sizeBarHTML(currentPct, targetPct, conviction) {
     </div>
   </div>`;
 }
+function termChip(cls, title, valueHTML, key, extraSummaryCls = "") {
+  const t = glossaryTermByKey(key);
+  const sCls = extraSummaryCls ? ` ${extraSummaryCls}` : "";
+  if (!t) {
+    return `<div class="${cls}${sCls}"><span class="t">${escapeHTML(title)}</span><span class="v">${valueHTML}</span></div>`;
+  }
+  return `<details class="${cls}">
+    <summary class="${cls}-h${sCls}" aria-label="${escapeHTML(title)} \u306E\u8AAC\u660E\u3092\u958B\u304F"><span class="t">${escapeHTML(title)}</span><span class="v">${valueHTML}</span><span class="ti" aria-hidden="true">\u24D8</span></summary>
+    <p class="${cls}-x">${escapeHTML(t.desc)}</p>
+  </details>`;
+}
 function sortKeyForLens(lens) {
   switch (lens) {
     case "total":
@@ -6132,12 +6177,12 @@ function coreChipsHTML(val, lens) {
   const sk = sortKeyForLens(lens);
   const per = `${fmtRaw(v.perTrail)}\u2192${fmtRaw(v.perFwd)}`;
   const pct = val && val.percentile != null && isFinite(val.percentile) ? `${Math.round(val.percentile)}%ile` : "\u2014";
-  const chip = (id, k, b) => `<span class="val-c${sk.chip === id ? " is-sortkey" : ""}"><span class="k">${k}</span><b>${escapeHTML(b)}</b></span>`;
+  const skCls = (posId) => sk.chip === posId ? "is-sortkey" : "";
   return `<div class="val-chips">
-    ${chip("per", "PER", per)}
-    ${chip("peg", "PEG", fmtRaw(v.peg))}
-    ${chip("pct", "%\u30BF\u30A4\u30EB", pct)}
-    ${chip("f", "F\u30B9\u30B3\u30A2", fmtRaw(q.fScore))}
+    ${termChip("val-c", "PER", escapeHTML(per), "per", skCls("per"))}
+    ${termChip("val-c", "PEG", escapeHTML(fmtRaw(v.peg)), "peg", skCls("peg"))}
+    ${termChip("val-c", "%\u30BF\u30A4\u30EB", escapeHTML(pct), "percentile", skCls("pct"))}
+    ${termChip("val-c", "F\u30B9\u30B3\u30A2", escapeHTML(fmtRaw(q.fScore)), "fScore", skCls("f"))}
   </div>`;
 }
 function detailHTML(val) {
@@ -6147,40 +6192,40 @@ function detailHTML(val) {
   const m = val.momentum || {};
   const ig = v.cyclical === true ? null : impliedGrowth(v.fcfYield, q.wacc != null ? q.wacc : null);
   const igTxt = ig != null && isFinite(ig) ? `${fmt1(ig)}%${isGrowthOverheated(ig) ? " \u26A0\u671F\u5F85\u904E\u591A" : ""}` : "\u2014";
-  const igCls = isGrowthOverheated(ig) ? ' class="val-warn"' : "";
+  const igHTML = isGrowthOverheated(ig) ? `<span class="val-warn">${escapeHTML(igTxt)}</span>` : escapeHTML(igTxt);
   const tg = v.targetGapPct != null && isFinite(v.targetGapPct) ? v.targetGapPct : null;
   const tgTxt = tg != null ? `${tg >= 0 ? "+" : ""}${fmt1(tg)}%` : "\u2014";
-  const tgCls = tg == null ? "" : tg >= 0 ? ' class="val-mom-up"' : ' class="val-mom-dn"';
-  const valueGrp = `<div class="val-met">
-      <b>EV/EBITDA</b><span>${escapeHTML(fmtRaw(v.evEbitda))}</span>
-      <b>FCF\u5229\u56DE\u308A</b><span>${escapeHTML(fmtRaw(v.fcfYield))}%</span>
-      <b>\u682A\u4E3B\u9084\u5143</b><span>${escapeHTML(fmtRaw(v.shareholderYield))}%</span>
-      <b>\u7E54\u8FBC\u6210\u9577</b><span${igCls}>${escapeHTML(igTxt)}</span>
-      <b>\u76EE\u6A19\u4E56\u96E2</b><span${tgCls}>${escapeHTML(tgTxt)}</span>
+  const tgHTML = tg == null ? escapeHTML(tgTxt) : `<span class="${tg >= 0 ? "val-mom-up" : "val-mom-dn"}">${escapeHTML(tgTxt)}</span>`;
+  const valueGrp = `<div class="val-cards">
+      ${termChip("val-card", "EV/EBITDA", escapeHTML(fmtRaw(v.evEbitda)), "evEbitda")}
+      ${termChip("val-card", "FCF\u5229\u56DE\u308A", `${escapeHTML(fmtRaw(v.fcfYield))}%`, "fcfYield")}
+      ${termChip("val-card", "\u682A\u4E3B\u9084\u5143", `${escapeHTML(fmtRaw(v.shareholderYield))}%`, "shareholderYield")}
+      ${termChip("val-card", "\u7E54\u8FBC\u6210\u9577", igHTML, "impliedGrowth")}
+      ${termChip("val-card", "\u76EE\u6A19\u4E56\u96E2", tgHTML, "targetGap")}
     </div>`;
   const roicNum = q.roic != null && isFinite(q.roic) ? q.roic : null;
   const waccNum = q.wacc != null && isFinite(q.wacc) ? q.wacc : null;
   const roicBad = roicNum != null && waccNum != null && roicNum < waccNum;
   const roicStr = `${escapeHTML(fmtRaw(roicNum))}% vs WACC ${escapeHTML(fmtRaw(waccNum))}%`;
-  const roicMetric = roicBad ? `<span class="val-bad">${roicStr} \u26A0\u4E0B\u56DE\u308A</span>` : roicStr;
+  const roicHTML = roicBad ? `<span class="val-bad">${roicStr} \u26A0\u4E0B\u56DE\u308A</span>` : roicStr;
   const zNum = q.altmanZ != null && isFinite(q.altmanZ) ? q.altmanZ : null;
   const zStr = escapeHTML(fmtRaw(zNum));
-  const zMetric = zNum != null && zNum < 3 ? `<span class="val-warn">${zStr} \u26A0&lt;3</span>` : zStr;
-  const qualGrp = `<div class="val-met">
-      <b>ROIC</b><span>${roicMetric}</span>
-      <b>\u7C97\u5229/\u8CC7\u7523</b><span>${escapeHTML(fmtRaw(q.grossProf))}</span>
-      <b>FCF\u5909\u63DB</b><span>${escapeHTML(fmtRaw(q.fcfConv))}</span>
-      <b>Altman Z</b><span>${zMetric}</span>
-      <b>Q\u30B9\u30B3\u30A2</b><span>${escapeHTML(fmtRaw(q.qScore))}</span>
+  const zHTML = zNum != null && zNum < 3 ? `<span class="val-warn">${zStr} \u26A0&lt;3</span>` : zStr;
+  const qualGrp = `<div class="val-cards">
+      ${termChip("val-card", "ROIC", roicHTML, "roic")}
+      ${termChip("val-card", "\u7C97\u5229/\u8CC7\u7523", escapeHTML(fmtRaw(q.grossProf)), "grossProfitability")}
+      ${termChip("val-card", "FCF\u5909\u63DB", escapeHTML(fmtRaw(q.fcfConv)), "fcfConversion")}
+      ${termChip("val-card", "Altman Z", zHTML, "altmanZ")}
+      ${termChip("val-card", "Q\u30B9\u30B3\u30A2", escapeHTML(fmtRaw(q.qScore)), "qScore")}
     </div>`;
   const mom1y = m.priceMom1Y != null && isFinite(m.priceMom1Y) ? m.priceMom1Y : null;
   const mom1yStr = mom1y != null ? mom1y >= 0 ? `+${fmt1(mom1y)}` : fmt1(mom1y) : "\u2014";
-  const mom1yCls = mom1y == null ? "" : mom1y >= 0 ? ' class="val-mom-up"' : ' class="val-mom-dn"';
-  const momGrp = `<div class="val-met">
-      <b>\u6539\u5B9A90d</b><span>${escapeHTML(fmtRaw(m.epsRev90d))}%</span>
-      <b>1Y\u9A30\u843D</b><span${mom1yCls}>${escapeHTML(mom1yStr)}%</span>
-      <b>52\u9031\u4F4D\u7F6E</b><span>${escapeHTML(fmtRaw(m.pos52w))}%</span>
-      <b>\u5BFE\u5E02\u5834</b><span>${escapeHTML(fmtRaw(m.rsVsSector))}%</span>
+  const mom1yHTML = mom1y == null ? `${escapeHTML("\u2014")}` : `<span class="${mom1y >= 0 ? "val-mom-up" : "val-mom-dn"}">${escapeHTML(mom1yStr)}%</span>`;
+  const momGrp = `<div class="val-cards">
+      ${termChip("val-card", "\u6539\u5B9A90d", `${escapeHTML(fmtRaw(m.epsRev90d))}%`, "epsRev90d")}
+      ${termChip("val-card", "1Y\u9A30\u843D", mom1yHTML, "priceMom1Y")}
+      ${termChip("val-card", "52\u9031\u4F4D\u7F6E", `${escapeHTML(fmtRaw(m.pos52w))}%`, "pos52w")}
+      ${termChip("val-card", "\u5BFE\u5E02\u5834", `${escapeHTML(fmtRaw(m.rsVsSector))}%`, "rsVsSector")}
     </div>`;
   const grp = (lab, cap, body) => `<div class="val-detail-grp"><span class="lab">${lab}<span class="grp-cap">${cap}</span></span>${body}</div>`;
   return `<details class="val-detail"><summary>\u8A73\u7D30\u6307\u6A19</summary>
@@ -6367,18 +6412,12 @@ async function renderValuationTab() {
   };
   const hitRateVal = `${hrPart("\u767A\u8B70", hrA)}<span class="hr-sep"> / </span>${hrPart("\u5224\u5B9A", hrV)}`;
   const trigVal = `<span class="hr-p">\u62B5\u89E6${triggerCount}</span><span class="hr-sep">\u30FB</span><span class="hr-p">\u76E3\u8996${watchCount}</span>`;
-  const statsExplain = `<details class="val-stats-help">
-    <summary>\u24D8 \u7D71\u8A08\u306E\u898B\u65B9</summary>
-    <p><b>\u767A\u8B70</b>\uFF1A\u81EA\u5206\u306E\u58F2\u8CB7\u304C\u7D041\u30F6\u6708\u5F8C\u306B\u5BFEACWI\u3067\u6B63\u3057\u304B\u3063\u305F\u304B\uFF08\u5F53\u305F\u308A / \u5224\u5B9A\u6E08\uFF09\u3002</p>
-    <p><b>\u5224\u5B9A</b>\uFF1A\u30A8\u30F3\u30B8\u30F3\u306E cheap/rich \u304C\u7D046\u30F6\u6708\u5F8C\u306B\u5BFEACWI\u3067\u5F53\u305F\u3063\u305F\u304B\u3002</p>
-    <p><b>\u62B5\u89E6/\u76E3\u8996</b>\uFF1A\u4E8B\u524D\u30EB\u30FC\u30EB\u306B\u4ECA\u62B5\u89E6\u3057\u3066\u3044\u308B\u9298\u67C4\u6570 / \u76E3\u8996\u4E2D\u306E\u9298\u67C4\u6570\u3002</p>
-  </details>`;
   const statsHTML = `<div class="val-stats">
-    <div class="val-stat"><span class="k">\u904E\u5927\u30DD\u30B8</span><span class="v">${overCount}</span></div>
-    <div class="val-stat"><span class="k">\u5272\u5B89\u5019\u88DC</span><span class="v">${cheapCount}</span></div>
-    <div class="val-stat"><span class="k">\u7684\u4E2D\u7387</span><span class="v">${hitRateVal}</span></div>
-    <div class="val-stat"><span class="k">\u30C8\u30EA\u30AC\u30FC</span><span class="v">${trigVal}</span></div>
-  </div>${statsExplain}`;
+    ${termChip("val-stat", "\u904E\u5927\u30DD\u30B8", escapeHTML(String(overCount)), "overweightCount")}
+    ${termChip("val-stat", "\u5272\u5B89\u5019\u88DC", escapeHTML(String(cheapCount)), "cheapCount")}
+    ${termChip("val-stat", "\u7684\u4E2D\u7387", hitRateVal, "hitRate")}
+    ${termChip("val-stat", "\u30C8\u30EA\u30AC\u30FC", trigVal, "sellTriggers")}
+  </div>`;
   const lenses = [
     { key: "total", label: "\u7DCF\u5408" },
     { key: "value", label: "\u30D0\u30EA\u30E5" },
