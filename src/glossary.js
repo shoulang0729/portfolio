@@ -46,7 +46,7 @@ export function glossaryHTML(tab) {
     .join('');
 
   return `<details class="gloss">
-    <summary>📘 用語解説（タップで開く）</summary>
+    <summary>📘 用語解説</summary>
     <div class="gloss-body">${catsHTML}</div>
   </details>`;
 }
