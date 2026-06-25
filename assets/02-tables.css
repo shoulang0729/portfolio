@@ -807,13 +807,18 @@
 
 /* 詳細指標（タップ展開・全レンズ共通の深掘り。native details） */
 .val-detail { margin-top: 8px; border-top: 1px solid var(--border2); }
+/* 開閉が分かるタップ行（≥40px）＋回転シェブロン（#507 B） */
 .val-detail > summary {
-  padding: 7px 2px 0; font-size: 11px; font-weight: 600; color: var(--text2);
+  display: flex; align-items: center; min-height: 40px;
+  padding: 10px 2px; font-size: 13px; font-weight: 600; color: var(--text2);
   cursor: pointer; list-style: none;
 }
 .val-detail > summary::-webkit-details-marker { display: none; }
-.val-detail > summary::before { content: '▸ '; color: var(--text3); }
-.val-detail[open] > summary::before { content: '▾ '; }
+.val-detail > summary::before {
+  content: '▸'; display: inline-block; font-size: 13px; color: var(--text2);
+  margin-right: 6px; transition: transform 0.15s;
+}
+.val-detail[open] > summary::before { transform: rotate(90deg); }
 /* グループ見出し①②③＝文字のみ（番号は本文色・下罫線だけ・カード/帯にしない・#504 C） */
 .val-detail-grp { margin-top: 14px; }
 .val-detail-grp .grp-h {
@@ -833,7 +838,7 @@
 .lg-zone { width: 14px; height: 8px; border-radius: 2px; background: var(--vg-good); opacity: 0.5; }
 .lg-mk { width: 9px; height: 9px; border-radius: 50%; background: var(--vg-good); border: 1.5px solid var(--surface); }
 .lg-tick { width: 0; height: 11px; border-left: 1.5px solid var(--text3); }
-.lg-peer { width: 0; height: 11px; border-left: 1.5px dashed var(--accent); }
+.lg-peer { width: 0; height: 12px; border-left: 2px dashed var(--accent); }
 
 /* ── 詳細指標 目安ゲージ行（#475 rev2・1指標=1行）── */
 .vg-rows { margin-top: 6px; }
