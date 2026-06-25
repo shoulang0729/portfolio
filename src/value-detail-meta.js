@@ -376,7 +376,7 @@ function clamp01(x) {
  * メタ＋val から gauge 描画値を算出する。データ欠損は null（行を出さない）。
  * @param {MetricMeta} meta
  * @param {any} val
- * @returns {{valueHTML:string, pos:number, zone:[number,number]|null, tick:number|null, peer:number|null, peerN:number|null, tone:string, judge:{glyph:string,label:string}|null} | null}
+ * @returns {{valueHTML:string, pos:number, zone:[number,number]|null, tick:number|null, peer:number|null, peerN:number|null, peerSource:string|null, tone:string, judge:{glyph:string,label:string}|null} | null}
  */
 export function computeMetric(meta, val) {
   const v = meta.read(val);
@@ -395,6 +395,8 @@ export function computeMetric(meta, val) {
   const peer = num(pv) ? axis(pv) : null;
   const pn = meta.peerN ? meta.peerN(val) : null;
   const peerN = num(pn) ? pn : null;
+  // peer の質を正直に伝えるラベル用（finnhub-peers=同業n / etf-proxy=同業(proxy)）。
+  const peerSource = peer != null && val && val.sectorMedian ? val.sectorMedian.source || null : null;
   const j = meta.judge ? meta.judge(val) : null;
-  return { valueHTML: meta.display(val), pos, zone, tick, peer, peerN, tone: j ? j.tone : 'neu', judge: j };
+  return { valueHTML: meta.display(val), pos, zone, tick, peer, peerN, peerSource, tone: j ? j.tone : 'neu', judge: j };
 }

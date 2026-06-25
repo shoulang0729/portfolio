@@ -38,6 +38,17 @@
    "bandNote": "Yahoo trailingPE anchor 17.77 (欧州)。欧州株(STOXX/MSCI Europe)のTTM P/Eは過去5-10年で概ね12(2020/2022の安値)〜18(2021ピーク)。現17.77はバンド上端寄り＝近年高位。欧州は構造的低PER市場。bandは指数レンジからの推計、ETF集計方式差に留意。confidence med。"
   },
   "6016.T": {
+   "sectorMedian": {
+    "per": 27.2,
+    "n": null,
+    "source": "etf-proxy",
+    "etf": "1624.T",
+    "asOf": "2026-06-25"
+   },
+   "value": {
+    "perTrail": 14.7,
+    "evEbitda": 95.1
+   },
    "perCurrent": 14.84,
    "bandLow": 12,
    "bandHigh": 35,
@@ -80,6 +91,13 @@
    "sellProposal": "最優先トリム発議。1.5-2割利確で半導体15.3%→12-13%・キャッシュ復元。売りシグナルを先に発議。"
   },
   "6301.T": {
+   "sectorMedian": {
+    "per": 27.2,
+    "n": null,
+    "source": "etf-proxy",
+    "etf": "1624.T",
+    "asOf": "2026-06-25"
+   },
    "perCurrent": 15.65,
    "bandLow": 9,
    "bandHigh": 18,
@@ -98,7 +116,9 @@
     "cyclical": true,
     "fcfYield": 4.3,
     "shareholderYield": 4.9,
-    "targetGapPct": -2
+    "targetGapPct": -2,
+    "perTrail": 15.6,
+    "evEbitda": 9.6
    },
    "verdict": {
     "class": "na",
@@ -809,6 +829,13 @@
    "bandNote": "実体はNEXT FUNDS 商社・卸売(TOPIX-17)上場投信=総合商社中心(三菱商事/三井物産等)。プロンプトの『機械セクターETF』は誤り(機械はTOPIX-17別コード1624)。商社は歴史的に5〜10倍の万年割安だったがバフェット買い/ROE再評価で2025年以降12〜16倍へ再レーティング。アンカー16.12はレンジ高値圏。"
   },
   "8050.T": {
+   "sectorMedian": {
+    "per": 30,
+    "n": null,
+    "source": "etf-proxy",
+    "etf": "1625.T",
+    "asOf": "2026-06-25"
+   },
    "perCurrent": 27.86,
    "bandLow": 12,
    "bandHigh": 26,
@@ -826,7 +853,8 @@
     "debtHeavy": false,
     "fcfYield": 10.5,
     "shareholderYield": 1.1,
-    "targetGapPct": 8
+    "targetGapPct": 8,
+    "evEbitda": 15.2
    },
    "verdict": {
     "class": "trap",
@@ -854,6 +882,13 @@
    "sellProposal": "winner利確1/4を発議。trap属性ゆえ深追いせず。"
   },
   "9983.T": {
+   "sectorMedian": {
+    "per": 24.8,
+    "n": null,
+    "source": "etf-proxy",
+    "etf": "1630.T",
+    "asOf": "2026-06-25"
+   },
    "perCurrent": 52.63,
    "bandLow": 25,
    "bandHigh": 55,
@@ -872,7 +907,8 @@
     "debtHeavy": false,
     "fcfYield": 2.7,
     "shareholderYield": 0.8,
-    "targetGapPct": -5
+    "targetGapPct": -5,
+    "evEbitda": 33.5
    },
    "verdict": {
     "class": "rich_real",
