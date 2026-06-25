@@ -804,19 +804,24 @@
 }
 
 /* 詳細指標（タップ展開・全レンズ共通の深掘り。native details） */
-.val-detail { margin-top: 8px; border-top: 1px solid var(--border2); }
-/* 開閉が分かるタップ行（≥40px）＋回転シェブロン（#507 B） */
+/* アコーディオン行（背景＋枠＋SVGシェブロン・#512）。行自体に枠が付くため border-top は撤去 */
+.val-detail { margin-top: 10px; }
 .val-detail > summary {
-  display: flex; align-items: center; min-height: 40px;
-  padding: 10px 2px; font-size: 13px; font-weight: 600; color: var(--text2);
+  display: flex; align-items: center; gap: 8px;
+  min-height: 46px; padding: 12px 14px;
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 10px;
   cursor: pointer; list-style: none;
 }
 .val-detail > summary::-webkit-details-marker { display: none; }
-.val-detail > summary::before {
-  content: '▸'; display: inline-block; font-size: 13px; color: var(--text2);
-  margin-right: 6px; transition: transform 0.15s;
+.vdt-lab { font-size: 14px; font-weight: 700; color: var(--text); }
+.vdt-sub { font-size: 10.5px; color: var(--text3); font-weight: 500; }
+.vdt-chev {
+  margin-left: auto; width: 20px; height: 20px; flex: none;
+  fill: none; stroke: var(--text2); stroke-width: 2.2;
+  stroke-linecap: round; stroke-linejoin: round;
+  transition: transform 0.2s;
 }
-.val-detail[open] > summary::before { transform: rotate(90deg); }
+.val-detail[open] > summary .vdt-chev { transform: rotate(180deg); }
 /* グループ見出し①②③＝文字のみ（番号は本文色・下罫線だけ・カード/帯にしない・#504 C） */
 .val-detail-grp { margin-top: 14px; }
 .val-detail-grp .grp-h {
