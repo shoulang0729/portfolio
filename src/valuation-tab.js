@@ -235,8 +235,10 @@ function detailRow(meta, val) {
     ? `<span class="vg-badge vg-${m.tone}">${m.judge.glyph} ${escapeHTML(m.judge.label)}</span>`
     : '';
   const tag = meta.live ? `<span class="vg-live">${escapeHTML(meta.liveTag || '')}</span>` : '';
-  // 同業中央値の破線が出る指標は「同業 n=N」ラベルを併記（#493）
-  const peerLab = m.peer != null ? `<span class="vg-peer-lab">同業 n=${m.peerN != null ? m.peerN : '—'}</span>` : '';
+  // 同業中央値の破線ラベル。質を正直に: 米株 peer 群=「同業 n=N」/ JP ETF proxy=「同業(proxy)」（#493/#497）
+  const peerLab = m.peer != null
+    ? `<span class="vg-peer-lab">${m.peerSource === 'etf-proxy' ? '同業(proxy)' : `同業 n=${m.peerN != null ? m.peerN : '—'}`}</span>`
+    : '';
   const iGlyph = t ? `<span class="vg-i" aria-hidden="true">ⓘ</span>` : '';
   const expl = t ? `<p class="vg-expl">${escapeHTML(t.desc)}</p>` : '';
   // gauge 内訳（全て clamp 済み・% 配置）
