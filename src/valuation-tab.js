@@ -235,6 +235,8 @@ function detailRow(meta, val) {
     ? `<span class="vg-badge vg-${m.tone}">${m.judge.glyph} ${escapeHTML(m.judge.label)}</span>`
     : '';
   const tag = meta.live ? `<span class="vg-live">${escapeHTML(meta.liveTag || '')}</span>` : '';
+  // 同業中央値の破線が出る指標は「同業 n=N」ラベルを併記（#493）
+  const peerLab = m.peer != null ? `<span class="vg-peer-lab">同業 n=${m.peerN != null ? m.peerN : '—'}</span>` : '';
   const iGlyph = t ? `<span class="vg-i" aria-hidden="true">ⓘ</span>` : '';
   const expl = t ? `<p class="vg-expl">${escapeHTML(t.desc)}</p>` : '';
   // gauge 内訳（全て clamp 済み・% 配置）
@@ -249,7 +251,7 @@ function detailRow(meta, val) {
       <span class="vg-top"><span class="vg-lab">${escapeHTML(meta.label)}</span>${iGlyph}<span class="vg-right"><span class="vg-val">${m.valueHTML}</span>${badge}</span></span>
       <span class="vg-gauge">${zoneHTML}${tickHTML}${peerHTML}${mkHTML}</span>
       <span class="vg-ends"><span>割安 / 低</span><span>割高 / 高</span></span>
-      <span class="vg-bot">${tag}<span class="vg-cap">${escapeHTML(meta.cap)}</span></span>
+      <span class="vg-bot">${tag}${peerLab}<span class="vg-cap">${escapeHTML(meta.cap)}</span></span>
     </summary>
     ${expl}
   </details>`;

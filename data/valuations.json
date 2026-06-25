@@ -226,6 +226,15 @@
    "buyProposal": "マネックス買付制限確認後に即実行を能動発議。NLRと併せAI電力テーマ枠。"
   },
   "LITE": {
+   "sectorMedian": {
+    "per": 47.2,
+    "evEbitda": 47.5,
+    "grossMargin": 51.4,
+    "pb": 11.4,
+    "n": 8,
+    "source": "finnhub-peers",
+    "asOf": "2026-06-25"
+   },
    "value": {
     "targetGapPct": 31
    },
@@ -252,6 +261,15 @@
    }
   },
   "CRWD": {
+   "sectorMedian": {
+    "per": 55.6,
+    "evEbitda": 40.6,
+    "grossMargin": 76.7,
+    "pb": 9,
+    "n": 7,
+    "source": "finnhub-peers",
+    "asOf": "2026-06-25"
+   },
    "value": {
     "targetGapPct": 4
    },
@@ -278,6 +296,15 @@
    }
   },
   "PANW": {
+   "sectorMedian": {
+    "per": 55.6,
+    "evEbitda": 40.6,
+    "grossMargin": 76.7,
+    "pb": 9,
+    "n": 7,
+    "source": "finnhub-peers",
+    "asOf": "2026-06-25"
+   },
    "value": {
     "targetGapPct": 8
    },
@@ -344,6 +371,15 @@
    "buyProposal": "履歴薄で分位の信頼度低いため発議は慎重・小口打診に留める。週次でPER系列整備後に再評価。"
   },
   "AAPL": {
+   "sectorMedian": {
+    "per": 35.6,
+    "evEbitda": 25.3,
+    "grossMargin": 40.8,
+    "pb": 7.5,
+    "n": 10,
+    "source": "finnhub-peers",
+    "asOf": "2026-06-25"
+   },
    "perCurrent": 35.44,
    "bandLow": 24,
    "bandHigh": 40,
@@ -390,6 +426,15 @@
    }
   },
   "AMZN": {
+   "sectorMedian": {
+    "per": 24.2,
+    "evEbitda": 14.4,
+    "grossMargin": 43.7,
+    "pb": 4.2,
+    "n": 9,
+    "source": "finnhub-peers",
+    "asOf": "2026-06-25"
+   },
    "perCurrent": 31.66,
    "bandLow": 24,
    "bandHigh": 55,
@@ -438,6 +483,15 @@
    "buyProposal": "$245以下で第1弾を能動発議。大きくは追わない小口分割。"
   },
   "GOOGL": {
+   "sectorMedian": {
+    "per": 25.6,
+    "evEbitda": 23.6,
+    "grossMargin": 73.8,
+    "pb": 6.4,
+    "n": 8,
+    "source": "finnhub-peers",
+    "asOf": "2026-06-25"
+   },
    "perCurrent": 26.32,
    "bandLow": 18,
    "bandHigh": 35,
@@ -482,6 +536,15 @@
    }
   },
   "MSFT": {
+   "sectorMedian": {
+    "per": 55.6,
+    "evEbitda": 40.6,
+    "grossMargin": 76.7,
+    "pb": 9,
+    "n": 7,
+    "source": "finnhub-peers",
+    "asOf": "2026-06-25"
+   },
    "perCurrent": 21.77,
    "bandLow": 24,
    "bandHigh": 42,
@@ -530,6 +593,15 @@
    "buyProposal": "打診→段階的積み増しを能動発議。新規cheap入りではないが%タイル0＝買い継続の中核。市場の質◎・触媒(AI/Azure)◎。"
   },
   "TSLA": {
+   "sectorMedian": {
+    "per": 23.6,
+    "evEbitda": 12.3,
+    "grossMargin": 5.9,
+    "pb": 1.4,
+    "n": 4,
+    "source": "finnhub-peers",
+    "asOf": "2026-06-25"
+   },
    "perCurrent": 338.32,
    "bandLow": 40,
    "bandHigh": 250,
@@ -654,6 +726,15 @@
    "bandNote": "Energy基準=Yahoo trailingPE。原油市況でEPSが激しく循環しP/Eが最も不安定なセクター。利益急増局面は一桁台(2022油高でTTM P/E≈8-10)、利益縮小/赤字局面はP/E急騰orNM(2020は赤字でP/E無意味化)。通常の利益局面で概ね12-20。アンカー20.03はバンド高値圏=earnings谷でP/Eが上振れた状態の可能性が高く、'割高'というより分母(EPS)縮小の解釈が必要。confidence=lowでnoteに循環性明記。⚠Yahoo TTM≈20 vs Investing.com≈12.55とソース差極大。"
   },
   "PLTR": {
+   "sectorMedian": {
+    "per": 33.3,
+    "evEbitda": 20.5,
+    "grossMargin": 80,
+    "pb": 9.1,
+    "n": 10,
+    "source": "finnhub-peers",
+    "asOf": "2026-06-25"
+   },
    "perCurrent": 127.53,
    "bandLow": 130,
    "bandHigh": 450,

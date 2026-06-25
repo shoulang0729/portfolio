@@ -45,6 +45,7 @@ function fmtRaw(n) {
  *   good?:(val:any)=>[number,number]|null, tick?:(val:any)=>number|null,
  *   judge?:(val:any)=>{tone:string,glyph:string,label:string}|null,
  *   live?:boolean, liveTag?:string,
+ *   peer?:(val:any)=>number|null, peerN?:(val:any)=>number|null,
  * }} MetricMeta
  */
 
@@ -68,6 +69,8 @@ export const VALUE_DETAIL_META = [
     tick: (val) => (num(val.bandMedian) ? val.bandMedian : null),
     live: true,
     liveTag: '過去比',
+    peer: (val) => (val && val.sectorMedian && num(val.sectorMedian.per) ? val.sectorMedian.per : null),
+    peerN: (val) => (val && val.sectorMedian ? val.sectorMedian.n : null),
     judge: (val) => {
       const p = val.percentile;
       if (!num(p)) return null;
@@ -101,6 +104,8 @@ export const VALUE_DETAIL_META = [
     max: 20,
     good: () => [0, 8],
     tick: () => 15,
+    peer: (val) => (val && val.sectorMedian && num(val.sectorMedian.evEbitda) ? val.sectorMedian.evEbitda : null),
+    peerN: (val) => (val && val.sectorMedian ? val.sectorMedian.n : null),
     judge: (val) => {
       const x = V(val).evEbitda;
       return x < 8 ? J.good : x <= 15 ? J.ok : J.warn;
@@ -371,7 +376,7 @@ function clamp01(x) {
  * メタ＋val から gauge 描画値を算出する。データ欠損は null（行を出さない）。
  * @param {MetricMeta} meta
  * @param {any} val
- * @returns {{valueHTML:string, pos:number, zone:[number,number]|null, tick:number|null, peer:number|null, tone:string, judge:{glyph:string,label:string}|null} | null}
+ * @returns {{valueHTML:string, pos:number, zone:[number,number]|null, tick:number|null, peer:number|null, peerN:number|null, tone:string, judge:{glyph:string,label:string}|null} | null}
  */
 export function computeMetric(meta, val) {
   const v = meta.read(val);
@@ -385,6 +390,11 @@ export function computeMetric(meta, val) {
   const zone = g && num(g[0]) && num(g[1]) ? /** @type {[number, number]} */ ([axis(g[0]), axis(g[1])]) : null;
   const tv = meta.tick ? meta.tick(val) : null;
   const tick = num(tv) ? axis(tv) : null;
+  // 同業中央値（peer・#493）。値が入っていれば axis 位置＋サンプル数 n を返す。
+  const pv = meta.peer ? meta.peer(val) : null;
+  const peer = num(pv) ? axis(pv) : null;
+  const pn = meta.peerN ? meta.peerN(val) : null;
+  const peerN = num(pn) ? pn : null;
   const j = meta.judge ? meta.judge(val) : null;
-  return { valueHTML: meta.display(val), pos, zone, tick, peer: null, tone: j ? j.tone : 'neu', judge: j };
+  return { valueHTML: meta.display(val), pos, zone, tick, peer, peerN, tone: j ? j.tone : 'neu', judge: j };
 }
