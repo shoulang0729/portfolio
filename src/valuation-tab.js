@@ -24,8 +24,8 @@ import {
 } from './target-allocation.js';
 import { loadMfHoldings, getMfTotals } from './networth.js';
 import { loadValuations, getValuation, computeVerdict, valuationsLoaded } from './valuations.js';
-import { impliedGrowth, isGrowthOverheated } from './reverse-dcf.js';
 import { glossaryHTML, glossaryTermByKey } from './glossary.js';
+import { VALUE_DETAIL_META, VALUE_DETAIL_GROUPS, computeMetric } from './value-detail-meta.js';
 import { loadTriggers, triggersLoaded, getTriggers, evaluateTriggers } from './triggers.js';
 import { loadVerdictOutcomes, outcomesLoaded, computeHitRate } from './verdict-outcomes.js';
 import { getAllHistorical } from './historical-cache.js';
@@ -220,77 +220,60 @@ function coreChipsHTML(val, lens) {
 }
 
 /**
- * 「詳細指標」タップ展開（全レンズ同一内容）。コア4項目（PER/PEG/%タイル/F）は
- * 重複回避のため載せない。色キュー（ROIC<WACC=赤・Altman Z<3・符号色）は保持。
+ * 1指標=1行の「目安ゲージ行」（#475 rev2）。ラベル＋ⓘ＋数値＋判定バッジ＋目安バー
+ * （goodゾーン/目安tick/現在地マーカー/同業破線=将来）＋目安キャプション。タップで解説展開。
+ * メタ＆閾値は value-detail-meta.js が正本。データ欠損の指標は行ごと出さない。
+ * @param {import('./value-detail-meta.js').MetricMeta} meta
+ * @param {any} val
+ * @returns {string}
+ */
+function detailRow(meta, val) {
+  const m = computeMetric(meta, val);
+  if (m == null) return ''; // データ無し→行を出さない（空 gauge を出さない）
+  const t = glossaryTermByKey(meta.key);
+  const badge = m.judge
+    ? `<span class="vg-badge vg-${m.tone}">${m.judge.glyph} ${escapeHTML(m.judge.label)}</span>`
+    : '';
+  const tag = meta.live ? `<span class="vg-live">${escapeHTML(meta.liveTag || '')}</span>` : '';
+  const iGlyph = t ? `<span class="vg-i" aria-hidden="true">ⓘ</span>` : '';
+  const expl = t ? `<p class="vg-expl">${escapeHTML(t.desc)}</p>` : '';
+  // gauge 内訳（全て clamp 済み・% 配置）
+  const z0 = m.zone ? Math.min(m.zone[0], m.zone[1]) : 0;
+  const zw = m.zone ? Math.abs(m.zone[1] - m.zone[0]) : 0;
+  const zoneHTML = m.zone ? `<span class="vg-zone vg-${m.tone}" style="left:${z0.toFixed(0)}%;width:${zw.toFixed(0)}%"></span>` : '';
+  const tickHTML = m.tick != null ? `<span class="vg-tick" style="left:${m.tick.toFixed(0)}%"></span>` : '';
+  const peerHTML = m.peer != null ? `<span class="vg-peer" style="left:${m.peer.toFixed(0)}%"></span>` : ''; // 将来（同業中央値）
+  const mkHTML = `<span class="vg-mk vg-${m.tone}" style="left:${m.pos.toFixed(0)}%"></span>`;
+  return `<details class="vg-row">
+    <summary aria-label="${escapeHTML(meta.label)} の説明を開く">
+      <span class="vg-top"><span class="vg-lab">${escapeHTML(meta.label)}</span>${iGlyph}<span class="vg-right"><span class="vg-val">${m.valueHTML}</span>${badge}</span></span>
+      <span class="vg-gauge">${zoneHTML}${tickHTML}${peerHTML}${mkHTML}</span>
+      <span class="vg-ends"><span>割安 / 低</span><span>割高 / 高</span></span>
+      <span class="vg-bot">${tag}<span class="vg-cap">${escapeHTML(meta.cap)}</span></span>
+    </summary>
+    ${expl}
+  </details>`;
+}
+
+/**
+ * 「詳細指標」タップ展開（全レンズ同一内容）。コア4は重複回避で載せない。
+ * 3つの問い（割安か/稼ぐか/期待勢い）でグルーピングし、各指標を目安ゲージ行で出す。
  * @param {any|null} val
  * @returns {string}
  */
 function detailHTML(val) {
   if (!val) return '';
-  const v = val.value || {};
-  const q = val.quality || {};
-  const m = val.momentum || {};
-
-  // 各指標 = 独立チップカード（termChip('val-card', …)・タイトル左/数値右・ⓘタップ解説）。
-  // 閾値は値の隣に記号併記（色だけに頼らない＝色覚配慮・#450 を維持）。色付き span はそのまま valueHTML へ。
-
-  // ── バリュ ──（1段Gordon は永久一定成長前提＝シクリカルには不適 → cyclical は —）
-  const ig = v.cyclical === true ? null : impliedGrowth(v.fcfYield, q.wacc != null ? q.wacc : null);
-  const igTxt = ig != null && isFinite(ig) ? `${fmt1(ig)}%${isGrowthOverheated(ig) ? ' ⚠期待過多' : ''}` : '—';
-  const igHTML = isGrowthOverheated(ig) ? `<span class="val-warn">${escapeHTML(igTxt)}</span>` : escapeHTML(igTxt);
-  const tg = v.targetGapPct != null && isFinite(v.targetGapPct) ? v.targetGapPct : null;
-  const tgTxt = tg != null ? `${tg >= 0 ? '+' : ''}${fmt1(tg)}%` : '—';
-  const tgHTML =
-    tg == null
-      ? escapeHTML(tgTxt)
-      : `<span class="${tg >= 0 ? 'val-mom-up' : 'val-mom-dn'}">${escapeHTML(tgTxt)}</span>`;
-  const valueGrp = `<div class="val-cards">
-      ${termChip('val-card', 'EV/EBITDA', escapeHTML(fmtRaw(v.evEbitda)), 'evEbitda')}
-      ${termChip('val-card', 'FCF利回り', `${escapeHTML(fmtRaw(v.fcfYield))}%`, 'fcfYield')}
-      ${termChip('val-card', '株主還元', `${escapeHTML(fmtRaw(v.shareholderYield))}%`, 'shareholderYield')}
-      ${termChip('val-card', '織込成長', igHTML, 'impliedGrowth')}
-      ${termChip('val-card', '目標乖離', tgHTML, 'targetGap')}
-    </div>`;
-
-  // ── 品質 ──
-  const roicNum = q.roic != null && isFinite(q.roic) ? q.roic : null;
-  const waccNum = q.wacc != null && isFinite(q.wacc) ? q.wacc : null;
-  const roicBad = roicNum != null && waccNum != null && roicNum < waccNum;
-  const roicStr = `${escapeHTML(fmtRaw(roicNum))}% vs WACC ${escapeHTML(fmtRaw(waccNum))}%`;
-  const roicHTML = roicBad ? `<span class="val-bad">${roicStr} ⚠下回り</span>` : roicStr;
-  const zNum = q.altmanZ != null && isFinite(q.altmanZ) ? q.altmanZ : null;
-  const zStr = escapeHTML(fmtRaw(zNum));
-  const zHTML = zNum != null && zNum < 3 ? `<span class="val-warn">${zStr} ⚠&lt;3</span>` : zStr;
-  const qualGrp = `<div class="val-cards">
-      ${termChip('val-card', 'ROIC', roicHTML, 'roic')}
-      ${termChip('val-card', '粗利/資産', escapeHTML(fmtRaw(q.grossProf)), 'grossProfitability')}
-      ${termChip('val-card', 'FCF変換', escapeHTML(fmtRaw(q.fcfConv)), 'fcfConversion')}
-      ${termChip('val-card', 'Altman Z', zHTML, 'altmanZ')}
-      ${termChip('val-card', 'Qスコア', escapeHTML(fmtRaw(q.qScore)), 'qScore')}
-    </div>`;
-
-  // ── モメンタム ──（日本市場慣例: 上昇=赤=up / 下落=緑=down）
-  const mom1y = m.priceMom1Y != null && isFinite(m.priceMom1Y) ? m.priceMom1Y : null;
-  const mom1yStr = mom1y != null ? (mom1y >= 0 ? `+${fmt1(mom1y)}` : fmt1(mom1y)) : '—';
-  const mom1yHTML =
-    mom1y == null
-      ? `${escapeHTML('—')}`
-      : `<span class="${mom1y >= 0 ? 'val-mom-up' : 'val-mom-dn'}">${escapeHTML(mom1yStr)}%</span>`;
-  const momGrp = `<div class="val-cards">
-      ${termChip('val-card', '改定90d', `${escapeHTML(fmtRaw(m.epsRev90d))}%`, 'epsRev90d')}
-      ${termChip('val-card', '1Y騰落', mom1yHTML, 'priceMom1Y')}
-      ${termChip('val-card', '52週位置', `${escapeHTML(fmtRaw(m.pos52w))}%`, 'pos52w')}
-      ${termChip('val-card', '対市場', `${escapeHTML(fmtRaw(m.rsVsSector))}%`, 'rsVsSector')}
-    </div>`;
-
-  // グループ凡例（1行・常時表示でモバイルでも分かる。詳しくは下部の用語解説）
-  const grp = (lab, cap, body) =>
-    `<div class="val-detail-grp"><span class="lab">${lab}<span class="grp-cap">${cap}</span></span>${body}</div>`;
-  return `<details class="val-detail"><summary>詳細指標</summary>
-    ${grp('バリュ', '価格が割安か', valueGrp)}
-    ${grp('品質', '罠でないか・稼ぐ力', qualGrp)}
-    ${grp('モメンタム', '勢いと市場対比', momGrp)}
-  </details>`;
+  const groupHTML = (g) => {
+    const rows = VALUE_DETAIL_META.filter((meta) => meta.group === g)
+      .map((meta) => detailRow(meta, val))
+      .join('');
+    if (!rows) return '';
+    const gi = VALUE_DETAIL_GROUPS[g];
+    return `<div class="val-detail-grp"><span class="lab">${escapeHTML(gi.label)}<span class="grp-cap">${escapeHTML(gi.cap)}</span></span><div class="vg-rows">${rows}</div></div>`;
+  };
+  const body = [1, 2, 3].map(groupHTML).join('');
+  if (!body) return '';
+  return `<details class="val-detail"><summary>詳細指標</summary>${body}</details>`;
 }
 
 /**
