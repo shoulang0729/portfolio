@@ -991,6 +991,20 @@
    "bandConfidence": "low",
    "bandNote": "NEXT FUNDS 日経半導体株指数連動ETF(東京エレクトロン/アドバンテスト等30銘柄)、2024/6上場で履歴が極端に薄くhold相当。主力4銘柄の予想PER平均は約39.5倍、半導体はサイクルでTTM PERが15〜50倍超まで大きく振れる。アンカー53.45はAI需要でレンジ高値圏。設定新しくバンド薄くconfidence=low。",
    "sellProposal": "SMHトリム後に半導体13%超なら5-10%トリムを発議。"
+  },
+  "SPCX": {
+   "perCurrent": null,
+   "forwardPE": 777.95,
+   "bandLow": null,
+   "bandHigh": null,
+   "bandMedian": null,
+   "percentile": null,
+   "status": "hold",
+   "asOf": "2026-06-26",
+   "bandBasis": "none(IPO直後)",
+   "bandConfidence": "low",
+   "note": "スペースX(SpaceX)。2026/6/12 IPO。トレーリングPER未形成(TTM利益基準なし・trailingPE=null)。forwardPE~778・P/B25.7・時価総額約$2.02T。TTM利益が出れば日次エンジンが自動採点開始。それまで⚪保留。",
+   "bandNote": "上場6/12で履歴極薄=自前PERバンド未確立。trailing EPSが揃うまで%タイル算定不可。週次Opusでバンド初期化を検討。"
   }
  }
 }
