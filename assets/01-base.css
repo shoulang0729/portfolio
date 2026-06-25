@@ -31,6 +31,11 @@ html[data-theme="light"] {
   --scrollbar-thumb-hover: rgba(0,0,0,0.30);
   --scrollbar-track:       transparent;
   --accent:    #cc785c;
+  /* 判定バッジ/ゲージのトーン（価格の赤緑とは別系統の意味色・#475 rev2。ライト） */
+  --vg-good:   #4f8a4d;
+  --vg-ok:     #b88a2e;
+  --vg-warn:   #c2603f;
+  --vg-neu:    #8a8178;
 }
 html[data-theme="dark"] {
   --bg:        #1c1917;
@@ -54,6 +59,11 @@ html[data-theme="dark"] {
   --scrollbar-thumb-hover: rgba(255,255,255,0.26);
   --scrollbar-track:       transparent;
   --accent:    #cc785c;
+  /* 判定バッジ/ゲージのトーン（#475 rev2。ダーク・コントラスト確保） */
+  --vg-good:   #7aa978;
+  --vg-ok:     #d8b25a;
+  --vg-warn:   #dd7a55;
+  --vg-neu:    #a99e92;
 }
 /* セマンティックカラー（テーマ非依存・市場慣例＋状態色）。
    ハードコード hex を排し、意味で参照できるようトークン化（Design System 準拠）。 */
