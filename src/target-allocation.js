@@ -42,6 +42,28 @@ export function __setConfig(cfg) {
 }
 
 /**
+ * テーマキー → 自然言語ラベル（#502 B・生キー露出を撲滅）。
+ * 未登録キーはそのまま返す（themeLabel）。
+ * @type {Record<string,string>}
+ */
+export const THEME_LABELS = {
+  semiconductor: '半導体',
+  ai_power: 'AI電力',
+  megatech: 'メガテック',
+  japan_theme: '日本テーマ株',
+  commodity_miner: '資源・鉱山',
+  silver: '銀',
+  space: '宇宙',
+  europe: '欧州',
+  energy: 'エネルギー',
+};
+
+/** テーマキーを自然言語ラベルに（未登録はキーのまま）。 */
+export function themeLabel(k) {
+  return THEME_LABELS[k] || k;
+}
+
+/**
  * symbol が属するテーマ（themeCaps のキー）を返す。無ければ null。
  * @param {string} symbol
  * @returns {string|null}

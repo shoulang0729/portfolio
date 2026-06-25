@@ -585,6 +585,18 @@
 .rcmp-v.bench { color: var(--text2); }
 .rcmp-cap { background: var(--surface2); border-radius: 9px; padding: 9px 11px; margin-top: 11px; font-size: 12px; color: var(--text2); }
 .rcmp-cap b { color: var(--accent); font-weight: 800; }
+/* 地域ルックスルー構成バー（#502 D）。日本バーに ACWI5% の参考縦線を重ねる。 */
+.rgn-bars { margin: 6px 0 0; }
+.rgn-row { display: grid; grid-template-columns: 60px 1fr 52px; align-items: center; gap: 10px; margin: 8px 0; }
+.rgn-k { font-size: 11.5px; font-weight: 600; color: var(--text); }
+.rgn-t { position: relative; height: 18px; background: var(--surface2); border-radius: 6px; overflow: hidden; }
+.rgn-f { display: block; height: 100%; border-radius: 6px; background: var(--accent); }
+.rgn-f.alt { background: var(--text2); }
+.rgn-f.cash { background: var(--text3); }
+.rgn-ref { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--text); border-radius: 1px; }
+.rgn-v { font-size: 13px; font-weight: 800; text-align: right; font-variant-numeric: tabular-nums; color: var(--text); }
+.rgn-refnote { font-size: 11px; color: var(--text2); margin: 11px 0 0; line-height: 1.5; }
+.rgn-refnote b { color: var(--text); font-weight: 800; }
 .region-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
 .region-list-item {
   display: flex; justify-content: space-between; align-items: center;
@@ -970,11 +982,12 @@
 .rev-cov.low { color: var(--warn); }
 .rev-cap { font-size: 10.5px; color: var(--text3); margin: 9px 0 0; padding-top: 9px; border-top: 1px dashed var(--border2); line-height: 1.5; }
 .rev-cap b { color: var(--text); }
-.q-sub { display: flex; gap: 10px; margin: 15px 0 0; }
-.q-stat2 { flex: 1; background: var(--surface2); border: 1px solid var(--border2); border-radius: 10px; padding: 10px 11px; }
-.q-stat2 .qsl { font-size: 10.5px; color: var(--text2); display: flex; align-items: center; gap: 4px; }
-.q-stat2 .qsv { font-size: 18px; font-weight: 800; margin-top: 2px; color: var(--text); }
-.q-stat2 .qsc { font-size: 10px; color: var(--text3); margin-top: 2px; }
+.q-sub { display: flex; gap: 10px; margin: 15px 0 0; align-items: stretch; }
+.q-stat2 { flex: 1; display: flex; flex-direction: column; background: var(--surface2); border: 1px solid var(--border2); border-radius: 10px; padding: 10px 11px; }
+.q-stat2 .qsl { font-size: 10.5px; color: var(--text2); display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.q-stat2 .qsl-l { display: inline-flex; align-items: center; gap: 4px; }
+.q-stat2 .qsv { font-size: 18px; font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; }
+.q-stat2 .qsc { font-size: 10px; color: var(--text3); margin-top: 5px; line-height: 1.45; }
 .q-block { margin-top: 16px; border-top: 1px solid var(--border2); padding-top: 13px; }
 .q-bhd { font-size: 12px; font-weight: 700; color: var(--text); margin: 0 0 9px; display: flex; align-items: center; gap: 6px; }
 .q-bhd .ric { color: var(--text2); }
