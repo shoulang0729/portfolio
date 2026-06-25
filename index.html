@@ -24,10 +24,10 @@
 
 <!-- スタイルシート -->
 
-<link rel="stylesheet" href="assets/01-base.css?v=20260625C">
-<link rel="stylesheet" href="assets/02-tables.css?v=20260625C">
-<link rel="stylesheet" href="assets/03-misc.css?v=20260625C">
-<link rel="stylesheet" href="assets/04-auth.css?v=20260625C">
+<link rel="stylesheet" href="assets/01-base.css?v=20260625D">
+<link rel="stylesheet" href="assets/02-tables.css?v=20260625D">
+<link rel="stylesheet" href="assets/03-misc.css?v=20260625D">
+<link rel="stylesheet" href="assets/04-auth.css?v=20260625D">
 
 <!-- assets/05-ai-tab.css は src/_disabled/05-ai-tab.css に移動（AIタブ無効化中）-->
 <!-- 銘柄リスト列表示制御（JS が動的に書き込む） -->
@@ -333,14 +333,14 @@
 
 <!-- ES Module エントリーポイント（全ファイルを import する単一スクリプト） -->
 
-<script type="module" src="dist/app.js?v=20260625C"></script>
+<script type="module" src="dist/app.js?v=20260625D"></script>
 
 
 <!-- PWA Service Worker 登録 -->
 <script>
 if ('serviceWorker' in navigator) {
 
-navigator.serviceWorker.register('./sw.js?v=20260625C').catch(() => {});
+navigator.serviceWorker.register('./sw.js?v=20260625D').catch(() => {});
 
 }
 </script>
