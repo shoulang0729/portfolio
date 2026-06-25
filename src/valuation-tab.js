@@ -306,10 +306,10 @@ function detailHTML(val) {
     <div class="vg-legend-ttl">目安バーの見方</div>
     <div class="vg-legend-bar"><span class="vg-zone vg-good" style="left:8%;width:46%"></span><span class="vg-tick" style="left:50%"></span><span class="vg-peer" style="left:72%"></span><span class="vg-mk vg-good" style="left:34%"></span></div>
     <ul class="vg-legend-items">
-      <li><span class="lg-sw lg-zone"></span>塗り＝良い範囲（目安）</li>
-      <li><span class="lg-sw lg-mk"></span>● いまの値（この銘柄）</li>
-      <li><span class="lg-sw lg-tick"></span>│ 目安ライン（中央値/しきい値）</li>
-      <li><span class="lg-sw lg-peer"></span>┊ 同業中央値（破線）</li>
+      <li><span class="lg-sw lg-zone"></span>良い範囲（目安）</li>
+      <li><span class="lg-sw lg-mk"></span>いまの値（この銘柄）</li>
+      <li><span class="lg-sw lg-tick"></span>目安ライン（中央値/しきい値）</li>
+      <li><span class="lg-sw lg-peer"></span>同業中央値（破線）</li>
     </ul>
   </div>`;
   return `<details class="val-detail"><summary>詳細指標</summary>${legend}${body}</details>`;
