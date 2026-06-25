@@ -840,6 +840,7 @@
 .vg-ends { display: flex; justify-content: space-between; font-size: 9px; color: var(--text3); }
 .vg-bot { display: flex; align-items: baseline; gap: 6px; margin-top: 5px; }
 .vg-live { font-size: 9.5px; font-weight: 600; color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); border-radius: 6px; padding: 0 5px; }
+.vg-peer-lab { font-size: 9.5px; color: var(--accent); border-bottom: 1.5px dashed var(--accent); line-height: 1.1; }
 .vg-cap { margin-left: auto; text-align: right; font-size: 10px; color: var(--text3); }
 .vg-expl { display: none; }
 .vg-row[open] .vg-expl { display: block; margin: 8px 0 0; padding-top: 8px; border-top: 1px dashed var(--border); font-size: 11px; color: var(--text2); line-height: 1.5; }
