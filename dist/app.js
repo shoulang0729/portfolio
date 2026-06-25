@@ -1481,13 +1481,13 @@ var fmtPrice = (v, cur) => {
 var sgn = (v) => v >= 0 ? "pos" : "neg";
 var fmtJPYInt = (v) => {
   const m = Math.round(v / 1e4);
-  const sign = m < 0 ? "-" : "";
+  const sign2 = m < 0 ? "-" : "";
   const abs = Math.abs(m);
   if (abs >= 1e4) {
     const s = (abs / 1e4).toFixed(2);
-    return `${sign + (s.endsWith("0") ? (abs / 1e4).toFixed(1) : s)}\u5104`;
+    return `${sign2 + (s.endsWith("0") ? (abs / 1e4).toFixed(1) : s)}\u5104`;
   }
-  return `${sign + abs.toLocaleString()}\u4E07`;
+  return `${sign2 + abs.toLocaleString()}\u4E07`;
 };
 var fmtPctInt = (v) => `${Math.round(v)}%`;
 var fmtShares = (n) => {
@@ -5808,6 +5808,9 @@ function fmt1(n) {
 function fmtRaw(n) {
   return num3(n) ? n.toFixed(1) : "\u2014";
 }
+function sign(n) {
+  return n >= 0 ? "+" : "";
+}
 var V = (val) => val && val.value || {};
 var Q = (val) => val && val.quality || {};
 var M = (val) => val && val.momentum || {};
@@ -5822,7 +5825,10 @@ var VALUE_DETAIL_META = [
     display: (val) => `${fmtRaw(V(val).perTrail)}\u2192${fmtRaw(V(val).perFwd)}`,
     min: (val) => num3(val.bandLow) ? val.bandLow : 0,
     max: (val) => num3(val.bandHigh) ? val.bandHigh : num3(V(val).perTrail) ? V(val).perTrail * 2 : 1,
-    good: (val) => [num3(val.bandLow) ? val.bandLow : 0, num3(val.bandMedian) ? val.bandMedian : num3(V(val).perTrail) ? V(val).perTrail : 1],
+    good: (val) => [
+      num3(val.bandLow) ? val.bandLow : 0,
+      num3(val.bandMedian) ? val.bandMedian : num3(V(val).perTrail) ? V(val).perTrail : 1
+    ],
     tick: (val) => num3(val.bandMedian) ? val.bandMedian : null,
     live: true,
     liveTag: "\u904E\u53BB\u6BD4",
@@ -6115,6 +6121,112 @@ var VALUE_DETAIL_META = [
     judge: (val) => M(val).rsVsSector > 0 ? J.good : J.warn
   }
 ];
+var EVAL = {
+  per: (val) => {
+    const pf = V(val).perFwd;
+    const pt = V(val).perTrail;
+    const p = val && val.percentile;
+    if (!num3(pt) && !num3(pf)) return null;
+    const sm = val && val.sectorMedian && num3(val.sectorMedian.per) ? val.sectorMedian.per : null;
+    const bandTxt = num3(val.bandLow) && num3(val.bandHigh) ? `\u904E\u53BB\u30D0\u30F3\u30C9(${fmt1(val.bandLow)}\u301C${fmt1(val.bandHigh)})` : "\u904E\u53BB\u30D0\u30F3\u30C9";
+    const posTxt = num3(p) ? p < 40 ? `${bandTxt}\u306E\u4E0B\u534A\u5206\uFF1D\u76F8\u5BFE\u7684\u306B\u5272\u5B89` : p <= 70 ? `${bandTxt}\u306E\u4E2D\u307B\u3069\uFF1D\u4E2D\u7ACB\u570F` : `${bandTxt}\u306E\u4E0A\u534A\u5206\uFF1D\u3084\u3084\u5272\u9AD8` : bandTxt;
+    const ref = num3(pf) ? pf : pt;
+    const smTxt = sm != null ? `\u3001\u540C\u696D\u4E2D\u592E\u5024 \u7D04${fmt1(sm)}\u500D${num3(ref) ? ref < sm ? "\u3088\u308A\u4F4E\u3044" : ref > sm ? "\u3088\u308A\u9AD8\u3044" : "\u4E26\u307F" : ""}` : "";
+    return `PER ${fmtRaw(ref)}\u500D\u306F${posTxt}${smTxt}\u3002`;
+  },
+  peg: (val) => {
+    const x = V(val).peg;
+    if (!num3(x)) return null;
+    return `PEG ${fmtRaw(x)}\uFF1D${x < 1 ? "\u6210\u9577\u5BFE\u6BD4\u3067\u5272\u5B89\u5BC4\u308A" : x <= 2 ? "\u6210\u9577\u76F8\u5FDC" : "\u6210\u9577\u3092\u7E54\u308A\u8FBC\u3093\u3067\u3082\u5272\u9AD8"}\u3002`;
+  },
+  evEbitda: (val) => {
+    const x = V(val).evEbitda;
+    if (!num3(x)) return null;
+    const sm = val && val.sectorMedian && num3(val.sectorMedian.evEbitda) ? val.sectorMedian.evEbitda : null;
+    const t = x < 8 ? "\u5272\u5B89\u6C34\u6E96" : x <= 15 ? "\u6A19\u6E96\u6C34\u6E96" : "\u5272\u9AD8\u6C34\u6E96";
+    return `\u501F\u91D1\u8FBC\u307F\u306E\u4F01\u696D\u4FA1\u5024\u306F\u672C\u696D\u5229\u76CA\u306E${fmtRaw(x)}\u5E74\u5206\uFF1D${t}${sm != null ? `\uFF08\u540C\u696D\u4E2D\u592E\u5024 \u7D04${fmt1(sm)}x\uFF09` : ""}\u3002`;
+  },
+  percentile: (val) => {
+    const p = val && val.percentile;
+    if (!num3(p)) return null;
+    return `\u81EA\u5206\u306E\u904E\u53BB\u30D0\u30EA\u30E5\u30A8\u30FC\u30B7\u30E7\u30F3\u5206\u5E03\u3067\u4E0B\u304B\u3089${Math.round(p)}%\u306E\u4F4D\u7F6E\uFF1D${p < 40 ? "\u5272\u5B89\u570F\uFF08\u8CB7\u3044\u5834\u5BC4\u308A\uFF09" : p <= 70 ? "\u4E2D\u7ACB\u570F" : "\u5272\u9AD8\u570F\uFF08\u904E\u71B1\u5BC4\u308A\uFF09"}\u3002`;
+  },
+  fcfYield: (val) => {
+    const x = V(val).fcfYield;
+    if (!num3(x)) return null;
+    return `\u6642\u4FA1\u7DCF\u984D\u306B\u5BFE\u3057FCF\u3092\u5E74${fmtRaw(x)}%\u751F\u3080\uFF1D${x > 4 ? "\u73FE\u91D1\u5275\u51FA\u529B\u304C\u9AD8\u304F\u5999\u5473\u3042\u308A" : x >= 2 ? "\u6A19\u6E96\u7684\u306A\u6C34\u6E96" : "\u73FE\u91D1\u5275\u51FA\u529B\u306F\u4F4E\u3081"}\u3002`;
+  },
+  shareholderYield: (val) => {
+    const x = V(val).shareholderYield;
+    if (!num3(x)) return null;
+    return `\u914D\u5F53\uFF0B\u81EA\u793E\u682A\u8CB7\u3044\u3067\u5E74${fmtRaw(x)}%\u3092\u682A\u4E3B\u306B\u8FD4\u3059\uFF1D${x > 3 ? "\u682A\u4E3B\u9084\u5143\u306F\u624B\u539A\u3044" : x >= 1 ? "\u6A19\u6E96\u7684\u306A\u9084\u5143" : "\u9084\u5143\u306F\u8584\u3081"}\u3002`;
+  },
+  fcfConversion: (val) => {
+    const x = Q(val).fcfConv;
+    if (!num3(x)) return null;
+    return `FCF\u5909\u63DB ${fmtRaw(x)}\uFF1D${x > 0.9 ? "\u5E33\u7C3F\u5229\u76CA\u304C\u3057\u3063\u304B\u308A\u73FE\u91D1\u5316\uFF1D\u8CEA\u304C\u9AD8\u3044" : x >= 0.6 ? "\u3084\u3084\u73FE\u91D1\u5316\u306B\u96E3" : "\u5229\u76CA\u304C\u73FE\u91D1\u306B\u5316\u3051\u306B\u304F\u3044"}\u3002`;
+  },
+  roic: (val) => {
+    const r = Q(val).roic;
+    const w = Q(val).wacc;
+    if (!num3(r) || !num3(w)) return null;
+    const d = r - w;
+    const t = d >= 1 ? "\u8CC7\u672C\u3092\u4F7F\u3046\u307B\u3069\u4FA1\u5024\u3092\u751F\u3080" : d > -1 ? "\u8CC7\u672C\u30B3\u30B9\u30C8\u3068\u62EE\u6297\uFF1D\u4FA1\u5024\u5275\u9020\u306F\u8584\u3044" : "\u8CC7\u672C\u30B3\u30B9\u30C8\u5272\u308C\uFF1D\u4FA1\u5024\u3092\u6BC0\u640D";
+    return `ROIC ${fmtRaw(r)}% ${d >= 0 ? ">" : "<"} WACC ${fmtRaw(w)}%\uFF08${sign(d)}${fmt1(d)}pt\uFF09\uFF1D${t}\u3002`;
+  },
+  grossProfitability: (val) => {
+    const x = Q(val).grossProf;
+    if (!num3(x)) return null;
+    return `\u7DCF\u8CC7\u7523\u306B\u5BFE\u3059\u308B\u7C97\u5229\u306F${fmtRaw(x)}\uFF1D${x > 0.33 ? "\u8CC7\u7523\u52B9\u7387\u306E\u9AD8\u3044\u512A\u826F\u578B" : x >= 0.2 ? "\u6A19\u6E96\u7684" : "\u8CC7\u7523\u306E\u5272\u306B\u7C97\u5229\u304C\u8584\u3044"}\u3002`;
+  },
+  altmanZ: (val) => {
+    const z = Q(val).altmanZ;
+    if (!num3(z)) return null;
+    return `Altman Z ${fmtRaw(z)}\uFF1D${z >= 3 ? "\u5012\u7523\u30EA\u30B9\u30AF\u306F\u4F4E\u3044\u5B89\u5168\u570F" : z >= 1.8 ? "\u30B0\u30EC\u30FC\u30BE\u30FC\u30F3\uFF08\u6CE8\u610F\uFF09" : "\u8CA1\u52D9\u7684\u306B\u5371\u967A\u6C34\u6E96"}\u3002`;
+  },
+  fScore: (val) => {
+    const f = Q(val).fScore;
+    const qs = Q(val).qScore;
+    const x = num3(f) ? f : qs;
+    if (!num3(x)) return null;
+    return `\u54C1\u8CEA\u30B9\u30B3\u30A2 ${Math.round(x)}/9\uFF1D${x >= 7 ? "\u53CE\u76CA\u6027\u30FB\u8CA1\u52D9\u30FB\u52B9\u7387\u3068\u3082\u5065\u5168" : x >= 5 ? "\u53CA\u7B2C\u70B9" : "\u5065\u5168\u6027\u306B\u4E0D\u5B89"}\u3002`;
+  },
+  impliedGrowth: (val) => {
+    if (V(val).cyclical === true) return null;
+    const ig = impliedGrowth(V(val).fcfYield, num3(Q(val).wacc) ? Q(val).wacc : null);
+    if (!num3(ig)) return null;
+    return `\u4ECA\u306E\u682A\u4FA1\u304C\u7E54\u308A\u8FBC\u3080\u9577\u671F\u6210\u9577\u306F\u7D04${fmt1(ig)}%\uFF1D${isGrowthOverheated(ig) ? "\u682A\u4FA1\u306F\u9AD8\u3044\u6210\u9577\u3092\u524D\u63D0\uFF1D\u671F\u5F85\u904E\u591A\u306E\u53EF\u80FD\u6027" : "\u524D\u63D0\u6210\u9577\u306F\u73FE\u5B9F\u7684\u306A\u7BC4\u56F2"}\u3002`;
+  },
+  targetGap: (val) => {
+    const tg = V(val).targetGapPct;
+    if (!num3(tg)) return null;
+    return tg > 0 ? `\u30A2\u30CA\u30EA\u30B9\u30C8\u5E73\u5747\u307E\u3067${sign(tg)}${fmt1(tg)}%\u306E\u4E0A\u5024\u4F59\u5730\u3002` : `\u30A2\u30CA\u30EA\u30B9\u30C8\u5E73\u5747\u3092${fmt1(Math.abs(tg))}%\u4E0A\u56DE\u308A\u4E0A\u5024\u4F59\u5730\u306B\u4E4F\u3057\u3044\u3002`;
+  },
+  epsRev90d: (val) => {
+    const x = M(val).epsRev90d;
+    if (!num3(x)) return null;
+    const t = x > 0 ? "\u76F4\u8FD190\u65E5\u3067EPS\u4E88\u60F3\u304C\u4E0A\u65B9\u4FEE\u6B63\uFF1D\u696D\u7E3E\u306E\u8FFD\u3044\u98A8" : x < 0 ? "\u76F4\u8FD190\u65E5\u3067EPS\u4E88\u60F3\u304C\u4E0B\u65B9\u4FEE\u6B63\uFF1D\u9006\u98A8" : "\u6539\u5B9A\u306F\u6A2A\u3070\u3044";
+    return `${t}\uFF08${sign(x)}${fmt1(x)}%\uFF09\u3002`;
+  },
+  priceMom1Y: (val) => {
+    const x = M(val).priceMom1Y;
+    if (!num3(x)) return null;
+    return `\u76F4\u8FD11\u5E74\u306E\u682A\u4FA1\u306F${sign(x)}${fmt1(x)}%\uFF1D${x >= 0 ? "\u4E0A\u6607\u57FA\u8ABF" : "\u4E0B\u843D\u57FA\u8ABF"}\uFF08\u5272\u5B89/\u5272\u9AD8\u306F\u4ED6\u6307\u6A19\u3068\u4F75\u8AAD\uFF09\u3002`;
+  },
+  pos52w: (val) => {
+    const x = M(val).pos52w;
+    if (!num3(x)) return null;
+    return `52\u9031\u30EC\u30F3\u30B8\u5185\u3067${fmtRaw(x)}%\u306E\u4F4D\u7F6E\uFF1D${x > 85 ? "\u9AD8\u5024\u570F\uFF08\u904E\u71B1\u306B\u6CE8\u610F\uFF09" : x < 20 ? "\u5B89\u5024\u570F" : "\u30EC\u30F3\u30B8\u4E2D\u307B\u3069"}\u3002`;
+  },
+  rsVsSector: (val) => {
+    const x = M(val).rsVsSector;
+    if (!num3(x)) return null;
+    return `\u4E16\u754C\u682A\u5E73\u5747\u3088\u308A${sign(x)}${fmt1(x)}%\uFF1D${x > 0 ? "\u5730\u5408\u3044\u3092\u9664\u3044\u3066\u3082\u500B\u5225\u3067\u5E02\u5834\u306B\u52DD\u3063\u3066\u3044\u308B" : "\u5E02\u5834(ACWI)\u306B\u5BFE\u3057\u3066\u898B\u52A3\u308A"}\u3002`;
+  }
+};
+for (const meta of VALUE_DETAIL_META) {
+  if (EVAL[meta.key]) meta.evalText = EVAL[meta.key];
+}
 var VALUE_DETAIL_GROUPS = {
   1: { label: "\u2460 \u4FA1\u683C\u306F\u5272\u5B89\u304B\uFF1F", cap: "\u5B89\u304F\u8CB7\u3048\u3066\u3044\u308B\u304B" },
   2: { label: "\u2461 \u3061\u3083\u3093\u3068\u7A3C\u3050\u304B\u30FB\u682A\u4E3B\u306B\u8FD4\u3059\u304B\uFF1F", cap: "\u7A3C\u3050\u529B\u30FB\u9084\u5143\u30FB\u5229\u76CA\u306E\u8CEA" },
@@ -6415,8 +6527,11 @@ function sortKeyForLens(lens) {
       return { chip: "pct", sizeBar: false };
     // percentile ASC → %タイルチップ
     case "quality":
-      return { chip: "f", sizeBar: false };
-    // qScore DESC → Fチップ（代表値）
+      return { chip: "qual", sizeBar: false };
+    // qScore DESC → 品質チップ
+    case "momentum":
+      return { chip: "mom", sizeBar: false };
+    // priceMom1Y DESC → モメンタムチップ
     default:
       return { chip: null, sizeBar: false };
   }
@@ -6424,26 +6539,31 @@ function sortKeyForLens(lens) {
 function coreChipsHTML(val, lens) {
   const v = val && val.value || {};
   const q = val && val.quality || {};
+  const mo = val && val.momentum || {};
   const sk = sortKeyForLens(lens);
   const per = `${fmtRaw2(v.perTrail)}\u2192${fmtRaw2(v.perFwd)}`;
   const pct = val && val.percentile != null && isFinite(val.percentile) ? `${Math.round(val.percentile)}%ile` : "\u2014";
+  const qual = q.qScore != null && isFinite(q.qScore) ? `Q${Math.round(q.qScore)}` : "\u2014";
+  const mom = mo.priceMom1Y != null && isFinite(mo.priceMom1Y) ? `${mo.priceMom1Y >= 0 ? "+" : ""}${Math.round(mo.priceMom1Y)}%` : "\u2014";
   const skCls = (posId) => sk.chip === posId ? "is-sortkey" : "";
   return `<div class="val-chips">
     ${termChip("val-c", "PER", escapeHTML(per), "per", skCls("per"))}
-    ${termChip("val-c", "PEG", escapeHTML(fmtRaw2(v.peg)), "peg", skCls("peg"))}
     ${termChip("val-c", "%\u30BF\u30A4\u30EB", escapeHTML(pct), "percentile", skCls("pct"))}
-    ${termChip("val-c", "F\u30B9\u30B3\u30A2", escapeHTML(fmtRaw2(q.fScore)), "fScore", skCls("f"))}
+    ${termChip("val-c", "\u54C1\u8CEA", escapeHTML(qual), "qScore", skCls("qual"))}
+    ${termChip("val-c", "\u30E2\u30E1\u30F3\u30BF\u30E0", escapeHTML(mom), "priceMom1Y", skCls("mom"))}
   </div>`;
 }
 function detailRow(meta, val) {
   const m = computeMetric(meta, val);
   if (m == null) return "";
   const t = glossaryTermByKey(meta.key);
-  const badge = m.judge ? `<span class="vg-badge vg-${m.tone}">${m.judge.glyph} ${escapeHTML(m.judge.label)}</span>` : "";
+  const badge = m.judge && m.tone !== "neu" ? `<span class="vg-badge vg-${m.tone}">${m.judge.glyph} ${escapeHTML(m.judge.label)}</span>` : "";
   const tag = meta.live ? `<span class="vg-live">${escapeHTML(meta.liveTag || "")}</span>` : "";
   const peerLab = m.peer != null ? `<span class="vg-peer-lab">${m.peerSource === "etf-proxy" ? "\u540C\u696D(proxy)" : `\u540C\u696D n=${m.peerN != null ? m.peerN : "\u2014"}`}</span>` : "";
-  const iGlyph = t ? `<span class="vg-i" aria-hidden="true">\u24D8</span>` : "";
-  const expl = t ? `<p class="vg-expl">${escapeHTML(t.desc)}</p>` : "";
+  const ev = meta.evalText ? meta.evalText(val) : null;
+  const glossLink = '<a class="vg-gloss-link" href="#val-glossary">\u7528\u8A9E\u306E\u610F\u5473\u3092\u898B\u308B \u2192</a>';
+  const iGlyph = ev || t ? `<span class="vg-i" aria-hidden="true">\u24D8</span>` : "";
+  const expl = ev ? `<p class="vg-expl">\u3053\u306E\u9298\u67C4: ${escapeHTML(ev)} ${glossLink}</p>` : t ? `<p class="vg-expl vg-expl--link">\u610F\u5473\u306F<a class="vg-gloss-link" href="#val-glossary">\u7528\u8A9E\u89E3\u8AAC</a>\u3078</p>` : "";
   const z0 = m.zone ? Math.min(m.zone[0], m.zone[1]) : 0;
   const zw = m.zone ? Math.abs(m.zone[1] - m.zone[0]) : 0;
   const zoneHTML = m.zone ? `<span class="vg-zone vg-${m.tone}" style="left:${z0.toFixed(0)}%;width:${zw.toFixed(0)}%"></span>` : "";
@@ -6466,39 +6586,50 @@ function detailHTML(val) {
     const rows = VALUE_DETAIL_META.filter((meta) => meta.group === g).map((meta) => detailRow(meta, val)).join("");
     if (!rows) return "";
     const gi = VALUE_DETAIL_GROUPS[g];
-    return `<div class="val-detail-grp"><span class="lab">${escapeHTML(gi.label)}<span class="grp-cap">${escapeHTML(gi.cap)}</span></span><div class="vg-rows">${rows}</div></div>`;
+    return `<div class="val-detail-grp"><div class="grp-h"><span class="lab">${escapeHTML(gi.label)}</span><span class="grp-cap">${escapeHTML(gi.cap)}</span></div><div class="vg-rows">${rows}</div></div>`;
   };
   const body = [1, 2, 3].map(groupHTML).join("");
   if (!body) return "";
-  return `<details class="val-detail"><summary>\u8A73\u7D30\u6307\u6A19</summary>${body}</details>`;
+  const legend = `<div class="vg-legend">
+    <div class="vg-legend-ttl">\u76EE\u5B89\u30D0\u30FC\u306E\u898B\u65B9</div>
+    <div class="vg-legend-bar"><span class="vg-zone vg-good" style="left:8%;width:46%"></span><span class="vg-tick" style="left:50%"></span><span class="vg-peer" style="left:72%"></span><span class="vg-mk vg-good" style="left:34%"></span></div>
+    <ul class="vg-legend-items">
+      <li><span class="lg-sw lg-zone"></span>\u5857\u308A\uFF1D\u826F\u3044\u7BC4\u56F2\uFF08\u76EE\u5B89\uFF09</li>
+      <li><span class="lg-sw lg-mk"></span>\u25CF \u3044\u307E\u306E\u5024\uFF08\u3053\u306E\u9298\u67C4\uFF09</li>
+      <li><span class="lg-sw lg-tick"></span>\u2502 \u76EE\u5B89\u30E9\u30A4\u30F3\uFF08\u4E2D\u592E\u5024/\u3057\u304D\u3044\u5024\uFF09</li>
+      <li><span class="lg-sw lg-peer"></span>\u250A \u540C\u696D\u4E2D\u592E\u5024\uFF08\u7834\u7DDA\uFF09</li>
+    </ul>
+  </div>`;
+  return `<details class="val-detail"><summary>\u8A73\u7D30\u6307\u6A19</summary>${legend}${body}</details>`;
 }
 function bannerHTML(trig) {
   let kind = "hold";
-  let glyph = "\u25AA";
+  let icon = "vb-hold";
   let action = "\u7DAD\u6301";
   let reason = "";
   if (trig && trig.active.length > 0) {
     const t = trig.active[0];
     if (t.side === "sell") {
       kind = "sell";
-      glyph = "\u25BC";
+      icon = "vb-trim";
       action = "\u30C8\u30EA\u30E0";
     } else {
       kind = "buy";
-      glyph = "\u25B2";
+      icon = "vb-add";
       action = "\u7A4D\u5897";
     }
     reason = t.reason || t.action || "";
   } else if (trig && trig.watching.length > 0) {
     const w = trig.watching[0];
     kind = "watch";
-    glyph = "\u25E6";
+    icon = "vb-watch";
     action = "\u76E3\u8996";
     reason = w.note || w.action || "";
   }
   const reasonHTML = reason ? `<span class="vb">${escapeHTML(reason)}</span>` : "";
-  return `<div class="val-banner val-banner--${kind}"><span class="va"><span class="gl" aria-hidden="true">${glyph}</span>${action}</span>${reasonHTML}</div>`;
+  return `<div class="val-banner val-banner--${kind}"><span class="va"><svg class="vb-ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#${icon}"/></svg>${action}</span>${reasonHTML}</div>`;
 }
+var VAL_BANNER_SPRITE = '<svg class="val-sprite" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden"><defs><g id="vb-add" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/></g><g id="vb-trim" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 7 9 13 13 9 21 17"/><polyline points="15 17 21 17 21 11"/></g><g id="vb-watch" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 12S5 5.5 12 5.5 22.5 12 22.5 12 19 18.5 12 18.5 1.5 12 1.5 12Z"/><circle cx="12" cy="12" r="3"/></g><g id="vb-hold" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6.5 9.5 17 4.5 12"/></g></defs></svg>';
 function confidenceHTML(verdict) {
   if (!verdict || verdict.confidence == null) return "";
   const lv = verdict.confidence;
@@ -6648,8 +6779,8 @@ async function renderValuationTab() {
     if (hr.pending > 0) return `<span class="hr-p">${label} \u5224\u5B9A\u5F85\u3061${hr.pending}</span>`;
     return `<span class="hr-p">${label}\u2014</span>`;
   };
-  const hitRateVal = `${hrPart("\u767A\u8B70", hrA)}<span class="hr-sep"> / </span>${hrPart("\u5224\u5B9A", hrV)}`;
-  const trigVal = `<span class="hr-p">\u62B5\u89E6${triggerCount}</span><span class="hr-sep">\u30FB</span><span class="hr-p">\u76E3\u8996${watchCount}</span>`;
+  const hitRateVal = `${hrPart("\u767A\u8B70", hrA)}<span class="l2">${hrPart("\u5224\u5B9A", hrV)}</span>`;
+  const trigVal = `<span class="hr-p">\u62B5\u89E6 ${triggerCount}</span><span class="l2"><span class="hr-p">\u76E3\u8996 ${watchCount}</span></span>`;
   const statsHTML = `<div class="val-stats">
     ${termChip("val-stat", "\u904E\u5927\u30DD\u30B8", escapeHTML(String(overCount)), "overweightCount")}
     ${termChip("val-stat", "\u5272\u5B89\u5019\u88DC", escapeHTML(String(cheapCount)), "cheapCount")}
@@ -6657,7 +6788,7 @@ async function renderValuationTab() {
     ${termChip("val-stat", "\u30C8\u30EA\u30AC\u30FC", trigVal, "sellTriggers")}
   </div>`;
   const lenses = [
-    { key: "total", label: "\u7DCF\u5408" },
+    { key: "total", label: "\u30B5\u30A4\u30BA\u4E56\u96E2" },
     { key: "value", label: "\u30D0\u30EA\u30E5" },
     { key: "quality", label: "\u54C1\u8CEA" },
     { key: "momentum", label: "\u30E2\u30E1\u30F3\u30BF\u30E0" }
@@ -6669,7 +6800,7 @@ async function renderValuationTab() {
   <div class="val-lens-cap">${escapeHTML(lensCap(_lens))}</div>`;
   const sorted = sortedRows(rows);
   const rowsHTML = sorted.map((r) => rowHTML(r.p, r.currentPct, r.targetPct, r.verdict, r.val, r.trig, r.conviction)).join("");
-  wrap.innerHTML = `${statsHTML}${lensHTML}<div class="val-list">${rowsHTML}</div>${glossaryHTML("value")}`;
+  wrap.innerHTML = `${VAL_BANNER_SPRITE}${statsHTML}${lensHTML}<div class="val-list">${rowsHTML}</div><div id="val-glossary">${glossaryHTML("value")}</div>`;
   wrap.querySelectorAll(".val-seg[data-lens]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const nextLens = (
