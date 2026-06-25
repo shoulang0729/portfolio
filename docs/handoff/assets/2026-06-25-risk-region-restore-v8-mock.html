@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Risk v8</title>
+<style>
+:root{
+  --bg:#f7f2ee; --surface:#fffdfb; --surface2:#f3ece5; --surface3:#ece2d8;
+  --border:#e3d8cc; --border2:#efe7dd; --text:#2a2521; --text2:#7c7167; --text3:#a99e92;
+  --accent:#cc785c; --ok:#5b8a5a; --warn:#c79a3a; --neg:#c2603f;
+  --okbg:#eaf1e8; --warnbg:#f6eed9; --negbg:#f7e7df;
+  --shadow:0 1px 3px rgba(60,40,25,.07),0 1px 2px rgba(60,40,25,.05);
+  --s-jp:var(--accent); --s-na:#d8a98f; --s-eu:#c9b79c; --s-em:#a9b39a; --s-cash:#cbbfae;
+}
+[data-theme="dark"]{
+  --bg:#1c1917; --surface:#262220; --surface2:#2e2a27; --surface3:#393330;
+  --border:#3a342f; --border2:#332e2a; --text:#ece5dd; --text2:#a99e92; --text3:#7c7167;
+  --accent:#e0916f; --ok:#7aa978; --warn:#d8b25a; --neg:#dd7a55;
+  --shadow:0 1px 3px rgba(0,0,0,.3);
+  --s-jp:var(--accent); --s-na:#a9745a; --s-eu:#8a7b5f; --s-em:#6f7a5c; --s-cash:#6b6253;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Hiragino Sans',Arial,sans-serif;font-size:13px;line-height:1.5}
+.wrap{max-width:600px;margin:0 auto;padding:18px 16px 80px}
+h1{font-size:19px;margin:0 0 4px}
+.sub{color:var(--text2);font-size:12px;margin:0 0 16px}
+.toolbar{display:flex;gap:8px;margin-bottom:16px}
+.btn{background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer}
+.chg{background:var(--okbg);border:1px solid var(--ok);border-radius:9px;padding:9px 12px;font-size:11.5px;margin-bottom:16px}
+.chg b{color:var(--ok)}
+.ic{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:15px;margin:13px 0;box-shadow:var(--shadow)}
+.card-ttl{font-size:14px;font-weight:700;margin:0 0 12px;display:flex;align-items:center;gap:8px}
+.card-ttl .ic{color:var(--accent)}
+.card-ttl .tag{margin-left:auto;font-size:10.5px;font-weight:600;color:var(--text3);background:var(--surface2);border-radius:20px;padding:3px 10px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.gcard{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:13px;box-shadow:var(--shadow)}
+.gcard .gt{font-size:13px;font-weight:700;display:flex;align-items:center;gap:7px;margin-bottom:9px}
+.gcard .gt .ic{color:var(--accent);width:17px;height:17px}
+.minidonut{width:74px;height:74px;border-radius:50%;margin:0 auto 6px;position:relative}
+.minidonut.ac{background:conic-gradient(var(--s-jp) 0 150deg,var(--s-na) 150deg 250deg,var(--s-eu) 250deg 320deg,var(--s-em) 320deg 360deg)}
+.minidonut.cur{background:conic-gradient(var(--s-jp) 0 200deg,var(--s-na) 200deg 330deg,var(--s-em) 330deg 360deg)}
+.minidonut.sec{background:conic-gradient(var(--s-jp) 0 120deg,var(--s-na) 120deg 210deg,var(--s-eu) 210deg 280deg,var(--s-em) 280deg 330deg,var(--s-cash) 330deg 360deg)}
+.minidonut::after{content:"";position:absolute;inset:22px;border-radius:50%;background:var(--surface)}
+.gleg{font-size:10px;color:var(--text2);text-align:center}
+.donutwrap{display:flex;gap:16px;align-items:center}
+.donut{position:relative;width:148px;height:148px;flex:none;border-radius:50%;
+  background:conic-gradient(var(--s-jp) 0 148.7deg,var(--s-na) 148.7deg 253.4deg,var(--s-eu) 253.4deg 285.8deg,var(--s-em) 285.8deg 315.4deg,var(--s-cash) 315.4deg 360deg);}
+.donut .hole{position:absolute;inset:30px;border-radius:50%;background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center}
+.donut .hk{font-size:10px;color:var(--text2)} .donut .hv{font-size:20px;font-weight:800;color:var(--accent);line-height:1} .donut .hs{font-size:9px;color:var(--text3)}
+.legend{flex:1;min-width:0;display:flex;flex-direction:column;gap:7px}
+.lg{display:grid;grid-template-columns:12px 1fr auto;align-items:center;gap:8px}
+.lg .sw{width:12px;height:12px;border-radius:3px}
+.lg .ln{font-size:12px;font-weight:600} .lg .ln.jp{color:var(--accent)}
+.lg .lp{font-size:12px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--text2)}
+.home{display:flex;align-items:center;gap:13px;background:var(--surface2);border:1px solid var(--border2);border-radius:11px;padding:12px 14px;margin-top:14px}
+.home .hicon{width:38px;height:38px;border-radius:11px;background:var(--accent);display:flex;align-items:center;justify-content:center;flex:none}
+.home .hicon .ic{color:#fff;width:21px;height:21px}
+.home .hmain{flex:1;min-width:0}
+.home .hk{font-size:11px;color:var(--text2);font-weight:600}
+.home .hv{font-size:22px;font-weight:800;line-height:1.1}
+.home .hb{font-size:11px;color:var(--text2);margin-top:2px} .home .hb b{color:var(--accent);font-weight:800}
+.refnote{font-size:10.5px;color:var(--text3);margin-top:12px;padding-top:10px;border-top:1px solid var(--border2)}
+.iconkey{display:flex;flex-wrap:wrap;gap:14px;margin-top:6px}
+.iconkey .k{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2)}
+.iconkey .k .ic{color:var(--accent)}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-assetclass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.2"/><path d="M12 12V3.8M12 12l7 3.6"/></symbol>
+  <symbol id="i-currency" viewBox="0 0 24 24"><rect x="3.4" y="6.6" width="17.2" height="10.8" rx="2.2"/><circle cx="12" cy="12" r="2.7"/><path d="M6.4 9v6M17.6 9v6"/></symbol>
+  <symbol id="i-sector" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.4"/><rect x="13" y="4" width="7" height="7" rx="1.4"/><rect x="4" y="13" width="7" height="7" rx="1.4"/><rect x="13" y="13" width="7" height="7" rx="1.4"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4"/><path d="M3.6 12h16.8M12 3.6c2.6 2.4 2.6 14.4 0 16.8M12 3.6c-2.6 2.4-2.6 14.4 0 16.8"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11.5L12 5l8 6.5"/><path d="M6 10.5V19h12v-8.5"/><path d="M10 19v-4.5h4V19"/></symbol>
+</defs></svg>
+
+<div class="wrap">
+  <h1>Risk タブ v8</h1>
+  <p class="sub">追加修正3点。サンプル数値はイメージ。</p>
+  <div class="toolbar"><button class="btn" onclick="var d=document.documentElement;d.setAttribute('data-theme',d.getAttribute('data-theme')==='dark'?'light':'dark')">🌓 ライト/ダーク</button></div>
+
+  <div class="chg"><b>今回の修正</b> ①アセットクラス/通貨/セクターの3カードにアイコン追加（新規SVG） ②カード名「地域の傾き」→「<b>地域</b>」 ③マザーマーケット偏りの説明を<b>円グラフの下</b>へ移動。
+    <div class="iconkey">
+      <span class="k"><svg class="ic"><use href="#i-assetclass"/></svg>アセットクラス（円グラフ）</span>
+      <span class="k"><svg class="ic"><use href="#i-currency"/></svg>通貨（紙幣）</span>
+      <span class="k"><svg class="ic"><use href="#i-sector"/></svg>セクター（区画グリッド）</span>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="gcard"><div class="gt"><svg class="ic"><use href="#i-assetclass"/></svg>アセットクラス</div>
+      <div class="minidonut ac"></div><div class="gleg">株式 58% ｜ 投信 22% ｜ 現金 12% …</div></div>
+    <div class="gcard"><div class="gt"><svg class="ic"><use href="#i-currency"/></svg>通貨</div>
+      <div class="minidonut cur"></div><div class="gleg">円 56% ｜ ドル 36% ｜ その他 8%</div></div>
+    <div class="gcard"><div class="gt"><svg class="ic"><use href="#i-sector"/></svg>セクター</div>
+      <div class="minidonut sec"></div><div class="gleg">情報技術 33% ｜ 金融 14% …</div></div>
+    <div class="gcard" style="display:flex;flex-direction:column;justify-content:center;color:var(--text3);font-size:11px">＋ この3つは「リスク断面グリッド」。各見出しに上記アイコンを付与。</div>
+  </div>
+
+  <div class="card">
+    <div class="card-ttl"><svg class="ic"><use href="#i-globe"/></svg>地域<span class="tag">ルックスルー・全資産</span></div>
+    <div class="donutwrap">
+      <div class="donut"><div class="hole"><span class="hk">日本</span><span class="hv">41%</span><span class="hs">マザー市場</span></div></div>
+      <div class="legend">
+        <div class="lg"><span class="sw" style="background:var(--s-jp)"></span><span class="ln jp">日本</span><span class="lp">41.3%</span></div>
+        <div class="lg"><span class="sw" style="background:var(--s-na)"></span><span class="ln">北米</span><span class="lp">29.1%</span></div>
+        <div class="lg"><span class="sw" style="background:var(--s-eu)"></span><span class="ln">欧州</span><span class="lp">9.0%</span></div>
+        <div class="lg"><span class="sw" style="background:var(--s-em)"></span><span class="ln">新興国</span><span class="lp">8.2%</span></div>
+        <div class="lg"><span class="sw" style="background:var(--s-cash)"></span><span class="ln">現金等</span><span class="lp">12.4%</span></div>
+      </div>
+    </div>
+    <div class="home">
+      <div class="hicon"><svg class="ic"><use href="#i-home"/></svg></div>
+      <div class="hmain">
+        <div class="hk">マザーマーケット（日本）への偏り</div>
+        <div class="hv">41.3%</div>
+        <div class="hb">世界株指数(ACWI)の日本比率 5% に対し <b>+36.3pt</b>（約8倍）。世界平均より日本に厚い。</div>
+      </div>
+    </div>
+    <p class="refnote">オルカン/ひふみ等の全世界ファンドを地域分解した「真の地域%」（カバレッジ92%・現金/暗号含む）。ACWI 5%は世界平均の参考値で、合わせる必要はなく日本への傾きの目安。</p>
+  </div>
+
+  <p class="sub" style="margin-top:24px">▶ OKなら handoff doc（#502実装への追補）＋Issue に落とします。円グラフ・3小カードは実装では既存D3ドーナツ機構の流用。今回は「3カード見出しにアイコン」「タイトル文言」「バナー位置」の表示変更のみ。</p>
+</div>
+</body>
+</html>
