@@ -4546,6 +4546,10 @@ var GLOSSARY = [
       },
       { term: "\u6700\u5927DD\uFF08\u30C9\u30ED\u30FC\u30C0\u30A6\u30F3\uFF09", desc: "\u9AD8\u5024\u304B\u3089\u8C37\u307E\u3067\u306E\u6700\u5927\u4E0B\u843D\u7387\u3002\u4E00\u756A\u82E6\u3057\u3044\u5C40\u9762\u306E\u6C88\u307F\u3002" },
       {
+        term: "\u76EE\u6A19\u8D85\u904Ept",
+        desc: "\u3042\u308B\u9298\u67C4\u306E\u73FE\u5728\u30A6\u30A7\u30A4\u30C8 \u2212 \u76EE\u6A19\u30A6\u30A7\u30A4\u30C8\uFF08%\u30DD\u30A4\u30F3\u30C8\uFF09\u3002+1.6pt\uFF1D\u76EE\u6A19\u3088\u308A1.6%\u30DD\u30A4\u30F3\u30C8\u591A\u304F\u6301\u3063\u3066\u3044\u308B\u3002"
+      },
+      {
         term: "PF\u03B2",
         desc: "\u5404\u9298\u67C4\u304CPF\u5168\u4F53\u306B\u5BFE\u3057\u3069\u308C\u3060\u3051\u654F\u611F\u306B\u52D5\u304F\u304B\u3002\u03B2\u5927\uFF1DPF\u306E\u63FA\u308C\u306E\u5897\u5E45\u5F79\u3002"
       },
@@ -4624,7 +4628,7 @@ function glossaryHTML(tab) {
     </details>`;
   }).join("");
   return `<details class="gloss">
-    <summary>\u{1F4D8} \u7528\u8A9E\u89E3\u8AAC\uFF08\u30BF\u30C3\u30D7\u3067\u958B\u304F\uFF09</summary>
+    <summary>\u{1F4D8} \u7528\u8A9E\u89E3\u8AAC</summary>
     <div class="gloss-body">${catsHTML}</div>
   </details>`;
 }
@@ -4652,6 +4656,20 @@ async function loadTargetAllocation() {
     _cfg = null;
   }
   return _cfg;
+}
+var THEME_LABELS = {
+  semiconductor: "\u534A\u5C0E\u4F53",
+  ai_power: "AI\u96FB\u529B",
+  megatech: "\u30E1\u30AC\u30C6\u30C3\u30AF",
+  japan_theme: "\u65E5\u672C\u30C6\u30FC\u30DE\u682A",
+  commodity_miner: "\u8CC7\u6E90\u30FB\u9271\u5C71",
+  silver: "\u9280",
+  space: "\u5B87\u5B99",
+  europe: "\u6B27\u5DDE",
+  energy: "\u30A8\u30CD\u30EB\u30AE\u30FC"
+};
+function themeLabel(k) {
+  return THEME_LABELS[k] || k;
 }
 function getThemeOf(symbol) {
   if (!_cfg || !_cfg.themeCaps) return null;
@@ -4811,60 +4829,29 @@ async function buildRegionCard(assets, manualSymbols) {
   const coveragePct = Math.max(0, Math.min(100, 100 - unknownPct));
   const card = document.createElement("div");
   card.className = "risk-card region-card";
-  const japanPct = bias.japanPct;
-  const benchPct = bias.benchPct;
-  const maxScale = Math.max(50, japanPct * 1.1, benchPct * 1.1);
-  const wYou = Math.min(100, japanPct / maxScale * 100);
-  const wBench = Math.min(100, benchPct / maxScale * 100);
-  const biasSign = bias.biasPt >= 0 ? "+" : "";
-  const ratio = benchPct > 0 ? japanPct / benchPct : null;
-  const ratioTxt = ratio != null ? `\u4E16\u754C\u5E73\u5747\u306E<b>\u7D04${ratio.toFixed(ratio >= 10 ? 0 : 1)}\u500D</b>\u3001` : "";
-  const tiltDir = bias.biasPt >= 0 ? "\u65E5\u672C\u306B\u5927\u304D\u304F\u50BE\u3051\u3066\u3044\u308B" : "\u65E5\u672C\u3092\u4E16\u754C\u5E73\u5747\u3088\u308A\u63A7\u3048\u3081\u306B\u3057\u3066\u3044\u308B";
   card.insertAdjacentHTML(
     "beforeend",
-    `<div class="risk-card-title">${ric("i-globe")}\u5730\u57DF\u306E\u50BE\u304D<span class="rtag">\u30EB\u30C3\u30AF\u30B9\u30EB\u30FC\u30FB\u5168\u8CC7\u7523</span></div>
-    <p class="rgn-lead">\u5168\u4E16\u754C\u30D5\u30A1\u30F3\u30C9\u3092\u5730\u57DF\u5206\u89E3\u3057\u305F<b>\u672C\u5F53\u306E\u65E5\u672C\u6BD4\u7387</b>\u3092\u4E16\u754C\u5E73\u5747\u3068\u4E26\u3079\u308B\u3002<span class="ihelp" title="\u771F\u306E\u5730\u57DF%\uFF08\u30EB\u30C3\u30AF\u30B9\u30EB\u30FC\uFF09\uFF1D\u5168\u4E16\u754C\u30D5\u30A1\u30F3\u30C9\u3092\u5730\u57DF\u69CB\u6210\u6BD4\u3067\u5206\u89E3\u3057PF\u5168\u4F53\u306E\u672C\u5F53\u306E\u5730\u57DF\u914D\u5206\u3092\u51FA\u3059\u3002\u65E5\u672C\uFF1DACWI\u51855%\uFF0B1306\uFF0B\u3072\u3075\u307F\uFF0B\u65E5\u672C\u500B\u5225\u3002">?</span></p>
-    <div class="rcmp">
-      <div class="rcmp-row"><span class="rcmp-k">\u3042\u306A\u305F\u306EPF<span class="s">\u65E5\u672C\uFF08\u771F\u306E\u5730\u57DF%\uFF09</span></span><span class="rcmp-t"><span class="rcmp-f you" style="width:${wYou.toFixed(0)}%"></span></span><span class="rcmp-v">${japanPct.toFixed(1)}%</span></div>
-      <div class="rcmp-row"><span class="rcmp-k">\u4E16\u754C\u5E73\u5747<span class="s">ACWI\u306E\u65E5\u672C%</span></span><span class="rcmp-t"><span class="rcmp-f bench" style="width:${wBench.toFixed(0)}%"></span></span><span class="rcmp-v bench">${benchPct.toFixed(1)}%</span></div>
-    </div>
-    <div class="rcmp-cap">\u30DB\u30FC\u30E0\u30D0\u30A4\u30A2\u30B9 <b>${biasSign}${bias.biasPt.toFixed(1)}pt</b><span class="ihelp" title="\u81EA\u56FD(\u65E5\u672C)\u3078\u306E\u504F\u308A\uFF1D\u771F\u306E\u65E5\u672C% \u2212 \u30D9\u30F3\u30C1(ACWI 5%)\u3002\u610F\u56F3\u7684\u306A\u50BE\u3051\u304B\u3092\u78BA\u8A8D\u3002">?</span> \uFF1D${ratioTxt}${tiltDir}\u3002\u610F\u56F3\u7684\u306A\u3089\u554F\u984C\u306A\u3057\u3001\u7121\u610F\u8B58\u306A\u3089\u662F\u6B63\u306E\u691C\u8A0E\u6750\u6599\u3002</div>`
+    `<div class="risk-card-title">${ric("i-globe")}\u5730\u57DF\u306E\u50BE\u304D<span class="rtag">\u30EB\u30C3\u30AF\u30B9\u30EB\u30FC\u30FB\u5168\u8CC7\u7523</span></div>`
   );
   const slices = Object.entries(pct).filter(([, p]) => typeof p === "number" && p > 0).sort((a, b) => b[1] - a[1]).map(([key, p]) => ({ key, pct: p }));
-  const body = document.createElement("div");
-  body.className = "risk-card-body";
-  card.appendChild(body);
-  const size = 168;
-  const radius = size / 2;
-  const svg = d3.select(body).append("svg").attr("class", "risk-donut").attr("width", size).attr("height", size).attr("viewBox", `0 0 ${size} ${size}`).attr("role", "img").attr("aria-label", "\u5730\u57DF\uFF08\u30EB\u30C3\u30AF\u30B9\u30EB\u30FC\uFF09\u306E\u69CB\u6210\u5186\u30B0\u30E9\u30D5");
-  const g = svg.append("g").attr("transform", `translate(${radius},${radius})`);
-  const pie = d3.pie().value((d) => d.pct).sort(null);
-  const arc = d3.arc().innerRadius(radius * 0.58).outerRadius(radius - 2);
-  g.selectAll("path").data(pie(slices)).join("path").attr("d", arc).attr("fill", (d, i) => PALETTE[i % PALETTE.length]).append("title").text((d) => `${REGION_LABELS[d.data.key] || d.data.key}: ${d.data.pct.toFixed(1)}%`);
-  const center = g.append("text").attr("class", "risk-donut-center");
-  center.append("tspan").attr("x", 0).attr("dy", "-0.1em").attr("font-size", "13px").attr("font-weight", "700").attr("text-anchor", "middle").text(`${coveragePct.toFixed(0)}%`);
-  center.append("tspan").attr("class", "risk-donut-center-sub").attr("x", 0).attr("dy", "1.3em").attr("font-size", "9px").attr("text-anchor", "middle").text("\u30AB\u30D0\u30EC\u30C3\u30B8");
-  const legend = document.createElement("ul");
-  legend.className = "risk-legend";
-  slices.forEach((s, i) => {
-    const li = document.createElement("li");
-    li.className = "risk-legend-item";
-    const sw = document.createElement("span");
-    sw.className = "risk-legend-swatch";
-    sw.style.background = PALETTE[i % PALETTE.length];
-    const name = document.createElement("span");
-    name.className = "risk-legend-name";
-    name.textContent = REGION_LABELS[s.key] || s.key;
-    const p = document.createElement("span");
-    p.className = "risk-legend-pct";
-    p.textContent = `${s.pct.toFixed(1)}%`;
-    li.append(sw, name, p);
-    legend.appendChild(li);
-  });
-  body.appendChild(legend);
+  const maxPct = Math.max(bias.benchPct, 10, ...slices.map((s) => s.pct));
+  const scale = Math.max(50, maxPct * 1.05);
+  const refLeft = Math.min(100, bias.benchPct / scale * 100);
+  const barsHTML = slices.map((s) => {
+    const w = Math.min(100, s.pct / scale * 100);
+    const isJapan = s.key === "japan";
+    const cls = isJapan ? "" : s.key === "commodity_cash" ? " cash" : " alt";
+    const ref = isJapan ? `<span class="rgn-ref" style="left:${refLeft.toFixed(0)}%"></span>` : "";
+    return `<div class="rgn-row"><span class="rgn-k">${escapeHTML(REGION_LABELS[s.key] || s.key)}</span><span class="rgn-t"><span class="rgn-f${cls}" style="width:${w.toFixed(0)}%"></span>${ref}</span><span class="rgn-v">${s.pct.toFixed(1)}%</span></div>`;
+  }).join("");
+  card.insertAdjacentHTML("beforeend", `<div class="rgn-bars">${barsHTML}</div>`);
+  const refnote = document.createElement("p");
+  refnote.className = "rgn-refnote";
+  refnote.innerHTML = "\u7E26\u7DDA\uFF5C\uFF1D\u4E16\u754C\u682A\u6307\u6570(ACWI)\u306E\u65E5\u672C\u6BD4\u73875%\u306E\u4F4D\u7F6E\u3002<b>\u5408\u308F\u305B\u308B\u5FC5\u8981\u306F\u306A\u304F</b>\u3001\u4E16\u754C\u5E73\u5747\u306B\u5BFE\u3059\u308B\u50BE\u304D\u306E\u76EE\u5B89\u3002";
+  card.appendChild(refnote);
   const note = document.createElement("div");
   note.className = "risk-coverage-note";
-  note.textContent = `\u76F4\u63A5\u30BF\u30B0\uFF0B\u30EB\u30C3\u30AF\u30B9\u30EB\u30FC\u6309\u5206\uFF08\u30AA\u30EB\u30AB\u30F3/\u3072\u3075\u307F/\u3072\u3075\u307FXO\uFF09\u3002\u73FE\u91D1/\u6697\u53F7\u306F \u30B3\u30E2\u30C7\u30A3\u30C6\u30A3/\u73FE\u91D1\u3002\u5730\u57DF\u69CB\u6210\u6BD4\u306F\u9759\u7684\uFF08\u9BAE\u5EA6 ${asOf || "\u2014"}\u30FB\u56DB\u534A\u671F\u66F4\u65B0\uFF09\u3002VGK/2800.HK \u306F\u672A\u4FDD\u6709\uFF1D0%\u3002`;
+  note.textContent = `\u30AB\u30D0\u30EC\u30C3\u30B8 ${coveragePct.toFixed(0)}%\u3002\u76F4\u63A5\u30BF\u30B0\uFF0B\u30EB\u30C3\u30AF\u30B9\u30EB\u30FC\u6309\u5206\uFF08\u30AA\u30EB\u30AB\u30F3/\u3072\u3075\u307F\uFF09\u3002\u5730\u57DF\u69CB\u6210\u6BD4\u306F\u9759\u7684\uFF08\u9BAE\u5EA6 ${asOf || "\u2014"}\u30FB\u56DB\u534A\u671F\u66F4\u65B0\uFF09\u3002`;
   card.appendChild(note);
   return card;
 }
@@ -5090,7 +5077,7 @@ function buildRiskOverviewCard() {
     const theme = getThemeOf(tkey);
     if (!theme) continue;
     themeUsedPct[theme] = (themeUsedPct[theme] || 0) + currentPct;
-    (themeMembers[theme] = themeMembers[theme] || []).push({ name: p.name || p.symbol || "", pct: currentPct });
+    (themeMembers[theme] = themeMembers[theme] || []).push({ name: p.symbol || "", pct: currentPct });
   }
   let maxLabel = null;
   let maxPct = 0;
@@ -5098,7 +5085,7 @@ function buildRiskOverviewCard() {
   for (const [theme, used] of Object.entries(themeUsedPct)) {
     if (used > maxPct) {
       maxPct = used;
-      maxLabel = theme;
+      maxLabel = themeLabel(theme);
       maxMembers = (themeMembers[theme] || []).slice().sort((a, b) => b.pct - a.pct);
     }
   }
@@ -5107,8 +5094,8 @@ function buildRiskOverviewCard() {
       const pct = (p.value || 0) / denom * 100;
       if (pct > maxPct) {
         maxPct = pct;
-        maxLabel = p.name || p.symbol || "";
-        maxMembers = [{ name: p.name || p.symbol || "", pct }];
+        maxLabel = p.symbol || "";
+        maxMembers = [{ name: p.symbol || "", pct }];
       }
     }
   }
@@ -5119,7 +5106,7 @@ function buildRiskOverviewCard() {
     if (!tkey) continue;
     const gap = computeGap(tkey, currentPct);
     if (gap.gapPct != null && gap.gapPct > 0.5) {
-      overPos.push({ name: p.name || p.symbol || "", cur: currentPct, target: gap.targetPct, pt: gap.gapPct });
+      overPos.push({ name: p.symbol || "", cur: currentPct, target: gap.targetPct, pt: gap.gapPct });
     }
   }
   overPos.sort((a, b) => b.pt - a.pt);
@@ -5174,7 +5161,7 @@ function buildRiskOverviewCard() {
     "",
     "\u6295\u8CC7\u8CC7\u7523\u306E\u3046\u3061\u73FE\u91D1\u30025\u301C20%\u304C\u9069\u6B63\u30EC\u30F3\u30B8\u3002"
   );
-  const concHolds = taAvailable && maxMembers.length ? maxMembers.slice(0, 4).map((m) => `<span class="htag">${escapeHTML(m.name)} <b>${m.pct.toFixed(1)}%</b></span>`).join("") : "";
+  const concHolds = taAvailable && maxMembers.length ? maxMembers.map((m) => `<span class="htag">${escapeHTML(m.name)} <b>${m.pct.toFixed(1)}%</b></span>`).join("") : "";
   const concVal = taAvailable && maxLabel ? `${escapeHTML(maxLabel)} ${maxPct.toFixed(1)}%` : "\u2014";
   const concRow = rmrow(
     "i-target",
@@ -5192,15 +5179,13 @@ function buildRiskOverviewCard() {
   let overPillTxt = "\u306A\u3057";
   let overWarn = false;
   if (overPos.length) {
-    const top = overPos[0];
-    overVal = `+${top.pt.toFixed(1)}pt`;
+    overVal = `${overPos.length}\u4EF6`;
     overWarn = true;
     overPill = "warn";
-    overPillTxt = `${overPos.length}\u4EF6`;
-    const tags = overPos.slice(0, 2).map(
-      (o) => `<span class="htag hot">${escapeHTML(o.name)} <b>\u76EE\u6A19${o.target != null ? o.target.toFixed(0) : "\u2014"}%\u2192${o.cur.toFixed(1)}%</b></span>`
+    overPillTxt = "\u6CE8\u610F";
+    overHolds = overPos.map(
+      (o) => `<span class="htag hot">${escapeHTML(o.name)} <b>\u76EE\u6A19${o.target != null ? o.target.toFixed(0) : "\u2014"}%\u2192\u73FE${o.cur.toFixed(1)}%\uFF08+${o.pt.toFixed(1)}pt\uFF09</b></span>`
     ).join("");
-    overHolds = tags + (overPos.length > 2 ? `<span class="htag">\u4ED6${overPos.length - 2}\u4EF6</span>` : "");
   }
   const overRow = rmrow(
     "i-expand",
@@ -5210,7 +5195,7 @@ function buildRiskOverviewCard() {
     overVal,
     overWarn,
     overHolds,
-    "\u76EE\u6A19\u914D\u5206\u309250%\u4EE5\u4E0A\u8D85\u3048\u305F\u9298\u67C4\u3002\u30B5\u30A4\u30BA\u898B\u76F4\u3057\u306E\u5019\u88DC\u3002"
+    "\u76EE\u6A19\u914D\u5206\u3092\u4E0A\u56DE\u308B\u4FDD\u6709\u3002pt\uFF1D\u73FE\u30A6\u30A7\u30A4\u30C8\u2212\u76EE\u6A19\u30A6\u30A7\u30A4\u30C8\uFF08\u7528\u8A9E\u89E3\u8AAC\u300C\u76EE\u6A19\u8D85\u904Ept\u300D\uFF09\u3002"
   );
   let themeVal = "0\u4EF6";
   let themeHolds = "";
@@ -5221,8 +5206,8 @@ function buildRiskOverviewCard() {
     themeVal = `${overThemes.length}\u4EF6`;
     themeWarn = true;
     themePill = "bad";
-    themePillTxt = `${overThemes.length}\u4EF6`;
-    themeHolds = overThemes.map((o) => `<span class="htag hot">${escapeHTML(o.theme)} <b>${o.used.toFixed(1)}%&gt;${o.cap}%</b></span>`).join("");
+    themePillTxt = "\u8D85\u904E";
+    themeHolds = overThemes.map((o) => `<span class="htag hot">${escapeHTML(themeLabel(o.theme))} <b>${o.used.toFixed(1)}%&gt;${o.cap}%</b></span>`).join("");
   }
   const themeRow = rmrow(
     "i-layers",
@@ -5254,6 +5239,9 @@ function _rqNote(msg) {
   p.textContent = msg;
   return p;
 }
+function stripEventYear(label) {
+  return (label || "").replace(/\b(?:19|20)\d{2}\b/g, "").replace(/[（(]\s*[）)]/g, "").replace(/\s{2,}/g, " ").trim();
+}
 function fmtEventPeriod(from, to) {
   const f = new Date(from);
   const t = new Date(to);
@@ -5269,7 +5257,7 @@ function fmtEventPeriod(from, to) {
 async function _appendEventStress(card, holdings) {
   const lead = document.createElement("p");
   lead.className = "q-lead";
-  lead.innerHTML = "\u6642\u9593\u7A93\uFF081\u65E5/1\u9031\u2026\u9577\u3044\u307B\u3069\u6DF1\u3044\u306E\u306F\u5F53\u305F\u308A\u524D\uFF09\u3092\u3084\u3081\u3001<b>\u540D\u524D\u306E\u3042\u308B\u5B9F\u969B\u306E\u5371\u6A5F</b>\u3092\u73FEPF\u306E\u30A6\u30A7\u30A4\u30C8\u3067\u518D\u73FE\u3002\u5404\u30A4\u30D9\u30F3\u30C8\u306F\u72EC\u7ACB\u30B7\u30CA\u30EA\u30AA\u3067\u300C<b>\u4F55\u306B\u5F31\u3044\u304B</b>\u300D\u304C\u898B\u3048\u308B\u3002\u4E0B\u843D\u306E\u5927\u304D\u3044\u9806\u3002";
+  lead.textContent = "\u73FEPF\u306E\u30A6\u30A7\u30A4\u30C8\u3067\u904E\u53BB\u306E\u66B4\u843D\u3092\u518D\u73FE\u3057\u3001\u305D\u306E\u671F\u9593\u306E\u4E0B\u843D\u7387\u3092\u51FA\u3057\u305F\u3082\u306E\uFF08\u4E0B\u843D\u306E\u5927\u304D\u3044\u9806\uFF09\u3002";
   card.appendChild(lead);
   const events = await loadStressEvents();
   if (events.length === 0) {
@@ -5297,7 +5285,7 @@ async function _appendEventStress(card, holdings) {
     const el = document.createElement("div");
     el.className = "rev";
     el.innerHTML = `
-      <div class="rev-en"><span class="rev-nm">${escapeHTML(ev.label)}</span><span class="rev-dt">${escapeHTML(fmtEventPeriod(ev.from, ev.to))}</span></div>
+      <div class="rev-en"><span class="rev-nm">${escapeHTML(stripEventYear(ev.label))}</span><span class="rev-dt">${escapeHTML(fmtEventPeriod(ev.from, ev.to))}</span></div>
       <div class="rev-v">${escapeHTML(retTxt)}</div>
       <div class="rev-track">${has ? `<span class="rev-fill" style="width:${w.toFixed(0)}%"></span>` : ""}</div>
       <div class="rev-cov${lowCov ? " low" : ""}">cov ${Math.round(res.coveragePct)}%${lowCov ? " \u26A0" : ""}</div>`;
@@ -5305,15 +5293,9 @@ async function _appendEventStress(card, holdings) {
     if (en) en.setAttribute("title", `${ev.from}\u301C${ev.to}${ev.note ? ` / ${ev.note}` : ""}`);
     card.appendChild(el);
   }
-  const deepest = rows.find((r) => r.res.ret != null);
-  const cap = document.createElement("p");
-  cap.className = "rev-cap";
-  if (deepest) {
-    cap.innerHTML = `\u8AAD\u307F\u7B4B\uFF1A\u6700\u3082\u6DF1\u3044\u306E\u306F <b>${escapeHTML(deepest.ev.label)}</b>\uFF08${(deepest.res.ret * 100).toFixed(1)}%\uFF09\u3002\u5404\u30A4\u30D9\u30F3\u30C8\u306F\u72EC\u7ACB\u306E what-if \u518D\u73FE\u3002cov\uFF1D\u5F53\u6642\u306B\u4FA1\u683C\u30C7\u30FC\u30BF\u306E\u3042\u3063\u305F\u4FDD\u6709\u306E\u6BD4\u7387\u3002`;
-  } else {
-    cap.textContent = "\u7A93\u5185\u306B\u4FA1\u683C\u306E\u3042\u308B\u4FDD\u6709\u304C\u307E\u3060\u5C11\u306A\u304F\u3001\u30A4\u30D9\u30F3\u30C8\u518D\u73FE\u3092\u7B97\u51FA\u3067\u304D\u307E\u305B\u3093\u3002";
+  if (!rows.some((r) => r.res.ret != null)) {
+    card.appendChild(_rqNote("\u7A93\u5185\u306B\u4FA1\u683C\u306E\u3042\u308B\u4FDD\u6709\u304C\u307E\u3060\u5C11\u306A\u304F\u3001\u30A4\u30D9\u30F3\u30C8\u518D\u73FE\u3092\u7B97\u51FA\u3067\u304D\u307E\u305B\u3093\u3002"));
   }
-  card.appendChild(cap);
 }
 async function buildQuantCard(posList) {
   const card = document.createElement("div");
@@ -5386,8 +5368,8 @@ async function buildQuantCard(posList) {
   card.insertAdjacentHTML(
     "beforeend",
     `<div class="q-sub">
-      <div class="q-stat2"><div class="qsl">${ric("i-pulse", true)}\u5E74\u7387\u30DC\u30E9<span class="ihelp" title="\u65E5\u6B21\u9A30\u843D\u306E\u3070\u3089\u3064\u304D\xD7\u221A252\u30021\u5E74\u3042\u305F\u308A\u306E\u5024\u52D5\u304D\u306E\u6FC0\u3057\u3055\u3002">?</span></div><div class="qsv">${escapeHTML(_pct1(pfVol))}</div><div class="qsc">\u53C2\u8003\u5024\uFF08\u904E\u53BB1\u5E74\u306E\u632F\u308C\u5E45\uFF09</div></div>
-      <div class="q-stat2"><div class="qsl">${ric("i-history", true)}\u6700\u5927DD<span class="ihelp" title="\u6700\u5927\u30C9\u30ED\u30FC\u30C0\u30A6\u30F3\u3002\u904E\u53BB\u306E\u30D4\u30FC\u30AF\u304B\u3089\u8C37\u307E\u3067\u306E\u6700\u5927\u4E0B\u843D\u3002">?</span></div><div class="qsv">${escapeHTML(_pct1(pfMaxDD))}</div><div class="qsc">\u53C2\u8003\u5024\uFF08\u904E\u53BB1\u5E74\u306E\u6700\u5927\u4E0B\u843D\uFF09</div></div>
+      <div class="q-stat2"><div class="qsl"><span class="qsl-l">${ric("i-pulse", true)}\u5E74\u7387\u30DC\u30E9</span><span class="qsv">${escapeHTML(_pct1(pfVol))}</span></div><div class="qsc">\u65E5\u6B21\u9A30\u843D\u306E\u3070\u3089\u3064\u304D\xD7\u221A252\u30021\u5E74\u3042\u305F\u308A\u306E\u5024\u52D5\u304D\u306E\u5927\u304D\u3055\uFF08\u904E\u53BB1\u5E74\uFF09\u3002</div></div>
+      <div class="q-stat2"><div class="qsl"><span class="qsl-l">${ric("i-history", true)}\u6700\u5927DD</span><span class="qsv">${escapeHTML(_pct1(pfMaxDD))}</span></div><div class="qsc">\u30D4\u30FC\u30AF\u304B\u3089\u8C37\u307E\u3067\u306E\u6700\u5927\u4E0B\u843D\uFF08\u904E\u53BB1\u5E74\uFF09\u3002</div></div>
     </div>`
   );
   const contribs = perHolding.map((h) => ({ sym: h.sym, c: (h.vol ?? 0) * Math.abs(h.beta ?? 1) }));
@@ -5396,7 +5378,7 @@ async function buildQuantCard(posList) {
   const top3c = [...contribs].sort((a, b) => b.c - a.c).slice(0, 3);
   if (top3c.length > 0) {
     const contribHTML = top3c.map(
-      (x) => `<div class="contrib"><span class="ck">${escapeHTML(nameOfSymbol(x.sym))}</span><span class="ct"><span class="cf" style="width:${(x.c / maxC * 100).toFixed(0)}%"></span></span><span class="cv">${Math.round(x.c / sumC * 100)}%</span></div>`
+      (x) => `<div class="contrib"><span class="ck">${escapeHTML(x.sym)}</span><span class="ct"><span class="cf" style="width:${(x.c / maxC * 100).toFixed(0)}%"></span></span><span class="cv">${Math.round(x.c / sumC * 100)}%</span></div>`
     ).join("");
     card.insertAdjacentHTML(
       "beforeend",
@@ -5448,23 +5430,31 @@ function buildRiskGlossary() {
   );
 }
 var _taLoaded = false;
+var _riskRenderSeq = 0;
 async function renderRiskCharts() {
   const panel = document.getElementById("panel-risk");
   if (!panel || panel.hidden) return;
   const wrap = document.getElementById("risk-charts-wrap");
   if (!wrap) return;
   if (typeof d3 === "undefined") return;
+  const myRun = ++_riskRenderSeq;
   if (!_taLoaded) {
     await loadTargetAllocation();
     _taLoaded = true;
   }
+  if (_riskRenderSeq !== myRun) return;
   const manualAssets = getMfManualAssets() || MANUAL_ASSETS;
   const assets = [...positions, ...manualAssets];
   const breakdown = computeRiskBreakdown(assets);
   const sourceSummary = getSourceSummary(assets);
+  const quantCard = await buildQuantCard(positions);
+  if (_riskRenderSeq !== myRun) return;
+  const manualSymbols = manualAssets.map((a) => a.symbol);
+  const regionCard = await buildRegionCard(assets, manualSymbols);
+  if (_riskRenderSeq !== myRun) return;
   wrap.textContent = "";
   wrap.appendChild(buildRiskOverviewCard());
-  wrap.appendChild(await buildQuantCard(positions));
+  wrap.appendChild(quantCard);
   const sumInfo = getClassificationSummary(assets);
   const summary = document.createElement("div");
   summary.className = "risk-summary";
@@ -5492,8 +5482,7 @@ async function renderRiskCharts() {
     grid.appendChild(buildChartCard(dim, breakdown[dim], sourceSummary[dim]));
   }
   wrap.appendChild(grid);
-  const manualSymbols = manualAssets.map((a) => a.symbol);
-  wrap.appendChild(await buildRegionCard(assets, manualSymbols));
+  wrap.appendChild(regionCard);
   const src = document.createElement("div");
   src.className = "risk-source";
   const baseSrc = "\u30C7\u30FC\u30BF\u30BD\u30FC\u30B9: \u4FA1\u683C = Finnhub / Yahoo Finance \u30FB \u30A2\u30BB\u30C3\u30C8\u30AF\u30E9\u30B9/\u901A\u8CA8/\u56FD/\u30BB\u30AF\u30BF\u30FC\u5206\u985E = \u9298\u67C4\u30DE\u30B9\u30BF\uFF08positions.js\u30FBconstituents.js\uFF09";
