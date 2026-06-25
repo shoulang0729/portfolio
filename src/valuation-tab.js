@@ -312,7 +312,13 @@ function detailHTML(val) {
       <li><span class="lg-sw lg-peer"></span>同業中央値（破線）</li>
     </ul>
   </div>`;
-  return `<details class="val-detail"><summary>詳細指標</summary>${legend}${body}</details>`;
+  // アコーディオン行（背景＋枠＋SVGシェブロン・#512）。native details のまま JS 不要。
+  const summary = `<summary class="val-detail-tog">
+    <span class="vdt-lab">詳細指標</span>
+    <span class="vdt-sub">13指標・目安バー・同業比較</span>
+    <svg class="vdt-chev" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+  </summary>`;
+  return `<details class="val-detail">${summary}${legend}${body}</details>`;
 }
 
 /**
