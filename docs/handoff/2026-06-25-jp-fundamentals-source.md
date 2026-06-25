@@ -37,3 +37,58 @@
 ## ブランチ／PR／Issue
 - 調査は実装最小（spike ブランチ可）。**結論は本 doc 追記＋ Issue コメント**。
 - 本実装は別 Issue（`feat/jp-sector-median`）として後続起票。Phase1（#493・米株）とはデータ源が別なので**独立に進められる**。
+
+---
+
+## 調査結果（2026-06-25 / 実測スパイク・#496）
+
+**経路**: Worker `/yahoo` proxy → Yahoo `quoteSummary`（`summaryDetail,defaultKeyStatistics,financialData`）。スクリプト `/private/tmp/jp_fund.py`・`/private/tmp/topix17.py`。
+
+### ① 個別ファンダ（日本株9銘柄・Yahoo quoteSummary）
+| sym | 種別 | trailingPE | forwardPE | EV/EBITDA | priceToBook | grossMargin | profitMargin | divYield | ROE |
+|---|---|---|---|---|---|---|---|---|---|
+| 6301.T 小松 | 個別株 | 15.66 | – | 9.62 | 1.67 | 0.305 | 0.091 | 0.029 | 0.114 |
+| 8050.T セイコー | 個別株 | 28.77 | – | 15.22 | 3.60 | 0.462 | 0.065 | 0.012 | 0.132 |
+| 9983.T ファストリ | 個別株 | 53.43 | – | 33.52 | 9.70 | 0.542 | 0.131 | 0.008 | 0.206 |
+| 1306/1477/1615/1629/200A/2516.T | ETF | ○(PERのみ) | – | – | – | – | – | – | – |
+
+**結論①**: **日本株の個別ファンダは Yahoo quoteSummary でほぼ取れる**（PER・EV/EBITDA・PBR・粗利率・純利益率・配当利回り・ROE）。**forwardPE のみ全銘柄空**（US 同様・ETF spike と一致）。ETF は trailingPE のみ（構造どおり）。
+
+### ② セクター中央値（TOPIX-17 セクターETF proxy）
+NEXT FUNDS TOPIX-17 シリーズ **1617〜1633 の全17業種ETFで trailingPE 取得可（17/17）**。priceToBook 等は ETF では出ない＝**proxy は PER のみ**。
+
+実測の業種別 trailingPE（抜粋）: 機械 27.3 / 小売 24.8 / 電機・精密 30.0 / 銀行 17.4 / 商社・卸売 15.7 / 自動車 10.4 / 電力ガス 7.6 …
+
+**意味のある比較が出る**:
+- 9983.T ファストリ self PE **53.4** vs 小売(1630.T) **24.8** → 明確に割高プレミアム
+- 6301.T 小松 self **15.7** vs 機械(1624.T) **27.3** → 同業より割安
+- 8050.T セイコー self **28.8** vs 電機・精密(1625.T) **30.0** → ほぼ同水準
+
+### 決定（MVP）
+| 項目 | 採用 |
+|---|---|
+| 日本株 個別ファンダ | **Yahoo quoteSummary**（週次バッチ・既存 `/yahoo` 経由） |
+| 日本株 セクター中央値 | **TOPIX-17 ETF proxy の PER のみ**（17/17・1コール・決定論）。EV/EBITDA・PBR 等は破線を出さない縮退 |
+| 業種マッピング | **小さな静的表 `sym → TOPIX-17 ETF`**（保有 .T 数銘柄＋ウォッチ分だけ・銘柄追加時に1行足す） |
+| 静的表 `sector-medians.json` | 採用しない（PER 以外も欲しくなったら Phase-next で再検討） |
+
+### スキーマ整合（Phase1 と同形・load-bearing 不変・追加のみ）
+```jsonc
+valuations[sym].sectorMedian = {
+  "per": 24.82,            // JP は PER のみ（他指標は欠で破線非表示）
+  "n": null,               // ETF proxy は真の中央値でないため null
+  "source": "etf-proxy",   // JP=etf-proxy / 米株(#493)=finnhub-peers / 将来 static
+  "etf": "1630.T",         // proxy 元（トレーサビリティ）
+  "asOf": "2026-06-25"
+}
+```
+- 破線ラベルは `n` 有無で出し分け: finnhub-peers→`同業(n=12)` / etf-proxy→`同業(proxy)`（質を正直に伝える）。
+- **個別ファンダ（Yahoo 由来 PER 等）は手動シードを上書きしない**。`value.*`/`perCurrent` が手入力済みならそれ優先、未設定のみ補完（既存 valuations パイプライン準拠）。
+
+### コスト・頻度
+- 個別 = 9銘柄 × quoteSummary 1コール。セクター = 17 ETF（全銘柄で共有・キャッシュ）。**合計 ≒26 コール／週**＝既存 quality/valuations 週次バッチに相乗りで十分。
+
+### 拡張性（将来の非米国上場）
+- 欧州(.L/.AS)・香港(.HK) も同じ「個別=Yahoo / セクター=現地セクターETF proxy or static」の型で拡張可。`source` 値を増やすだけ。マッピング表をジェネリックに（`sym → proxyEtf`）。
+
+→ 本実装は別 Issue `feat/jp-sector-median` を起票（Phase1 #493 と独立）。
