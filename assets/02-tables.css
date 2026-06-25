@@ -630,19 +630,21 @@
 #value-wrap { padding: 10px 12px 40px; }
 
 /* ヘッダー統計カード群 */
-.val-stats { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; margin-bottom: 12px; }
+/* 値をカード高さの縦中央に揃える（1行/2段でカード高一致・#504 A） */
+.val-stats { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; margin-bottom: 12px; }
 /* ヘッダ統計＝ⓘ付き details（#475）。summary に label/値/ⓘ、開くと真下に解説。 */
 .val-stat {
-  flex: 1 1 0; min-width: 64px;
+  flex: 1 1 0; min-width: 64px; display: flex; flex-direction: column;
   background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
 }
 .val-stat-h {
-  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 1px;
   padding: 8px 10px; cursor: pointer; list-style: none; position: relative;
 }
 .val-stat-h::-webkit-details-marker { display: none; }
 .val-stat-h .t { font-size: 10px; color: var(--text2); white-space: nowrap; }
-.val-stat-h .v { font-size: 16px; font-weight: 600; color: var(--text); }
+.val-stat-h .v { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; font-size: 16px; font-weight: 600; color: var(--text); }
+.val-stat .l2 { display: block; }
 .val-stat-h .ti { position: absolute; top: 3px; right: 5px; font-size: 11px; color: var(--text3); }
 .val-stat[open] .val-stat-h .ti { color: var(--accent); }
 .val-stat-x { margin: 0; padding: 0 10px 9px; font-size: 11px; color: var(--text2); line-height: 1.5; }
@@ -652,7 +654,7 @@
 .val-stat-h .v .hr-sep { font-size: 11.5px; color: var(--text3); }
 /* フォールバック（解説なし語＝プレーン div） */
 .val-stat > .t { display: block; text-align: center; font-size: 10px; color: var(--text2); padding-top: 8px; }
-.val-stat > .v { display: block; text-align: center; font-size: 16px; font-weight: 600; color: var(--text); padding-bottom: 8px; }
+.val-stat > .v { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; font-size: 16px; font-weight: 600; color: var(--text); padding-bottom: 8px; }
 
 /* レンズ切替ピル（segmented control） */
 .val-lens { display: flex; gap: 4px; margin-bottom: 10px; flex-wrap: wrap; }
@@ -684,20 +686,20 @@
 }
 .val-body { padding: 10px 13px; }
 
-/* アクションバナー（カード上部の色帯） */
+/* アクションバナー（SVGアイコン＋薄い塗り・端の濃い色帯なし・#504 G） */
 .val-banner {
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
-  padding: 4px 13px; font-size: 12px; font-weight: 700; line-height: 1.2;
+  padding: 5px 13px; font-size: 12px; font-weight: 700; line-height: 1.2;
 }
 .val-banner .va { display: inline-flex; align-items: center; gap: 6px; }
-.val-banner .gl { font-size: 10px; opacity: 0.9; }
+.val-banner .vb-ic { width: 15px; height: 15px; flex: none; }
 .val-banner .vb {
-  font-size: 11px; font-weight: 500; opacity: 0.92;
+  font-size: 11px; font-weight: 500; color: var(--text2);
   min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.val-banner--sell  { background: var(--pos); color: #fff; }
-.val-banner--buy   { background: var(--neg); color: #fff; }
-.val-banner--watch { background: color-mix(in srgb, var(--warn) 14%, transparent); color: var(--warn); }
+.val-banner--buy   { background: color-mix(in srgb, var(--vg-good) 13%, transparent); color: var(--vg-good); }
+.val-banner--sell  { background: color-mix(in srgb, var(--vg-warn) 13%, transparent); color: var(--vg-warn); }
+.val-banner--watch { background: color-mix(in srgb, var(--vg-ok) 13%, transparent); color: var(--vg-ok); }
 .val-banner--hold  { background: var(--surface2); color: var(--text2); }
 
 /* 上段: シンボル + 銘柄名（下揃え） + verdict chip */
@@ -812,11 +814,26 @@
 .val-detail > summary::-webkit-details-marker { display: none; }
 .val-detail > summary::before { content: '▸ '; color: var(--text3); }
 .val-detail[open] > summary::before { content: '▾ '; }
-.val-detail-grp { margin-top: 6px; }
-.val-detail-grp .lab { display: block; font-size: 10px; color: var(--text3); font-weight: 600; }
+/* グループ見出し①②③＝文字のみ（番号は本文色・下罫線だけ・カード/帯にしない・#504 C） */
+.val-detail-grp { margin-top: 14px; }
+.val-detail-grp .grp-h {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+  padding-bottom: 5px; margin-bottom: 8px; border-bottom: 1.5px solid var(--border);
+}
+.val-detail-grp .lab { font-size: 14px; font-weight: 700; color: var(--text); }
+.val-detail-grp .grp-cap { font-size: 11px; color: var(--text3); font-weight: 400; text-align: right; white-space: nowrap; }
 
-/* 詳細グループ凡例（3つの問い・1行常時表示） */
-.val-detail-grp .grp-cap { margin-left: 6px; font-size: 9.5px; color: var(--text3); font-weight: 400; }
+/* 目安バーの凡例（詳細先頭に1回・#504 D） */
+.vg-legend { border: 1px dashed var(--border); background: var(--surface2); border-radius: 8px; padding: 9px 11px; margin: 6px 0 12px; }
+.vg-legend-ttl { font-size: 11px; font-weight: 700; color: var(--text2); margin-bottom: 7px; }
+.vg-legend-bar { position: relative; height: 6px; border-radius: 3px; background: var(--surface3); margin: 0 0 9px; }
+.vg-legend-items { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 3px 10px; }
+.vg-legend-items li { display: flex; align-items: center; gap: 6px; font-size: 10.5px; color: var(--text2); }
+.lg-sw { flex: none; display: inline-block; }
+.lg-zone { width: 14px; height: 8px; border-radius: 2px; background: var(--vg-good); opacity: 0.5; }
+.lg-mk { width: 9px; height: 9px; border-radius: 50%; background: var(--vg-good); border: 1.5px solid var(--surface); }
+.lg-tick { width: 0; height: 11px; border-left: 1.5px solid var(--text3); }
+.lg-peer { width: 0; height: 11px; border-left: 1.5px dashed var(--accent); }
 
 /* ── 詳細指標 目安ゲージ行（#475 rev2・1指標=1行）── */
 .vg-rows { margin-top: 6px; }
@@ -856,6 +873,9 @@
 .vg-cap { margin-left: auto; text-align: right; font-size: 10px; color: var(--text3); }
 .vg-expl { display: none; }
 .vg-row[open] .vg-expl { display: block; margin: 8px 0 0; padding-top: 8px; border-top: 1px dashed var(--border); font-size: 11px; color: var(--text2); line-height: 1.5; }
+/* ⓘ展開内の用語解説リンク（#504 B） */
+.vg-gloss-link { color: var(--accent); text-decoration: none; white-space: nowrap; }
+.vg-gloss-link:hover { text-decoration: underline; }
 
 /* レンズキャプション */
 .val-lens-cap {

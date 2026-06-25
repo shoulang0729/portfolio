@@ -10,12 +10,12 @@ describe('sortKeyForLens', () => {
     expect(sortKeyForLens('value')).toEqual({ chip: 'pct', sizeBar: false });
   });
 
-  it('quality は Fチップを強調', () => {
-    expect(sortKeyForLens('quality')).toEqual({ chip: 'f', sizeBar: false });
+  it('quality は品質チップを強調（#504 F）', () => {
+    expect(sortKeyForLens('quality')).toEqual({ chip: 'qual', sizeBar: false });
   });
 
-  it('momentum はチップ・サイズバーとも強調なし', () => {
-    expect(sortKeyForLens('momentum')).toEqual({ chip: null, sizeBar: false });
+  it('momentum はモメンタムチップを強調（#504 F）', () => {
+    expect(sortKeyForLens('momentum')).toEqual({ chip: 'mom', sizeBar: false });
   });
 
   it('未知レンズも安全な既定（強調なし）', () => {

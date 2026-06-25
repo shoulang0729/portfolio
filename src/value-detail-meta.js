@@ -36,6 +36,11 @@ function fmtRaw(n) {
   return num(n) ? n.toFixed(1) : '—';
 }
 
+/** 符号プレフィックス（負は付けない＝値側に − が入る）。 */
+function sign(n) {
+  return n >= 0 ? '+' : '';
+}
+
 // ── 各指標のメタ（付録表）。group: 1=割安か / 2=稼ぐか / 3=期待・勢い ──
 /**
  * @typedef {{
@@ -46,6 +51,7 @@ function fmtRaw(n) {
  *   judge?:(val:any)=>{tone:string,glyph:string,label:string}|null,
  *   live?:boolean, liveTag?:string,
  *   peer?:(val:any)=>number|null, peerN?:(val:any)=>number|null,
+ *   evalText?:(val:any)=>string|null,
  * }} MetricMeta
  */
 
@@ -64,8 +70,11 @@ export const VALUE_DETAIL_META = [
     read: (val) => (num(V(val).perTrail) ? V(val).perTrail : null),
     display: (val) => `${fmtRaw(V(val).perTrail)}→${fmtRaw(V(val).perFwd)}`,
     min: (val) => (num(val.bandLow) ? val.bandLow : 0),
-    max: (val) => (num(val.bandHigh) ? val.bandHigh : (num(V(val).perTrail) ? V(val).perTrail * 2 : 1)),
-    good: (val) => [num(val.bandLow) ? val.bandLow : 0, num(val.bandMedian) ? val.bandMedian : (num(V(val).perTrail) ? V(val).perTrail : 1)],
+    max: (val) => (num(val.bandHigh) ? val.bandHigh : num(V(val).perTrail) ? V(val).perTrail * 2 : 1),
+    good: (val) => [
+      num(val.bandLow) ? val.bandLow : 0,
+      num(val.bandMedian) ? val.bandMedian : num(V(val).perTrail) ? V(val).perTrail : 1,
+    ],
     tick: (val) => (num(val.bandMedian) ? val.bandMedian : null),
     live: true,
     liveTag: '過去比',
@@ -359,6 +368,137 @@ export const VALUE_DETAIL_META = [
     judge: (val) => (M(val).rsVsSector > 0 ? J.good : J.warn),
   },
 ];
+
+// ── 銘柄固有の評価（evalText・#504 B）──────────────────────────────────────
+// 実値＋しきい値＋（あれば）同業中央値から「その銘柄に踏み込んだ1〜2文」を返す。
+// 一般定義は glossary が正本＝ここでは"定義"ではなく"評価"だけを書く。null は評価不能（リンクのみ）。
+/** @type {Record<string, (val:any)=>string|null>} */
+const EVAL = {
+  per: (val) => {
+    const pf = V(val).perFwd;
+    const pt = V(val).perTrail;
+    const p = val && val.percentile;
+    if (!num(pt) && !num(pf)) return null;
+    const sm = val && val.sectorMedian && num(val.sectorMedian.per) ? val.sectorMedian.per : null;
+    const bandTxt =
+      num(val.bandLow) && num(val.bandHigh) ? `過去バンド(${fmt1(val.bandLow)}〜${fmt1(val.bandHigh)})` : '過去バンド';
+    const posTxt = num(p)
+      ? p < 40
+        ? `${bandTxt}の下半分＝相対的に割安`
+        : p <= 70
+          ? `${bandTxt}の中ほど＝中立圏`
+          : `${bandTxt}の上半分＝やや割高`
+      : bandTxt;
+    const ref = num(pf) ? pf : pt;
+    const smTxt =
+      sm != null
+        ? `、同業中央値 約${fmt1(sm)}倍${num(ref) ? (ref < sm ? 'より低い' : ref > sm ? 'より高い' : '並み') : ''}`
+        : '';
+    return `PER ${fmtRaw(ref)}倍は${posTxt}${smTxt}。`;
+  },
+  peg: (val) => {
+    const x = V(val).peg;
+    if (!num(x)) return null;
+    return `PEG ${fmtRaw(x)}＝${x < 1 ? '成長対比で割安寄り' : x <= 2 ? '成長相応' : '成長を織り込んでも割高'}。`;
+  },
+  evEbitda: (val) => {
+    const x = V(val).evEbitda;
+    if (!num(x)) return null;
+    const sm = val && val.sectorMedian && num(val.sectorMedian.evEbitda) ? val.sectorMedian.evEbitda : null;
+    const t = x < 8 ? '割安水準' : x <= 15 ? '標準水準' : '割高水準';
+    return `借金込みの企業価値は本業利益の${fmtRaw(x)}年分＝${t}${sm != null ? `（同業中央値 約${fmt1(sm)}x）` : ''}。`;
+  },
+  percentile: (val) => {
+    const p = val && val.percentile;
+    if (!num(p)) return null;
+    return `自分の過去バリュエーション分布で下から${Math.round(p)}%の位置＝${p < 40 ? '割安圏（買い場寄り）' : p <= 70 ? '中立圏' : '割高圏（過熱寄り）'}。`;
+  },
+  fcfYield: (val) => {
+    const x = V(val).fcfYield;
+    if (!num(x)) return null;
+    return `時価総額に対しFCFを年${fmtRaw(x)}%生む＝${x > 4 ? '現金創出力が高く妙味あり' : x >= 2 ? '標準的な水準' : '現金創出力は低め'}。`;
+  },
+  shareholderYield: (val) => {
+    const x = V(val).shareholderYield;
+    if (!num(x)) return null;
+    return `配当＋自社株買いで年${fmtRaw(x)}%を株主に返す＝${x > 3 ? '株主還元は手厚い' : x >= 1 ? '標準的な還元' : '還元は薄め'}。`;
+  },
+  fcfConversion: (val) => {
+    const x = Q(val).fcfConv;
+    if (!num(x)) return null;
+    return `FCF変換 ${fmtRaw(x)}＝${x > 0.9 ? '帳簿利益がしっかり現金化＝質が高い' : x >= 0.6 ? 'やや現金化に難' : '利益が現金に化けにくい'}。`;
+  },
+  roic: (val) => {
+    const r = Q(val).roic;
+    const w = Q(val).wacc;
+    if (!num(r) || !num(w)) return null;
+    const d = r - w;
+    const t =
+      d >= 1 ? '資本を使うほど価値を生む' : d > -1 ? '資本コストと拮抗＝価値創造は薄い' : '資本コスト割れ＝価値を毀損';
+    return `ROIC ${fmtRaw(r)}% ${d >= 0 ? '>' : '<'} WACC ${fmtRaw(w)}%（${sign(d)}${fmt1(d)}pt）＝${t}。`;
+  },
+  grossProfitability: (val) => {
+    const x = Q(val).grossProf;
+    if (!num(x)) return null;
+    return `総資産に対する粗利は${fmtRaw(x)}＝${x > 0.33 ? '資産効率の高い優良型' : x >= 0.2 ? '標準的' : '資産の割に粗利が薄い'}。`;
+  },
+  altmanZ: (val) => {
+    const z = Q(val).altmanZ;
+    if (!num(z)) return null;
+    return `Altman Z ${fmtRaw(z)}＝${z >= 3 ? '倒産リスクは低い安全圏' : z >= 1.8 ? 'グレーゾーン（注意）' : '財務的に危険水準'}。`;
+  },
+  fScore: (val) => {
+    const f = Q(val).fScore;
+    const qs = Q(val).qScore;
+    const x = num(f) ? f : qs;
+    if (!num(x)) return null;
+    return `品質スコア ${Math.round(x)}/9＝${x >= 7 ? '収益性・財務・効率とも健全' : x >= 5 ? '及第点' : '健全性に不安'}。`;
+  },
+  impliedGrowth: (val) => {
+    if (V(val).cyclical === true) return null;
+    const ig = impliedGrowth(V(val).fcfYield, num(Q(val).wacc) ? Q(val).wacc : null);
+    if (!num(ig)) return null;
+    return `今の株価が織り込む長期成長は約${fmt1(ig)}%＝${isGrowthOverheated(ig) ? '株価は高い成長を前提＝期待過多の可能性' : '前提成長は現実的な範囲'}。`;
+  },
+  targetGap: (val) => {
+    const tg = V(val).targetGapPct;
+    if (!num(tg)) return null;
+    return tg > 0
+      ? `アナリスト平均まで${sign(tg)}${fmt1(tg)}%の上値余地。`
+      : `アナリスト平均を${fmt1(Math.abs(tg))}%上回り上値余地に乏しい。`;
+  },
+  epsRev90d: (val) => {
+    const x = M(val).epsRev90d;
+    if (!num(x)) return null;
+    const t =
+      x > 0
+        ? '直近90日でEPS予想が上方修正＝業績の追い風'
+        : x < 0
+          ? '直近90日でEPS予想が下方修正＝逆風'
+          : '改定は横ばい';
+    return `${t}（${sign(x)}${fmt1(x)}%）。`;
+  },
+  priceMom1Y: (val) => {
+    const x = M(val).priceMom1Y;
+    if (!num(x)) return null;
+    return `直近1年の株価は${sign(x)}${fmt1(x)}%＝${x >= 0 ? '上昇基調' : '下落基調'}（割安/割高は他指標と併読）。`;
+  },
+  pos52w: (val) => {
+    const x = M(val).pos52w;
+    if (!num(x)) return null;
+    return `52週レンジ内で${fmtRaw(x)}%の位置＝${x > 85 ? '高値圏（過熱に注意）' : x < 20 ? '安値圏' : 'レンジ中ほど'}。`;
+  },
+  rsVsSector: (val) => {
+    const x = M(val).rsVsSector;
+    if (!num(x)) return null;
+    return `世界株平均より${sign(x)}${fmt1(x)}%＝${x > 0 ? '地合いを除いても個別で市場に勝っている' : '市場(ACWI)に対して見劣り'}。`;
+  },
+};
+
+// 各メタに evalText を後付け（評価が無い key は undefined のまま＝detailRow はリンクのみ）。
+for (const meta of VALUE_DETAIL_META) {
+  if (EVAL[meta.key]) meta.evalText = EVAL[meta.key];
+}
 
 /** 3つの問いの見出し＋1行キャプション。 */
 export const VALUE_DETAIL_GROUPS = {
