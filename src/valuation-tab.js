@@ -1,7 +1,7 @@
 // @ts-check
 
 // ══════════════════════════════════════════════════════════════
-// valuation-tab.js  ―  「Value」タブ（4レンズ: 総合/バリュ/品質/モメンタム）
+// valuation-tab.js  ―  「Value」タブ（4レンズ: サイズ乖離/バリュ/品質/モメンタム）
 //
 // 保有銘柄を各レンズの視点で並べ直し、メトリクスを表示する。
 //
@@ -179,9 +179,10 @@ function termChip(cls, title, valueHTML, key, extraSummaryCls = '') {
 }
 
 /**
- * レンズの並べ替え基準を、カード上で強調する対象に対応づける（純関数・テスト対象）。
+ * レンズの並べ替え基準を、コア4チップ（PER/%タイル/品質/モメンタム）の強調位置に1対1で対応づける
+ * （純関数・テスト対象・#504 F）。サイズ乖離レンズはチップ無しでサイズバーをリング強調。
  * @param {string} lens
- * @returns {{ chip: 'pct'|'f'|null, sizeBar: boolean }}
+ * @returns {{ chip: 'pct'|'qual'|'mom'|null, sizeBar: boolean }}
  */
 export function sortKeyForLens(lens) {
   switch (lens) {
@@ -190,15 +191,18 @@ export function sortKeyForLens(lens) {
     case 'value':
       return { chip: 'pct', sizeBar: false }; // percentile ASC → %タイルチップ
     case 'quality':
-      return { chip: 'f', sizeBar: false }; // qScore DESC → Fチップ（代表値）
+      return { chip: 'qual', sizeBar: false }; // qScore DESC → 品質チップ
+    case 'momentum':
+      return { chip: 'mom', sizeBar: false }; // priceMom1Y DESC → モメンタムチップ
     default:
-      return { chip: null, sizeBar: false }; // momentum 等はチップ強調なし（レンズピルで表現）
+      return { chip: null, sizeBar: false };
   }
 }
 
 /**
- * 固定コアチップ（PER／PEG／%タイル／Fスコア の4枚・2×2）。レンズに応じて
- * 並べ替えキーのチップに is-sortkey を付与する。全レンズ同一構成（作り替えない）。
+ * 固定コアチップ（PER／%タイル／品質／モメンタム の4枚・2×2・#504 F）。レンズに応じて
+ * 対応チップ（value→%タイル/quality→品質/momentum→モメンタム）に is-sortkey を付与する。
+ * 全レンズ同一構成（作り替えない）。PEG/EV-EBITDA・Fスコア等は詳細①②に既出。
  * @param {any|null} val
  * @param {string} lens
  * @returns {string}
@@ -206,16 +210,22 @@ export function sortKeyForLens(lens) {
 function coreChipsHTML(val, lens) {
   const v = (val && val.value) || {};
   const q = (val && val.quality) || {};
+  const mo = (val && val.momentum) || {};
   const sk = sortKeyForLens(lens);
   const per = `${fmtRaw(v.perTrail)}→${fmtRaw(v.perFwd)}`;
   const pct = val && val.percentile != null && isFinite(val.percentile) ? `${Math.round(val.percentile)}%ile` : '—';
-  // 各チップ = ⓘ付き termChip。ソートキー強調 is-sortkey は位置 id（per/peg/pct/f）で付与・維持。
+  const qual = q.qScore != null && isFinite(q.qScore) ? `Q${Math.round(q.qScore)}` : '—';
+  const mom =
+    mo.priceMom1Y != null && isFinite(mo.priceMom1Y)
+      ? `${mo.priceMom1Y >= 0 ? '+' : ''}${Math.round(mo.priceMom1Y)}%`
+      : '—';
+  // 各チップ = ⓘ付き termChip。ソートキー強調 is-sortkey は位置 id（per/pct/qual/mom）で付与・維持。
   const skCls = (posId) => (sk.chip === posId ? 'is-sortkey' : '');
   return `<div class="val-chips">
     ${termChip('val-c', 'PER', escapeHTML(per), 'per', skCls('per'))}
-    ${termChip('val-c', 'PEG', escapeHTML(fmtRaw(v.peg)), 'peg', skCls('peg'))}
     ${termChip('val-c', '%タイル', escapeHTML(pct), 'percentile', skCls('pct'))}
-    ${termChip('val-c', 'Fスコア', escapeHTML(fmtRaw(q.fScore)), 'fScore', skCls('f'))}
+    ${termChip('val-c', '品質', escapeHTML(qual), 'qScore', skCls('qual'))}
+    ${termChip('val-c', 'モメンタム', escapeHTML(mom), 'priceMom1Y', skCls('mom'))}
   </div>`;
 }
 
@@ -231,20 +241,33 @@ function detailRow(meta, val) {
   const m = computeMetric(meta, val);
   if (m == null) return ''; // データ無し→行を出さない（空 gauge を出さない）
   const t = glossaryTermByKey(meta.key);
-  const badge = m.judge
-    ? `<span class="vg-badge vg-${m.tone}">${m.judge.glyph} ${escapeHTML(m.judge.label)}</span>`
-    : '';
+  // 中立（neu）は判定バッジを出さない（「・ 文脈次第」を撲滅・#504 B）。マーカー色は neu のままでよい。
+  const badge =
+    m.judge && m.tone !== 'neu'
+      ? `<span class="vg-badge vg-${m.tone}">${m.judge.glyph} ${escapeHTML(m.judge.label)}</span>`
+      : '';
   const tag = meta.live ? `<span class="vg-live">${escapeHTML(meta.liveTag || '')}</span>` : '';
   // 同業中央値の破線ラベル。質を正直に: 米株 peer 群=「同業 n=N」/ JP ETF proxy=「同業(proxy)」（#493/#497）
-  const peerLab = m.peer != null
-    ? `<span class="vg-peer-lab">${m.peerSource === 'etf-proxy' ? '同業(proxy)' : `同業 n=${m.peerN != null ? m.peerN : '—'}`}</span>`
-    : '';
-  const iGlyph = t ? `<span class="vg-i" aria-hidden="true">ⓘ</span>` : '';
-  const expl = t ? `<p class="vg-expl">${escapeHTML(t.desc)}</p>` : '';
+  const peerLab =
+    m.peer != null
+      ? `<span class="vg-peer-lab">${m.peerSource === 'etf-proxy' ? '同業(proxy)' : `同業 n=${m.peerN != null ? m.peerN : '—'}`}</span>`
+      : '';
+  // ⓘ展開＝この銘柄ならではの評価（evalText）＋用語解説への誘導（#504 B）。
+  // 一般的な定義は glossary が正本＝vg-expl に generic desc を二度書きしない。
+  const ev = meta.evalText ? meta.evalText(val) : null;
+  const glossLink = '<a class="vg-gloss-link" href="#val-glossary">用語の意味を見る →</a>';
+  const iGlyph = ev || t ? `<span class="vg-i" aria-hidden="true">ⓘ</span>` : '';
+  const expl = ev
+    ? `<p class="vg-expl">この銘柄: ${escapeHTML(ev)} ${glossLink}</p>`
+    : t
+      ? `<p class="vg-expl vg-expl--link">意味は<a class="vg-gloss-link" href="#val-glossary">用語解説</a>へ</p>`
+      : '';
   // gauge 内訳（全て clamp 済み・% 配置）
   const z0 = m.zone ? Math.min(m.zone[0], m.zone[1]) : 0;
   const zw = m.zone ? Math.abs(m.zone[1] - m.zone[0]) : 0;
-  const zoneHTML = m.zone ? `<span class="vg-zone vg-${m.tone}" style="left:${z0.toFixed(0)}%;width:${zw.toFixed(0)}%"></span>` : '';
+  const zoneHTML = m.zone
+    ? `<span class="vg-zone vg-${m.tone}" style="left:${z0.toFixed(0)}%;width:${zw.toFixed(0)}%"></span>`
+    : '';
   const tickHTML = m.tick != null ? `<span class="vg-tick" style="left:${m.tick.toFixed(0)}%"></span>` : '';
   const peerHTML = m.peer != null ? `<span class="vg-peer" style="left:${m.peer.toFixed(0)}%"></span>` : ''; // 将来（同業中央値）
   const mkHTML = `<span class="vg-mk vg-${m.tone}" style="left:${m.pos.toFixed(0)}%"></span>`;
@@ -273,11 +296,23 @@ function detailHTML(val) {
       .join('');
     if (!rows) return '';
     const gi = VALUE_DETAIL_GROUPS[g];
-    return `<div class="val-detail-grp"><span class="lab">${escapeHTML(gi.label)}<span class="grp-cap">${escapeHTML(gi.cap)}</span></span><div class="vg-rows">${rows}</div></div>`;
+    // 文字のみ見出し（番号は本文色・下罫線だけ・カード/帯にしない・#504 C）
+    return `<div class="val-detail-grp"><div class="grp-h"><span class="lab">${escapeHTML(gi.label)}</span><span class="grp-cap">${escapeHTML(gi.cap)}</span></div><div class="vg-rows">${rows}</div></div>`;
   };
   const body = [1, 2, 3].map(groupHTML).join('');
   if (!body) return '';
-  return `<details class="val-detail"><summary>詳細指標</summary>${body}</details>`;
+  // 目安バーの見方（凡例）を詳細先頭に1回だけ（各行には出さない・#504 D）
+  const legend = `<div class="vg-legend">
+    <div class="vg-legend-ttl">目安バーの見方</div>
+    <div class="vg-legend-bar"><span class="vg-zone vg-good" style="left:8%;width:46%"></span><span class="vg-tick" style="left:50%"></span><span class="vg-peer" style="left:72%"></span><span class="vg-mk vg-good" style="left:34%"></span></div>
+    <ul class="vg-legend-items">
+      <li><span class="lg-sw lg-zone"></span>塗り＝良い範囲（目安）</li>
+      <li><span class="lg-sw lg-mk"></span>● いまの値（この銘柄）</li>
+      <li><span class="lg-sw lg-tick"></span>│ 目安ライン（中央値/しきい値）</li>
+      <li><span class="lg-sw lg-peer"></span>┊ 同業中央値（破線）</li>
+    </ul>
+  </div>`;
+  return `<details class="val-detail"><summary>詳細指標</summary>${legend}${body}</details>`;
 }
 
 /**
@@ -288,31 +323,46 @@ function detailHTML(val) {
  */
 function bannerHTML(trig) {
   let kind = 'hold';
-  let glyph = '▪';
+  let icon = 'vb-hold';
   let action = '維持';
   let reason = '';
   if (trig && trig.active.length > 0) {
     const t = trig.active[0];
     if (t.side === 'sell') {
       kind = 'sell';
-      glyph = '▼';
+      icon = 'vb-trim';
       action = 'トリム';
     } else {
       kind = 'buy';
-      glyph = '▲';
+      icon = 'vb-add';
       action = '積増';
     }
     reason = t.reason || t.action || '';
   } else if (trig && trig.watching.length > 0) {
     const w = trig.watching[0];
     kind = 'watch';
-    glyph = '◦';
+    icon = 'vb-watch';
     action = '監視';
     reason = w.note || w.action || '';
   }
   const reasonHTML = reason ? `<span class="vb">${escapeHTML(reason)}</span>` : '';
-  return `<div class="val-banner val-banner--${kind}"><span class="va"><span class="gl" aria-hidden="true">${glyph}</span>${action}</span>${reasonHTML}</div>`;
+  // 記号 ▼▲◦▪ 廃止 → SVG ラインアイコン（同一文書 use・外部参照なし＝CSP 安全・#504 G）
+  return `<div class="val-banner val-banner--${kind}"><span class="va"><svg class="vb-ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#${icon}"/></svg>${action}</span>${reasonHTML}</div>`;
 }
+
+/**
+ * アクションバナー用 SVG スプライト（feather 風・stroke=currentColor）。renderValuationTab の
+ * 出力先頭に1回だけ置く。各バナーは <use href="#vb-*"> で参照（CSP 安全）。
+ * @type {string}
+ */
+const VAL_BANNER_SPRITE =
+  '<svg class="val-sprite" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">' +
+  '<defs>' +
+  '<g id="vb-add" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/></g>' +
+  '<g id="vb-trim" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 7 9 13 13 9 21 17"/><polyline points="15 17 21 17 21 11"/></g>' +
+  '<g id="vb-watch" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 12S5 5.5 12 5.5 22.5 12 22.5 12 19 18.5 12 18.5 1.5 12 1.5 12Z"/><circle cx="12" cy="12" r="3"/></g>' +
+  '<g id="vb-hold" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6.5 9.5 17 4.5 12"/></g>' +
+  '</defs></svg>';
 
 /**
  * カード下部の判定確度 行 HTML を生成する（confidence が無ければ空文字）。
@@ -568,9 +618,10 @@ export async function renderValuationTab() {
     if (hr.pending > 0) return `<span class="hr-p">${label} 判定待ち${hr.pending}</span>`;
     return `<span class="hr-p">${label}—</span>`;
   };
-  const hitRateVal = `${hrPart('発議', hrA)}<span class="hr-sep"> / </span>${hrPart('判定', hrV)}`;
-  // トリガー: active=抵触 / watching=監視 を併記（ヘッダ値は抵触＝アクションバナー化する銘柄数）
-  const trigVal = `<span class="hr-p">抵触${triggerCount}</span><span class="hr-sep">・</span><span class="hr-p">監視${watchCount}</span>`;
+  // 的中率＝発議/判定 を2段（キリよく改行・#504 A）
+  const hitRateVal = `${hrPart('発議', hrA)}<span class="l2">${hrPart('判定', hrV)}</span>`;
+  // トリガー: active=抵触 / watching=監視 を2段（抵触＝アクションバナー化する銘柄数・#504 A）
+  const trigVal = `<span class="hr-p">抵触 ${triggerCount}</span><span class="l2"><span class="hr-p">監視 ${watchCount}</span></span>`;
   // 各統計に個別ⓘ（termChip）。旧「ⓘ 統計の見方」単独 details は撤去し各統計へ集約（#475）。
   const statsHTML = `<div class="val-stats">
     ${termChip('val-stat', '過大ポジ', escapeHTML(String(overCount)), 'overweightCount')}
@@ -581,7 +632,7 @@ export async function renderValuationTab() {
 
   // レンズ切替ピル（4つすべて有効）
   const lenses = [
-    { key: 'total', label: '総合' },
+    { key: 'total', label: 'サイズ乖離' },
     { key: 'value', label: 'バリュ' },
     { key: 'quality', label: '品質' },
     { key: 'momentum', label: 'モメンタム' },
@@ -601,7 +652,7 @@ export async function renderValuationTab() {
     .map((r) => rowHTML(r.p, r.currentPct, r.targetPct, r.verdict, r.val, r.trig, r.conviction))
     .join('');
 
-  wrap.innerHTML = `${statsHTML}${lensHTML}<div class="val-list">${rowsHTML}</div>${glossaryHTML('value')}`;
+  wrap.innerHTML = `${VAL_BANNER_SPRITE}${statsHTML}${lensHTML}<div class="val-list">${rowsHTML}</div><div id="val-glossary">${glossaryHTML('value')}</div>`;
 
   // ピルのクリックで _lens を更新して再描画（CSP 安全な addEventListener）
   wrap.querySelectorAll('.val-seg[data-lens]').forEach((btn) => {
