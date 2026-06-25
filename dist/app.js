@@ -6153,8 +6153,9 @@ function computeMetric(meta, val) {
   const peer = num3(pv) ? axis(pv) : null;
   const pn = meta.peerN ? meta.peerN(val) : null;
   const peerN = num3(pn) ? pn : null;
+  const peerSource = peer != null && val && val.sectorMedian ? val.sectorMedian.source || null : null;
   const j = meta.judge ? meta.judge(val) : null;
-  return { valueHTML: meta.display(val), pos, zone, tick, peer, peerN, tone: j ? j.tone : "neu", judge: j };
+  return { valueHTML: meta.display(val), pos, zone, tick, peer, peerN, peerSource, tone: j ? j.tone : "neu", judge: j };
 }
 
 // src/triggers.js
@@ -6451,7 +6452,7 @@ function detailRow(meta, val) {
   const t = glossaryTermByKey(meta.key);
   const badge = m.judge ? `<span class="vg-badge vg-${m.tone}">${m.judge.glyph} ${escapeHTML(m.judge.label)}</span>` : "";
   const tag = meta.live ? `<span class="vg-live">${escapeHTML(meta.liveTag || "")}</span>` : "";
-  const peerLab = m.peer != null ? `<span class="vg-peer-lab">\u540C\u696D n=${m.peerN != null ? m.peerN : "\u2014"}</span>` : "";
+  const peerLab = m.peer != null ? `<span class="vg-peer-lab">${m.peerSource === "etf-proxy" ? "\u540C\u696D(proxy)" : `\u540C\u696D n=${m.peerN != null ? m.peerN : "\u2014"}`}</span>` : "";
   const iGlyph = t ? `<span class="vg-i" aria-hidden="true">\u24D8</span>` : "";
   const expl = t ? `<p class="vg-expl">${escapeHTML(t.desc)}</p>` : "";
   const z0 = m.zone ? Math.min(m.zone[0], m.zone[1]) : 0;
