@@ -5801,6 +5801,351 @@ function classifyVerdict(v) {
   return { class: "fair", label: VERDICT_LABELS["fair"], drivers: [], sub: null };
 }
 
+// src/value-detail-meta.js
+var J = {
+  good: { tone: "good", glyph: "\u25CE", label: "\u826F\u3044" },
+  ok: { tone: "ok", glyph: "\u25CB", label: "\u6A19\u6E96" },
+  warn: { tone: "warn", glyph: "\u25B3", label: "\u6CE8\u610F" },
+  bad: { tone: "warn", glyph: "\u26A0", label: "\u5371\u967A" },
+  // 色は warn 系・グリフで強調
+  neu: { tone: "neu", glyph: "\u30FB", label: "\u6587\u8108\u6B21\u7B2C" }
+};
+function num3(x) {
+  return typeof x === "number" && Number.isFinite(x);
+}
+function fmt1(n) {
+  return num3(n) ? n.toFixed(1) : "\u2014";
+}
+function fmtRaw(n) {
+  return num3(n) ? n.toFixed(1) : "\u2014";
+}
+var V = (val) => val && val.value || {};
+var Q = (val) => val && val.quality || {};
+var M = (val) => val && val.momentum || {};
+var VALUE_DETAIL_META = [
+  // ── ① 価格は割安か？ ──
+  {
+    key: "per",
+    label: "PER",
+    group: 1,
+    cap: "\u81EA\u5206\u306E\u904E\u53BBPER\u30D0\u30F3\u30C9\u3067\u306E\u4F4D\u7F6E\u3002\u5DE6\uFF1D\u5272\u5B89\u3002",
+    read: (val) => num3(V(val).perTrail) ? V(val).perTrail : null,
+    display: (val) => `${fmtRaw(V(val).perTrail)}\u2192${fmtRaw(V(val).perFwd)}`,
+    min: (val) => num3(val.bandLow) ? val.bandLow : 0,
+    max: (val) => num3(val.bandHigh) ? val.bandHigh : num3(V(val).perTrail) ? V(val).perTrail * 2 : 1,
+    good: (val) => [num3(val.bandLow) ? val.bandLow : 0, num3(val.bandMedian) ? val.bandMedian : num3(V(val).perTrail) ? V(val).perTrail : 1],
+    tick: (val) => num3(val.bandMedian) ? val.bandMedian : null,
+    live: true,
+    liveTag: "\u904E\u53BB\u6BD4",
+    judge: (val) => {
+      const p = val.percentile;
+      if (!num3(p)) return null;
+      return p < 40 ? J.good : p <= 70 ? J.ok : J.warn;
+    }
+  },
+  {
+    key: "peg",
+    label: "PEG",
+    group: 1,
+    cap: "\u6210\u9577\u3092\u52A0\u5473\u3057\u305F\u5272\u9AD8\u5EA6\u30021\u672A\u6E80\u3067\u5272\u5B89\u5BC4\u308A\u3002",
+    read: (val) => num3(V(val).peg) ? V(val).peg : null,
+    display: (val) => fmtRaw(V(val).peg),
+    min: 0,
+    max: 3,
+    good: () => [0, 1],
+    tick: () => 1,
+    judge: (val) => {
+      const x = V(val).peg;
+      return x < 1 ? J.good : x <= 2 ? J.ok : J.warn;
+    }
+  },
+  {
+    key: "evEbitda",
+    label: "EV/EBITDA",
+    group: 1,
+    cap: "\u501F\u91D1\u8FBC\u307F\u3067\u4F1A\u793E\u3092\u4E38\u3054\u3068\u8CB7\u3046\u3068\u672C\u696D\u5229\u76CA\u306E\u4F55\u5E74\u5206\u3002\u4F4E\u3044\uFF1D\u5272\u5B89\u3002",
+    read: (val) => num3(V(val).evEbitda) ? V(val).evEbitda : null,
+    display: (val) => `${fmtRaw(V(val).evEbitda)}x`,
+    min: 0,
+    max: 20,
+    good: () => [0, 8],
+    tick: () => 15,
+    judge: (val) => {
+      const x = V(val).evEbitda;
+      return x < 8 ? J.good : x <= 15 ? J.ok : J.warn;
+    }
+  },
+  {
+    key: "percentile",
+    label: "%\u30BF\u30A4\u30EB",
+    group: 1,
+    cap: "\u81EA\u5206\u306E\u904E\u53BB\u30D0\u30F3\u30C9\u3067\u4ECA\u304C\u4F55%\u306E\u4F4D\u7F6E\u304B\u3002\u4F4E\u3044\uFF1D\u5272\u5B89\u3002",
+    read: (val) => num3(val.percentile) ? val.percentile : null,
+    display: (val) => `${Math.round(val.percentile)}%ile`,
+    min: 0,
+    max: 100,
+    good: () => [0, 40],
+    tick: () => 50,
+    live: true,
+    liveTag: "\u904E\u53BB\u6BD4",
+    judge: (val) => {
+      const p = val.percentile;
+      return p < 40 ? J.good : p <= 70 ? J.ok : J.warn;
+    }
+  },
+  // ── ② ちゃんと稼ぐか・株主に返すか？ ──
+  {
+    key: "fcfYield",
+    label: "FCF\u5229\u56DE\u308A",
+    group: 2,
+    cap: "\u6642\u4FA1\u7DCF\u984D\u306B\u5BFE\u3059\u308B\u73FE\u91D1\u5275\u51FA\u529B\u30024%\u8D85\u3067\u5999\u5473\u3002",
+    read: (val) => num3(V(val).fcfYield) ? V(val).fcfYield : null,
+    display: (val) => `${fmtRaw(V(val).fcfYield)}%`,
+    min: 0,
+    max: 10,
+    good: () => [4, 10],
+    tick: () => 4,
+    judge: (val) => {
+      const x = V(val).fcfYield;
+      return x > 4 ? J.good : x >= 2 ? J.ok : J.warn;
+    }
+  },
+  {
+    key: "shareholderYield",
+    label: "\u682A\u4E3B\u9084\u5143",
+    group: 2,
+    cap: "\u914D\u5F53\uFF0B\u81EA\u793E\u682A\u8CB7\u3044\u306E\u5229\u56DE\u308A\u30023%\u8D85\u3067\u624B\u539A\u3044\u3002",
+    read: (val) => num3(V(val).shareholderYield) ? V(val).shareholderYield : null,
+    display: (val) => `${fmtRaw(V(val).shareholderYield)}%`,
+    min: 0,
+    max: 8,
+    good: () => [3, 8],
+    tick: () => 3,
+    judge: (val) => {
+      const x = V(val).shareholderYield;
+      return x > 3 ? J.good : x >= 1 ? J.ok : J.warn;
+    }
+  },
+  {
+    key: "fcfConversion",
+    label: "FCF\u5909\u63DB",
+    group: 2,
+    cap: "\u5E33\u7C3F\u5229\u76CA\u304C\u73FE\u91D1\u306B\u3069\u308C\u3060\u3051\u5316\u3051\u308B\u304B\u30021.0\u8FD1\u8FBA\u4EE5\u4E0A\u304C\u5065\u5168\u3002",
+    read: (val) => num3(Q(val).fcfConv) ? Q(val).fcfConv : null,
+    display: (val) => fmtRaw(Q(val).fcfConv),
+    min: 0,
+    max: 2,
+    good: () => [0.9, 2],
+    tick: () => 1,
+    judge: (val) => {
+      const x = Q(val).fcfConv;
+      return x > 0.9 ? J.good : x >= 0.6 ? J.ok : J.warn;
+    }
+  },
+  {
+    key: "roic",
+    label: "ROIC",
+    group: 2,
+    cap: "\u6295\u4E0B\u8CC7\u672C\u306E\u7A3C\u3050\u5229\u7387\u304CWACC\u3092\u8D85\u3048\u308B\u304B\u3002\u8D85\u3048\uFF1D\u4FA1\u5024\u5275\u9020\u3002",
+    read: (val) => num3(Q(val).roic) ? Q(val).roic : null,
+    display: (val) => {
+      const r = Q(val).roic;
+      const w = Q(val).wacc;
+      const s = `${fmtRaw(r)}% vs WACC ${fmtRaw(w)}%`;
+      return num3(r) && num3(w) && r < w ? `<span class="val-bad">${s} \u26A0\u4E0B\u56DE\u308A</span>` : s;
+    },
+    min: 0,
+    max: 25,
+    good: (val) => num3(Q(val).wacc) ? [Q(val).wacc, 25] : null,
+    tick: (val) => num3(Q(val).wacc) ? Q(val).wacc : null,
+    live: true,
+    liveTag: "vs WACC",
+    judge: (val) => {
+      const r = Q(val).roic;
+      const w = Q(val).wacc;
+      if (!num3(w)) return null;
+      const d = r - w;
+      return d >= 1 ? J.good : d > -1 ? J.ok : J.bad;
+    }
+  },
+  {
+    key: "grossProfitability",
+    label: "\u7C97\u5229/\u8CC7\u7523",
+    group: 2,
+    cap: "\u8CC7\u7523\u898F\u6A21\u306B\u5BFE\u3059\u308B\u7C97\u5229\u3002\u8CEA\u306E\u9AD8\u3044\u5272\u5B89\u682A\u306E\u6307\u6A19\u3002",
+    read: (val) => num3(Q(val).grossProf) ? Q(val).grossProf : null,
+    display: (val) => fmtRaw(Q(val).grossProf),
+    min: 0,
+    max: 1,
+    good: () => [0.33, 1],
+    tick: () => 0.33,
+    judge: (val) => {
+      const x = Q(val).grossProf;
+      return x > 0.33 ? J.good : x >= 0.2 ? J.ok : J.warn;
+    }
+  },
+  {
+    key: "altmanZ",
+    label: "Altman Z",
+    group: 2,
+    cap: "\u5012\u7523\u306E\u8D77\u304D\u306B\u304F\u3055\u30023\u8D85\u3067\u5B89\u5168\u570F\u30011.8\u672A\u6E80\u3067\u5371\u967A\u3002",
+    read: (val) => num3(Q(val).altmanZ) ? Q(val).altmanZ : null,
+    display: (val) => {
+      const z = Q(val).altmanZ;
+      const s = fmtRaw(z);
+      return num3(z) && z < 3 ? `<span class="val-warn">${s} \u26A0&lt;3</span>` : s;
+    },
+    min: 0,
+    max: 8,
+    good: () => [3, 8],
+    tick: () => 3,
+    judge: (val) => {
+      const z = Q(val).altmanZ;
+      return z >= 3 ? J.good : z >= 1.8 ? J.ok : J.bad;
+    }
+  },
+  {
+    key: "fScore",
+    label: "F/Q\u30B9\u30B3\u30A2",
+    group: 2,
+    cap: "\u53CE\u76CA\u6027\u30FB\u8CA1\u52D9\u30FB\u52B9\u7387\u306E\u5065\u5168\u5EA6\uFF080\u301C9\uFF09\u30027\u4EE5\u4E0A\u304C\u5065\u5168\u3002",
+    read: (val) => num3(Q(val).fScore) ? Q(val).fScore : null,
+    display: (val) => fmtRaw(Q(val).fScore),
+    min: 0,
+    max: 9,
+    good: () => [7, 9],
+    tick: () => 5,
+    judge: (val) => {
+      const f = Q(val).fScore;
+      return f >= 7 ? J.good : f >= 5 ? J.ok : J.warn;
+    }
+  },
+  // ── ③ 市場の期待・勢いは？ ──
+  {
+    key: "impliedGrowth",
+    label: "\u7E54\u8FBC\u6210\u9577",
+    group: 3,
+    cap: "\u4ECA\u306E\u682A\u4FA1\u304C\u524D\u63D0\u306B\u3059\u308B\u9577\u671FFCF\u6210\u9577\u7387\u30027%\u8D85\u3067\u671F\u5F85\u904E\u591A\u3002",
+    read: (val) => {
+      if (V(val).cyclical === true) return null;
+      const ig = impliedGrowth(V(val).fcfYield, num3(Q(val).wacc) ? Q(val).wacc : null);
+      return num3(ig) ? ig : null;
+    },
+    display: (val) => {
+      const ig = impliedGrowth(V(val).fcfYield, num3(Q(val).wacc) ? Q(val).wacc : null);
+      const txt = `${fmt1(ig)}%${isGrowthOverheated(ig) ? " \u26A0\u671F\u5F85\u904E\u591A" : ""}`;
+      return isGrowthOverheated(ig) ? `<span class="val-warn">${txt}</span>` : txt;
+    },
+    min: 0,
+    max: 15,
+    good: () => [0, 7],
+    tick: () => 7,
+    judge: (val) => {
+      const ig = impliedGrowth(V(val).fcfYield, num3(Q(val).wacc) ? Q(val).wacc : null);
+      return isGrowthOverheated(ig) ? J.warn : J.ok;
+    }
+  },
+  {
+    key: "targetGap",
+    label: "\u76EE\u6A19\u4E56\u96E2",
+    group: 3,
+    cap: "\u30A2\u30CA\u30EA\u30B9\u30C8\u5E73\u5747\u76EE\u6A19\u682A\u4FA1\u3068\u306E\u5DEE\u3002\uFF0B\uFF1D\u4E0A\u5024\u4F59\u5730\u3002",
+    read: (val) => num3(V(val).targetGapPct) ? V(val).targetGapPct : null,
+    display: (val) => {
+      const tg = V(val).targetGapPct;
+      const txt = `${tg >= 0 ? "+" : ""}${fmt1(tg)}%`;
+      return `<span class="${tg >= 0 ? "val-mom-up" : "val-mom-dn"}">${txt}</span>`;
+    },
+    min: -30,
+    max: 50,
+    good: () => [0, 50],
+    tick: () => 0,
+    live: true,
+    liveTag: "\u5BFE\u76EE\u6A19",
+    judge: (val) => V(val).targetGapPct > 0 ? J.good : J.warn
+  },
+  {
+    key: "epsRev90d",
+    label: "\u6539\u5B9A90d",
+    group: 3,
+    cap: "\u76F4\u8FD190\u65E5\u306EEPS\u4E88\u60F3\u6539\u5B9A\u3002\uFF0B\uFF1D\u4E0A\u65B9\u4FEE\u6B63\u3002",
+    read: (val) => num3(M(val).epsRev90d) ? M(val).epsRev90d : null,
+    display: (val) => `${fmtRaw(M(val).epsRev90d)}%`,
+    min: -10,
+    max: 10,
+    good: () => [0, 10],
+    tick: () => 0,
+    judge: (val) => M(val).epsRev90d > 0 ? J.good : J.warn
+  },
+  {
+    key: "priceMom1Y",
+    label: "1Y\u9A30\u843D",
+    group: 3,
+    cap: "\u76F4\u8FD11\u5E74\u306E\u5024\u4E0A\u304C\u308A\u7387\u3002",
+    read: (val) => num3(M(val).priceMom1Y) ? M(val).priceMom1Y : null,
+    display: (val) => {
+      const x = M(val).priceMom1Y;
+      const txt = `${x >= 0 ? "+" : ""}${fmt1(x)}%`;
+      return `<span class="${x >= 0 ? "val-mom-up" : "val-mom-dn"}">${txt}</span>`;
+    },
+    min: -40,
+    max: 40,
+    tick: () => 0,
+    judge: () => null
+    // 判定なし（文脈次第）
+  },
+  {
+    key: "pos52w",
+    label: "52\u9031\u4F4D\u7F6E",
+    group: 3,
+    cap: "52\u9031\u30EC\u30F3\u30B8\u5185\u306E\u4F4D\u7F6E\u30020\uFF1D\u5B89\u5024\u30FB100\uFF1D\u9AD8\u5024\u3002",
+    read: (val) => num3(M(val).pos52w) ? M(val).pos52w : null,
+    display: (val) => `${fmtRaw(M(val).pos52w)}%`,
+    min: 0,
+    max: 100,
+    tick: () => 50,
+    judge: (val) => M(val).pos52w > 85 ? J.warn : J.neu
+  },
+  {
+    key: "rsVsSector",
+    label: "\u5BFE\u5E02\u5834",
+    group: 3,
+    cap: "\u4E16\u754C\u682AACWI\u3068\u306E\u76F8\u5BFE\u5F37\u3055\u3002\uFF0B\uFF1D\u5E02\u5834\u306B\u52DD\u3063\u3066\u3044\u308B\u3002",
+    read: (val) => num3(M(val).rsVsSector) ? M(val).rsVsSector : null,
+    display: (val) => `${fmtRaw(M(val).rsVsSector)}%`,
+    min: -20,
+    max: 20,
+    good: () => [0, 20],
+    tick: () => 0,
+    live: true,
+    liveTag: "\u5BFEACWI",
+    judge: (val) => M(val).rsVsSector > 0 ? J.good : J.warn
+  }
+];
+var VALUE_DETAIL_GROUPS = {
+  1: { label: "\u2460 \u4FA1\u683C\u306F\u5272\u5B89\u304B\uFF1F", cap: "\u5B89\u304F\u8CB7\u3048\u3066\u3044\u308B\u304B" },
+  2: { label: "\u2461 \u3061\u3083\u3093\u3068\u7A3C\u3050\u304B\u30FB\u682A\u4E3B\u306B\u8FD4\u3059\u304B\uFF1F", cap: "\u7A3C\u3050\u529B\u30FB\u9084\u5143\u30FB\u5229\u76CA\u306E\u8CEA" },
+  3: { label: "\u2462 \u5E02\u5834\u306E\u671F\u5F85\u30FB\u52E2\u3044\u306F\uFF1F", cap: "\u671F\u5F85\u306E\u9AD8\u3055\u30FB\u30E2\u30E1\u30F3\u30BF\u30E0\u30FB\u5E02\u5834\u5BFE\u6BD4" }
+};
+function clamp01(x) {
+  return Math.max(0, Math.min(100, x));
+}
+function computeMetric(meta, val) {
+  const v = meta.read(val);
+  if (!num3(v)) return null;
+  const min = typeof meta.min === "function" ? meta.min(val) : meta.min;
+  const max = typeof meta.max === "function" ? meta.max(val) : meta.max;
+  if (!num3(min) || !num3(max) || !(max > min)) return null;
+  const axis = (x) => clamp01((x - min) / (max - min) * 100);
+  const pos = axis(v);
+  const g = meta.good ? meta.good(val) : null;
+  const zone = g && num3(g[0]) && num3(g[1]) ? [axis(g[0]), axis(g[1])] : null;
+  const tv = meta.tick ? meta.tick(val) : null;
+  const tick = num3(tv) ? axis(tv) : null;
+  const j = meta.judge ? meta.judge(val) : null;
+  return { valueHTML: meta.display(val), pos, zone, tick, peer: null, tone: j ? j.tone : "neu", judge: j };
+}
+
 // src/triggers.js
 var TRIGGERS_URL = "data/triggers.json";
 var _trig = {};
@@ -6002,10 +6347,10 @@ async function _ensureData() {
   }
   await Promise.all(loads);
 }
-function fmt1(n) {
+function fmt12(n) {
   return n != null && isFinite(n) ? n.toFixed(1) : "\u2014";
 }
-function fmtRaw(n) {
+function fmtRaw2(n) {
   return n != null && isFinite(n) ? n.toFixed(1) : "\u2014";
 }
 function chipClass(verdict) {
@@ -6040,11 +6385,11 @@ function sizeBarHTML(currentPct, targetPct, conviction) {
   const convTxt = convictionLabel(conviction);
   const convHTML = convTxt ? `<span class="cv">\uFF08${escapeHTML(convTxt)}\uFF09</span>` : "";
   return `<div class="val-sb">
-    <div class="val-sb-top"><span class="val-sb-cur ${fillCls}" style="left:${curLeft.toFixed(0)}%">${fmt1(currentPct)}%</span></div>
+    <div class="val-sb-top"><span class="val-sb-cur ${fillCls}" style="left:${curLeft.toFixed(0)}%">${fmt12(currentPct)}%</span></div>
     <div class="val-sb-bar"><span class="val-sb-fill ${fillCls}" style="width:${fillW.toFixed(1)}%"></span>${xnum}</div>
     <div class="val-sb-scale">
       <span class="end">\u6301\u305F\u306A\u3059\u304E</span>
-      <span class="mid"><span class="tri" aria-hidden="true"></span><span class="lab">${fmt1(targetPct)}%${convHTML}</span></span>
+      <span class="mid"><span class="tri" aria-hidden="true"></span><span class="lab">${fmt12(targetPct)}%${convHTML}</span></span>
       <span class="end">\u6301\u3061\u3059\u304E</span>
     </div>
   </div>`;
@@ -6079,64 +6424,51 @@ function coreChipsHTML(val, lens) {
   const v = val && val.value || {};
   const q = val && val.quality || {};
   const sk = sortKeyForLens(lens);
-  const per = `${fmtRaw(v.perTrail)}\u2192${fmtRaw(v.perFwd)}`;
+  const per = `${fmtRaw2(v.perTrail)}\u2192${fmtRaw2(v.perFwd)}`;
   const pct = val && val.percentile != null && isFinite(val.percentile) ? `${Math.round(val.percentile)}%ile` : "\u2014";
   const skCls = (posId) => sk.chip === posId ? "is-sortkey" : "";
   return `<div class="val-chips">
     ${termChip("val-c", "PER", escapeHTML(per), "per", skCls("per"))}
-    ${termChip("val-c", "PEG", escapeHTML(fmtRaw(v.peg)), "peg", skCls("peg"))}
+    ${termChip("val-c", "PEG", escapeHTML(fmtRaw2(v.peg)), "peg", skCls("peg"))}
     ${termChip("val-c", "%\u30BF\u30A4\u30EB", escapeHTML(pct), "percentile", skCls("pct"))}
-    ${termChip("val-c", "F\u30B9\u30B3\u30A2", escapeHTML(fmtRaw(q.fScore)), "fScore", skCls("f"))}
+    ${termChip("val-c", "F\u30B9\u30B3\u30A2", escapeHTML(fmtRaw2(q.fScore)), "fScore", skCls("f"))}
   </div>`;
+}
+function detailRow(meta, val) {
+  const m = computeMetric(meta, val);
+  if (m == null) return "";
+  const t = glossaryTermByKey(meta.key);
+  const badge = m.judge ? `<span class="vg-badge vg-${m.tone}">${m.judge.glyph} ${escapeHTML(m.judge.label)}</span>` : "";
+  const tag = meta.live ? `<span class="vg-live">${escapeHTML(meta.liveTag || "")}</span>` : "";
+  const iGlyph = t ? `<span class="vg-i" aria-hidden="true">\u24D8</span>` : "";
+  const expl = t ? `<p class="vg-expl">${escapeHTML(t.desc)}</p>` : "";
+  const z0 = m.zone ? Math.min(m.zone[0], m.zone[1]) : 0;
+  const zw = m.zone ? Math.abs(m.zone[1] - m.zone[0]) : 0;
+  const zoneHTML = m.zone ? `<span class="vg-zone vg-${m.tone}" style="left:${z0.toFixed(0)}%;width:${zw.toFixed(0)}%"></span>` : "";
+  const tickHTML = m.tick != null ? `<span class="vg-tick" style="left:${m.tick.toFixed(0)}%"></span>` : "";
+  const peerHTML = m.peer != null ? `<span class="vg-peer" style="left:${m.peer.toFixed(0)}%"></span>` : "";
+  const mkHTML = `<span class="vg-mk vg-${m.tone}" style="left:${m.pos.toFixed(0)}%"></span>`;
+  return `<details class="vg-row">
+    <summary aria-label="${escapeHTML(meta.label)} \u306E\u8AAC\u660E\u3092\u958B\u304F">
+      <span class="vg-top"><span class="vg-lab">${escapeHTML(meta.label)}</span>${iGlyph}<span class="vg-right"><span class="vg-val">${m.valueHTML}</span>${badge}</span></span>
+      <span class="vg-gauge">${zoneHTML}${tickHTML}${peerHTML}${mkHTML}</span>
+      <span class="vg-ends"><span>\u5272\u5B89 / \u4F4E</span><span>\u5272\u9AD8 / \u9AD8</span></span>
+      <span class="vg-bot">${tag}<span class="vg-cap">${escapeHTML(meta.cap)}</span></span>
+    </summary>
+    ${expl}
+  </details>`;
 }
 function detailHTML(val) {
   if (!val) return "";
-  const v = val.value || {};
-  const q = val.quality || {};
-  const m = val.momentum || {};
-  const ig = v.cyclical === true ? null : impliedGrowth(v.fcfYield, q.wacc != null ? q.wacc : null);
-  const igTxt = ig != null && isFinite(ig) ? `${fmt1(ig)}%${isGrowthOverheated(ig) ? " \u26A0\u671F\u5F85\u904E\u591A" : ""}` : "\u2014";
-  const igHTML = isGrowthOverheated(ig) ? `<span class="val-warn">${escapeHTML(igTxt)}</span>` : escapeHTML(igTxt);
-  const tg = v.targetGapPct != null && isFinite(v.targetGapPct) ? v.targetGapPct : null;
-  const tgTxt = tg != null ? `${tg >= 0 ? "+" : ""}${fmt1(tg)}%` : "\u2014";
-  const tgHTML = tg == null ? escapeHTML(tgTxt) : `<span class="${tg >= 0 ? "val-mom-up" : "val-mom-dn"}">${escapeHTML(tgTxt)}</span>`;
-  const valueGrp = `<div class="val-cards">
-      ${termChip("val-card", "EV/EBITDA", escapeHTML(fmtRaw(v.evEbitda)), "evEbitda")}
-      ${termChip("val-card", "FCF\u5229\u56DE\u308A", `${escapeHTML(fmtRaw(v.fcfYield))}%`, "fcfYield")}
-      ${termChip("val-card", "\u682A\u4E3B\u9084\u5143", `${escapeHTML(fmtRaw(v.shareholderYield))}%`, "shareholderYield")}
-      ${termChip("val-card", "\u7E54\u8FBC\u6210\u9577", igHTML, "impliedGrowth")}
-      ${termChip("val-card", "\u76EE\u6A19\u4E56\u96E2", tgHTML, "targetGap")}
-    </div>`;
-  const roicNum = q.roic != null && isFinite(q.roic) ? q.roic : null;
-  const waccNum = q.wacc != null && isFinite(q.wacc) ? q.wacc : null;
-  const roicBad = roicNum != null && waccNum != null && roicNum < waccNum;
-  const roicStr = `${escapeHTML(fmtRaw(roicNum))}% vs WACC ${escapeHTML(fmtRaw(waccNum))}%`;
-  const roicHTML = roicBad ? `<span class="val-bad">${roicStr} \u26A0\u4E0B\u56DE\u308A</span>` : roicStr;
-  const zNum = q.altmanZ != null && isFinite(q.altmanZ) ? q.altmanZ : null;
-  const zStr = escapeHTML(fmtRaw(zNum));
-  const zHTML = zNum != null && zNum < 3 ? `<span class="val-warn">${zStr} \u26A0&lt;3</span>` : zStr;
-  const qualGrp = `<div class="val-cards">
-      ${termChip("val-card", "ROIC", roicHTML, "roic")}
-      ${termChip("val-card", "\u7C97\u5229/\u8CC7\u7523", escapeHTML(fmtRaw(q.grossProf)), "grossProfitability")}
-      ${termChip("val-card", "FCF\u5909\u63DB", escapeHTML(fmtRaw(q.fcfConv)), "fcfConversion")}
-      ${termChip("val-card", "Altman Z", zHTML, "altmanZ")}
-      ${termChip("val-card", "Q\u30B9\u30B3\u30A2", escapeHTML(fmtRaw(q.qScore)), "qScore")}
-    </div>`;
-  const mom1y = m.priceMom1Y != null && isFinite(m.priceMom1Y) ? m.priceMom1Y : null;
-  const mom1yStr = mom1y != null ? mom1y >= 0 ? `+${fmt1(mom1y)}` : fmt1(mom1y) : "\u2014";
-  const mom1yHTML = mom1y == null ? `${escapeHTML("\u2014")}` : `<span class="${mom1y >= 0 ? "val-mom-up" : "val-mom-dn"}">${escapeHTML(mom1yStr)}%</span>`;
-  const momGrp = `<div class="val-cards">
-      ${termChip("val-card", "\u6539\u5B9A90d", `${escapeHTML(fmtRaw(m.epsRev90d))}%`, "epsRev90d")}
-      ${termChip("val-card", "1Y\u9A30\u843D", mom1yHTML, "priceMom1Y")}
-      ${termChip("val-card", "52\u9031\u4F4D\u7F6E", `${escapeHTML(fmtRaw(m.pos52w))}%`, "pos52w")}
-      ${termChip("val-card", "\u5BFE\u5E02\u5834", `${escapeHTML(fmtRaw(m.rsVsSector))}%`, "rsVsSector")}
-    </div>`;
-  const grp = (lab, cap, body) => `<div class="val-detail-grp"><span class="lab">${lab}<span class="grp-cap">${cap}</span></span>${body}</div>`;
-  return `<details class="val-detail"><summary>\u8A73\u7D30\u6307\u6A19</summary>
-    ${grp("\u30D0\u30EA\u30E5", "\u4FA1\u683C\u304C\u5272\u5B89\u304B", valueGrp)}
-    ${grp("\u54C1\u8CEA", "\u7F60\u3067\u306A\u3044\u304B\u30FB\u7A3C\u3050\u529B", qualGrp)}
-    ${grp("\u30E2\u30E1\u30F3\u30BF\u30E0", "\u52E2\u3044\u3068\u5E02\u5834\u5BFE\u6BD4", momGrp)}
-  </details>`;
+  const groupHTML = (g) => {
+    const rows = VALUE_DETAIL_META.filter((meta) => meta.group === g).map((meta) => detailRow(meta, val)).join("");
+    if (!rows) return "";
+    const gi = VALUE_DETAIL_GROUPS[g];
+    return `<div class="val-detail-grp"><span class="lab">${escapeHTML(gi.label)}<span class="grp-cap">${escapeHTML(gi.cap)}</span></span><div class="vg-rows">${rows}</div></div>`;
+  };
+  const body = [1, 2, 3].map(groupHTML).join("");
+  if (!body) return "";
+  return `<details class="val-detail"><summary>\u8A73\u7D30\u6307\u6A19</summary>${body}</details>`;
 }
 function bannerHTML(trig) {
   let kind = "hold";
