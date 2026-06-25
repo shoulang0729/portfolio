@@ -40,8 +40,23 @@
   - これなら content の差し替えをやめ、1つの `▸` を回すだけ＝アニメで開閉が明確。
 - ラベル「詳細指標」は右に件数や「タップで展開」を添えてもよい（任意）。
 
+## 修正C ― デモバーの「同業中央値」が点に見える（追加・ユーザー実機指摘）
+凡例の**デモバー `.vg-legend-bar`**（valuation-tab.js L307）の `left:72%` にある `.vg-peer`（同業中央値サンプル）が、`border-left:1.5px dashed`（02-tables.css L863）＋バーが低い（6px→実高さ12px）ため**破線が1〜2個しか出ず「ゴミのような点」**に見える。
+- **原因**: `border-*-style:dashed` は要素の辺長が短いとダッシュが1〜2個で点化する。
+- **修正**: `.vg-peer`（と凡例スウォッチ `.lg-peer`）の破線を **`border-left:dashed` から `repeating-linear-gradient` ベースの縦破線**に変更し、高さに依らず常に破線として読めるようにする。例:
+  ```css
+  .vg-peer { position:absolute; top:-3px; bottom:-3px; width:1.5px;
+    background: repeating-linear-gradient(to bottom, var(--accent) 0 2.5px, transparent 2.5px 5px);
+    border-left: 0; }
+  .lg-peer { width:2px; height:12px; border-left:0;
+    background: repeating-linear-gradient(to bottom, var(--accent) 0 2.5px, transparent 2.5px 5px); }
+  ```
+  （実バーの行でも同じく破線が安定する＝両方が綺麗になる。位置ロジック `left:%` は不変。）
+- これは**実バーの `.vg-peer` 描画の見た目改善**で、データ・位置・`#493/#497` の供給ロジックには触れない（スタイルのみ）。
+
 ## 受け入れ条件
 - [ ] 凡例の各項目のマーカーが**1つずつ**（◯/縦線/破線が二重に出ない）。`●│┊` の文字が消えている。
+- [ ] デモバーの**同業中央値（~72%）が破線の縦線**として読める（点・ゴミに見えない）。実バーの同業破線も同様に綺麗。
 - [ ] 「同業中央値」のスウォッチが**破線の縦線**として分かる（点に見えない）。
 - [ ] デモバー（`.vg-legend-bar`）は従来どおり zone/tick/peer/mk が1つずつ。
 - [ ] 「詳細指標」トグルが**大きく**、開閉でシェブロンが**回転して見える**。タップ領域 ≥40px。
