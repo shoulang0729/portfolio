@@ -836,7 +836,8 @@
 .lg-zone { width: 14px; height: 8px; border-radius: 2px; background: var(--vg-good); opacity: 0.5; }
 .lg-mk { width: 9px; height: 9px; border-radius: 50%; background: var(--vg-good); border: 1.5px solid var(--surface); }
 .lg-tick { width: 0; height: 11px; border-left: 1.5px solid var(--text3); }
-.lg-peer { width: 0; height: 12px; border-left: 2px dashed var(--accent); }
+/* 縦破線は border-left:dashed だと低背でダッシュ1〜2個＝点化するため gradient で安定描画（#507 修正C） */
+.lg-peer { width: 2px; height: 12px; border-left: 0; background: repeating-linear-gradient(to bottom, var(--accent) 0 2.5px, transparent 2.5px 5px); }
 
 /* ── 詳細指標 目安ゲージ行（#475 rev2・1指標=1行）── */
 .vg-rows { margin-top: 6px; }
@@ -863,7 +864,7 @@
 .vg-zone.vg-warn { background: var(--vg-warn); }
 .vg-zone.vg-neu { background: var(--vg-neu); }
 .vg-tick { position: absolute; top: -2px; bottom: -2px; width: 1px; background: var(--text3); transform: translateX(-0.5px); }
-.vg-peer { position: absolute; top: -3px; bottom: -3px; border-left: 1.5px dashed var(--accent); }
+.vg-peer { position: absolute; top: -3px; bottom: -3px; width: 1.5px; border-left: 0; background: repeating-linear-gradient(to bottom, var(--accent) 0 2.5px, transparent 2.5px 5px); }
 .vg-mk { position: absolute; top: 50%; width: 11px; height: 11px; border-radius: 50%; border: 2px solid var(--surface); transform: translate(-50%, -50%); }
 .vg-mk.vg-good { background: var(--vg-good); }
 .vg-mk.vg-ok { background: var(--vg-ok); }
