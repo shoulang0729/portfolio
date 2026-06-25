@@ -1,5 +1,6 @@
 # Handoff（2026-06-25）: Value タブ 仕上げポリッシュ（サマリ/詳細ⓘ/見出し/ゲージ凡例/レンズ/4チップ/アクションバナー）
 
+> ✅ **実装完了（2026-06-25・PR#505 / Issue#504 クローズ）**＝A〜G（サマリ/詳細ⓘ/見出し/凡例/レンズ/4チップ/アクションバナー）の見た目仕上げを反映。PM盤面モニタで完了確認。
 > 設計=Mulmo。実装は VS Code が本 doc を正本に着手。1タスク=1ブランチ=1PR=1Issue。
 > **前提（実装済み）**: #475(目安ゲージ行 rev2)・#493/#497(同業中央値 peer 破線)・全用語ⓘ。本タスクは**その上の見た目仕上げ**。モックで合意（ワークスペース `artifacts/html/2026/06/value-eHXKadX68wULRKTr-*.html` ほか一連）。
 > 対象: `src/valuation-tab.js`／`src/value-detail-meta.js`／`assets/02-tables.css`／`assets/01-base.css`／`index.html`(`?v=`)。**触ってはいけない範囲**は末尾。

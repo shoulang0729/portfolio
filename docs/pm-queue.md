@@ -36,3 +36,16 @@
 - Wiki `investment-system-upgrade-plan.md` に後続スプリント節を追記。
 
 **🟡 監視中**：前回ベースラインの Wait バックログ6件（#367/#306/#305/#304/#301/#220）に変化なし。新規の長期オープンIssue・要判断項目なし。
+
+---
+
+## 2026-06-25（PM盤面モニタ・2回目）
+
+**🔴 設計差し戻し / CI red**：なし（open PR は #478 auto-fix のみ）。
+
+**✅ 完了スタンプ（設計正本に反映・Mulmo docs PR）**
+- Risk 信号機リデザイン 仕上げv6（PR#503 / Issue#502）→ handoff `2026-06-25-risk-polish-v6.md`
+- Value タブ 仕上げポリッシュ A〜G（PR#505 / Issue#504）→ handoff `2026-06-25-value-tab-polish.md`
+- Wiki `investment-system-upgrade-plan.md` の後続スプリント節に2件追記。
+
+**🟡 監視中**：Wait バックログ6件（#367/#306/#305/#304/#301/#220）変化なし。要判断項目なし。
