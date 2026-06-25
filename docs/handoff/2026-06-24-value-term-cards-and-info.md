@@ -1,6 +1,6 @@
 # Handoff（2026-06-24・rev2）: Value タブ 詳細指標 ―― 目安ゲージ行リデザイン＋全用語ⓘ＋判定バッジ
 
-> 設計=Mulmo。実装は VS Code が本 doc を正本に着手。1タスク=1ブランチ=1PR=1Issue（**Issue #475**）。
+> 設計=Mulmo。実装は VS Code が本 doc を正本に着手。1タスク=1ブランチ=1PR=1Issue（**Issue #495**。rev1は#475/PR#477でマージ済）。
 > **依存**: #443（コア4チップ＋『詳細指標』展開）／#450 PR#453（自己説明・的中率/トリガー明確化）の上に乗る（マージ済み前提）。
 > **rev2 の経緯**: 初版（チップカード2列）を実装→ユーザーが実機で「左右に間延び」「単体だと良し悪しが分からない」と指摘。モックで方向性を確定（2026-06-24・フォーム2回）。確定版モック＝`artifacts/html/2026/06/value-b-*.html`（ワークスペース側・参考用）。
 
@@ -124,7 +124,7 @@ function detailRow(meta, val) {
 - ⚠ rev1 で実装済みなら、その差分の上に rev2 を重ねる（カード2列 CSS は撤去して置換）。
 
 ## ブランチ／PR／Issue
-- ブランチ `feat/value-detail-gauge-rows`（rev1 から改称可）、base `main`。`Closes #475`。
+- ブランチ `feat/value-detail-gauge-rows`（rev1 から改称可）、base `main`。`Closes #495`（#475はrev1で既にクローズ済）。
 - **マージ方針: コア4チップ/ヘッダ統計に触れる（load-bearing 近傍）＋見た目の大改修＝Toshio 事前レビュー**（CI green 後、自動マージしない）。
 
 ---
