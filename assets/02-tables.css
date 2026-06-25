@@ -585,18 +585,16 @@
 .rcmp-v.bench { color: var(--text2); }
 .rcmp-cap { background: var(--surface2); border-radius: 9px; padding: 9px 11px; margin-top: 11px; font-size: 12px; color: var(--text2); }
 .rcmp-cap b { color: var(--accent); font-weight: 800; }
-/* 地域ルックスルー構成バー（#502 D）。日本バーに ACWI5% の参考縦線を重ねる。 */
-.rgn-bars { margin: 6px 0 0; }
-.rgn-row { display: grid; grid-template-columns: 60px 1fr 52px; align-items: center; gap: 10px; margin: 8px 0; }
-.rgn-k { font-size: 11.5px; font-weight: 600; color: var(--text); }
-.rgn-t { position: relative; height: 18px; background: var(--surface2); border-radius: 6px; overflow: hidden; }
-.rgn-f { display: block; height: 100%; border-radius: 6px; background: var(--accent); }
-.rgn-f.alt { background: var(--text2); }
-.rgn-f.cash { background: var(--text3); }
-.rgn-ref { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--text); border-radius: 1px; }
-.rgn-v { font-size: 13px; font-weight: 800; text-align: right; font-variant-numeric: tabular-nums; color: var(--text); }
-.rgn-refnote { font-size: 11px; color: var(--text2); margin: 11px 0 0; line-height: 1.5; }
-.rgn-refnote b { color: var(--text); font-weight: 800; }
+/* 地域ドーナツ復活（#509）。日本スライス/凡例スウォッチをアクセント色で強調。 */
+.region-card .risk-donut path.is-jp { fill: var(--accent); }
+.risk-legend-swatch.is-jp { background: var(--accent); }
+/* マザーマーケット（日本）偏りバナー＝円グラフの下（#509） */
+.rgn-bias { display: flex; gap: 9px; align-items: flex-start; margin: 4px 0 0; padding: 9px 11px; background: var(--surface2); border-radius: 9px; }
+.rgn-bias-ic { flex: none; color: var(--accent); display: flex; }
+.rgn-bias-body { min-width: 0; flex: 1; }
+.rgn-bias-h { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 12px; font-weight: 700; color: var(--text); }
+.rgn-bias-v { font-variant-numeric: tabular-nums; color: var(--accent); white-space: nowrap; }
+.rgn-bias-cap { font-size: 11px; color: var(--text2); line-height: 1.5; margin-top: 3px; }
 .region-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
 .region-list-item {
   display: flex; justify-content: space-between; align-items: center;

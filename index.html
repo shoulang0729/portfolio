@@ -24,10 +24,10 @@
 
 <!-- スタイルシート -->
 
-<link rel="stylesheet" href="assets/01-base.css?v=20260625H">
-<link rel="stylesheet" href="assets/02-tables.css?v=20260625H">
-<link rel="stylesheet" href="assets/03-misc.css?v=20260625H">
-<link rel="stylesheet" href="assets/04-auth.css?v=20260625H">
+<link rel="stylesheet" href="assets/01-base.css?v=20260625I">
+<link rel="stylesheet" href="assets/02-tables.css?v=20260625I">
+<link rel="stylesheet" href="assets/03-misc.css?v=20260625I">
+<link rel="stylesheet" href="assets/04-auth.css?v=20260625I">
 
 <!-- assets/05-ai-tab.css は src/_disabled/05-ai-tab.css に移動（AIタブ無効化中）-->
 <!-- 銘柄リスト列表示制御（JS が動的に書き込む） -->
@@ -55,6 +55,10 @@
   <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4"/><path d="M3.6 12h16.8M12 3.6c2.6 2.4 2.6 14.4 0 16.8M12 3.6c-2.6 2.4-2.6 14.4 0 16.8"/></symbol>
   <symbol id="i-book" viewBox="0 0 24 24"><path d="M5 4.5h10.5a2 2 0 012 2V20a1.6 1.6 0 00-1.6-1.6H5V4.5z"/><path d="M5 4.5v15.4"/></symbol>
   <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 4.2l8.4 14.6H3.6L12 4.2z"/><path d="M12 10v4.2M12 16.8v.1"/></symbol>
+  <symbol id="i-assetclass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.2"/><path d="M12 12V3.8M12 12l7 3.6"/></symbol>
+  <symbol id="i-currency" viewBox="0 0 24 24"><rect x="3.4" y="6.6" width="17.2" height="10.8" rx="2.2"/><circle cx="12" cy="12" r="2.7"/><path d="M6.4 9v6M17.6 9v6"/></symbol>
+  <symbol id="i-sector" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.4"/><rect x="13" y="4" width="7" height="7" rx="1.4"/><rect x="4" y="13" width="7" height="7" rx="1.4"/><rect x="13" y="13" width="7" height="7" rx="1.4"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11.5L12 5l8 6.5"/><path d="M6 10.5V19h12v-8.5"/><path d="M10 19v-4.5h4V19"/></symbol>
 </defs></svg>
 
 <div id="d3-load-error" style="display:none">
@@ -333,14 +337,14 @@
 
 <!-- ES Module エントリーポイント（全ファイルを import する単一スクリプト） -->
 
-<script type="module" src="dist/app.js?v=20260625H"></script>
+<script type="module" src="dist/app.js?v=20260625I"></script>
 
 
 <!-- PWA Service Worker 登録 -->
 <script>
 if ('serviceWorker' in navigator) {
 
-navigator.serviceWorker.register('./sw.js?v=20260625H').catch(() => {});
+navigator.serviceWorker.register('./sw.js?v=20260625I').catch(() => {});
 
 }
 </script>
