@@ -83,43 +83,106 @@ async function buildRegionCard(assets, manualSymbols) {
   const card = document.createElement('div');
   card.className = 'risk-card region-card';
 
-  // ── タイトル＋地域ルックスルー構成バー（#502 D）──
-  // ゲージ上下の長い説明文は撤去。ACWI 日本5% は「到達目標」でなく日本バー上の参考縦線に格下げ。
-  // 用語（真の地域%・ホームバイアス）の定義は末尾の用語解説へ集約。算出ロジックは不変＝表示のみ。
+  // ── タイトル「地域」＋ルックスルー・ドーナツ＋凡例（#509 で復活）──
+  // #502 で誤って構成バーに置換したドーナツを #451 の機構で復活。日本スライスはアクセント色で強調。
+  // マザーマーケット（日本）偏りはドーナツの下（順序: タイトル→円グラフ→偏りバナー→注記）。算出は不変＝表示のみ。
   card.insertAdjacentHTML(
     'beforeend',
-    `<div class="risk-card-title">${ric('i-globe')}地域の傾き<span class="rtag">ルックスルー・全資産</span></div>`
+    `<div class="risk-card-title">${ric('i-globe')}地域<span class="rtag">ルックスルー・全資産</span></div>`
   );
 
   const slices = Object.entries(pct)
     .filter(([, p]) => typeof p === 'number' && p > 0)
     .sort((a, b) => b[1] - a[1])
     .map(([key, p]) => ({ key, pct: p }));
-  const maxPct = Math.max(bias.benchPct, 10, ...slices.map((s) => s.pct));
-  const scale = Math.max(50, maxPct * 1.05);
-  const refLeft = Math.min(100, (bias.benchPct / scale) * 100);
 
-  const barsHTML = slices
-    .map((s) => {
-      const w = Math.min(100, (s.pct / scale) * 100);
-      const isJapan = s.key === 'japan';
-      const cls = isJapan ? '' : s.key === 'commodity_cash' ? ' cash' : ' alt';
-      const ref = isJapan ? `<span class="rgn-ref" style="left:${refLeft.toFixed(0)}%"></span>` : '';
-      return `<div class="rgn-row"><span class="rgn-k">${escapeHTML(REGION_LABELS[s.key] || s.key)}</span><span class="rgn-t"><span class="rgn-f${cls}" style="width:${w.toFixed(0)}%"></span>${ref}</span><span class="rgn-v">${s.pct.toFixed(1)}%</span></div>`;
-    })
-    .join('');
-  card.insertAdjacentHTML('beforeend', `<div class="rgn-bars">${barsHTML}</div>`);
+  const body = document.createElement('div');
+  body.className = 'risk-card-body';
+  card.appendChild(body);
 
-  const refnote = document.createElement('p');
-  refnote.className = 'rgn-refnote';
-  refnote.innerHTML =
-    '縦線｜＝世界株指数(ACWI)の日本比率5%の位置。<b>合わせる必要はなく</b>、世界平均に対する傾きの目安。';
-  card.appendChild(refnote);
+  const size = 168;
+  const radius = size / 2;
+  const svg = d3
+    .select(body)
+    .append('svg')
+    .attr('class', 'risk-donut')
+    .attr('width', size)
+    .attr('height', size)
+    .attr('viewBox', `0 0 ${size} ${size}`)
+    .attr('role', 'img')
+    .attr('aria-label', '地域（ルックスルー）の構成円グラフ');
+  const g = svg.append('g').attr('transform', `translate(${radius},${radius})`);
+  const pie = d3
+    .pie()
+    .value((d) => d.pct)
+    .sort(null);
+  const arc = d3
+    .arc()
+    .innerRadius(radius * 0.58)
+    .outerRadius(radius - 2);
+  // 日本スライスはアクセント色（CSS の .is-jp で fill:var(--accent)）、他は固定パレット。
+  g.selectAll('path')
+    .data(pie(slices))
+    .join('path')
+    .attr('d', arc)
+    .attr('class', (d) => (d.data.key === 'japan' ? 'is-jp' : null))
+    .attr('fill', (d, i) => PALETTE[i % PALETTE.length])
+    .append('title')
+    .text((d) => `${REGION_LABELS[d.data.key] || d.data.key}: ${fmtPctInt(d.data.pct)}`);
+  const center = g.append('text').attr('class', 'risk-donut-center');
+  center
+    .append('tspan')
+    .attr('x', 0)
+    .attr('dy', '-0.1em')
+    .attr('font-size', '13px')
+    .attr('font-weight', '700')
+    .attr('text-anchor', 'middle')
+    .text(`${coveragePct.toFixed(0)}%`);
+  center
+    .append('tspan')
+    .attr('class', 'risk-donut-center-sub')
+    .attr('x', 0)
+    .attr('dy', '1.3em')
+    .attr('font-size', '9px')
+    .attr('text-anchor', 'middle')
+    .text('カバレッジ');
 
-  // 鮮度・方式注記（短縮）
+  const legend = document.createElement('ul');
+  legend.className = 'risk-legend';
+  slices.forEach((s, i) => {
+    const li = document.createElement('li');
+    li.className = 'risk-legend-item';
+    const sw = document.createElement('span');
+    sw.className = 'risk-legend-swatch';
+    if (s.key === 'japan') sw.classList.add('is-jp');
+    else sw.style.background = PALETTE[i % PALETTE.length];
+    const name = document.createElement('span');
+    name.className = 'risk-legend-name';
+    name.textContent = REGION_LABELS[s.key] || s.key;
+    const p = document.createElement('span');
+    p.className = 'risk-legend-pct';
+    p.textContent = fmtPctInt(s.pct);
+    li.append(sw, name, p);
+    legend.appendChild(li);
+  });
+  body.appendChild(legend);
+
+  // マザーマーケット（日本）偏り＝円グラフの下（japanHomeBias 流用・新規計算なし・ACWI は参考値）
+  const ratio = bias.benchPct > 0 ? bias.japanPct / bias.benchPct : null;
+  const biasSign = bias.biasPt >= 0 ? '+' : '';
+  const ratioTxt = ratio != null ? `（約${ratio.toFixed(ratio >= 10 ? 0 : 1)}倍）` : '';
+  const tiltTxt = bias.biasPt >= 0 ? '世界平均より日本に厚い。' : '世界平均より日本は控えめ。';
+  card.insertAdjacentHTML(
+    'beforeend',
+    `<div class="rgn-bias"><div class="rgn-bias-ic">${ric('i-home')}</div><div class="rgn-bias-body">` +
+      `<div class="rgn-bias-h"><span>マザーマーケット（日本）への偏り</span><span class="rgn-bias-v">日本 ${bias.japanPct.toFixed(1)}%</span></div>` +
+      `<div class="rgn-bias-cap">世界株指数(ACWI)の日本比率${bias.benchPct.toFixed(0)}%に対し ${biasSign}${bias.biasPt.toFixed(1)}pt${ratioTxt}。${tiltTxt}</div>` +
+      `</div></div>`
+  );
+
   const note = document.createElement('div');
   note.className = 'risk-coverage-note';
-  note.textContent = `カバレッジ ${coveragePct.toFixed(0)}%。直接タグ＋ルックスルー按分（オルカン/ひふみ）。地域構成比は静的（鮮度 ${asOf || '—'}・四半期更新）。`;
+  note.textContent = `ACWI ${bias.benchPct.toFixed(0)}%は世界平均の参考値で、合わせる必要はなく日本への傾きの目安。地域構成比は静的（鮮度 ${asOf || '—'}・四半期更新）。`;
   card.appendChild(note);
 
   return card;
@@ -133,7 +196,7 @@ async function loadStressEvents() {
   try {
     const r = await fetch(`data/stress-events.json?_=${Date.now()}`);
     const j = r.ok ? await r.json() : null;
-    _stressEvents = (j && Array.isArray(j.events) ? j.events : []);
+    _stressEvents = j && Array.isArray(j.events) ? j.events : [];
   } catch {
     _stressEvents = [];
   }
@@ -158,7 +221,9 @@ async function ensureStressHistory(symbols) {
   for (const [sym, entries] of Object.entries(cached)) state.historicalCache['5y'][sym] = entries;
 
   // 2. 未取得銘柄のみ lazy fetch（5y は saveCacheToSession でスキップ＝IDB のみ永続）
-  const missing = symbols.filter((s) => !Array.isArray(state.historicalCache['5y'][s]) || state.historicalCache['5y'][s].length < 2);
+  const missing = symbols.filter(
+    (s) => !Array.isArray(state.historicalCache['5y'][s]) || state.historicalCache['5y'][s].length < 2
+  );
   if (missing.length) {
     await batchWithRetry(missing, (s) => fetchSymbolHistory(s, '5y'), { batchSize: 6, delayMs: 1100 });
   }
@@ -174,6 +239,14 @@ const TITLES = {
   currency: '通貨',
   country: '国・地域',
   sector: 'セクター',
+};
+
+/** 軸ごとの見出しアイコン（自前 SVG スプライト・#509 B） */
+const DIM_ICONS = {
+  assetClass: 'i-assetclass',
+  currency: 'i-currency',
+  country: 'i-globe',
+  sector: 'i-sector',
 };
 
 /** カテゴリキー → 表示ラベル */
@@ -314,7 +387,8 @@ function buildChartCard(dim, dimResult, dimSource) {
 
   const title = document.createElement('div');
   title.className = 'risk-card-title';
-  title.textContent = TITLES[dim];
+  // 見出しに先頭アイコン（既存カードと同じ .ric・#509 B）。ラベルは静的だが念のため escape。
+  title.innerHTML = `${DIM_ICONS[dim] ? ric(DIM_ICONS[dim]) : ''}${escapeHTML(TITLES[dim])}`;
   card.appendChild(title);
 
   // ソース構成バッジ（ライブ/登録/推定 + asOf + 鮮度警告・#208）
@@ -596,9 +670,7 @@ function buildRiskOverviewCard() {
 
   const concHolds =
     taAvailable && maxMembers.length
-      ? maxMembers
-          .map((m) => `<span class="htag">${escapeHTML(m.name)} <b>${m.pct.toFixed(1)}%</b></span>`)
-          .join('')
+      ? maxMembers.map((m) => `<span class="htag">${escapeHTML(m.name)} <b>${m.pct.toFixed(1)}%</b></span>`).join('')
       : '';
   const concVal = taAvailable && maxLabel ? `${escapeHTML(maxLabel)} ${maxPct.toFixed(1)}%` : '—';
   const concRow = rmrow(
@@ -652,7 +724,10 @@ function buildRiskOverviewCard() {
     themePill = 'bad';
     themePillTxt = '超過';
     themeHolds = overThemes
-      .map((o) => `<span class="htag hot">${escapeHTML(themeLabel(o.theme))} <b>${o.used.toFixed(1)}%&gt;${o.cap}%</b></span>`)
+      .map(
+        (o) =>
+          `<span class="htag hot">${escapeHTML(themeLabel(o.theme))} <b>${o.used.toFixed(1)}%&gt;${o.cap}%</b></span>`
+      )
       .join('');
   }
   const themeRow = rmrow(
