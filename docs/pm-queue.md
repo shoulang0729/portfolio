@@ -21,3 +21,18 @@
 
 **ℹ️ 自動運用（対応不要）**
 - #455 [Auto] Daily issues fix 2026-06-21 — `daily-issues.yml` 自動生成PR。取り込み owner=VS Code。
+
+---
+
+## 2026-06-25（PM盤面モニタ）
+
+**🔴 設計差し戻し / CI red**：なし（open PR は #478 auto-fix のみ・statusCheckRollup 空）。
+
+**✅ 完了スタンプ（設計正本に反映）**
+- Risk タブ 信号機リデザイン（PR#489 / Issue#488）→ handoff `2026-06-25-risk-traffic-light-redesign.md`
+- セクター中央値ベンチマーク本実装（PR#499 / Issue#493）→ handoff `2026-06-24-sector-average-benchmark.md`
+- 日本株ファンダ＆セクター中央値本実装（PR#500 / Issue#497）→ VS Code 自己スタンプ済（spike doc）
+- Value 詳細 目安ゲージ rev2（PR#477→#495）／MF 堅牢化（PR#486/#487/#491）→ VS Code 自己スタンプ済
+- Wiki `investment-system-upgrade-plan.md` に後続スプリント節を追記。
+
+**🟡 監視中**：前回ベースラインの Wait バックログ6件（#367/#306/#305/#304/#301/#220）に変化なし。新規の長期オープンIssue・要判断項目なし。
