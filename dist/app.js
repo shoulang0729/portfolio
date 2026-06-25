@@ -5837,6 +5837,8 @@ var VALUE_DETAIL_META = [
     tick: (val) => num3(val.bandMedian) ? val.bandMedian : null,
     live: true,
     liveTag: "\u904E\u53BB\u6BD4",
+    peer: (val) => val && val.sectorMedian && num3(val.sectorMedian.per) ? val.sectorMedian.per : null,
+    peerN: (val) => val && val.sectorMedian ? val.sectorMedian.n : null,
     judge: (val) => {
       const p = val.percentile;
       if (!num3(p)) return null;
@@ -5870,6 +5872,8 @@ var VALUE_DETAIL_META = [
     max: 20,
     good: () => [0, 8],
     tick: () => 15,
+    peer: (val) => val && val.sectorMedian && num3(val.sectorMedian.evEbitda) ? val.sectorMedian.evEbitda : null,
+    peerN: (val) => val && val.sectorMedian ? val.sectorMedian.n : null,
     judge: (val) => {
       const x = V(val).evEbitda;
       return x < 8 ? J.good : x <= 15 ? J.ok : J.warn;
@@ -6145,8 +6149,12 @@ function computeMetric(meta, val) {
   ) : null;
   const tv = meta.tick ? meta.tick(val) : null;
   const tick = num3(tv) ? axis(tv) : null;
+  const pv = meta.peer ? meta.peer(val) : null;
+  const peer = num3(pv) ? axis(pv) : null;
+  const pn = meta.peerN ? meta.peerN(val) : null;
+  const peerN = num3(pn) ? pn : null;
   const j = meta.judge ? meta.judge(val) : null;
-  return { valueHTML: meta.display(val), pos, zone, tick, peer: null, tone: j ? j.tone : "neu", judge: j };
+  return { valueHTML: meta.display(val), pos, zone, tick, peer, peerN, tone: j ? j.tone : "neu", judge: j };
 }
 
 // src/triggers.js
@@ -6443,6 +6451,7 @@ function detailRow(meta, val) {
   const t = glossaryTermByKey(meta.key);
   const badge = m.judge ? `<span class="vg-badge vg-${m.tone}">${m.judge.glyph} ${escapeHTML(m.judge.label)}</span>` : "";
   const tag = meta.live ? `<span class="vg-live">${escapeHTML(meta.liveTag || "")}</span>` : "";
+  const peerLab = m.peer != null ? `<span class="vg-peer-lab">\u540C\u696D n=${m.peerN != null ? m.peerN : "\u2014"}</span>` : "";
   const iGlyph = t ? `<span class="vg-i" aria-hidden="true">\u24D8</span>` : "";
   const expl = t ? `<p class="vg-expl">${escapeHTML(t.desc)}</p>` : "";
   const z0 = m.zone ? Math.min(m.zone[0], m.zone[1]) : 0;
@@ -6456,7 +6465,7 @@ function detailRow(meta, val) {
       <span class="vg-top"><span class="vg-lab">${escapeHTML(meta.label)}</span>${iGlyph}<span class="vg-right"><span class="vg-val">${m.valueHTML}</span>${badge}</span></span>
       <span class="vg-gauge">${zoneHTML}${tickHTML}${peerHTML}${mkHTML}</span>
       <span class="vg-ends"><span>\u5272\u5B89 / \u4F4E</span><span>\u5272\u9AD8 / \u9AD8</span></span>
-      <span class="vg-bot">${tag}<span class="vg-cap">${escapeHTML(meta.cap)}</span></span>
+      <span class="vg-bot">${tag}${peerLab}<span class="vg-cap">${escapeHTML(meta.cap)}</span></span>
     </summary>
     ${expl}
   </details>`;
