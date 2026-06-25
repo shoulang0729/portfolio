@@ -382,7 +382,7 @@ export function computeMetric(meta, val) {
   const axis = (x) => clamp01(((x - min) / (max - min)) * 100);
   const pos = axis(v);
   const g = meta.good ? meta.good(val) : null;
-  const zone = g && num(g[0]) && num(g[1]) ? [axis(g[0]), axis(g[1])] : null;
+  const zone = g && num(g[0]) && num(g[1]) ? /** @type {[number, number]} */ ([axis(g[0]), axis(g[1])]) : null;
   const tv = meta.tick ? meta.tick(val) : null;
   const tick = num(tv) ? axis(tv) : null;
   const j = meta.judge ? meta.judge(val) : null;
