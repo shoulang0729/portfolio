@@ -85,4 +85,4 @@ export async function renderRiskCharts() {
 - mf-holdings の load-bearing フィールド（`cat/cur/value/totals.imported/asOf`）・`dist/app.js`（CI自動ビルド）。
 
 ## ブランチ／PR／Issue
-- ブランチ `feat/risk-polish-v6`、base `main`、squash。`Closes #<本Issue>`。
+- ブランチ `feat/risk-polish-v6`、base `main`、squash。`Closes #502`。
