@@ -37,6 +37,7 @@ import {
   getThemeCap,
   computeThemeUsage,
   computeGap,
+  themeLabel,
 } from './target-allocation.js';
 import { computeTrueRegionExposure, japanHomeBias, REGION_LABELS } from './region-calc.js';
 
@@ -548,7 +549,8 @@ function buildRiskOverviewCard() {
     const theme = getThemeOf(tkey);
     if (!theme) continue;
     themeUsedPct[theme] = (themeUsedPct[theme] || 0) + currentPct;
-    (themeMembers[theme] = themeMembers[theme] || []).push({ name: p.name || p.symbol || '', pct: currentPct });
+    // 構成銘柄はティッカー表示（#502 B）
+    (themeMembers[theme] = themeMembers[theme] || []).push({ name: p.symbol || '', pct: currentPct });
   }
   /** @type {string|null} */
   let maxLabel = null;
@@ -558,18 +560,18 @@ function buildRiskOverviewCard() {
   for (const [theme, used] of Object.entries(themeUsedPct)) {
     if (used > maxPct) {
       maxPct = used;
-      maxLabel = theme;
+      maxLabel = themeLabel(theme); // 自然言語化（#502 B）
       maxMembers = (themeMembers[theme] || []).slice().sort((a, b) => b.pct - a.pct);
     }
   }
-  // 単銘柄が最大なら銘柄名で
+  // 単銘柄が最大ならティッカーで
   if (taAvailable) {
     for (const p of positions) {
       const pct = ((p.value || 0) / denom) * 100;
       if (pct > maxPct) {
         maxPct = pct;
-        maxLabel = p.name || p.symbol || '';
-        maxMembers = [{ name: p.name || p.symbol || '', pct }];
+        maxLabel = p.symbol || '';
+        maxMembers = [{ name: p.symbol || '', pct }];
       }
     }
   }
@@ -583,7 +585,7 @@ function buildRiskOverviewCard() {
     if (!tkey) continue;
     const gap = computeGap(tkey, currentPct);
     if (gap.gapPct != null && gap.gapPct > 0.5) {
-      overPos.push({ name: p.name || p.symbol || '', cur: currentPct, target: gap.targetPct, pt: gap.gapPct });
+      overPos.push({ name: p.symbol || '', cur: currentPct, target: gap.targetPct, pt: gap.gapPct });
     }
   }
   overPos.sort((a, b) => b.pt - a.pt);
@@ -659,7 +661,6 @@ function buildRiskOverviewCard() {
   const concHolds =
     taAvailable && maxMembers.length
       ? maxMembers
-          .slice(0, 4)
           .map((m) => `<span class="htag">${escapeHTML(m.name)} <b>${m.pct.toFixed(1)}%</b></span>`)
           .join('')
       : '';
@@ -675,25 +676,23 @@ function buildRiskOverviewCard() {
     '最も偏ったテーマ。20%超で赤。構成銘柄を表示。'
   );
 
+  // 右値＝件数「N件」、ピル＝状態語、明細は全件（他N件で省略しない・#502 B）
   let overVal = '0件';
   let overHolds = '';
   let overPill = 'ok';
   let overPillTxt = 'なし';
   let overWarn = false;
   if (overPos.length) {
-    const top = overPos[0];
-    overVal = `+${top.pt.toFixed(1)}pt`;
+    overVal = `${overPos.length}件`;
     overWarn = true;
     overPill = 'warn';
-    overPillTxt = `${overPos.length}件`;
-    const tags = overPos
-      .slice(0, 2)
+    overPillTxt = '注意';
+    overHolds = overPos
       .map(
         (o) =>
-          `<span class="htag hot">${escapeHTML(o.name)} <b>目標${o.target != null ? o.target.toFixed(0) : '—'}%→${o.cur.toFixed(1)}%</b></span>`
+          `<span class="htag hot">${escapeHTML(o.name)} <b>目標${o.target != null ? o.target.toFixed(0) : '—'}%→現${o.cur.toFixed(1)}%（+${o.pt.toFixed(1)}pt）</b></span>`
       )
       .join('');
-    overHolds = tags + (overPos.length > 2 ? `<span class="htag">他${overPos.length - 2}件</span>` : '');
   }
   const overRow = rmrow(
     'i-expand',
@@ -703,7 +702,7 @@ function buildRiskOverviewCard() {
     overVal,
     overWarn,
     overHolds,
-    '目標配分を50%以上超えた銘柄。サイズ見直しの候補。'
+    '目標配分を上回る保有。pt＝現ウェイト−目標ウェイト（用語解説「目標超過pt」）。'
   );
 
   let themeVal = '0件';
@@ -715,9 +714,9 @@ function buildRiskOverviewCard() {
     themeVal = `${overThemes.length}件`;
     themeWarn = true;
     themePill = 'bad';
-    themePillTxt = `${overThemes.length}件`;
+    themePillTxt = '超過';
     themeHolds = overThemes
-      .map((o) => `<span class="htag hot">${escapeHTML(o.theme)} <b>${o.used.toFixed(1)}%&gt;${o.cap}%</b></span>`)
+      .map((o) => `<span class="htag hot">${escapeHTML(themeLabel(o.theme))} <b>${o.used.toFixed(1)}%&gt;${o.cap}%</b></span>`)
       .join('');
   }
   const themeRow = rmrow(
@@ -765,6 +764,20 @@ function _rqNote(msg) {
 }
 
 /**
+ * イベント名から西暦4桁を除去（日付は別表示するため重複を消す・#502 C）。
+ * stress-events.json の label は変えず表示時のみ。例「関税ショック 2025」→「関税ショック」。
+ * @param {string} label
+ * @returns {string}
+ */
+function stripEventYear(label) {
+  return (label || '')
+    .replace(/\b(?:19|20)\d{2}\b/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/^[\s（(]+|[\s）)]+$/g, '')
+    .trim();
+}
+
+/**
  * イベント日付を「YYYY年M月／YYYY年M〜M月／YYYY年M月〜YYYY年M月」表記にする（#488 §2-2）。
  * @param {string} from YYYY-MM-DD
  * @param {string} to   YYYY-MM-DD
@@ -791,10 +804,10 @@ function fmtEventPeriod(from, to) {
  * @returns {Promise<void>}
  */
 async function _appendEventStress(card, holdings) {
+  // 「これは何？」の1行のみ（物語/読み筋キャプションは廃止・#502 C）
   const lead = document.createElement('p');
   lead.className = 'q-lead';
-  lead.innerHTML =
-    '時間窓（1日/1週…長いほど深いのは当たり前）をやめ、<b>名前のある実際の危機</b>を現PFのウェイトで再現。各イベントは独立シナリオで「<b>何に弱いか</b>」が見える。下落の大きい順。';
+  lead.textContent = '現PFのウェイトで過去の暴落を再現し、その期間の下落率を出したもの（下落の大きい順）。';
   card.appendChild(lead);
 
   const events = await loadStressEvents();
@@ -828,7 +841,7 @@ async function _appendEventStress(card, holdings) {
     const el = document.createElement('div');
     el.className = 'rev';
     el.innerHTML = `
-      <div class="rev-en"><span class="rev-nm">${escapeHTML(ev.label)}</span><span class="rev-dt">${escapeHTML(fmtEventPeriod(ev.from, ev.to))}</span></div>
+      <div class="rev-en"><span class="rev-nm">${escapeHTML(stripEventYear(ev.label))}</span><span class="rev-dt">${escapeHTML(fmtEventPeriod(ev.from, ev.to))}</span></div>
       <div class="rev-v">${escapeHTML(retTxt)}</div>
       <div class="rev-track">${has ? `<span class="rev-fill" style="width:${w.toFixed(0)}%"></span>` : ''}</div>
       <div class="rev-cov${lowCov ? ' low' : ''}">cov ${Math.round(res.coveragePct)}%${lowCov ? ' ⚠' : ''}</div>`;
@@ -837,15 +850,10 @@ async function _appendEventStress(card, holdings) {
     card.appendChild(el);
   }
 
-  const deepest = rows.find((r) => r.res.ret != null);
-  const cap = document.createElement('p');
-  cap.className = 'rev-cap';
-  if (deepest) {
-    cap.innerHTML = `読み筋：最も深いのは <b>${escapeHTML(deepest.ev.label)}</b>（${(deepest.res.ret * 100).toFixed(1)}%）。各イベントは独立の what-if 再現。cov＝当時に価格データのあった保有の比率。`;
-  } else {
-    cap.textContent = '窓内に価格のある保有がまだ少なく、イベント再現を算出できません。';
+  // 窓内に価格のある保有が少なく1件も算出できない場合だけ案内（読み筋キャプションは廃止・#502 C）
+  if (!rows.some((r) => r.res.ret != null)) {
+    card.appendChild(_rqNote('窓内に価格のある保有がまだ少なく、イベント再現を算出できません。'));
   }
-  card.appendChild(cap);
 }
 
 /**
@@ -956,8 +964,8 @@ async function buildQuantCard(posList) {
   card.insertAdjacentHTML(
     'beforeend',
     `<div class="q-sub">
-      <div class="q-stat2"><div class="qsl">${ric('i-pulse', true)}年率ボラ<span class="ihelp" title="日次騰落のばらつき×√252。1年あたりの値動きの激しさ。">?</span></div><div class="qsv">${escapeHTML(_pct1(pfVol))}</div><div class="qsc">参考値（過去1年の振れ幅）</div></div>
-      <div class="q-stat2"><div class="qsl">${ric('i-history', true)}最大DD<span class="ihelp" title="最大ドローダウン。過去のピークから谷までの最大下落。">?</span></div><div class="qsv">${escapeHTML(_pct1(pfMaxDD))}</div><div class="qsc">参考値（過去1年の最大下落）</div></div>
+      <div class="q-stat2"><div class="qsl"><span class="qsl-l">${ric('i-pulse', true)}年率ボラ</span><span class="qsv">${escapeHTML(_pct1(pfVol))}</span></div><div class="qsc">日次騰落のばらつき×√252。1年あたりの値動きの大きさ（過去1年）。</div></div>
+      <div class="q-stat2"><div class="qsl"><span class="qsl-l">${ric('i-history', true)}最大DD</span><span class="qsv">${escapeHTML(_pct1(pfMaxDD))}</span></div><div class="qsc">ピークから谷までの最大下落（過去1年）。</div></div>
     </div>`
   );
 
@@ -970,7 +978,7 @@ async function buildQuantCard(posList) {
     const contribHTML = top3c
       .map(
         (x) =>
-          `<div class="contrib"><span class="ck">${escapeHTML(nameOfSymbol(x.sym))}</span><span class="ct"><span class="cf" style="width:${((x.c / maxC) * 100).toFixed(0)}%"></span></span><span class="cv">${Math.round((x.c / sumC) * 100)}%</span></div>`
+          `<div class="contrib"><span class="ck">${escapeHTML(x.sym)}</span><span class="ct"><span class="cf" style="width:${((x.c / maxC) * 100).toFixed(0)}%"></span></span><span class="cv">${Math.round((x.c / sumC) * 100)}%</span></div>`
       )
       .join('');
     card.insertAdjacentHTML(
@@ -1031,6 +1039,10 @@ function buildRiskGlossary() {
 // ── once-guard: target-allocation を二重ロードしない ───────────────────────
 let _taLoaded = false;
 
+// レンダー世代トークン（#502 A・カード重複バグ対策）。renderRiskCharts が後発に
+// 追い越されたら旧 run を破棄する。
+let _riskRenderSeq = 0;
+
 /**
  * リスク断面タブを描画する。panel が hidden のときは何もしない。
  * @returns {Promise<void>}
@@ -1042,11 +1054,17 @@ export async function renderRiskCharts() {
   if (!wrap) return;
   if (typeof d3 === 'undefined') return;
 
+  // 世代トークン＋レンダーガード（#502 A）: タブ連打/価格更新で renderRiskCharts が
+  // 二重起動されると await を挟むカード（クオンツ等）が重複 append される。後発に
+  // 追い越された旧 run は各 await 直後に破棄し、クリア＆append は最新 run のみ行う。
+  const myRun = ++_riskRenderSeq;
+
   // target-allocation をロード（未ロード時のみ）
   if (!_taLoaded) {
     await loadTargetAllocation();
     _taLoaded = true;
   }
+  if (_riskRenderSeq !== myRun) return;
 
   // 証券（positions・ライブ）＋非証券（現金・暗号資産）を合算して look-through。
   // 非証券は Money Forward 実値（mf-holdings）を優先。未ロード時のみ manual-assets.js にフォールバック。
@@ -1055,6 +1073,13 @@ export async function renderRiskCharts() {
   const breakdown = computeRiskBreakdown(assets);
   const sourceSummary = getSourceSummary(assets);
 
+  // 重い await（クオンツ・地域）を先に解決してから一括クリア＆append（交錯による重複を防ぐ）。
+  const quantCard = await buildQuantCard(positions);
+  if (_riskRenderSeq !== myRun) return;
+  const manualSymbols = manualAssets.map((a) => a.symbol);
+  const regionCard = await buildRegionCard(assets, manualSymbols);
+  if (_riskRenderSeq !== myRun) return;
+
   wrap.textContent = '';
 
   // ── リスク要約カード（Phase 4 v1）────────────────────────────────────────
@@ -1062,7 +1087,7 @@ export async function renderRiskCharts() {
   // ── /リスク要約カード ────────────────────────────────────────────────────
 
   // ── クオンツ・リスクカード（Phase 4b）────────────────────────────────────
-  wrap.appendChild(await buildQuantCard(positions));
+  wrap.appendChild(quantCard);
   // ── /クオンツ・リスクカード ──────────────────────────────────────────────
 
   // ストレスは②クオンツ・リスクへ統合（別カード廃止・#488）。
@@ -1100,9 +1125,9 @@ export async function renderRiskCharts() {
   wrap.appendChild(grid);
 
   // ── 地域（ルックスルー・D-6 / #451 統合）──────────────────────────────────
-  // 真の地域配分（特に日本のホームバイアス）をドーナツで可視化。全資産（証券＋現金/暗号）。
-  const manualSymbols = manualAssets.map((a) => a.symbol);
-  wrap.appendChild(await buildRegionCard(assets, manualSymbols));
+  // 真の地域配分（特に日本のホームバイアス）を可視化。全資産（証券＋現金/暗号）。
+  // ※ build は上部で await 済み（#502 A レンダーガード）。ここでは append のみ。
+  wrap.appendChild(regionCard);
   // ── /地域（ルックスルー）──────────────────────────────────────────────────
 
   // データソース明記（#214）＋ 手動入力データの引用元（現金・ひふみ等）
