@@ -6594,10 +6594,10 @@ function detailHTML(val) {
     <div class="vg-legend-ttl">\u76EE\u5B89\u30D0\u30FC\u306E\u898B\u65B9</div>
     <div class="vg-legend-bar"><span class="vg-zone vg-good" style="left:8%;width:46%"></span><span class="vg-tick" style="left:50%"></span><span class="vg-peer" style="left:72%"></span><span class="vg-mk vg-good" style="left:34%"></span></div>
     <ul class="vg-legend-items">
-      <li><span class="lg-sw lg-zone"></span>\u5857\u308A\uFF1D\u826F\u3044\u7BC4\u56F2\uFF08\u76EE\u5B89\uFF09</li>
-      <li><span class="lg-sw lg-mk"></span>\u25CF \u3044\u307E\u306E\u5024\uFF08\u3053\u306E\u9298\u67C4\uFF09</li>
-      <li><span class="lg-sw lg-tick"></span>\u2502 \u76EE\u5B89\u30E9\u30A4\u30F3\uFF08\u4E2D\u592E\u5024/\u3057\u304D\u3044\u5024\uFF09</li>
-      <li><span class="lg-sw lg-peer"></span>\u250A \u540C\u696D\u4E2D\u592E\u5024\uFF08\u7834\u7DDA\uFF09</li>
+      <li><span class="lg-sw lg-zone"></span>\u826F\u3044\u7BC4\u56F2\uFF08\u76EE\u5B89\uFF09</li>
+      <li><span class="lg-sw lg-mk"></span>\u3044\u307E\u306E\u5024\uFF08\u3053\u306E\u9298\u67C4\uFF09</li>
+      <li><span class="lg-sw lg-tick"></span>\u76EE\u5B89\u30E9\u30A4\u30F3\uFF08\u4E2D\u592E\u5024/\u3057\u304D\u3044\u5024\uFF09</li>
+      <li><span class="lg-sw lg-peer"></span>\u540C\u696D\u4E2D\u592E\u5024\uFF08\u7834\u7DDA\uFF09</li>
     </ul>
   </div>`;
   return `<details class="val-detail"><summary>\u8A73\u7D30\u6307\u6A19</summary>${legend}${body}</details>`;
