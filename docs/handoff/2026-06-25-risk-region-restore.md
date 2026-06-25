@@ -60,4 +60,4 @@
 - `dist/app.js`（CI自動ビルド）。
 
 ## ブランチ／PR／Issue
-- ブランチ `feat/risk-region-donut-restore`、base `main`、squash。`Closes #<本Issue>`。
+- ブランチ `feat/risk-region-donut-restore`、base `main`、squash。`Closes #509`。
