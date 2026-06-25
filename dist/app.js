@@ -6635,7 +6635,12 @@ function detailHTML(val) {
       <li><span class="lg-sw lg-peer"></span>\u540C\u696D\u4E2D\u592E\u5024\uFF08\u7834\u7DDA\uFF09</li>
     </ul>
   </div>`;
-  return `<details class="val-detail"><summary>\u8A73\u7D30\u6307\u6A19</summary>${legend}${body}</details>`;
+  const summary = `<summary class="val-detail-tog">
+    <span class="vdt-lab">\u8A73\u7D30\u6307\u6A19</span>
+    <span class="vdt-sub">13\u6307\u6A19\u30FB\u76EE\u5B89\u30D0\u30FC\u30FB\u540C\u696D\u6BD4\u8F03</span>
+    <svg class="vdt-chev" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+  </summary>`;
+  return `<details class="val-detail">${summary}${legend}${body}</details>`;
 }
 function bannerHTML(trig) {
   let kind = "hold";
