@@ -83,107 +83,43 @@ async function buildRegionCard(assets, manualSymbols) {
   const card = document.createElement('div');
   card.className = 'risk-card region-card';
 
-  // ── タイトル＋比較バー hero（あなたのPF vs 世界平均・#488 §4）──
-  // ★塗りは CSS で display:block（インライン span のままだと width が効かず潰れる）。
-  const japanPct = bias.japanPct;
-  const benchPct = bias.benchPct;
-  const maxScale = Math.max(50, japanPct * 1.1, benchPct * 1.1);
-  const wYou = Math.min(100, (japanPct / maxScale) * 100);
-  const wBench = Math.min(100, (benchPct / maxScale) * 100);
-  const biasSign = bias.biasPt >= 0 ? '+' : '';
-  const ratio = benchPct > 0 ? japanPct / benchPct : null;
-  const ratioTxt = ratio != null ? `世界平均の<b>約${ratio.toFixed(ratio >= 10 ? 0 : 1)}倍</b>、` : '';
-  const tiltDir = bias.biasPt >= 0 ? '日本に大きく傾けている' : '日本を世界平均より控えめにしている';
-
+  // ── タイトル＋地域ルックスルー構成バー（#502 D）──
+  // ゲージ上下の長い説明文は撤去。ACWI 日本5% は「到達目標」でなく日本バー上の参考縦線に格下げ。
+  // 用語（真の地域%・ホームバイアス）の定義は末尾の用語解説へ集約。算出ロジックは不変＝表示のみ。
   card.insertAdjacentHTML(
     'beforeend',
-    `<div class="risk-card-title">${ric('i-globe')}地域の傾き<span class="rtag">ルックスルー・全資産</span></div>
-    <p class="rgn-lead">全世界ファンドを地域分解した<b>本当の日本比率</b>を世界平均と並べる。<span class="ihelp" title="真の地域%（ルックスルー）＝全世界ファンドを地域構成比で分解しPF全体の本当の地域配分を出す。日本＝ACWI内5%＋1306＋ひふみ＋日本個別。">?</span></p>
-    <div class="rcmp">
-      <div class="rcmp-row"><span class="rcmp-k">あなたのPF<span class="s">日本（真の地域%）</span></span><span class="rcmp-t"><span class="rcmp-f you" style="width:${wYou.toFixed(0)}%"></span></span><span class="rcmp-v">${japanPct.toFixed(1)}%</span></div>
-      <div class="rcmp-row"><span class="rcmp-k">世界平均<span class="s">ACWIの日本%</span></span><span class="rcmp-t"><span class="rcmp-f bench" style="width:${wBench.toFixed(0)}%"></span></span><span class="rcmp-v bench">${benchPct.toFixed(1)}%</span></div>
-    </div>
-    <div class="rcmp-cap">ホームバイアス <b>${biasSign}${bias.biasPt.toFixed(1)}pt</b><span class="ihelp" title="自国(日本)への偏り＝真の日本% − ベンチ(ACWI 5%)。意図的な傾けかを確認。">?</span> ＝${ratioTxt}${tiltDir}。意図的なら問題なし、無意識なら是正の検討材料。</div>`
+    `<div class="risk-card-title">${ric('i-globe')}地域の傾き<span class="rtag">ルックスルー・全資産</span></div>`
   );
 
-  // ドーナツ＋凡例（curated「国・地域」ドーナツを置換＝広域ファンドを地域へ按分済み）
   const slices = Object.entries(pct)
     .filter(([, p]) => typeof p === 'number' && p > 0)
     .sort((a, b) => b[1] - a[1])
     .map(([key, p]) => ({ key, pct: p }));
+  const maxPct = Math.max(bias.benchPct, 10, ...slices.map((s) => s.pct));
+  const scale = Math.max(50, maxPct * 1.05);
+  const refLeft = Math.min(100, (bias.benchPct / scale) * 100);
 
-  const body = document.createElement('div');
-  body.className = 'risk-card-body';
-  card.appendChild(body);
+  const barsHTML = slices
+    .map((s) => {
+      const w = Math.min(100, (s.pct / scale) * 100);
+      const isJapan = s.key === 'japan';
+      const cls = isJapan ? '' : s.key === 'commodity_cash' ? ' cash' : ' alt';
+      const ref = isJapan ? `<span class="rgn-ref" style="left:${refLeft.toFixed(0)}%"></span>` : '';
+      return `<div class="rgn-row"><span class="rgn-k">${escapeHTML(REGION_LABELS[s.key] || s.key)}</span><span class="rgn-t"><span class="rgn-f${cls}" style="width:${w.toFixed(0)}%"></span>${ref}</span><span class="rgn-v">${s.pct.toFixed(1)}%</span></div>`;
+    })
+    .join('');
+  card.insertAdjacentHTML('beforeend', `<div class="rgn-bars">${barsHTML}</div>`);
 
-  const size = 168;
-  const radius = size / 2;
-  const svg = d3
-    .select(body)
-    .append('svg')
-    .attr('class', 'risk-donut')
-    .attr('width', size)
-    .attr('height', size)
-    .attr('viewBox', `0 0 ${size} ${size}`)
-    .attr('role', 'img')
-    .attr('aria-label', '地域（ルックスルー）の構成円グラフ');
-  const g = svg.append('g').attr('transform', `translate(${radius},${radius})`);
-  const pie = d3
-    .pie()
-    .value((d) => d.pct)
-    .sort(null);
-  const arc = d3
-    .arc()
-    .innerRadius(radius * 0.58)
-    .outerRadius(radius - 2);
-  g.selectAll('path')
-    .data(pie(slices))
-    .join('path')
-    .attr('d', arc)
-    .attr('fill', (d, i) => PALETTE[i % PALETTE.length])
-    .append('title')
-    .text((d) => `${REGION_LABELS[d.data.key] || d.data.key}: ${d.data.pct.toFixed(1)}%`);
-  const center = g.append('text').attr('class', 'risk-donut-center');
-  center
-    .append('tspan')
-    .attr('x', 0)
-    .attr('dy', '-0.1em')
-    .attr('font-size', '13px')
-    .attr('font-weight', '700')
-    .attr('text-anchor', 'middle')
-    .text(`${coveragePct.toFixed(0)}%`);
-  center
-    .append('tspan')
-    .attr('class', 'risk-donut-center-sub')
-    .attr('x', 0)
-    .attr('dy', '1.3em')
-    .attr('font-size', '9px')
-    .attr('text-anchor', 'middle')
-    .text('カバレッジ');
+  const refnote = document.createElement('p');
+  refnote.className = 'rgn-refnote';
+  refnote.innerHTML =
+    '縦線｜＝世界株指数(ACWI)の日本比率5%の位置。<b>合わせる必要はなく</b>、世界平均に対する傾きの目安。';
+  card.appendChild(refnote);
 
-  const legend = document.createElement('ul');
-  legend.className = 'risk-legend';
-  slices.forEach((s, i) => {
-    const li = document.createElement('li');
-    li.className = 'risk-legend-item';
-    const sw = document.createElement('span');
-    sw.className = 'risk-legend-swatch';
-    sw.style.background = PALETTE[i % PALETTE.length];
-    const name = document.createElement('span');
-    name.className = 'risk-legend-name';
-    name.textContent = REGION_LABELS[s.key] || s.key;
-    const p = document.createElement('span');
-    p.className = 'risk-legend-pct';
-    p.textContent = `${s.pct.toFixed(1)}%`;
-    li.append(sw, name, p);
-    legend.appendChild(li);
-  });
-  body.appendChild(legend);
-
-  // 鮮度・方式注記
+  // 鮮度・方式注記（短縮）
   const note = document.createElement('div');
   note.className = 'risk-coverage-note';
-  note.textContent = `直接タグ＋ルックスルー按分（オルカン/ひふみ/ひふみXO）。現金/暗号は コモディティ/現金。地域構成比は静的（鮮度 ${asOf || '—'}・四半期更新）。VGK/2800.HK は未保有＝0%。`;
+  note.textContent = `カバレッジ ${coveragePct.toFixed(0)}%。直接タグ＋ルックスルー按分（オルカン/ひふみ）。地域構成比は静的（鮮度 ${asOf || '—'}・四半期更新）。`;
   card.appendChild(note);
 
   return card;
@@ -771,9 +707,9 @@ function _rqNote(msg) {
  */
 function stripEventYear(label) {
   return (label || '')
-    .replace(/\b(?:19|20)\d{2}\b/g, '')
+    .replace(/\b(?:19|20)\d{2}\b/g, '') // 西暦4桁を除去
+    .replace(/[（(]\s*[）)]/g, '') // 年除去で空になった括弧を削除（中身ある括弧は温存）
     .replace(/\s{2,}/g, ' ')
-    .replace(/^[\s（(]+|[\s）)]+$/g, '')
     .trim();
 }
 
