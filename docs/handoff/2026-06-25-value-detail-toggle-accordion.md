@@ -1,5 +1,6 @@
 # Handoff（2026-06-25）: Value「詳細指標」トグルをアコーディオン行に（#507 B の作り直し）
 
+> ✅ **実装完了（2026-06-25・PR#513 / Issue#512 クローズ）**＝詳細指標トグルを A案アコーディオン行に置換。PM盤面モニタ（2026-06-26）で完了確認。
 > 設計=Mulmo。実装=VS Code。軽微・見た目のみ。**#507 B（summary を 40px＋回転▸）では"薄い灰色テキストでゴミっぽい"が解消せず**、モックで A案（アコーディオン行）に確定（ユーザー選択）。確定モック=`artifacts/html/2026/06/yY_PIAhH-*.html`。
 > 対象: `src/valuation-tab.js`（L315 summary）／`assets/02-tables.css`（`.val-detail > summary` L807-819）／`index.html`(`?v=`)。
 
