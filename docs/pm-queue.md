@@ -49,3 +49,17 @@
 - Wiki `investment-system-upgrade-plan.md` の後続スプリント節に2件追記。
 
 **🟡 監視中**：Wait バックログ6件（#367/#306/#305/#304/#301/#220）変化なし。要判断項目なし。
+
+---
+
+## 2026-06-26（PM盤面モニタ）
+
+**🔴 設計差し戻し / CI red**：なし（open PR ゼロ・前回の #478 auto-fix も解消済）。
+
+**✅ 完了スタンプ（設計正本に反映・Mulmo docs PR）**
+- Value「詳細指標」トグルをアコーディオン行に（PR#513 / Issue#512）→ handoff `2026-06-25-value-detail-toggle-accordion.md`
+- Value 詳細 後始末：凡例二重マーカー＋トグル視認性（PR#508）＋同業中央値破線 gradient 化（PR#511・修正C）/ Issue#507 → handoff `2026-06-25-value-legend-toggle-fix.md`
+- Risk 地域カード 円グラフ復活＋アイコン（PR#510 / Issue#509）→ VS Code 自己スタンプ済（`2026-06-25-risk-region-restore.md`）
+- Wiki `investment-system-upgrade-plan.md` の後続スプリント節に4件追記。
+
+**🟡 監視中**：Wait バックログ6件（#367/#306/#305/#304/#301/#220）変化なし。要判断項目なし。
