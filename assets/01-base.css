@@ -31,11 +31,16 @@ html[data-theme="light"] {
   --scrollbar-thumb-hover: rgba(0,0,0,0.30);
   --scrollbar-track:       transparent;
   --accent:    #cc785c;
-  /* 判定バッジ/ゲージのトーン（価格の赤緑とは別系統の意味色・#475 rev2。ライト） */
-  --vg-good:   #4f8a4d;
-  --vg-ok:     #b88a2e;
-  --vg-warn:   #c2603f;
-  --vg-neu:    #8a8178;
+  /* 意味色トークン（良い/注意/警告/中立）— 全タブ共通・#515 P1 */
+  --tone-good: #4f8a4d;
+  --tone-ok:   #b88a2e;
+  --tone-warn: #c2603f;
+  --tone-neu:  #8a8178;
+  /* --vg-* は --tone-* のエイリアス（後方互換） */
+  --vg-good:   var(--tone-good);
+  --vg-ok:     var(--tone-ok);
+  --vg-warn:   var(--tone-warn);
+  --vg-neu:    var(--tone-neu);
 }
 html[data-theme="dark"] {
   --bg:        #1c1917;
@@ -59,11 +64,16 @@ html[data-theme="dark"] {
   --scrollbar-thumb-hover: rgba(255,255,255,0.26);
   --scrollbar-track:       transparent;
   --accent:    #cc785c;
-  /* 判定バッジ/ゲージのトーン（#475 rev2。ダーク・コントラスト確保） */
-  --vg-good:   #7aa978;
-  --vg-ok:     #d8b25a;
-  --vg-warn:   #dd7a55;
-  --vg-neu:    #a99e92;
+  /* 意味色トークン（ダーク・コントラスト確保）— #515 P1 */
+  --tone-good: #7aa978;
+  --tone-ok:   #d8b25a;
+  --tone-warn: #dd7a55;
+  --tone-neu:  #a99e92;
+  /* --vg-* は --tone-* のエイリアス（後方互換） */
+  --vg-good:   var(--tone-good);
+  --vg-ok:     var(--tone-ok);
+  --vg-warn:   var(--tone-warn);
+  --vg-neu:    var(--tone-neu);
 }
 /* セマンティックカラー（テーマ非依存・市場慣例＋状態色）。
    ハードコード hex を排し、意味で参照できるようトークン化（Design System 準拠）。 */
@@ -73,6 +83,20 @@ html[data-theme="dark"] {
   --danger:  #FF3B30;  /* エラー・破壊的操作 */
   --success: #34C759;  /* 成功・確定 */
   --warn:    #FF9F0A;  /* 警告・コード強調 */
+  /* 型スケール — 6サイズ固定（ad-hoc px を段階的にこれへ移行・#515 P1） */
+  --fs-hero: 24px;   /* 資産hero・最大数値 */
+  --fs-lg:   18px;   /* 値・銘柄ティッカー・stat */
+  --fs-md:   15px;   /* カード見出し */
+  --fs-base: 13px;   /* 本文 */
+  --fs-sm:   11px;   /* ラベル・キャプション・表・ピル */
+  --fs-xs:   9.5px;  /* 脚注・出典・極小バッジ */
+  /* 余白スケール（4px基準）— #515 P1 */
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px;
+  --sp-4: 16px; --sp-5: 20px; --sp-6: 24px;
+  /* 角丸 — #515 P1 */
+  --r-card: 14px; --r-pill: 999px; --r-chip: 8px;
+  /* カード影 — #515 P1 */
+  --shadow-card: 0 2px 10px rgba(0,0,0,.04);
 }
 /* @media (prefers-color-scheme: dark) は app.js の applyTheme() が
    matchMedia で解決して data-theme="dark" を明示セットするため不要。
