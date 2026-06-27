@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>投資システム 統一デザインシステム v1</title>
+<style>
+  /* ===== トークン ===== */
+  :root{
+    /* surface ladder */
+    --bg:#f7f2ee;--surface:#ffffff;--surface2:#f0e9e3;--surface3:#e8ddd7;
+    --border:#d4c8c0;--border2:#e4d9d2;
+    /* text ladder */
+    --text:#1c1714;--text2:#78695f;--text3:rgba(28,23,20,.5);
+    --accent:#cc785c;
+    /* 価格方向（日本式）— これだけは赤=上/緑=下に固定 */
+    --pos:#FF3B30;--neg:#34C759;
+    /* 意味色（良い/注意/警告/中立）— 全タブ共通。verdict/severityはこれを使う */
+    --tone-good:#4f8a4d;--tone-ok:#b88a2e;--tone-warn:#c2603f;--tone-neu:#8a8178;
+    /* 角丸・余白・影 */
+    --r-card:14px;--r-pill:999px;--r-chip:8px;
+    --sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:20px;--sp-6:24px;
+    --shadow-card:0 2px 10px rgba(0,0,0,.04);
+    /* 型スケール（役割で固定） */
+    --fs-hero:26px; --fs-xl:22px; --fs-stat:18px; --fs-value:16px;
+    --fs-title:15px; --fs-body:13px; --fs-label:12px; --fs-sub:11.5px;
+    --fs-cap:11px; --fs-tiny:10px; --fs-micro:9px;
+  }
+  html[data-theme="dark"]{
+    --bg:#1c1917;--surface:#27211e;--surface2:#322b28;--surface3:#3d3530;
+    --border:#48403b;--border2:#3d3530;
+    --text:#f5f0ec;--text2:#a09188;--text3:rgba(245,240,236,.5);--accent:#e08a6a;
+    --pos:#FF453A;--neg:#30D158;
+    --tone-good:#7aa978;--tone-ok:#d8b25a;--tone-warn:#dd7a55;--tone-neu:#a99e92;
+  }
+  *{box-sizing:border-box;-webkit-text-size-adjust:100%;}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
+    line-height:1.55;font-size:var(--fs-body);}
+  .wrap{max-width:680px;margin:0 auto;padding:0 16px 60px;}
+  .topbar{position:sticky;top:0;z-index:30;background:var(--bg);border-bottom:1px solid var(--border);
+    display:flex;align-items:center;justify-content:space-between;padding:11px 16px;}
+  .topbar h1{font-size:var(--fs-title);font-weight:800;margin:0;}
+  .tbtn{background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text2);
+    font-size:var(--fs-label);font-weight:600;padding:6px 11px;cursor:pointer;}
+  .sech{font-size:var(--fs-cap);font-weight:800;color:var(--text2);letter-spacing:.06em;
+    text-transform:uppercase;margin:26px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border2);}
+  .note{font-size:var(--fs-cap);color:var(--text2);margin:6px 0 0;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+  /* ===== icon base（統一） ===== */
+  .ic{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;
+    stroke-linecap:round;stroke-linejoin:round;flex:none;}
+  .ic-sm{width:14px;height:14px;}
+
+  /* ===== card primitive（統一） ===== */
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-card);
+    padding:var(--sp-4);margin-bottom:10px;box-shadow:var(--shadow-card);}
+  .card-ttl{display:flex;align-items:center;gap:9px;font-size:var(--fs-title);font-weight:800;
+    margin:0 0 13px;padding-bottom:11px;border-bottom:1px solid var(--border);}
+  .card-ttl .tic{width:28px;height:28px;border-radius:8px;background:var(--surface2);
+    display:flex;align-items:center;justify-content:center;color:var(--accent);flex:none;}
+  .card-ttl .tag{margin-left:auto;font-size:var(--fs-tiny);font-weight:600;color:var(--text3);
+    background:var(--surface2);border-radius:var(--r-pill);padding:3px 10px;}
+
+  /* ===== chips / pills / badges（統一） ===== */
+  .pill{display:inline-flex;align-items:center;gap:4px;font-size:var(--fs-tiny);font-weight:700;
+    border-radius:var(--r-pill);padding:2px 9px;}
+  .pill.good{background:color-mix(in srgb,var(--tone-good) 15%,transparent);color:var(--tone-good);}
+  .pill.ok{background:color-mix(in srgb,var(--tone-ok) 15%,transparent);color:var(--tone-ok);}
+  .pill.warn{background:color-mix(in srgb,var(--tone-warn) 15%,transparent);color:var(--tone-warn);}
+  .pill.neu{background:var(--surface2);color:var(--text2);}
+  .pill.up{background:color-mix(in srgb,var(--pos) 15%,transparent);color:var(--pos);}
+  .pill.down{background:color-mix(in srgb,var(--neg) 15%,transparent);color:var(--neg);}
+  .chip{display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border2);
+    border-radius:var(--r-chip);padding:4px 9px;font-size:var(--fs-cap);}
+  .chip b{font-weight:800;}
+  .badge{display:inline-flex;align-items:center;gap:3px;font-size:var(--fs-tiny);font-weight:700;
+    border-radius:var(--r-pill);padding:2px 8px;}
+  .badge.good{background:color-mix(in srgb,var(--tone-good) 16%,transparent);color:var(--tone-good);}
+  .badge.ok{background:color-mix(in srgb,var(--tone-ok) 16%,transparent);color:var(--tone-ok);}
+  .badge.warn{background:color-mix(in srgb,var(--tone-warn) 16%,transparent);color:var(--tone-warn);}
+
+  /* ===== segmented control（lens/セグメント統一） ===== */
+  .seg{display:inline-flex;gap:4px;flex-wrap:wrap;}
+  .seg button{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-pill);
+    color:var(--text2);font-size:var(--fs-label);font-weight:600;padding:5px 13px;cursor:pointer;}
+  .seg button.on{background:var(--accent);border-color:var(--accent);color:#fff;}
+
+  /* ===== tab bar ===== */
+  .tabbar{display:flex;border-bottom:1px solid var(--border);margin:4px 0 0;}
+  .tabbar button{flex:1 1 0;min-width:0;background:none;border:none;border-bottom:2px solid transparent;
+    margin-bottom:-1px;color:var(--text2);font-size:var(--fs-body);font-weight:500;padding:9px 3px 7px;cursor:pointer;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .tabbar button.on{color:var(--accent);border-bottom-color:var(--accent);font-weight:600;}
+
+  /* ===== table（統一） ===== */
+  table.t{width:100%;border-collapse:collapse;font-size:var(--fs-cap);table-layout:fixed;}
+  table.t th{font-size:var(--fs-micro);color:var(--text2);font-weight:700;text-align:right;
+    padding:4px 2px 6px 0;border-bottom:1px solid var(--border);}
+  table.t th:first-child{text-align:left;}
+  table.t td{padding:6px 2px;border-bottom:1px solid var(--border2);text-align:right;font-weight:700;}
+  table.t td:first-child{text-align:left;font-weight:600;}
+  table.t tr:last-child td{border-bottom:none;}
+  .up{color:var(--pos);}.down{color:var(--neg);}
+  .lv{display:block;font-size:var(--fs-micro);color:var(--text2);font-weight:600;}
+
+  /* swatches */
+  .sw{display:flex;flex-direction:column;gap:4px;font-size:var(--fs-micro);color:var(--text2);}
+  .sw .box{height:34px;border-radius:8px;border:1px solid var(--border);}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .typ{display:flex;align-items:baseline;gap:10px;padding:4px 0;border-bottom:1px dashed var(--border2);}
+  .typ .k{font-size:var(--fs-micro);color:var(--text2);width:120px;flex:none;}
+  /* applied demo helpers */
+  .verdict{display:flex;align-items:center;gap:12px;border-radius:12px;padding:12px 14px;margin-bottom:12px;}
+  .verdict.warn{background:color-mix(in srgb,var(--tone-ok) 14%,transparent);}
+  .verdict .vbadge{width:38px;height:38px;border-radius:11px;flex:none;display:flex;align-items:center;justify-content:center;background:var(--tone-ok);color:#fff;}
+  .verdict .vt{font-weight:800;font-size:var(--fs-title);}
+  .verdict .vs{font-size:var(--fs-sub);color:var(--text2);}
+  .mrow{display:flex;align-items:center;gap:11px;padding:10px 0;border-top:1px solid var(--border2);}
+  .mrow:first-of-type{border-top:none;}
+  .mrow .mic{width:30px;height:30px;border-radius:9px;background:var(--surface2);display:flex;align-items:center;justify-content:center;color:var(--text2);flex:none;}
+  .mrow .ml{font-size:var(--fs-label);color:var(--text2);font-weight:600;}
+  .mrow .mv{font-size:var(--fs-value);font-weight:800;margin-left:auto;}
+  .vg{height:6px;background:var(--surface3);border-radius:3px;position:relative;margin:10px 0 5px;}
+  .vg .zone{position:absolute;height:100%;border-radius:3px;background:var(--tone-good);opacity:.5;}
+  .vg .mk{position:absolute;top:50%;width:11px;height:11px;border-radius:50%;border:2px solid var(--surface);transform:translate(-50%,-50%);background:var(--tone-good);}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <h1>統一デザインシステム v1</h1>
+  <button class="tbtn" onclick="var h=document.documentElement;h.setAttribute('data-theme',h.getAttribute('data-theme')==='dark'?'light':'dark')">🌓 ライト/ダーク</button>
+</div>
+<div class="wrap">
+
+  <p class="note">全5タブ（Heatmap / Historical / Risk / Value / Briefing）で共有する土台。<b>個別タブはこの部品だけで組む</b>＝色・型・余白・カード・アイコン・チップを統一。下は実際の共有CSSのプレビュー。</p>
+
+  <div class="sech">1. カラートークン</div>
+  <div class="note">surface/text/accent は既存を踏襲。<b>意味色を `--tone-good/ok/warn/neu` に一本化</b>（Riskの`--vg-*`混用を解消）。価格方向 `--pos`(赤=上)/`--neg`(緑=下) は別系統で固定。</div>
+  <div class="grid2" style="margin-top:10px">
+    <div class="sw"><div class="box" style="background:var(--surface)"></div>surface</div>
+    <div class="sw"><div class="box" style="background:var(--surface2)"></div>surface2</div>
+    <div class="sw"><div class="box" style="background:var(--surface3)"></div>surface3</div>
+    <div class="sw"><div class="box" style="background:var(--accent)"></div>accent</div>
+  </div>
+  <div class="grid2" style="margin-top:8px">
+    <div class="sw"><div class="box" style="background:var(--tone-good)"></div>tone-good（良い）</div>
+    <div class="sw"><div class="box" style="background:var(--tone-ok)"></div>tone-ok（注意）</div>
+    <div class="sw"><div class="box" style="background:var(--tone-warn)"></div>tone-warn（警告）</div>
+    <div class="sw"><div class="box" style="background:var(--tone-neu)"></div>tone-neu（中立）</div>
+  </div>
+  <div class="row" style="margin-top:8px">
+    <span class="sw" style="flex:1"><span class="box" style="background:var(--pos)"></span>pos（赤=上昇）</span>
+    <span class="sw" style="flex:1"><span class="box" style="background:var(--neg)"></span>neg（緑=下落）</span>
+  </div>
+
+  <div class="sech">2. 型スケール（役割で固定）</div>
+  <div class="card">
+    <div class="typ"><span class="k">hero 26/800</span><span style="font-size:var(--fs-hero);font-weight:800">¥577,106,724</span></div>
+    <div class="typ"><span class="k">xl 22/800</span><span style="font-size:var(--fs-xl);font-weight:800">NVDA</span></div>
+    <div class="typ"><span class="k">stat 18/800</span><span style="font-size:var(--fs-stat);font-weight:800">17.8%</span></div>
+    <div class="typ"><span class="k">value 16/800</span><span style="font-size:var(--fs-value);font-weight:800">14.2%</span></div>
+    <div class="typ"><span class="k">title 15/800</span><span style="font-size:var(--fs-title);font-weight:800">カード見出し</span></div>
+    <div class="typ"><span class="k">body 13/400</span><span style="font-size:var(--fs-body)">本文テキスト</span></div>
+    <div class="typ"><span class="k">label 12/600</span><span style="font-size:var(--fs-label);font-weight:600">ラベル</span></div>
+    <div class="typ"><span class="k">sub 11.5/600</span><span style="font-size:var(--fs-sub);font-weight:600">サブラベル</span></div>
+    <div class="typ"><span class="k">cap 11/400</span><span style="font-size:var(--fs-cap);color:var(--text2)">キャプション</span></div>
+    <div class="typ"><span class="k">tiny 10/700</span><span style="font-size:var(--fs-tiny);font-weight:700">バッジ</span></div>
+    <div class="typ" style="border:none"><span class="k">micro 9</span><span style="font-size:var(--fs-micro);color:var(--text2)">出典タグ・注記</span></div>
+  </div>
+
+  <div class="sech">3. タブバー（共通・現状維持でOK）</div>
+  <div class="card" style="padding:0">
+    <div class="tabbar">
+      <button>Heatmap</button><button>Historical</button>
+      <button class="on">Risk</button><button>Value</button><button>Briefing</button>
+    </div>
+  </div>
+
+  <div class="sech">4. カード＋見出し（★最重要の統一点）</div>
+  <div class="note">3パターンに割れていた見出しを <b>`.card-ttl`（アイコン箱28px＋名前15/800＋右に任意タグ）に一本化</b>。アイコンは自前SVGスプライト・stroke1.7。カードは角丸14px・padding16px・薄影で統一。</div>
+  <div class="card">
+    <div class="card-ttl"><span class="tic"><svg class="ic"><use href="#i-shield"/></svg></span>リスク要約<span class="tag">致命傷を避けられているか</span></div>
+    <div style="font-size:var(--fs-body);color:var(--text2)">見出しの直下にカード本文。アイコン色＝accent、タグ＝surface2のピル。これを全タブで使う。</div>
+  </div>
+
+  <div class="sech">5. セグメント / レンズ（共通）</div>
+  <div class="card">
+    <div class="seg">
+      <button class="on">総合</button><button>バリュ</button><button>品質</button><button>モメンタム</button>
+    </div>
+    <div class="note">Value のレンズ・Historical の［全部/保有/ウォッチ］を同一スタイルに。</div>
+  </div>
+
+  <div class="sech">6. チップ・ピル・バッジ（共通）</div>
+  <div class="card">
+    <div class="row" style="margin-bottom:10px">
+      <span class="pill good">適正</span><span class="pill ok">注意</span><span class="pill warn">警告</span><span class="pill neu">なし</span>
+      <span class="pill up">+1.85%</span><span class="pill down">-3.54%</span>
+    </div>
+    <div class="row" style="margin-bottom:10px">
+      <span class="chip">SMH <b>9.4%</b></span><span class="chip">200A <b>7.2%</b></span><span class="chip">比率 <b>10.1%</b></span>
+    </div>
+    <div class="row">
+      <span class="badge good">◎ 割安</span><span class="badge ok">○ ふつう</span><span class="badge warn">△ 割高</span>
+    </div>
+  </div>
+
+  <div class="sech">7. 表（共通）</div>
+  <div class="card">
+    <table class="t">
+      <thead><tr><th>指標</th><th>1週</th><th>1月</th><th>6月</th></tr></thead>
+      <tbody>
+        <tr><td>日経平均<span class="lv">72,366</span></td><td class="up">+1.85%</td><td class="up">+11.3%</td><td class="up">+43.6%</td></tr>
+        <tr><td>S&amp;P500<span class="lv">7,365</span></td><td class="down">-1.94%</td><td class="down">-1.45%</td><td class="up">+6.59%</td></tr>
+        <tr><td>ハンセン<span class="lv">23,077</span></td><td class="down">-3.54%</td><td class="down">-9.85%</td><td class="down">-10.6%</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sech">8. 全タブ適用イメージ（同じ部品で組む）</div>
+  <div class="note">下の3枚は Risk / Value / Briefing の中身を<b>同じ `.card`＋`.card-ttl`＋意味色＋型スケール</b>で組んだ例。見出し・色・余白・フォントが揃う。</div>
+
+  <!-- Risk適用例 -->
+  <div class="card">
+    <div class="card-ttl"><span class="tic"><svg class="ic"><use href="#i-shield"/></svg></span>リスク要約<span class="tag">Risk</span></div>
+    <div class="verdict warn">
+      <div class="vbadge"><svg class="ic" style="color:#fff"><use href="#i-warn"/></svg></div>
+      <div><div class="vt">注意 — 1件が基準オーバー</div><div class="vs">過大ポジ1件。集中は適正圏。</div></div>
+    </div>
+    <div class="mrow"><span class="mic"><svg class="ic"><use href="#i-coin"/></svg></span><span class="ml">投資用キャッシュ</span><span class="pill good" style="margin-left:7px">適正</span><span class="mv">10.1%</span></div>
+    <div class="mrow"><span class="mic"><svg class="ic"><use href="#i-target"/></svg></span><span class="ml">最大集中（半導体）</span><span class="pill ok" style="margin-left:7px">注意</span><span class="mv">14.6%</span></div>
+  </div>
+
+  <!-- Value適用例 -->
+  <div class="card">
+    <div class="card-ttl"><span class="tic"><svg class="ic"><use href="#i-gauge"/></svg></span>Value：NVDA<span class="tag">Value</span></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span style="font-size:var(--fs-label);color:var(--text2);font-weight:600">PER（実績）</span><span class="badge warn" style="margin-left:auto">△ 割高</span><span style="font-size:var(--fs-body);font-weight:800;margin-left:8px">42.4倍</span></div>
+    <div class="vg"><span class="zone" style="left:8%;width:34%"></span><span class="mk" style="left:78%;background:var(--tone-warn);border-color:var(--surface)"></span></div>
+    <div class="note">目安バー：塗り=妥当域、●=現在地。意味色は tone-* で全タブ共通。</div>
+  </div>
+
+  <!-- Briefing適用例 -->
+  <div class="card">
+    <div class="card-ttl"><span class="tic"><svg class="ic"><use href="#i-globe"/></svg></span>マクロ<span class="tag">Briefing</span></div>
+    <table class="t">
+      <thead><tr><th>指標</th><th>1週</th><th>1月</th><th>6月</th></tr></thead>
+      <tbody>
+        <tr><td>TOPIX<span class="lv">3,964</span></td><td class="down">-1.06%</td><td class="up">+2.18%</td><td class="up">+19.1%</td></tr>
+        <tr><td>VIX<span class="lv">現在 18.6</span></td><td class="up">18.4</td><td class="up">16.6</td><td class="up">13.5</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7 2.6v6c0 4.4-3 7.2-7 8.4-4-1.2-7-4-7-8.4v-6L12 3z"/><path d="M9 11.8l2.1 2.1 4-4.2"/></symbol>
+  <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 4.2l8.4 14.6H3.6L12 4.2z"/><path d="M12 10v4.2M12 16.8v.1"/></symbol>
+  <symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.2"/><path d="M12 7.6v8.8M9 12.3h6M9 14.4h6"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.2"/><circle cx="12" cy="12" r="3.6"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M4.5 15a7.5 7.5 0 1115 0"/><path d="M12 15l3.4-3.4"/><circle cx="12" cy="15" r="1" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4"/><path d="M3.6 12h16.8M12 3.6c2.6 2.4 2.6 14.4 0 16.8M12 3.6c-2.6 2.4-2.6 14.4 0 16.8"/></symbol>
+</defs></svg>
+</body>
+</html>
