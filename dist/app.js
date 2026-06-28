@@ -6696,10 +6696,19 @@ function rowHTML(p, currentPct, targetPct, verdict, val, trig, conviction) {
   </div>`;
   const sk = sortKeyForLens(_lens);
   const size = `<div class="val-size-wrap${sk.sizeBar ? " is-sortkey" : ""}">${sizeBarHTML(currentPct, targetPct, conviction)}</div>`;
-  const metrics = coreChipsHTML(val, _lens);
-  const detail = detailHTML(val);
-  const confLine = confidenceHTML(verdict);
-  return `<div class="val-row">${banner}<div class="val-body">${head}${size}${metrics}${confLine}${detail}</div></div>`;
+  const fm = val && val.source === "fund-monthly-top10" ? val : null;
+  let metricsBlock;
+  if (fm) {
+    const cov = typeof fm.coverage === "number" ? Math.round(fm.coverage * 100) : null;
+    const ref = typeof fm.coverage === "number" && fm.coverage < 0.5 || fm.status === "na";
+    metricsBlock = `<div class="val-fundmo">
+      <div class="val-fundmo-top"><span class="t">PER\uFF08\u672C\u4F53\uFF09</span><span class="v">${escapeHTML(fmtRaw2(fm.perCurrent))}</span>${ref ? '<span class="val-fundmo-ref">\u53C2\u8003</span>' : ""}</div>
+      <div class="val-fundmo-lab">\u6708\u6B21\u4E0A\u4F4D10\u30D9\u30FC\u30B9\uFF08\u30AB\u30D0\u30FC\u7387${cov != null ? cov + "%" : "\u2014"}\u30FB${escapeHTML(fm.asOf || "\u2014")}\uFF09</div>
+    </div>`;
+  } else {
+    metricsBlock = `${coreChipsHTML(val, _lens)}${confidenceHTML(verdict)}${detailHTML(val)}`;
+  }
+  return `<div class="val-row">${banner}<div class="val-body">${head}${size}${metricsBlock}</div></div>`;
 }
 function sortedRows(rows) {
   const copy = rows.slice();
@@ -6781,10 +6790,12 @@ async function renderValuationTab() {
     const targetPct = tkey != null ? getTargetPct(tkey) : null;
     const gap = targetPct != null ? currentPct - targetPct : null;
     const conviction = tkey != null ? getConviction(tkey) : null;
-    let val = getValuation(p.ySymbol);
+    const fundMonthly = getValuation(p.name);
+    const useFundMonthly = !!(fundMonthly && fundMonthly.source === "fund-monthly-top10");
+    let val = useFundMonthly ? fundMonthly : getValuation(p.ySymbol);
     const liveMom = p.ySymbol ? computePriceMomentum(_hist[p.ySymbol]) : null;
     const liveRs = p.ySymbol && _benchSeries ? relStrength(_hist[p.ySymbol], _benchSeries) : null;
-    if (liveMom || liveRs != null) {
+    if (!useFundMonthly && (liveMom || liveRs != null)) {
       const m = val && val.momentum || {};
       val = {
         ...val || {},
