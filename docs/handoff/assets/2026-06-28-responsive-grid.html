@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="light">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>レスポンシブ・グリッド（iPad/PCで2カラム）</title>
+<style>
+  :root{
+    --bg:#f7f2ee;--surface:#fff;--surface2:#f0e9e3;--surface3:#e8ddd7;--border:#d4c8c0;--border2:#e4d9d2;
+    --text:#1c1714;--text2:#78695f;--text3:rgba(28,23,20,.5);--accent:#cc785c;--pos:#FF3B30;--neg:#34C759;
+    --tone-ok:#b88a2e;--tone-good:#4f8a4d;--tone-warn:#c2603f;
+    --fs-md:15px;--fs-base:13px;--fs-sm:11px;--fs-xs:9.5px;--fs-lg:18px;
+    --app-max:1080px;     /* iPad/PCの全体上限 */
+  }
+  html[data-theme="dark"]{--bg:#1c1917;--surface:#27211e;--surface2:#322b28;--surface3:#3d3530;--border:#48403b;--border2:#3d3530;--text:#f5f0ec;--text2:#a09188;--text3:rgba(245,240,236,.5);--accent:#e08a6a;}
+  *{box-sizing:border-box;}
+  body{margin:0;background:#cfc6bd;font-family:-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;color:var(--text);padding:16px;}
+  .head{max-width:1200px;margin:0 auto 14px;color:#4a3f37;font-size:13px;}
+  .head b{color:#1c1714;}
+  .toggle{background:#fff;border:1px solid #b9ab9f;border-radius:8px;padding:6px 11px;font-size:12px;font-weight:600;cursor:pointer;}
+  .device{margin:0 auto 22px;border:2px solid #8a7a6c;border-radius:18px;overflow:hidden;background:var(--bg);box-shadow:0 6px 24px rgba(0,0,0,.18);}
+  .dlabel{background:#8a7a6c;color:#fff;font-size:11px;font-weight:700;padding:5px 12px;}
+  .d-phone{width:390px;max-width:100%;}
+  .d-desk{width:100%;max-width:1120px;}
+
+  .topbar{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--border);padding:9px 14px;}
+  .trow{display:flex;align-items:center;justify-content:space-between;} .ttl{font-size:var(--fs-md);font-weight:800;}
+  .tabbar{display:flex;margin-top:6px;max-width:var(--app-max);margin-inline:auto;}
+  .tabbar b{flex:1;text-align:center;font-size:var(--fs-base);font-weight:600;color:var(--text2);padding:8px 2px;border-bottom:2px solid transparent;}
+  .tabbar b.on{color:var(--accent);border-bottom-color:var(--accent);font-weight:700;}
+
+  /* ★ コンテンツ：モバイル=1カラム、iPad/PC=最大1080中央＋グリッド */
+  .body{padding:14px;max-width:var(--app-max);margin-inline:auto;}
+  .tab-grid{display:grid;gap:12px;grid-template-columns:1fr;}
+  @media(min-width:760px){ .tab-grid{grid-template-columns:1fr 1fr;} }     /* iPad/PC=2カラム */
+  .span-all{grid-column:1/-1;}                                            /* 全幅カード */
+
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:15px;box-shadow:0 2px 10px rgba(0,0,0,.04);}
+  .card-ttl{display:flex;align-items:center;gap:9px;font-size:var(--fs-md);font-weight:800;margin:0 0 13px;padding-bottom:11px;border-bottom:1px solid var(--border);}
+  .tic{width:28px;height:28px;border-radius:8px;background:var(--surface2);display:flex;align-items:center;justify-content:center;color:var(--accent);flex:none;}
+  .tag{margin-left:auto;font-size:var(--fs-xs);font-weight:600;color:var(--text3);background:var(--surface2);border-radius:999px;padding:3px 10px;}
+  .ic{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
+  .verdict{display:flex;align-items:center;gap:12px;border-radius:12px;padding:12px 14px;background:color-mix(in srgb,var(--tone-ok) 14%,transparent);}
+  .vb{width:36px;height:36px;border-radius:11px;background:var(--tone-ok);color:#fff;display:flex;align-items:center;justify-content:center;flex:none;}
+  .vt{font-weight:800;font-size:var(--fs-md);} .vs{font-size:var(--fs-sm);color:var(--text2);}
+  /* donut card */
+  .dcard-body{display:flex;align-items:center;gap:14px;}
+  .donut{width:96px;height:96px;border-radius:50%;flex:none;
+    background:conic-gradient(var(--accent) 0 41%, #6a8caf 41% 64%, #c2a36b 64% 82%, #7fa885 82% 100%);
+    -webkit-mask:radial-gradient(circle 30px at center,transparent 98%,#000 100%);mask:radial-gradient(circle 30px at center,transparent 98%,#000 100%);}
+  .leg{flex:1;min-width:0;font-size:var(--fs-sm);}
+  .leg li{display:flex;align-items:center;gap:6px;list-style:none;padding:2px 0;}
+  .leg .sw{width:10px;height:10px;border-radius:2px;flex:none;} .leg .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;} .leg .pc{color:var(--text2);font-variant-numeric:tabular-nums;}
+  .qstat{display:flex;gap:10px;} .qs{flex:1;background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:10px 11px;}
+  .qs .l{font-size:var(--fs-sm);color:var(--text2);} .qs .v{font-size:var(--fs-lg);font-weight:800;}
+  .note{font-size:var(--fs-xs);color:var(--text3);margin-top:6px;}
+</style>
+</head>
+<body>
+<div class="head">
+  <b>iPad/PC＝2カラム・全体は最大1080px中央寄せ。モバイル＝1カラム。</b>
+  Risk の4円グラフ（国/通貨/セクター/地域）を<b>1つの統一グリッド</b>に。iPad/PCは2×2＝“はぐれ”なし。要約・クオンツは全幅(span-all)。
+  <button class="toggle" onclick="var h=document.documentElement;h.setAttribute('data-theme',h.getAttribute('data-theme')==='dark'?'light':'dark')">🌓</button>
+</div>
+
+<div class="device d-phone"><div class="dlabel">📱 iPhone（390px）— 1カラム（縦積み）</div><div id="ph"></div></div>
+<div class="device d-desk"><div class="dlabel">🖥 iPad / デスクトップ — 2カラム・最大1080中央</div><div id="dk"></div></div>
+
+<svg width="0" height="0" style="position:absolute"><defs>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7 2.6v6c0 4.4-3 7.2-7 8.4-4-1.2-7-4-7-8.4v-6L12 3z"/><path d="M9 11.8l2.1 2.1 4-4.2"/></symbol>
+  <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 4.2l8.4 14.6H3.6L12 4.2z"/><path d="M12 10v4.2M12 16.8v.1"/></symbol>
+  <symbol id="i-history" viewBox="0 0 24 24"><path d="M4.5 12a7.5 7.5 0 107.5-7.5A7.5 7.5 0 005 8.5M4.5 4.5v4h4"/><path d="M12 8.2v4.3l2.8 1.8"/></symbol>
+</defs></svg>
+
+<script>
+function donutCard(title){
+  return `<div class="card">
+    <div class="card-ttl"><span class="tic"><svg class="ic"><use href="#i-history"/></svg></span>${title}</div>
+    <div class="dcard-body">
+      <div class="donut"></div>
+      <ul class="leg" style="margin:0;padding:0">
+        <li><span class="sw" style="background:var(--accent)"></span><span class="nm">日本</span><span class="pc">41%</span></li>
+        <li><span class="sw" style="background:#6a8caf"></span><span class="nm">北米</span><span class="pc">23%</span></li>
+        <li><span class="sw" style="background:#c2a36b"></span><span class="nm">欧州</span><span class="pc">18%</span></li>
+        <li><span class="sw" style="background:#7fa885"></span><span class="nm">新興国</span><span class="pc">18%</span></li>
+      </ul>
+    </div>
+  </div>`;
+}
+var SHELL = `
+  <div class="topbar"><div class="trow"><span class="ttl">Portfolio</span><span style="font-size:11px;color:var(--text2)">●●●</span></div>
+    <div class="tabbar"><b>Heatmap</b><b>Historical</b><b class="on">Risk</b><b>Valuation</b><b>Briefing</b></div></div>
+  <div class="body"><div class="tab-grid">
+    <div class="card span-all">
+      <div class="card-ttl"><span class="tic"><svg class="ic"><use href="#i-shield"/></svg></span>リスク要約<span class="tag">致命傷を避けられているか</span></div>
+      <div class="verdict"><div class="vb"><svg class="ic" style="color:#fff"><use href="#i-warn"/></svg></div><div><div class="vt">注意 — 1件が基準オーバー</div><div class="vs">過大ポジ1件。集中は適正圏。</div></div></div>
+    </div>
+    ${donutCard('国・地域')}
+    ${donutCard('通貨')}
+    ${donutCard('セクター')}
+    ${donutCard('地域の傾き')}
+    <div class="card span-all">
+      <div class="card-ttl"><span class="tic"><svg class="ic"><use href="#i-history"/></svg></span>クオンツ・リスク<span class="tag">現PFで過去危機を再現</span></div>
+      <div class="qstat"><div class="qs"><div class="l">年率ボラ</div><div class="v">17.8%</div></div><div class="qs"><div class="l">最大DD</div><div class="v" style="color:var(--neg)">-22.4%</div></div></div>
+      <div class="note">全幅カードは span-all で2カラムをまたぐ。円グラフ4枚は2×2で揃う。</div>
+    </div>
+  </div></div>`;
+document.getElementById('ph').innerHTML = SHELL;
+document.getElementById('dk').innerHTML = SHELL;
+</script>
+</body>
+</html>
