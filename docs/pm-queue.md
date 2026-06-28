@@ -6,6 +6,19 @@
 
 ---
 
+## 2026-06-28（PM盤面モニタ）
+
+**🔴 設計差し戻し / CI red**：なし（open PR は #516 auto-fix のみ・CI checks 未設定／green 扱い）。
+
+**🟠 要判断（Toshio）**：デザイン統一 umbrella **Issue#515**（段階ロールアウト P1-P5）が **P1 のみ実装（PR#517）の時点で close 済**。残 P2-P5（カード/見出し・ピル/チップ/バッジ・表/配色・型スケール）の継続を **別Issue 起票で追跡するか** 要確認。→ Mulmo は勝手に設計変更しない。残フェーズを進めるなら handoff `2026-06-26-design-system-unification.md` §7 の P2 から新Issueを立てて VS Code に渡す。
+
+**✅ 完了スタンプ（設計正本に反映・本docs PR）**
+- デザイン統一 P1 トークン導入（非破壊）（PR#517 / Issue#515・2026-06-27）→ handoff `2026-06-26-design-system-unification.md` §7、Wiki upgrade-plan に「デザイン統一スプリント」節を新設。
+
+**🟡 監視中**：Wait バックログ6件（#367/#306/#305/#304/#301/#220）変化なし。#516 は daily-issues 自動PR＝コード取り込みは VS Code owner（Mulmo は触らない）。
+
+---
+
 ## 2026-06-22（初回ベースライン）
 
 **🔴 設計差し戻し / CI red**：なし。
