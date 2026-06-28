@@ -443,15 +443,24 @@ function rowHTML(p, currentPct, targetPct, verdict, val, trig, conviction) {
   const sk = sortKeyForLens(_lens);
   const size = `<div class="val-size-wrap${sk.sizeBar ? ' is-sortkey' : ''}">${sizeBarHTML(currentPct, targetPct, conviction)}</div>`;
 
-  // 指標段はレンズ非依存に統一: 固定コアチップ4枚＋詳細展開（作り替えない）
-  const metrics = coreChipsHTML(val, _lens);
-  const detail = detailHTML(val);
+  // 指標段。アクティブ投信の本体評価（fund-monthly-top10・#530）は value 系メトリクスを持たないため、
+  // コアチップ/詳細の代わりに「本体PER＋月次上位10カバー率」を出す。coverage<0.5 / status:na は「参考」。
+  const fm = val && val.source === 'fund-monthly-top10' ? val : null;
+  let metricsBlock;
+  if (fm) {
+    const cov = typeof fm.coverage === 'number' ? Math.round(fm.coverage * 100) : null;
+    const ref = (typeof fm.coverage === 'number' && fm.coverage < 0.5) || fm.status === 'na';
+    metricsBlock = `<div class="val-fundmo">
+      <div class="val-fundmo-top"><span class="t">PER（本体）</span><span class="v">${escapeHTML(fmtRaw(fm.perCurrent))}</span>${ref ? '<span class="val-fundmo-ref">参考</span>' : ''}</div>
+      <div class="val-fundmo-lab">月次上位10ベース（カバー率${cov != null ? cov + '%' : '—'}・${escapeHTML(fm.asOf || '—')}）</div>
+    </div>`;
+  } else {
+    // 通常: 固定コアチップ4枚＋判定確度＋詳細展開（作り替えない）
+    metricsBlock = `${coreChipsHTML(val, _lens)}${confidenceHTML(verdict)}${detailHTML(val)}`;
+  }
 
-  // 判定確度（全レンズ共通）
-  const confLine = confidenceHTML(verdict);
-
-  // 並び: banner → head → size → metrics → 判定確度 → detail
-  return `<div class="val-row">${banner}<div class="val-body">${head}${size}${metrics}${confLine}${detail}</div></div>`;
+  // 並び: banner → head → size → (fund-monthly: 本体PER / 通常: チップ＋確度＋詳細)
+  return `<div class="val-row">${banner}<div class="val-body">${head}${size}${metricsBlock}</div></div>`;
 }
 
 /**
@@ -585,11 +594,17 @@ export async function renderValuationTab() {
     const gap = targetPct != null ? currentPct - targetPct : null;
     const conviction = tkey != null ? getConviction(tkey) : null;
 
-    let val = getValuation(p.ySymbol);
-    // 価格モメンタム（priceMom1Y / pos52w / rsVsSector=対ACWI）を履歴から live 補完（null のみ）
+    // アクティブ投信は本体の「月次上位10加重PER」（canonicalName=p.name でキー）を proxy より優先（#530）。
+    // 無ければ従来どおり proxy ETF（p.ySymbol）。fund-monthly は percentile を持たないので
+    // computeVerdict は自動的に na（強い割安/割高を断定しない）＝coverage<0.5 でも安全。
+    const fundMonthly = getValuation(p.name);
+    const useFundMonthly = !!(fundMonthly && fundMonthly.source === 'fund-monthly-top10');
+    let val = useFundMonthly ? fundMonthly : getValuation(p.ySymbol);
+    // 価格モメンタム（priceMom1Y / pos52w / rsVsSector=対ACWI）を履歴から live 補完（null のみ）。
+    // fund-monthly はファンド本体評価なので proxy 価格由来のモメンタムは載せない。
     const liveMom = p.ySymbol ? computePriceMomentum(_hist[p.ySymbol]) : null;
     const liveRs = p.ySymbol && _benchSeries ? relStrength(_hist[p.ySymbol], _benchSeries) : null;
-    if (liveMom || liveRs != null) {
+    if (!useFundMonthly && (liveMom || liveRs != null)) {
       const m = (val && val.momentum) || {};
       val = {
         ...(val || {}),
