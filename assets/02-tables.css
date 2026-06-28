@@ -284,13 +284,16 @@ table.t td { font-size: var(--fs-sm); font-weight: 700; border-bottom: 1px solid
 .bf-wrap { display: flex; flex-direction: column; }
 .bf-msg { padding: 32px 16px; text-align: center; color: var(--text2); font-size: var(--fs-md); }
 .bf-msg.bf-err { color: var(--danger); }
+/* Briefing 本文はモバイル幅レイアウト＝広い画面では最大600pxで中央寄せ（#525 R3）。
+   モバイル(<600)は全幅で不変。iframe の高さフィット（枠内1スクロール）挙動は維持。 */
 .bf-frame {
-  width: 100%; border: none; display: block;
+  width: 100%; max-width: 600px; margin-inline: auto; border: none; display: block;
   flex: 1 1 auto; background: var(--bg);
 }
 /* 過去号プルダウン（薄いバー） */
 .bf-pastbar {
   display: flex; align-items: center; gap: 8px; flex: 0 0 auto;
+  width: 100%; max-width: 600px; margin-inline: auto; box-sizing: border-box;
   padding: 7px 12px; border-top: 1px solid var(--border); background: var(--bg);
 }
 .bf-past-label { flex: 0 0 auto; font-size: var(--fs-sm); font-weight: 700; color: var(--text2); letter-spacing: 0.04em; }
