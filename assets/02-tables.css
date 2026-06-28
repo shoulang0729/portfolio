@@ -788,6 +788,13 @@ table.t td { font-size: var(--fs-sm); font-weight: 700; border-bottom: 1px solid
   display: inline-flex; align-items: center;
   background: var(--surface2); color: var(--text3); border: 1px dashed var(--border);
 }
+/* アクティブ投信 本体評価（月次上位10加重PER・#530） */
+.val-fundmo { margin-top: 8px; padding: 10px 12px; background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--r-chip); }
+.val-fundmo-top { display: flex; align-items: baseline; gap: 8px; }
+.val-fundmo-top .t { font-size: var(--fs-sm); color: var(--text2); }
+.val-fundmo-top .v { font-size: var(--fs-lg); font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; }
+.val-fundmo-ref { margin-left: auto; font-size: var(--fs-xs); font-weight: 700; color: var(--tone-neu); background: var(--surface3); border-radius: var(--r-pill); padding: 1px 8px; }
+.val-fundmo-lab { font-size: var(--fs-xs); color: var(--text3); margin-top: 4px; }
 
 /* サイズバー（左端0% / 右端=適正×2 / 適正は中央） */
 .val-size-wrap { margin: 2px 0 8px; }
