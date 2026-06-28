@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>レスポンシブ統一パターン（中央カラム）</title>
+<style>
+  :root{
+    --bg:#f7f2ee;--surface:#fff;--surface2:#f0e9e3;--surface3:#e8ddd7;--border:#d4c8c0;--border2:#e4d9d2;
+    --text:#1c1714;--text2:#78695f;--text3:rgba(28,23,20,.5);--accent:#cc785c;--pos:#FF3B30;--neg:#34C759;
+    --tone-ok:#b88a2e;--tone-good:#4f8a4d;--tone-warn:#c2603f;
+    --fs-md:15px;--fs-base:13px;--fs-sm:11px;--fs-xs:9.5px;--fs-lg:18px;
+    --app-max:540px;            /* ★中央カラムの最大幅 */
+  }
+  html[data-theme="dark"]{--bg:#1c1917;--surface:#27211e;--surface2:#322b28;--surface3:#3d3530;--border:#48403b;--border2:#3d3530;--text:#f5f0ec;--text2:#a09188;--text3:rgba(245,240,236,.5);--accent:#e08a6a;}
+  *{box-sizing:border-box;}
+  body{margin:0;background:#cfc6bd;font-family:-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;color:var(--text);padding:16px;}
+  .head{max-width:1000px;margin:0 auto 14px;color:#4a3f37;font-size:13px;}
+  .head b{color:#1c1714;}
+  .toggle{background:#fff;border:1px solid #b9ab9f;border-radius:8px;padding:6px 11px;font-size:12px;font-weight:600;cursor:pointer;}
+
+  /* デバイス枠 */
+  .device{margin:0 auto 22px;border:2px solid #8a7a6c;border-radius:18px;overflow:hidden;background:var(--bg);box-shadow:0 6px 24px rgba(0,0,0,.18);}
+  .device .dlabel{background:#8a7a6c;color:#fff;font-size:11px;font-weight:700;padding:5px 12px;}
+  .d-phone{width:390px;max-width:100%;}
+  .d-pad{width:760px;max-width:100%;}
+  .d-desk{width:100%;max-width:1100px;}
+
+  /* ★アプリのシェル：全端末でこのカラムが中央に出る */
+  .shell{max-width:var(--app-max);margin:0 auto;background:var(--bg);min-height:200px;}
+  .topbar{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--border);padding:9px 14px;}
+  .trow{display:flex;align-items:center;justify-content:space-between;}
+  .ttl{font-size:var(--fs-md);font-weight:800;}
+  .tabbar{display:flex;margin-top:6px;}
+  .tabbar b{flex:1;text-align:center;font-size:var(--fs-base);font-weight:600;color:var(--text2);padding:8px 2px;border-bottom:2px solid transparent;}
+  .tabbar b.on{color:var(--accent);border-bottom-color:var(--accent);font-weight:700;}
+  .body{padding:14px;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:15px;margin-bottom:10px;box-shadow:0 2px 10px rgba(0,0,0,.04);}
+  .card-ttl{display:flex;align-items:center;gap:9px;font-size:var(--fs-md);font-weight:800;margin:0 0 13px;padding-bottom:11px;border-bottom:1px solid var(--border);}
+  .tic{width:28px;height:28px;border-radius:8px;background:var(--surface2);display:flex;align-items:center;justify-content:center;color:var(--accent);flex:none;}
+  .ic{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
+  table.t{width:100%;border-collapse:collapse;font-size:var(--fs-sm);table-layout:fixed;}
+  table.t th{font-size:var(--fs-xs);color:var(--text2);font-weight:700;text-align:right;padding:4px 2px 6px 0;border-bottom:1px solid var(--border);}
+  table.t th:first-child{text-align:left;}
+  table.t td{padding:6px 2px;border-bottom:1px solid var(--border2);text-align:right;font-weight:700;}
+  table.t td:first-child{text-align:left;font-weight:600;}
+  table.t tr:last-child td{border-bottom:none;}
+  .up{color:var(--pos);}.down{color:var(--neg);}
+  .lv{display:block;font-size:var(--fs-xs);color:var(--text2);font-weight:600;}
+  .verdict{display:flex;align-items:center;gap:12px;border-radius:12px;padding:12px 14px;margin-bottom:10px;background:color-mix(in srgb,var(--tone-ok) 14%,transparent);}
+  .vb{width:36px;height:36px;border-radius:11px;background:var(--tone-ok);color:#fff;display:flex;align-items:center;justify-content:center;flex:none;}
+  .vt{font-weight:800;font-size:var(--fs-md);} .vs{font-size:var(--fs-sm);color:var(--text2);}
+  .gut{font-size:11px;color:#7a6e62;text-align:center;padding:6px;}
+</style>
+</head>
+<body>
+<div class="head">
+  <b>レスポンシブ統一パターン＝コンテンツ最大幅 <code>--app-max:540px</code> で中央寄せ。</b>
+  iPhone はそのまま全幅、iPad / デスクトップでは同じ540pxカラムが中央に出て両脇に余白（gutter）＝<b>全端末で同じ見た目</b>。
+  <button class="toggle" onclick="var h=document.documentElement;h.setAttribute('data-theme',h.getAttribute('data-theme')==='dark'?'light':'dark')">🌓 ライト/ダーク</button>
+</div>
+
+<!-- iPhone -->
+<div class="device d-phone">
+  <div class="dlabel">📱 iPhone（390px）— カラム=全幅</div>
+  <div class="shell">__SHELL__</div>
+</div>
+
+<!-- iPad -->
+<div class="device d-pad">
+  <div class="dlabel">▭ iPad（760px）— 540カラムが中央・両脇に余白</div>
+  <div class="shell">__SHELL__</div>
+</div>
+
+<!-- Desktop -->
+<div class="device d-desk">
+  <div class="dlabel">🖥 デスクトップ（ブラウザ全幅）— 同じ540カラムが中央</div>
+  <div class="shell">__SHELL__</div>
+</div>
+
+<svg width="0" height="0" style="position:absolute"><defs>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7 2.6v6c0 4.4-3 7.2-7 8.4-4-1.2-7-4-7-8.4v-6L12 3z"/><path d="M9 11.8l2.1 2.1 4-4.2"/></symbol>
+  <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 4.2l8.4 14.6H3.6L12 4.2z"/><path d="M12 10v4.2M12 16.8v.1"/></symbol>
+</defs></svg>
+
+<script>
+var SHELL = `
+  <div class="topbar">
+    <div class="trow"><span class="ttl">Portfolio</span><span style="font-size:11px;color:var(--text2)">●●●</span></div>
+    <div class="tabbar"><b>Heatmap</b><b>Historical</b><b class="on">Risk</b><b>Valuation</b><b>Briefing</b></div>
+  </div>
+  <div class="body">
+    <div class="card">
+      <div class="card-ttl"><span class="tic"><svg class="ic"><use href="#i-shield"/></svg></span>リスク要約</div>
+      <div class="verdict"><div class="vb"><svg class="ic" style="color:#fff"><use href="#i-warn"/></svg></div><div><div class="vt">注意 — 1件が基準オーバー</div><div class="vs">過大ポジ1件。集中は適正圏。</div></div></div>
+    </div>
+    <div class="card" style="padding:12px 13px">
+      <table class="t">
+        <thead><tr><th>銘柄</th><th>1週</th><th>1月</th><th>6月</th></tr></thead>
+        <tbody>
+          <tr><td>NVDA<span class="lv">エヌビディア</span></td><td class="up">+5.4%</td><td class="up">+12%</td><td class="up">+48%</td></tr>
+          <tr><td>SMH<span class="lv">半導体ETF</span></td><td class="down">-2.1%</td><td class="up">+8%</td><td class="up">+31%</td></tr>
+          <tr><td>2800<span class="lv">ハンセンETF</span></td><td class="down">-3.5%</td><td class="down">-9%</td><td class="down">-11%</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="gut">← この両脇の余白(gutter)が iPad/デスクトップで出る。中身は iPhone と完全に同じ。</div>
+  </div>`;
+document.querySelectorAll('.shell').forEach(function(s){ s.innerHTML = SHELL; });
+</script>
+</body>
+</html>
