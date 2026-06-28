@@ -4829,10 +4829,7 @@ async function buildRegionCard(assets, manualSymbols) {
   const coveragePct = Math.max(0, Math.min(100, 100 - unknownPct));
   const card = document.createElement("div");
   card.className = "risk-card region-card";
-  card.insertAdjacentHTML(
-    "beforeend",
-    `<div class="risk-card-title">${ric("i-globe")}\u5730\u57DF<span class="rtag">\u30EB\u30C3\u30AF\u30B9\u30EB\u30FC\u30FB\u5168\u8CC7\u7523</span></div>`
-  );
+  card.insertAdjacentHTML("beforeend", cardTitle("i-globe", "\u5730\u57DF", "\u30EB\u30C3\u30AF\u30B9\u30EB\u30FC\u30FB\u5168\u8CC7\u7523"));
   const slices = Object.entries(pct).filter(([, p]) => typeof p === "number" && p > 0).sort((a, b) => b[1] - a[1]).map(([key, p]) => ({ key, pct: p }));
   const body = document.createElement("div");
   body.className = "risk-card-body";
@@ -5021,10 +5018,7 @@ function buildChartCard(dim, dimResult, dimSource) {
   const slices = toSlices(dimResult);
   const card = document.createElement("div");
   card.className = "risk-card";
-  const title = document.createElement("div");
-  title.className = "risk-card-title";
-  title.innerHTML = `${DIM_ICONS[dim] ? ric(DIM_ICONS[dim]) : ""}${escapeHTML(TITLES[dim])}`;
-  card.appendChild(title);
+  card.insertAdjacentHTML("beforeend", cardTitle(DIM_ICONS[dim] || "i-layers", TITLES[dim]));
   if (dimSource) card.appendChild(buildSourceBadge(dimSource));
   const body = document.createElement("div");
   body.className = "risk-card-body";
@@ -5086,6 +5080,10 @@ function _resolvePositionTkeys(denom) {
 }
 function ric(id, sm) {
   return `<svg class="ric${sm ? " ric-sm" : ""}" aria-hidden="true"><use href="#${id}"/></svg>`;
+}
+function cardTitle(iconId, name, tag) {
+  const tagHTML = tag ? `<span class="tag">${escapeHTML(tag)}</span>` : "";
+  return `<div class="card-ttl"><span class="tic">${ric(iconId)}</span>${escapeHTML(name)}${tagHTML}</div>`;
 }
 function buildRiskOverviewCard() {
   const card = document.createElement("div");
@@ -5255,7 +5253,7 @@ function buildRiskOverviewCard() {
     "\u4E0A\u9650\u3092\u8D85\u3048\u305F\u30C6\u30FC\u30DE\u3002\u306A\u3057\uFF1D\u5065\u5168\u3002"
   );
   card.innerHTML = `
-    <div class="risk-card-title">${ric("i-shield")}\u30EA\u30B9\u30AF\u8981\u7D04<span class="rtag">\u81F4\u547D\u50B7\u3092\u907F\u3051\u3089\u308C\u3066\u3044\u308B\u304B</span></div>
+    ${cardTitle("i-shield", "\u30EA\u30B9\u30AF\u8981\u7D04", "\u81F4\u547D\u50B7\u3092\u907F\u3051\u3089\u308C\u3066\u3044\u308B\u304B")}
     <div class="rv ${vCls}">
       <div class="rv-badge">${ric(breaches === 0 ? "i-shield" : "i-warn")}</div>
       <div><div class="rv-t">${escapeHTML(vt)}</div><div class="rv-s">${escapeHTML(vs)}</div></div>
@@ -5335,10 +5333,7 @@ async function _appendEventStress(card, holdings) {
 async function buildQuantCard(posList) {
   const card = document.createElement("div");
   card.className = "risk-quant";
-  card.insertAdjacentHTML(
-    "beforeend",
-    `<div class="risk-card-title">${ric("i-history")}\u30AF\u30AA\u30F3\u30C4\u30FB\u30EA\u30B9\u30AF<span class="rtag">\u73FEPF\u3067\u904E\u53BB\u5371\u6A5F\u3092\u518D\u73FE</span></div>`
-  );
+  card.insertAdjacentHTML("beforeend", cardTitle("i-history", "\u30AF\u30AA\u30F3\u30C4\u30FB\u30EA\u30B9\u30AF", "\u73FEPF\u3067\u904E\u53BB\u5371\u6A5F\u3092\u518D\u73FE"));
   await _appendEventStress(card, posList);
   function _fallback(msg) {
     const block = document.createElement("div");
@@ -6684,7 +6679,8 @@ function rowHTML(p, currentPct, targetPct, verdict, val, trig, conviction) {
   const chipHTML = verdict && verdict.label && verdict.label !== "-" ? `<span class="${chipClass(verdict)}" title="${escapeHTML(verdict.drivers.join("\u30FB"))}">${escapeHTML(verdict.label)}</span>` : "";
   const isProxy = !!(val && val.value && val.value.perSource === "fund-trailing");
   const proxyHTML = isProxy ? `<span class="val-proxy" title="ETF\u306E\u30D5\u30A1\u30F3\u30C9\u5B9F\u7E3EPER\u3002\u4E88\u60F3PER\u4E0D\u5728\u306E\u305F\u3081%\u30BF\u30A4\u30EB\u57FA\u6E96\u306E\u7C97\u3044\u5224\u5B9A">proxy</span>` : "";
-  const head = `<div class="val-head">
+  const head = `<div class="val-head card-ttl">
+    <span class="tic"><svg class="ric" aria-hidden="true"><use href="#i-gauge"/></svg></span>
     <b class="val-tk">${escapeHTML(p.symbol)}</b>
     <span class="val-nm">${escapeHTML(p.name)}</span>
     ${chipHTML}${proxyHTML}
