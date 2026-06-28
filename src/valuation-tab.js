@@ -414,7 +414,9 @@ function rowHTML(p, currentPct, targetPct, verdict, val, trig, conviction) {
   const proxyHTML = isProxy
     ? `<span class="val-proxy" title="ETFのファンド実績PER。予想PER不在のため%タイル基準の粗い判定">proxy</span>`
     : '';
-  const head = `<div class="val-head">
+  // 見出しを共通 .card-ttl（アイコン箱）へ統一（#515 P2・Value にもアイコン追加=gauge）
+  const head = `<div class="val-head card-ttl">
+    <span class="tic"><svg class="ric" aria-hidden="true"><use href="#i-gauge"/></svg></span>
     <b class="val-tk">${escapeHTML(p.symbol)}</b>
     <span class="val-nm">${escapeHTML(p.name)}</span>
     ${chipHTML}${proxyHTML}
