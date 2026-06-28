@@ -63,3 +63,21 @@
 - 将来：カバレッジ向上（決算期は全銘柄で真の加重PER）/ 他アクティブ投信へ展開。
 
 — 設計：MulmoClaude（2026-06-28）。
+
+---
+
+## 7. P2 実施結果（2026-06-28・Mulmo）
+- **計算スクリプト** `data/scheduler/fund-per.mjs`（workspace）＋**月次シード** `data/scheduler/fund-holdings.json` 実装。日次バッチ ③A（`config/scheduler/tasks.json`）に `node data/scheduler/fund-per.mjs --write` を組込み（watchlist-per の隣・PERは日次再計算）。**valuations.json は1スペースindentで書く**＝既存と最小diff。
+- **キーは canonicalName**（`ひふみ投信` / `ひふみマイクロスコープpro`）。Valueタブの照合 `[p.ySymbol, p.symbol, p.name]` のうち ySymbol(=proxy 2516.T) が先勝ちのため、**この追加キーは現行表示を変えない**（P3 で fund 優先に切替えるまで dormant）。
+- **初回シード（2026-05 月次・Rheos PDF `/fund/<f>/pdf/report<YYYYMM>.pdf` から抽出）と算出結果**：
+  | ファンド | 上位10加重 実績PER | カバー率 | 旧proxy |
+  |---|---|---|---|
+  | ひふみ投信 | **28.74** | 36.4%（ルネサスNM除外） | グロース250 16.58（割安）＝誤誘導 |
+  | ひふみマイクロスコープpro | **20.58** | 26.4% | グロース250 16.58 |
+  | ひふみクロスオーバーpro | **対象外** | — | ACWI 22.77 |
+  - ★**クロスオーバーproは月次が「上位5銘柄」のみ＋未上場株が中心**（上位5計≈15%・残りは未上場でPER無し）→ PER計算はミスリードになるため**算出しない**（proxy/対象外のまま）。
+  - 教訓：ひふみ投信は proxy「割安」と真逆で本体 PER≈29＝**割安ではない**（高マルチプルの東エレ58/村田84が効く）。proxy指数評価の危うさが定量で確認できた。
+- **月次更新**：翌月の月次レポートが出たら `fund-holdings.json` の `top`/`asOf` を更新（PDF→上位10抽出）。PERは日次バッチが自動再計算。
+
+## 8. 残（P3・VS Code 別Issue）
+Value タブが `valuations[canonicalName]`（source:fund-monthly-top10）を proxy より優先消費＋「月次上位10ベース（カバー率NN%・YYYY-MM）」ラベル。coverage<0.5 は強い割安/割高断定をしない。クロスオーバーは proxy ラベル（#529）のまま。
