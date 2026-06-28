@@ -86,10 +86,7 @@ async function buildRegionCard(assets, manualSymbols) {
   // ── タイトル「地域」＋ルックスルー・ドーナツ＋凡例（#509 で復活）──
   // #502 で誤って構成バーに置換したドーナツを #451 の機構で復活。日本スライスはアクセント色で強調。
   // マザーマーケット（日本）偏りはドーナツの下（順序: タイトル→円グラフ→偏りバナー→注記）。算出は不変＝表示のみ。
-  card.insertAdjacentHTML(
-    'beforeend',
-    `<div class="risk-card-title">${ric('i-globe')}地域<span class="rtag">ルックスルー・全資産</span></div>`
-  );
+  card.insertAdjacentHTML('beforeend', cardTitle('i-globe', '地域', 'ルックスルー・全資産'));
 
   const slices = Object.entries(pct)
     .filter(([, p]) => typeof p === 'number' && p > 0)
@@ -385,11 +382,8 @@ function buildChartCard(dim, dimResult, dimSource) {
   const card = document.createElement('div');
   card.className = 'risk-card';
 
-  const title = document.createElement('div');
-  title.className = 'risk-card-title';
-  // 見出しに先頭アイコン（既存カードと同じ .ric・#509 B）。ラベルは静的だが念のため escape。
-  title.innerHTML = `${DIM_ICONS[dim] ? ric(DIM_ICONS[dim]) : ''}${escapeHTML(TITLES[dim])}`;
-  card.appendChild(title);
+  // 見出しを共通 .card-ttl（アイコン箱）へ統一（#515 P2）。
+  card.insertAdjacentHTML('beforeend', cardTitle(DIM_ICONS[dim] || 'i-layers', TITLES[dim]));
 
   // ソース構成バッジ（ライブ/登録/推定 + asOf + 鮮度警告・#208）
   if (dimSource) card.appendChild(buildSourceBadge(dimSource));
@@ -521,6 +515,18 @@ function _resolvePositionTkeys(denom) {
 /** 自前アイコン参照（絵文字廃止・#488）。`<svg class="ric"><use href="#i-…"/>` 文字列を返す。 */
 function ric(id, sm) {
   return `<svg class="ric${sm ? ' ric-sm' : ''}" aria-hidden="true"><use href="#${id}"/></svg>`;
+}
+
+/**
+ * 共通カード見出し（#515 P2・全タブ統一）。アイコン箱(.tic)＋名前＋右に任意タグ。
+ * @param {string} iconId  スプライト id（i-shield 等）
+ * @param {string} name    見出し文字列
+ * @param {string} [tag]   右端タグ（任意）
+ * @returns {string}
+ */
+function cardTitle(iconId, name, tag) {
+  const tagHTML = tag ? `<span class="tag">${escapeHTML(tag)}</span>` : '';
+  return `<div class="card-ttl"><span class="tic">${ric(iconId)}</span>${escapeHTML(name)}${tagHTML}</div>`;
 }
 
 /**
@@ -742,7 +748,7 @@ function buildRiskOverviewCard() {
   );
 
   card.innerHTML = `
-    <div class="risk-card-title">${ric('i-shield')}リスク要約<span class="rtag">致命傷を避けられているか</span></div>
+    ${cardTitle('i-shield', 'リスク要約', '致命傷を避けられているか')}
     <div class="rv ${vCls}">
       <div class="rv-badge">${ric(breaches === 0 ? 'i-shield' : 'i-warn')}</div>
       <div><div class="rv-t">${escapeHTML(vt)}</div><div class="rv-s">${escapeHTML(vs)}</div></div>
@@ -877,10 +883,7 @@ async function buildQuantCard(posList) {
   const card = document.createElement('div');
   card.className = 'risk-quant';
 
-  card.insertAdjacentHTML(
-    'beforeend',
-    `<div class="risk-card-title">${ric('i-history')}クオンツ・リスク<span class="rtag">現PFで過去危機を再現</span></div>`
-  );
+  card.insertAdjacentHTML('beforeend', cardTitle('i-history', 'クオンツ・リスク', '現PFで過去危機を再現'));
 
   // §2-1 イベント別「下落の深さ」（5y・stress-events 流用。別カードは②へ統合・廃止）
   await _appendEventStress(card, posList);
