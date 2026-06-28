@@ -24,10 +24,10 @@
 
 <!-- スタイルシート -->
 
-<link rel="stylesheet" href="assets/01-base.css?v=20260626A">
-<link rel="stylesheet" href="assets/02-tables.css?v=20260626A">
-<link rel="stylesheet" href="assets/03-misc.css?v=20260626A">
-<link rel="stylesheet" href="assets/04-auth.css?v=20260626A">
+<link rel="stylesheet" href="assets/01-base.css?v=20260626B">
+<link rel="stylesheet" href="assets/02-tables.css?v=20260626B">
+<link rel="stylesheet" href="assets/03-misc.css?v=20260626B">
+<link rel="stylesheet" href="assets/04-auth.css?v=20260626B">
 
 <!-- assets/05-ai-tab.css は src/_disabled/05-ai-tab.css に移動（AIタブ無効化中）-->
 <!-- 銘柄リスト列表示制御（JS が動的に書き込む） -->
@@ -59,6 +59,7 @@
   <symbol id="i-currency" viewBox="0 0 24 24"><rect x="3.4" y="6.6" width="17.2" height="10.8" rx="2.2"/><circle cx="12" cy="12" r="2.7"/><path d="M6.4 9v6M17.6 9v6"/></symbol>
   <symbol id="i-sector" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.4"/><rect x="13" y="4" width="7" height="7" rx="1.4"/><rect x="4" y="13" width="7" height="7" rx="1.4"/><rect x="13" y="13" width="7" height="7" rx="1.4"/></symbol>
   <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11.5L12 5l8 6.5"/><path d="M6 10.5V19h12v-8.5"/><path d="M10 19v-4.5h4V19"/></symbol>
+  <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M4.5 17.5a8 8 0 0 1 15 0"/><path d="M12 17.5l4-5"/><circle cx="12" cy="17.5" r="1.1" fill="currentColor" stroke="none"/></symbol>
 </defs></svg>
 
 <div id="d3-load-error" style="display:none">
@@ -337,14 +338,14 @@
 
 <!-- ES Module エントリーポイント（全ファイルを import する単一スクリプト） -->
 
-<script type="module" src="dist/app.js?v=20260626A"></script>
+<script type="module" src="dist/app.js?v=20260626B"></script>
 
 
 <!-- PWA Service Worker 登録 -->
 <script>
 if ('serviceWorker' in navigator) {
 
-navigator.serviceWorker.register('./sw.js?v=20260626A').catch(() => {});
+navigator.serviceWorker.register('./sw.js?v=20260626B').catch(() => {});
 
 }
 </script>

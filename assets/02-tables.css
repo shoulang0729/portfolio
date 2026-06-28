@@ -455,8 +455,9 @@
 .risk-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 14px;
+  border-radius: var(--r-card);
+  padding: var(--sp-4);
+  box-shadow: var(--shadow-card);
   display: flex;
   flex-direction: column;
 }
@@ -480,6 +481,20 @@
   stroke-linecap: round; stroke-linejoin: round; flex: none; vertical-align: middle;
 }
 .ric-sm { width: 14px; height: 14px; }
+/* ── 共通カード見出し（#515 P2・全タブ統一の正）。アイコン箱28px＋名前15/800＋右に任意タグ ── */
+.card-ttl {
+  display: flex; align-items: center; gap: 9px;
+  font-size: var(--fs-md); font-weight: 800; color: var(--text);
+  margin: 0 0 13px; padding-bottom: 11px; border-bottom: 1px solid var(--border);
+}
+.card-ttl .tic {
+  width: 28px; height: 28px; border-radius: 8px; background: var(--surface2);
+  display: flex; align-items: center; justify-content: center; color: var(--accent); flex: none;
+}
+.card-ttl .tag {
+  margin-left: auto; font-size: var(--fs-xs); font-weight: 600; color: var(--text3);
+  background: var(--surface2); border-radius: var(--r-pill); padding: 3px 10px;
+}
 /* ⓘヘルプグリフ（title ツールチップ） */
 .ihelp {
   display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px;
@@ -680,7 +695,7 @@
 .val-list { display: flex; flex-direction: column; gap: 10px; }
 .val-row {
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: 13px; overflow: hidden;
+  border-radius: var(--r-card); overflow: hidden; box-shadow: var(--shadow-card);
 }
 .val-body { padding: 10px 13px; }
 
@@ -700,9 +715,9 @@
 .val-banner--watch { background: color-mix(in srgb, var(--vg-ok) 13%, transparent); color: var(--vg-ok); }
 .val-banner--hold  { background: var(--surface2); color: var(--text2); }
 
-/* 上段: シンボル + 銘柄名（下揃え） + verdict chip */
-.val-head { display: flex; align-items: flex-end; gap: 8px; margin-bottom: 8px; }
-.val-tk { font-size: 22px; font-weight: 800; color: var(--text); line-height: 1; }
+/* 上段: アイコン箱 + シンボル + 銘柄名 + verdict chip（#515 P2 card-ttl 統一） */
+.val-head { display: flex; align-items: center; gap: 9px; margin: 0 0 11px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+.val-tk { font-size: var(--fs-lg); font-weight: 800; color: var(--text); line-height: 1.05; }
 .val-nm {
   font-size: 12px; color: var(--text2); flex: 1; min-width: 0; line-height: 1;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -955,8 +970,9 @@
 .risk-overview {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 14px 16px 10px;
+  border-radius: var(--r-card);
+  padding: var(--sp-4) var(--sp-4) 10px;
+  box-shadow: var(--shadow-card);
   margin-bottom: 16px;
 }
 /* ── ①リスク要約 信号機（#488）── */
@@ -994,8 +1010,9 @@
 .risk-quant {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 15px 16px;
+  border-radius: var(--r-card);
+  padding: var(--sp-4);
+  box-shadow: var(--shadow-card);
   margin-bottom: 13px;
 }
 .q-lead { font-size: 12px; color: var(--text2); margin: 0 0 13px; line-height: 1.5; }
