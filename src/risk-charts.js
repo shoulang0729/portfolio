@@ -1136,13 +1136,10 @@ export async function renderRiskCharts() {
     if (dim === 'country') continue;
     grid.appendChild(buildChartCard(dim, breakdown[dim], sourceSummary[dim]));
   }
+  // ── 地域（ルックスルー）も同じグリッドに入れて4円グラフを 2×2 に（#525 R2）──
+  // 真の地域配分（特に日本のホームバイアス）。build は上部で await 済み。全幅特例は撤廃しグリッド子化。
+  grid.appendChild(regionCard);
   wrap.appendChild(grid);
-
-  // ── 地域（ルックスルー・D-6 / #451 統合）──────────────────────────────────
-  // 真の地域配分（特に日本のホームバイアス）を可視化。全資産（証券＋現金/暗号）。
-  // ※ build は上部で await 済み（#502 A レンダーガード）。ここでは append のみ。
-  wrap.appendChild(regionCard);
-  // ── /地域（ルックスルー）──────────────────────────────────────────────────
 
   // データソース明記（#214）＋ 手動入力データの引用元（現金・ひふみ等）
   const src = document.createElement('div');

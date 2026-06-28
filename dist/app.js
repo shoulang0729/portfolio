@@ -5511,8 +5511,8 @@ async function renderRiskCharts() {
     if (dim === "country") continue;
     grid.appendChild(buildChartCard(dim, breakdown[dim], sourceSummary[dim]));
   }
+  grid.appendChild(regionCard);
   wrap.appendChild(grid);
-  wrap.appendChild(regionCard);
   const src = document.createElement("div");
   src.className = "risk-source";
   const baseSrc = "\u30C7\u30FC\u30BF\u30BD\u30FC\u30B9: \u4FA1\u683C = Finnhub / Yahoo Finance \u30FB \u30A2\u30BB\u30C3\u30C8\u30AF\u30E9\u30B9/\u901A\u8CA8/\u56FD/\u30BB\u30AF\u30BF\u30FC\u5206\u985E = \u9298\u67C4\u30DE\u30B9\u30BF\uFF08positions.js\u30FBconstituents.js\uFF09";
