@@ -6463,6 +6463,13 @@ function computePriceMomentum(series) {
 var _taLoaded2 = false;
 var _mfLoaded = false;
 var _lens = "total";
+var PROXY_LABELS = {
+  "1306.T": "TOPIX",
+  "2516.T": "\u30B0\u30ED\u30FC\u30B9250",
+  "1477.T": "\u5C0F\u578B\u682A(1477)",
+  ACWI: "ACWI",
+  SHV: "\u7C73\u77ED\u671F\u50B5"
+};
 async function _ensureData() {
   const loads = [];
   if (!_taLoaded2) {
@@ -6678,7 +6685,9 @@ function rowHTML(p, currentPct, targetPct, verdict, val, trig, conviction) {
   const banner = bannerHTML(trig);
   const chipHTML = verdict && verdict.label && verdict.label !== "-" ? `<span class="${chipClass(verdict)}" title="${escapeHTML(verdict.drivers.join("\u30FB"))}">${escapeHTML(verdict.label)}</span>` : "";
   const isProxy = !!(val && val.value && val.value.perSource === "fund-trailing");
-  const proxyHTML = isProxy ? `<span class="val-proxy" title="ETF\u306E\u30D5\u30A1\u30F3\u30C9\u5B9F\u7E3EPER\u3002\u4E88\u60F3PER\u4E0D\u5728\u306E\u305F\u3081%\u30BF\u30A4\u30EB\u57FA\u6E96\u306E\u7C97\u3044\u5224\u5B9A">proxy</span>` : "";
+  const proxyShort = PROXY_LABELS[p.ySymbol] || p.proxyName || p.ySymbol || "\u6307\u6570";
+  const proxyTitle = `${p.proxyName || proxyShort} \u306E\u5B9F\u7E3EPER\uFF08\u30D7\u30ED\u30AD\u30B7\u6307\u6570\uFF09\u3002${p.name}\u672C\u4F53\u306E\u6570\u5024\u3067\u306F\u3042\u308A\u307E\u305B\u3093\u3002`;
+  const proxyHTML = isProxy ? `<span class="val-proxy" title="${escapeHTML(proxyTitle)}">proxy: ${escapeHTML(proxyShort)}</span>` : "";
   const head = `<div class="val-head card-ttl">
     <span class="tic"><svg class="ric" aria-hidden="true"><use href="#i-gauge"/></svg></span>
     <b class="val-tk">${escapeHTML(p.symbol)}</b>
