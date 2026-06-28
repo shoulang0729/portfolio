@@ -52,6 +52,8 @@ html[data-theme="light"] {
   --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px; --sp-6: 24px;
   --r-card: 14px; --r-pill: 999px; --r-chip: 8px;
   --shadow-card: 0 2px 10px rgba(0,0,0,0.04);
+  /* コンテンツ最大幅（#525 R1・iPad/PC で中央寄せ。モバイルは実質全幅） */
+  --app-max: 1080px;
 }
 html[data-theme="dark"] {
   --bg:        #1c1917;
@@ -120,6 +122,13 @@ body {
 #d3-load-error h2 { color: var(--danger); font-size: 18px; }
 #d3-load-error p  { color: var(--text2); font-size: 13px; line-height: 1.6; }
 #d3-load-error code { color: var(--warn); background: var(--surface3); padding: 2px 6px; border-radius: 4px; }
+
+/* アプリシェル: ヘッダ内側・stats・タブバー・各パネルを 1080px で中央寄せ（#525 R1）。
+   sticky-top / body の背景は全幅のまま、左右 gutter は --bg で埋まる。モバイルは実質全幅で不変。 */
+.header,
+.stats-outer,
+.tab-bar,
+.tab-panel { max-width: var(--app-max); margin-inline: auto; }
 
 .sticky-top {
   position: sticky;
