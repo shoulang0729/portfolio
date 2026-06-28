@@ -40,6 +40,20 @@ let _mfLoaded = false;
 let _lens = 'total';
 
 /**
+ * プロキシ ETF の短縮表示名（誤読防止・#529）。アクティブ投信は本体PERが取れず代替指数ETFの
+ * 実績PERを表示しているため、どの指数かをバッジに明記する。キー＝保有の `ySymbol`（実際に
+ * PER を引いた proxy 銘柄）。未登録は position の proxyName / ySymbol にフォールバック。
+ * @type {Record<string,string>}
+ */
+const PROXY_LABELS = {
+  '1306.T': 'TOPIX',
+  '2516.T': 'グロース250',
+  '1477.T': '小型株(1477)',
+  ACWI: 'ACWI',
+  SHV: '米短期債',
+};
+
+/**
  * データを必要なら読み込む（既ロード済みならスキップ）。
  * @returns {Promise<void>}
  */
@@ -391,7 +405,7 @@ function confidenceHTML(verdict) {
 /**
  * 1 銘柄分のカード HTML を生成する。
  * 構成: アクションバナー → シンボル+verdict → サイズバー → コアチップ → 判定確度 → 詳細指標。
- * @param {{ symbol:string, name:string, value:number, ySymbol:string, cat:string, cur:string }} p
+ * @param {{ symbol:string, name:string, value:number, ySymbol:string, cat:string, cur:string, proxyName?:string, isProxy?:boolean }} p
  * @param {number} currentPct
  * @param {number|null} targetPct
  * @param {import('./valuations.js').Verdict|null} verdict
@@ -409,10 +423,13 @@ function rowHTML(p, currentPct, targetPct, verdict, val, trig, conviction) {
     verdict && verdict.label && verdict.label !== '-'
       ? `<span class="${chipClass(verdict)}" title="${escapeHTML(verdict.drivers.join('・'))}">${escapeHTML(verdict.label)}</span>`
       : '';
-  // proxy ETF（value.perSource:"fund-trailing"）は判定が proxy 由来である旨をバッジ表示
+  // proxy ETF（value.perSource:"fund-trailing"）は判定が proxy 由来である旨をバッジ表示。
+  // 代替指数名を明記して「ファンド本体の割安/割高」と誤読されないようにする（#529）。
   const isProxy = !!(val && val.value && val.value.perSource === 'fund-trailing');
+  const proxyShort = PROXY_LABELS[p.ySymbol] || p.proxyName || p.ySymbol || '指数';
+  const proxyTitle = `${p.proxyName || proxyShort} の実績PER（プロキシ指数）。${p.name}本体の数値ではありません。`;
   const proxyHTML = isProxy
-    ? `<span class="val-proxy" title="ETFのファンド実績PER。予想PER不在のため%タイル基準の粗い判定">proxy</span>`
+    ? `<span class="val-proxy" title="${escapeHTML(proxyTitle)}">proxy: ${escapeHTML(proxyShort)}</span>`
     : '';
   // 見出しを共通 .card-ttl（アイコン箱）へ統一（#515 P2・Value にもアイコン追加=gauge）
   const head = `<div class="val-head card-ttl">
