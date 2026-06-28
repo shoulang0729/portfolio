@@ -156,7 +156,7 @@ table.t td{font-size:var(--fs-sm);font-weight:700;...border-bottom:1px solid var
 
 手戻りと巨大diffを避けるため、**フェーズ分割**。各フェーズは品質ゲート green を確認してマージ。
 
-- **P1 トークン導入（非破壊）**：§2 のトークンを `:root`/dark に追加。`--vg-*` を `--tone-*` の alias 化。**この時点で見た目は原則不変**（既存 px を即置換しない）。受け入れ＝全タブ目視で回帰なし。
+- **P1 トークン導入（非破壊）**：§2 のトークンを `:root`/dark に追加。`--vg-*` を `--tone-*` の alias 化。**この時点で見た目は原則不変**（既存 px を即置換しない）。受け入れ＝全タブ目視で回帰なし。 ✅**実装完了（PR#517 / Issue#515・2026-06-27）**＝§2 のデザイントークン（意味色 `--tone-*`・型6サイズ・余白/角丸/影）を `:root`＋dark に導入、非破壊。`assets/01-base.css`／`index.html` 改修。※umbrella Issue#515（段階ロールアウト P1-P5）は本PRで close 済＝P2-P5 は別Issue起票で継続の見込み（要確認はpm-queue参照）。
 - **P2 カード＋見出し統一**：§3.1/3.2。Risk/Value のカードタイトルを `.card-ttl`（アイコン箱）へ。Value にアイコン追加。
 - **P3 ピル/チップ/バッジ/セグメント統一**：§3.3/3.4。意味色を `--tone-*` に。
 - **P4 表＋Heatmap/Historical 配色**：§3.5/§5。Historical の % セルを Heatmap ランプのタイルへ（getColor 出力をタイル背景に）。**getColor/scale 不変**。
