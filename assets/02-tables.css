@@ -450,11 +450,22 @@ table.t td { font-size: var(--fs-sm); font-weight: 700; border-bottom: 1px solid
   margin-bottom: 12px;
   text-align: center;
 }
+/* Risk 4円グラフ（アセット/通貨/セクター/地域）: モバイル1×4 / iPad・PC 2×2（#525 R2）。
+   auto-fit をやめ明示2カラム化＝広い画面で 1×4 に間延びさせない。 */
 .risk-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: 1fr;
   gap: 14px;
 }
+@media (min-width: 760px) {
+  .risk-grid { grid-template-columns: 1fr 1fr; }
+}
+/* 共通タブグリッド（#525 R2・§3）。カード=セル / .span-all=全幅 */
+.tab-grid { display: grid; gap: 12px; grid-template-columns: 1fr; }
+@media (min-width: 760px) {
+  .tab-grid { grid-template-columns: 1fr 1fr; }
+}
+.tab-grid > .span-all { grid-column: 1 / -1; }
 .risk-card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -602,7 +613,7 @@ table.t td { font-size: var(--fs-sm); font-weight: 700; border-bottom: 1px solid
 }
 
 /* D-6: 地域エクスポージャ（ルックスルー）カード */
-.region-card { margin-top: 14px; }
+/* region-card は risk-grid のセル（#525 R2）。全幅特例 margin-top は撤廃 */
 /* 地域 hero 比較バー（あなたのPF vs 世界平均・#488 §4） */
 .rgn-lead { font-size: var(--fs-base); color: var(--text2); margin: 0 0 11px; line-height: 1.5; }
 .rgn-lead b { color: var(--text); font-weight: 800; }
@@ -711,7 +722,11 @@ table.t td { font-size: var(--fs-sm); font-weight: 700; border-bottom: 1px solid
 }
 
 /* 各銘柄カード */
-.val-list { display: flex; flex-direction: column; gap: 10px; }
+/* Value 銘柄カード: モバイル1列 / iPad・PC 2-up（#525 R2）。カード内部は不変 */
+.val-list { display: grid; grid-template-columns: 1fr; gap: 10px; align-items: start; }
+@media (min-width: 760px) {
+  .val-list { grid-template-columns: 1fr 1fr; }
+}
 .val-row {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--r-card); overflow: hidden; box-shadow: var(--shadow-card);
