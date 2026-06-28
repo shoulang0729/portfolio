@@ -21,7 +21,10 @@
 .sl-table th[data-col="2Q"],  .sl-table th[data-col="3Q"],
 .sl-table th[data-col="1y"],  .sl-table th[data-col="3y"],
 .sl-table td.sl-pct-cell { width: 56px; min-width: 56px; }
-.sl-table td[style*="background"] { border-radius: 3px; }
+.sl-table td[style*="background"] { border-radius: 4px; }
+/* 共通表コンポーネント（#515 P4・§3.5）。色は getColor が正＝セル背景は inline で不変 */
+table.t th { font-size: var(--fs-xs); color: var(--text2); font-weight: 700; border-bottom: 1px solid var(--border); }
+table.t td { font-size: var(--fs-sm); font-weight: 700; border-bottom: 1px solid var(--border2); }
 /* ティッカー列：幅を固定してバーグラフ左端が動かないようにする / 横スクロール時に固定 */
 .sl-table th[data-col="symbol"] { width: 150px; max-width: 150px; position: sticky; left: 0; z-index: 4; background: var(--surface3); box-shadow: 1px 0 0 var(--border2); }
 .sl-table td[data-col="symbol"] { width: 150px; max-width: 150px; position: sticky; left: 0; z-index: 1; background: var(--surface); box-shadow: 1px 0 0 var(--border2); }
