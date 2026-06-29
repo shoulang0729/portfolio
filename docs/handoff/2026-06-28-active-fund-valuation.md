@@ -59,7 +59,7 @@
 ## 6. フェーズ
 - **P1（完了）**：proxyラベル明記（#529・VS Code）。
 - **P2（Mulmo）**：`fund-holdings.json` スキーマ確定＋初回 ingest（ひふみ3本の今月上位10）＋`fund-per.mjs` 実装＋日次バッチ組込み＝`valuations[ひふみ*]` を生成。
-- **P3（VS Code・別Issue）**：Value タブが §4 の優先順位で fund-monthly を消費＋ラベル。
+- **P3（VS Code・別Issue）**：Value タブが §4 の優先順位で fund-monthly を消費＋ラベル。 ✅**実装完了（PR#532 / Closes Issue#530・2026-06-28）**＝アクティブ投信を fund-monthly PER で評価（proxyより優先・ひふみ本体表示）。
 - 将来：カバレッジ向上（決算期は全銘柄で真の加重PER）/ 他アクティブ投信へ展開。
 
 — 設計：MulmoClaude（2026-06-28）。
