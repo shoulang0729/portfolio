@@ -15,17 +15,23 @@ const EMERGENCY_FUND = 20_000_000;
 
 /** @type {{asOf?:string, totals?:{imported?:number, mfNetWorth?:number}, holdings?:Array<{cat:string,cur?:string,value:number}>}|null} */
 let _mf = null;
+/** @type {Promise<typeof _mf>|null} */
+let _mfPromise = null;
 
-/** mf-holdings.json を読み込む（失敗時は null のまま＝positions フォールバック） */
-export async function loadMfHoldings() {
-  try {
-    const r = await fetch(`${MF_URL}?_=${Date.now()}`);
-    if (!r.ok) throw new Error(`mf ${r.status}`);
-    _mf = await r.json();
-  } catch {
-    _mf = null;
-  }
-  return _mf;
+/** mf-holdings.json を読み込む（失敗時は null のまま＝positions フォールバック）。並列呼出し時はリクエストを共有。 */
+export function loadMfHoldings() {
+  if (_mfPromise) return _mfPromise;
+  _mfPromise = (async () => {
+    try {
+      const r = await fetch(`${MF_URL}?_=${Date.now()}`);
+      if (!r.ok) throw new Error(`mf ${r.status}`);
+      _mf = await r.json();
+    } catch {
+      _mf = null;
+    }
+    return _mf;
+  })();
+  return _mfPromise;
 }
 
 /**
@@ -69,4 +75,9 @@ export function getMfManualAssets() {
 export function getMfSources() {
   if (!_mf) return null;
   return [`現金・暗号資産 = Money Forward 実値（${_mf.asOf || ''}・mf-holdings.json）`];
+}
+
+/** ロード済みの生 mf-holdings データを返す（buildPositionsFromMf 用）。未ロードなら null */
+export function getMfRawData() {
+  return _mf;
 }

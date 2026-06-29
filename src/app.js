@@ -17,7 +17,9 @@ import { renderHeatmap } from './heatmap.js';
 import { loadChart, setRange, closeModal, handleOverlayClick } from './chart.js';
 import { switchTab } from './tabs.js';
 import { reloadBriefing } from './briefing.js';
-import { loadMfHoldings } from './networth.js';
+import { loadMfHoldings, getMfRawData } from './networth.js';
+import { buildPositionsFromMf } from './holdings-from-mf.js';
+import { FUND_DEFS } from './funds.js';
 import { setupEventListeners } from './init.js';
 import {
   renderHeatmapList,
@@ -478,7 +480,17 @@ function init() {
   renderStats();
 
   // Money Forward 実値（mf-holdings）を読み込み、資産総額・キャッシュ比率に反映（非同期・失敗時はライブ証券にフォールバック）
-  loadMfHoldings().then(() => renderStats()).catch(() => {});
+  loadMfHoldings().then(mf => {
+    renderStats();
+    if (mf) {
+      const mfPositions = buildPositionsFromMf(mf, FUND_DEFS);
+      if (mfPositions.length > 0) {
+        positions.splice(0, positions.length, ...mfPositions);
+        renderStats();
+        renderHeatmap();
+      }
+    }
+  }).catch(() => {});
 
   // stats バーは常に表示。目アイコンは金額マスク状態（state.statsMasked）を反映。
   const _eye = document.getElementById('stats-eye');
@@ -516,9 +528,17 @@ function init() {
       // 0. sessionStorage → IDB マイグレーション（初回のみ有効）、その後 IDB からメモリ復元
       await migrateFromSessionStorage();
       await restoreFromIDB();
-      // 1. KV から保有銘柄を取得（あれば positions.js の内容を上書き）
-      const loaded = await loadPositionsFromKV();
-      if (loaded) { renderStats(); renderHeatmap(); }
+      // 1. mf-holdings から保有展開（同一 Promise を共有するため二重フェッチなし。未ロードなら KV にフォールバック）
+      const _mfData = getMfRawData() || await loadMfHoldings().catch(() => null);
+      const mfPositions = buildPositionsFromMf(_mfData, FUND_DEFS);
+      if (mfPositions.length > 0) {
+        positions.splice(0, positions.length, ...mfPositions);
+        renderStats();
+        renderHeatmap();
+      } else {
+        const loaded = await loadPositionsFromKV();
+        if (loaded) { renderStats(); renderHeatmap(); }
+      }
       // 1b. 分散ファンドの実セクター比率を Yahoo topHoldings から取得（fire-and-forget）
       loadTopHoldings().then(() => {
         if (state.activeTab === 'risk') renderRiskCharts();
