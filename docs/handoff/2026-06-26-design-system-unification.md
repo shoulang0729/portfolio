@@ -157,10 +157,10 @@ table.t td{font-size:var(--fs-sm);font-weight:700;...border-bottom:1px solid var
 手戻りと巨大diffを避けるため、**フェーズ分割**。各フェーズは品質ゲート green を確認してマージ。
 
 - **P1 トークン導入（非破壊）**：§2 のトークンを `:root`/dark に追加。`--vg-*` を `--tone-*` の alias 化。**この時点で見た目は原則不変**（既存 px を即置換しない）。受け入れ＝全タブ目視で回帰なし。 ✅**実装完了（PR#517 / Issue#515・2026-06-27）**＝§2 のデザイントークン（意味色 `--tone-*`・型6サイズ・余白/角丸/影）を `:root`＋dark に導入、非破壊。`assets/01-base.css`／`index.html` 改修。※umbrella Issue#515（段階ロールアウト P1-P5）は本PRで close 済＝P2-P5 は別Issue起票で継続の見込み（要確認はpm-queue参照）。
-- **P2 カード＋見出し統一**：§3.1/3.2。Risk/Value のカードタイトルを `.card-ttl`（アイコン箱）へ。Value にアイコン追加。
-- **P3 ピル/チップ/バッジ/セグメント統一**：§3.3/3.4。意味色を `--tone-*` に。
-- **P4 表＋Heatmap/Historical 配色**：§3.5/§5。Historical の % セルを Heatmap ランプのタイルへ（getColor 出力をタイル背景に）。**getColor/scale 不変**。
-- **P5 型スケール適用**：ad-hoc font-size を `--fs-*` 6種へタブ単位で置換。最後に未使用 px を掃除。
+- **P2 カード＋見出し統一**：§3.1/3.2。Risk/Value のカードタイトルを `.card-ttl`（アイコン箱）へ。Value にアイコン追加。 ✅**実装完了（PR#519・2026-06-28）**。
+- **P3 ピル/チップ/バッジ/セグメント統一**：§3.3/3.4。意味色を `--tone-*` に。 ✅**実装完了（PR#520・2026-06-28）**＝ピル/チップ/バッジ/セグメント・意味色を `--tone-*` へ。
+- **P4 表＋Heatmap/Historical 配色**：§3.5/§5。Historical の % セルを Heatmap ランプのタイルへ（getColor 出力をタイル背景に）。**getColor/scale 不変**。 ✅**実装完了（PR#521・2026-06-28）**＝表＋Heatmap/Historical 配色（タイル4px・表タイポ）。
+- **P5 型スケール適用**：ad-hoc font-size を `--fs-*` 6種へタブ単位で置換。最後に未使用 px を掃除。 ✅**実装完了（PR#522 / Closes Issue#515・2026-06-28）**＝タブ内容の font-size を `--fs-*` 6種へ置換。**umbrella Issue#515 はP5マージで close 済＝段階ロールアウト P1-P5 全完了**（前回pm-queueの「P2-P5別Issue起票要否」は別Issue不要＝umbrella内で直接実装し解決）。
 
 各 PR：`index.html` の `?v=` を全 bump（CSS/JS/SW 揃える）。`dist/app.js` は手commitしない。
 

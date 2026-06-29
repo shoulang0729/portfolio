@@ -76,3 +76,20 @@
 - Wiki `investment-system-upgrade-plan.md` の後続スプリント節に4件追記。
 
 **🟡 監視中**：Wait バックログ6件（#367/#306/#305/#304/#301/#220）変化なし。要判断項目なし。
+
+---
+
+## 2026-06-29（PM盤面モニタ）
+
+**🔴 設計差し戻し / CI red**：なし（open PR ゼロ・CI red なし）。
+
+**✅ 完了スタンプ（設計正本に反映・Mulmo docs PR）**
+- デザインシステム統一 **P2-P5 全完了**（PR#519/#520/#521/#522・Closes #515）→ handoff `2026-06-26-design-system-unification.md` §7。umbrella #515 close 済＝段階ロールアウト P1-P5 完結。
+- レスポンシブ・レイアウト **R1-R3 全完了**（PR#526/#527/#528・Closes #525）→ handoff `2026-06-28-responsive-layout.md` §4。
+- アクティブ投信バリュエーション **P3 完了**（PR#532・Closes #530）＝Value タブが fund-monthly PER を proxy より優先消費（ひふみ本体表示）→ handoff `2026-06-28-active-fund-valuation.md` §6。
+- Wiki `investment-system-upgrade-plan.md` 後続スプリント節に上記を追記。
+
+**✅ 前回要判断の解決**
+- 2026-06-28 の要判断「umbrella #515 close後、残P2-P5を別Issue起票するか」→ **別Issue不要**で解決。VS Code 側が umbrella #515 を再オープンせず P2-P5 を直接実装し、P5（#522）で close。追跡の漏れなし。
+
+**🟡 監視中**：Wait バックログ6件（#367/#306/#305/#304/#301/#220）変化なし。タブ順入替＋表示名 Value→Valuation（PR#524/#523・handoff無しの軽微UI）はマージ済・要対応なし。新規の要判断項目なし。
