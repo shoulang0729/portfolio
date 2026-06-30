@@ -1,5 +1,5 @@
 {
-  "updated": "2026-06-19",
+  "updated": "2026-06-29",
   "denominator": "managedAssets",
   "note": "適正サイズv1。target%=clip(convictionPct[確信度], テーマ上限の取り分)。コア/守りはtargets直接。乖離=現在%−target%。",
   "unitUSD": 50000,
@@ -23,7 +23,8 @@
       "rule": "固定",
       "targets": {
         "GLDM": 8,
-        "cash": 12.5
+        "cash": 12.5,
+        "XLU": 2
       }
     }
   },
