@@ -1,7 +1,7 @@
 {
- "updated": "2026-07-03-0505",
- "note": "PER採点の単一ストア(symbol→valuation)。保有テーブル・ウォッチリスト・Briefingが共有参照。保有∪ウォッチを和集合で1回採点(重複計算なし)。%タイルは概算。PER非該当(金GLDM/銀SLV/債券JPST,SHV)は本ストアに含めず=アプリは'–'表示。 [2026-06-18 バンドをTTM(Yahoo trailingPE)基準で全面再構築。日次はwatchlist-per.mjsがYahoo trailingPEで%タイル/status自動更新。ETF/シクリカル/新規上場はconfidence低・bandNote参照] [2026-06-19 個別株9銘柄に quality/momentum/value拡張(FCF利回り・還元) を追加。wacc仮置き米8/日6。qScore=Piotroski。8050/6301はAltman Zグレーゾーン注意。] [2026-06-27 土曜バンドレビュー実施・据え置き(Opus判断)。sellProposal/buyProposalを段B判断で更新。] [2026-06-30 段B(Opus)判断でsellProposal/buyProposal更新。SMH最優先トリム・MSFT/DTCR/AMZN買い発議。] [2026-07-01 段C(Sonnet)書き戻し。段B判断反映。日経72366・米テック軟調・じっちゃま中立格下げ・後藤FRB独立性維持。] [2026-07-02 段C(Sonnet)書き戻し。日経70475(+40%/6m)・VIX16.45鎮静・ハンセン-9.14%/1m。じっちゃま中立格下げ継続・後藤FRBタカ派・NFP通過待ち。SMH最優先トリム/MSFT最優先買い/DTCR/AMZN継続発議。] [2026-07-03 段C(Sonnet)書き戻し。日経68733(-5.02%/1w急調整)・6月NFP+57K大幅下振れ・VIX16.59鎮静。スタンス=中立(やや守り)。半導体13.8%・キャッシュ7.4%。SMH最優先トリム/MSFT最優先買い/DTCR/AMZN/6016.T継続発議。]",
- "asOf": "2026-07-03",
+ "updated": "2026-07-04-auto-per",
+ "note": "PER採点の単一ストア(symbol→valuation)。保有テーブル・ウォッチリスト・Briefingが共有参照。保有∪ウォッチを和集合で1回採点(重複計算なし)。%タイルは概算。PER非該当(金GLDM/銀SLV/債券JPST,SHV)は本ストアに含めず=アプリは'–'表示。 [2026-06-18 バンドをTTM(Yahoo trailingPE)基準で全面再構築。日次はwatchlist-per.mjsがYahoo trailingPEで%タイル/status自動更新。ETF/シクリカル/新規上場はconfidence低・bandNote参照] [2026-06-19 個別株9銘柄に quality/momentum/value拡張(FCF利回り・還元) を追加。wacc仮置き米8/日6。qScore=Piotroski。8050/6301はAltman Zグレーゾーン注意。] [2026-06-27 土曜バンドレビュー実施・据え置き(Opus判断)。sellProposal/buyProposalを段B判断で更新。] [2026-06-30 段B(Opus)判断でsellProposal/buyProposal更新。SMH最優先トリム・MSFT/DTCR/AMZN買い発議。] [2026-07-01 段C(Sonnet)書き戻し。段B判断反映。日経72366・米テック軟調・じっちゃま中立格下げ・後藤FRB独立性維持。] [2026-07-02 段C(Sonnet)書き戻し。日経70475(+40%/6m)・VIX16.45鎮静・ハンセン-9.14%/1m。じっちゃま中立格下げ継続・後藤FRBタカ派・NFP通過待ち。SMH最優先トリム/MSFT最優先買い/DTCR/AMZN継続発議。] [2026-07-03 段C(Sonnet)書き戻し。日経68733(-5.02%/1w急調整)・6月NFP+57K大幅下振れ・VIX16.59鎮静。スタンス=中立(やや守り)。半導体13.8%・キャッシュ7.4%。SMH最優先トリム/MSFT最優先買い/DTCR/AMZN/6016.T継続発議。] [2026-07-04 段C(Sonnet)書き戻し。土曜バンドレビュー(rebuildBands=true)。日経69744(+0.55%/1w)・TOPIX+2.67%/1w・Nasdaq-4.66%/1m・ハンセン-11.46%/1m。スタンス=中立(半導体トリム優先・押し目は質を選別)。半導体13.7%・キャッシュ7.3%。SMH最優先トリム/MSFT最優先買い/DTCR/AMZN/6016.T継続。3033.HK/PLTR/LITE低confidence扱い。]",
+ "asOf": "2026-07-04",
  "valuations": {
   "VEA": {
    "value": {
@@ -14,8 +14,8 @@
    "bandMedian": 15,
    "percentile": 96,
    "status": "rich",
-   "note": "%タイル95・先進国ex-US。監視中rich＝新規買い見送り。",
-   "asOf": "2026-07-02",
+   "note": "%タイル96・先進国ex-US。監視中rich＝新規買い見送り。",
+   "asOf": "2026-07-04",
    "bandBasis": "TTM(ETF)",
    "bandConfidence": "med",
    "bandNote": "Yahoo trailingPE anchor 18.66 (先進国ex-US)。VEAのTTM P/Eは過去5-10年で概ね12(2020/2022の底)〜18近辺で推移。現在18.66は近年の高位＝バンド上端付近。MSCI World系の5年平均~21より低い水準で、先進国ex-USは構造的に米国より割安。bandは目測レンジ(GuruFocus/Vanguard公式17.3xは算定方式差で参考)。不確実性: ETFのPER集計は提供元差大。"
@@ -32,10 +32,11 @@
    "percentile": 100,
    "status": "rich",
    "note": "%タイル92・欧州株上限寄り。条件付き買い(原油低下+ホルムズ正常化)は条件未達＝新規買い見送り。",
-   "asOf": "2026-07-02",
+   "asOf": "2026-07-04",
    "bandBasis": "TTM(ETF)",
    "bandConfidence": "med",
-   "bandNote": "Yahoo trailingPE anchor 17.77 (欧州)。欧州株(STOXX/MSCI Europe)のTTM P/Eは過去5-10年で概ね12(2020/2022の安値)〜18(2021ピーク)。現17.77はバンド上端寄り＝近年高位。欧州は構造的低PER市場。bandは指数レンジからの推計、ETF集計方式差に留意。confidence med。"
+   "bandNote": "Yahoo trailingPE anchor 17.77 (欧州)。欧州株(STOXX/MSCI Europe)のTTM P/Eは過去5-10年で概ね12(2020/2022の安値)〜18(2021ピーク)。現17.77はバンド上端寄り＝近年高位。欧州は構造的低PER市場。bandは指数レンジからの推計、ETF集計方式差に留意。confidence med。",
+   "sellProposal": "N/A。条件未達で据置。"
   },
   "6016.T": {
    "sectorMedian": {
@@ -49,14 +50,14 @@
     "perTrail": 14.7,
     "evEbitda": 95.1
    },
-   "perCurrent": 13.71,
+   "perCurrent": 14.6,
    "bandLow": 12,
    "bandHigh": 35,
    "bandMedian": 20,
-   "percentile": 7,
+   "percentile": 11,
    "status": "cheap",
    "note": "舶用エンジン小型。bandConfidence low(低流動・利益ボラ大)・市場の質△。",
-   "asOf": "2026-07-02",
+   "asOf": "2026-07-04",
    "bandBasis": "TTM",
    "bandConfidence": "low",
    "bandNote": "実体はジャパンエンジンコーポレーション(J-ENG/舶用エンジン小型株)。プロンプトの『ヤンマー?』は誤り。irbank 2010年以降のPERレンジは赤字〜約50倍と極端に広く、業績変動が大きい市況株。アンカー15.69はバンド下〜中位。低流動・利益ボラ大でconfidence=low、バンドは広めに設定。",
@@ -70,7 +71,7 @@
     "intCoverage": 217.4,
     "qScore": 6
    },
-   "buyProposal": "¥8,500以下の指値・小口で能動発議。低流動ゆえ慎重に。"
+   "buyProposal": "¥8,500以下小口指値（低優先）。"
   },
   "SMH": {
    "perCurrent": 39.94,
@@ -80,7 +81,7 @@
    "percentile": 81,
    "status": "rich",
    "note": "PER42・%タイル86・保有。半導体集中14.2%の主因・bandConfidence low(算定差大)だが絶対水準突出。",
-   "asOf": "2026-07-02",
+   "asOf": "2026-07-04",
    "bandBasis": "TTM(ETF)",
    "bandConfidence": "low",
    "bandNote": "Semiconductor基準=Yahoo trailingPE。半導体は強いシクリカル+成長でP/Eレンジが極めて広い。サイクル谷(2018末/2022下期)は18-22、平時25-30、AIブーム拡大局面(2024-26)は40-45超。アンカー44.23はバンド最上端(~90%タイル)=台帳🔴rich/90%と整合し現在のAI需要バリュエーション拡大を反映。⚠Yahoo TTM≈42 vs Investing.com≈29.34と算定差大。EPS急変でTTMが大きくブレるためconfidence=low。",
@@ -88,7 +89,7 @@
     "perTrail": 44.5,
     "perSource": "fund-trailing"
    },
-   "sellProposal": "最優先トリム発議。1.5-2割利確で半導体14.2%→12-13%・キャッシュ復元。売りシグナルを先に発議。じっちゃま格下げ・AI資金循環の綻びと整合。"
+   "sellProposal": "1.5-2割トリム（最優先）。集中13.7%→12-13%・現金復元の主資金源。"
   },
   "6301.T": {
    "sectorMedian": {
@@ -98,14 +99,14 @@
     "etf": "1624.T",
     "asOf": "2026-06-25"
    },
-   "perCurrent": 15.13,
+   "perCurrent": 16.0,
    "bandLow": 9,
    "bandHigh": 18,
    "bandMedian": 13,
-   "percentile": 68,
+   "percentile": 78,
    "status": "rich",
    "note": "%タイル68・コマツ・シクリカル(利益-14%YoY)・常用域上。発議なし・監視。",
-   "asOf": "2026-07-02",
+   "asOf": "2026-07-04",
    "bandBasis": "TTM",
    "bandConfidence": "med",
    "bandNote": "コマツ。irbank 10年TTM PERレンジ約7.0〜62.5倍だが、極端値(不況期/V字回復)を除いた常用域は概ね9〜18倍。建機シクリカル。アンカー16.08はバンド高値圏(~75%タイル)で従前watchlist判定と整合。",
@@ -146,18 +147,18 @@
    }
   },
   "1306.T": {
-   "perCurrent": 18.11,
+   "perCurrent": 18.34,
    "bandLow": 12,
    "bandHigh": 18,
    "bandMedian": 14.5,
    "percentile": 100,
    "status": "rich",
    "note": "%タイル98・TOPIX ETF最高値圏・保有・日本株コア。日経過熱の裏返し。",
-   "asOf": "2026-07-02",
+   "asOf": "2026-07-04",
    "bandBasis": "TTM",
    "bandConfidence": "med",
    "bandNote": "TOPIX連動ETF。構成指数TOPIX(現プライム市場)のTTM PERで代替。10年平均は概ね14〜15倍、常用域12〜18倍。東証は2022/3でTOPIX PER公表終了→以降プライム市場PERで接続(ソース差あり)。アンカー18.36はレンジ上端=最高値圏で日経7万円の過熱と整合。",
-   "sellProposal": "コア維持だが半導体トリムでキャッシュ未達なら二次トリム候補。"
+   "sellProposal": "コア維持。急ぐトリム不要だが上昇一服なら一部利確候補。"
   },
   "VT": {
    "value": {
@@ -171,7 +172,7 @@
    "percentile": 81,
    "status": "rich",
    "note": "%タイル78・全世界株バンド上位。新規買い見送り。",
-   "asOf": "2026-07-02",
+   "asOf": "2026-07-04",
    "bandBasis": "TTM(ETF)",
    "bandConfidence": "med",
    "bandNote": "Yahoo trailingPE anchor 22.5 (全世界)。VTのTTM P/Eは過去5-10年で概ね15(2022弱気相場の底)〜24(2021/2024-26の高値圏)。現22.5はバンド上位80%付近=高値圏。全世界株は米国比率高でMSCI World 5年平均~21に近い。Vanguard公式21.3xは参考。confidence med。"
@@ -188,7 +189,7 @@
    "percentile": 84,
    "status": "rich",
    "note": "%タイル73・金融・上限寄り。監視。",
-   "asOf": "2026-07-02",
+   "asOf": "2026-07-04",
    "bandBasis": "TTM(ETF)",
    "bandConfidence": "med",
    "bandNote": "Financials基準=Yahoo trailingPE。XLFは銀行/保険/資本市場の比率高くTTM P/Eは構造的に低位。5-10年で概ね12-18台で推移(2020コロナ底/2022は低位、2024-26は上端)。アンカー17.08は上限寄り(~70%タイル)で現状の高値圏と整合。⚠Yahoo TTM≈17.6に対しInvesting.com≈15.06と算定差大(加重平均/赤字除外等)。バンドはYahoo基準に寄せた。"
@@ -205,10 +206,11 @@
    "percentile": 100,
    "status": "rich",
    "note": "%タイル100・ヘルスケア。Yahoo基準で上端化だがソース差大。監視のみ。",
-   "asOf": "2026-07-02",
+   "asOf": "2026-07-04",
    "bandBasis": "TTM(ETF)",
    "bandConfidence": "med",
-   "bandNote": "Health Care基準=Yahoo trailingPE。ディフェンシブで安定的、5-10年で概ね16-25。アンカー24.14はバンド上端付近(~85-90%タイル)=Yahoo基準では割高寄りに見える。⚠ただしInvesting.com等は≈17.6と大きく低く、ソース差が極端なセクター(製薬の一時費用/減損でTTM EPSが振れやすい)。Yahoo trailingPEに寄せたためアンカーが上端化、note留意。"
+   "bandNote": "Health Care基準=Yahoo trailingPE。ディフェンシブで安定的、5-10年で概ね16-25。アンカー24.14はバンド上端付近(~85-90%タイル)=Yahoo基準では割高寄りに見える。⚠ただしInvesting.com等は≈17.6と大きく低く、ソース差が極端なセクター(製薬の一時費用/減損でTTM EPSが振れやすい)。Yahoo trailingPEに寄せたためアンカーが上端化、note留意。",
+   "sellProposal": "N/A（非保有）。新規買い見送り。"
   },
   "XLP": {
    "value": {
@@ -222,7 +224,7 @@
    "percentile": 94,
    "status": "rich",
    "note": "%タイル93・生活必需・上端寄り。新規買い見送り。",
-   "asOf": "2026-07-02",
+   "asOf": "2026-07-04",
    "bandBasis": "TTM(ETF)",
    "bandConfidence": "med",
    "bandNote": "Consumer Staples基準=Yahoo trailingPE。低ボラ・安定収益でレンジ狭く5-10年概ね19-26。アンカー25.16は上端寄り(~75-80%タイル)=現状割高で台帳の🔴richと整合。⚠Yahoo TTM≈25に対しInvesting.com≈19.89/別ソース22.78と分散。Yahoo基準に寄せた。"
@@ -239,11 +241,11 @@
    "percentile": 12,
    "status": "cheap",
    "note": "AI電力/データセンターの本丸。bandConfidence low(REIT偏重・履歴薄)だがテーマ触媒◎(中島/ゆな整合)。",
-   "asOf": "2026-07-02",
+   "asOf": "2026-07-04",
    "bandBasis": "TTM P/E (Yahoo trailingPE)",
    "bandConfidence": "low",
    "bandNote": "Global X データセンター&デジタルインフラETF(2020設定・履歴薄)。REIT偏重でFFOベースが本来適切なためP/Eは過大に出やすく信頼度低。現アンカー22.3(Yahoo)に対しRobinhood23.95/Investing.com28と source差が大きい。履歴が短く正式な分位は出せないため現値中心の暫定バンド。出典: Yahoo/Robinhood/Investing.com(2026-06取得)。",
-   "buyProposal": "マネックス買付制限確認後に即実行を能動発議。NLRと併せAI電力テーマ枠。"
+   "buyProposal": "マネックス買付制限確認後即実行（NLRも）。"
   },
   "LITE": {
    "sectorMedian": {
@@ -258,14 +260,14 @@
    "value": {
     "targetGapPct": 31
    },
-   "perCurrent": 128,
+   "perCurrent": 128.23,
    "bandLow": 20,
    "bandHigh": 90,
    "bandMedian": 45,
    "percentile": 100,
    "status": "rich",
    "note": "%タイル100だが利益サイクル底でPE膨張(光通信)。bandConfidence low・forward/正規化EPS併読必須。発議なし。",
-   "asOf": "2026-07-02",
+   "asOf": "2026-07-04",
    "bandBasis": "TTM P/E (Yahoo trailingPE)",
    "bandConfidence": "low",
    "bandNote": "Lumentum=個別株(光通信)。MacroTrends 10年TTM PEレンジは13.35(2018/9・EPS$4.49のピーク利益期)〜696(2016/10・EPS$0.06)で極端に乱高下。5年平均は55(public.com)〜77.6(fullratio)。現アンカー153.16はTTM利益が一時的に縮小したサイクル底でPEが膨張した状態(2026/5時点で136〜156の報告もあり)。極端な>200は外れ値として除外し、利益正常化局面を想定した広めレンジ。バンド位置だけで割高判断せず、利益サイクル(forward PEや正規化EPS)併用が必須。出典: MacroTrends/fullratio/public.com/GuruFocus(2026-06取得)。",
@@ -328,14 +330,14 @@
    "value": {
     "targetGapPct": 8
    },
-   "perCurrent": 300.05,
+   "perCurrent": 302.66,
    "bandLow": 40,
    "bandHigh": 140,
    "bandMedian": 80,
    "percentile": 100,
    "status": "rich",
    "note": "%タイル100・サイバー首位・薄利益でTTM振れ・bandConfidence low。監視のみ・追わない。",
-   "asOf": "2026-07-02",
+   "asOf": "2026-07-04",
    "bandBasis": "TTM",
    "bandConfidence": "low",
    "bandNote": "Spiky TTM (37 to >1300 on thin earnings); band uses normalized range, 3yr avg ~109, recent year-end ~110. Anchor 245.55 above bandHigh - elevated.",
@@ -370,25 +372,25 @@
    "bandMedian": 13.5,
    "percentile": 83,
    "status": "rich",
-   "asOf": "2026-07-02",
+   "asOf": "2026-07-04",
    "note": "%タイル93・中国A株ラリーで割高側。藤沢の本丸だが監視中rich＝今は追いかけ見送り。",
    "bandBasis": "TTM(ETF)",
    "bandConfidence": "med",
    "bandNote": "Yahoo trailingPE anchor 17.39 (中国A株・CSI300連動)。CSI300指数のTTM P/Eは過去10年で record低8.1/中央値13.2/高54.9、typical 11.4-14 (GuruFocus)。bandHighはバブル期(54.9)を外れ値として除き常用上端18に圧縮。現17.39は常用域の上=高値圏(2025-26中国株ラリー)。confidence med(指数データは堅いがETF集計差あり)。"
   },
   "3033.HK": {
-   "perCurrent": 17.82,
+   "perCurrent": 18.03,
    "bandLow": 15,
    "bandHigh": 40,
    "bandMedian": 22,
-   "percentile": 11,
+   "percentile": 12,
    "status": "cheap",
-   "asOf": "2026-07-02",
+   "asOf": "2026-07-04",
    "note": "ハンセンTECH・バンド下半分=過熱なし。bandConfidence low(2020設定・履歴薄)。",
    "bandBasis": "TTM(ETF)",
    "bandConfidence": "low",
    "bandNote": "Yahoo trailingPE anchor 18.43 (香港・ハンセンTECH)。CSOP 3033は2020/8設定で履歴薄=バンド信頼度低。ハンセンTECHのTTM P/Eはバブル期(2020-21)30-60倍、底(2022-23)15-18倍。現18.43はバンド下半分=過熱なし。若い指数ゆえ%タイル目測・確立した標準域なし。confidence low(履歴薄を明記)。",
-   "buyProposal": "履歴薄で分位信頼度低のため小口打診に留める。週次でPER系列整備後に再評価。"
+   "buyProposal": "小口打診に留める。バンド信頼性低く発議は慎重・再評価後。"
   },
   "AAPL": {
    "sectorMedian": {
@@ -407,7 +409,7 @@
    "percentile": 83,
    "status": "rich",
    "note": "%タイル65・5年平均29.8・verdict=rich_real寄りだがバンド内。発議なし・監視。",
-   "asOf": "2026-07-02",
+   "asOf": "2026-07-04",
    "bandBasis": "TTM",
    "bandConfidence": "high",
    "bandNote": "10yr TTM range ~11-40 but regime shifted up post-2020; modern band 24-40, 10yr median ~24.5 / 5yr avg ~30.5. Anchor 36.24 sits upper-mid, no issue.",
@@ -443,7 +445,8 @@
     "pos52w": 84,
     "epsRev90d": null,
     "rsVsSector": null
-   }
+   },
+   "sellProposal": "N/A（非保有）。新規買い見送り。"
   },
   "AMZN": {
    "sectorMedian": {
@@ -455,14 +458,14 @@
     "source": "finnhub-peers",
     "asOf": "2026-06-25"
    },
-   "perCurrent": 31.76,
+   "perCurrent": 31.64,
    "bandLow": 24,
    "bandHigh": 55,
    "bandMedian": 35,
    "percentile": 25,
    "status": "cheap",
    "note": "%タイル25・cheap_fake(EVではフェア)・5年下限近辺。",
-   "asOf": "2026-07-02",
+   "asOf": "2026-07-04",
    "bandBasis": "TTM",
    "bandConfidence": "med",
    "bandNote": "Old TTM PEs (50-250) distorted by thin earnings; band reflects post-2022 earnings-normalization regime (recent low ~24.5). Anchor 30.87 lower-mid, fine.",
@@ -500,7 +503,7 @@
     "epsRev90d": null,
     "rsVsSector": null
    },
-   "buyProposal": "$245以下で第1弾を能動発議。大きくは追わない小口分割(本人保留中)。"
+   "buyProposal": "$245以下で第1弾指値（本人保留中）。"
   },
   "GOOGL": {
    "sectorMedian": {
@@ -512,14 +515,14 @@
     "source": "finnhub-peers",
     "asOf": "2026-06-25"
    },
-   "perCurrent": 27.45,
+   "perCurrent": 27.47,
    "bandLow": 18,
    "bandHigh": 35,
    "bandMedian": 25,
    "percentile": 56,
    "status": "fair",
    "note": "%タイル47・中立・ゆな先生最大ポジ。バンド中位・発議なし(ホールド)。",
-   "asOf": "2026-07-02",
+   "asOf": "2026-07-04",
    "bandBasis": "TTM",
    "bandConfidence": "high",
    "bandNote": "10yr range 17-58, 5yr avg ~24.4, recent low ~17. Anchor 27.7 mid-band, fine.",
@@ -572,7 +575,7 @@
    "percentile": 0,
    "status": "cheap",
    "note": "%タイル最底・cheap_real・財務最良級。割安側の最有力。",
-   "asOf": "2026-07-02",
+   "asOf": "2026-07-04",
    "bandBasis": "TTM",
    "bandConfidence": "high",
    "bandNote": "10yr median ~32.6, range ~22-48. Anchor 22.54 is at/just below band low (near 13yr min ~22.08) - currently cheap vs history.",
@@ -610,7 +613,7 @@
     "epsRev90d": null,
     "rsVsSector": null
    },
-   "buyProposal": "打診→段階的積み増しを能動発議。市場の質◎・触媒(AI/Azure)◎。"
+   "buyProposal": "打診→積み増し（最優先）。段階建て。"
   },
   "TSLA": {
    "sectorMedian": {
@@ -622,14 +625,14 @@
     "source": "finnhub-peers",
     "asOf": "2026-06-25"
    },
-   "perCurrent": 354.46,
+   "perCurrent": 357.68,
    "bandLow": 40,
    "bandHigh": 250,
    "bandMedian": 120,
    "percentile": 100,
    "status": "rich",
    "note": "%タイル100・rich_real・PER振れ大bandConfidence low。監視・新規買い見送り。",
-   "asOf": "2026-07-02",
+   "asOf": "2026-07-04",
    "bandBasis": "TTM",
    "bandConfidence": "low",
    "bandNote": "Extremely volatile; 6yr range 30-940, 3yr avg ~156. Wide band. Anchor 355.67 above bandHigh - elevated but within historical spikes.",
@@ -665,7 +668,8 @@
     "pos52w": 53,
     "epsRev90d": null,
     "rsVsSector": null
-   }
+   },
+   "sellProposal": "N/A（非保有）。新規買い見送り明記。"
   },
   "COPX": {
    "value": {
@@ -678,7 +682,7 @@
    "percentile": 38,
    "status": "fair",
    "note": "%タイル38・銅鉱山シクリカル・サイクル中位。銅価併読・発議なし。",
-   "asOf": "2026-07-02",
+   "asOf": "2026-07-04",
    "bandBasis": "TTM P/E (Yahoo trailingPE)",
    "bandConfidence": "low",
    "bandNote": "Global X 銅鉱山ETF=高シクリカル(コモディティのレバレッジ的値動き)。銅価ピーク(2021 >$4.5/lb)では鉱山利益最大化でPE圧縮(10〜12)、価格下落・コスト上昇局面では利益縮小でPE拡大(30+)。現アンカー20.12はサイクル中位。source間で16.3〜23とブレ。コモディティ価格次第で大きく振れるためバンド位置のみで割安判断不可、銅価サイクルを併読。出典: Yahoo/Investing.com/stockanalysis/Statista(2026-06取得)。"
@@ -691,7 +695,7 @@
    "percentile": 68,
    "status": "rich",
    "note": "%タイル67・中南米・構造割安だがバンド中位上・通貨/資源で変動。発議なし。",
-   "asOf": "2026-07-02",
+   "asOf": "2026-07-04",
    "bandBasis": "TTM(ETF)",
    "bandConfidence": "low",
    "bandNote": "Yahoo trailingPE anchor 12.9 (中南米)。中南米(ブラジル中心)株のTTM P/Eは過去5-10年で概ね8(コモディティ安・通貨安局面)〜15、Bovespa 3年平均~10.2/現~11.5。新興国・通貨/コモディティ依存でPERの振れ大=バンド薄い。現12.9はバンド中位やや上。confidence low。"
@@ -707,7 +711,7 @@
    "percentile": 53,
    "status": "fair",
    "note": "%タイル53・レアアース鉱山・赤字混在でPER NM気味・bandConfidence low。発議なし。",
-   "asOf": "2026-07-02",
+   "asOf": "2026-07-04",
    "bandBasis": "TTM P/E (Yahoo trailingPE)",
    "bandConfidence": "low",
    "bandNote": "VanEck レアアース/戦略金属ETF=高シクリカル。2021-22のレアアース価格ブームでは構成株(MP Materials等)の利益急増しPEは低め、2023以降は価格下落・利益急減(MP 2023 EBITDA-56%)でPE膨張〜赤字(NM)化。年次リターンも+80%(21)/-31%(22)/-19%(23)と乱高下。現アンカー40.21はTTM利益縮小局面の高PE。source間で23.8〜41とブレ、一部-119(赤字)も。サイクルで大きく振れるため広めレンジ＋note必須。出典: Yahoo/Investing.com/etfdb/MP Materials 8-K(2026-06取得)。"
@@ -724,7 +728,7 @@
    "percentile": 45,
    "status": "fair",
    "note": "防衛テック・2023設定で履歴薄・上限圏。テーマ触媒(地政学)強いがマルチプル圧縮リスク大。発議は見送り。",
-   "asOf": "2026-07-02",
+   "asOf": "2026-07-04",
    "bandBasis": "TTM P/E (Yahoo trailingPE)",
    "bandConfidence": "low",
    "bandNote": "Global X 防衛テックETF(2023/9設定・履歴約2.5年で極薄)。2024 +35%/2025 +74%の急騰で構成株のバリュエーションが拡大(Rheinmetall PE 2024末37→2026 72、Palantir 100倍超)。現アンカー29.26に対しYahoo trailingPE 33.93の報告もあり。歴史不足で分位は目測。地政学テーマで触媒は強いがマルチプル圧縮リスク大。出典: stockanalysis/Investing.com/financecharts(2026-06取得)。"
@@ -740,10 +744,11 @@
    "percentile": 99,
    "status": "rich",
    "note": "%タイル100だがエネルギーは利益谷でPE上振れの解釈が必要(分母縮小)・bandConfidence low。割高断定不可・監視。",
-   "asOf": "2026-07-02",
+   "asOf": "2026-07-04",
    "bandBasis": "TTM(ETF)",
    "bandConfidence": "low",
-   "bandNote": "Energy基準=Yahoo trailingPE。原油市況でEPSが激しく循環しP/Eが最も不安定なセクター。利益急増局面は一桁台(2022油高でTTM P/E≈8-10)、利益縮小/赤字局面はP/E急騰orNM(2020は赤字でP/E無意味化)。通常の利益局面で概ね12-20。アンカー20.03はバンド高値圏=earnings谷でP/Eが上振れた状態の可能性が高く、'割高'というより分母(EPS)縮小の解釈が必要。confidence=lowでnoteに循環性明記。⚠Yahoo TTM≈20 vs Investing.com≈12.55とソース差極大。"
+   "bandNote": "Energy基準=Yahoo trailingPE。原油市況でEPSが激しく循環しP/Eが最も不安定なセクター。利益急増局面は一桁台(2022油高でTTM P/E≈8-10)、利益縮小/赤字局面はP/E急騰orNM(2020は赤字でP/E無意味化)。通常の利益局面で概ね12-20。アンカー20.03はバンド高値圏=earnings谷でP/Eが上振れた状態の可能性が高く、'割高'というより分母(EPS)縮小の解釈が必要。confidence=lowでnoteに循環性明記。⚠Yahoo TTM≈20 vs Investing.com≈12.55とソース差極大。",
+   "sellProposal": "N/A（非保有）。新規買い見送り。"
   },
   "PLTR": {
    "sectorMedian": {
@@ -762,7 +767,7 @@
    "percentile": 5,
    "status": "cheap",
    "note": "%タイル0だがrich_fake(見せかけの割高・売るな/絶対値高で追わない)。自前バンド中下位は%タイルのアヤ。発議なし。",
-   "asOf": "2026-07-02",
+   "asOf": "2026-07-04",
    "bandBasis": "TTM",
    "bandConfidence": "low",
    "bandNote": "Only GAAP-profitable since 2023 so short TTM history; range ~130-550, median ~286. Anchor 143.16 near band low.",
@@ -799,34 +804,36 @@
     "pos52w": 7,
     "epsRev90d": null,
     "rsVsSector": null
-   }
+   },
+   "buyProposal": "見送り推奨。%タイル低=自己過去比の割安に過ぎず絶対バリュエーション過熱。新規買いは慎重。"
   },
   "1615.T": {
-   "perCurrent": 17.88,
+   "perCurrent": 18.11,
    "bandLow": 8,
    "bandHigh": 15,
    "bandMedian": 11,
    "percentile": 100,
    "status": "rich",
    "note": "%タイル100・銀行業指数・金利正常化で再評価・保有。bandConfidence low。",
-   "asOf": "2026-07-02",
+   "asOf": "2026-07-04",
    "bandBasis": "TTM",
    "bandConfidence": "low",
    "bandNote": "東証銀行業株価指数連動ETF。銀行セクターは伝統的にTTM PER 8〜13倍と低位。直近の金利上昇による再評価で上振れ。Yahoo記載の現値は約11.5倍だが、アンカー18.18は通常域を大きく上回り、指数算定方式差/一部構成銘柄の利益要因の可能性=理由不明瞭につきnote明記・confidence=low。",
-   "sellProposal": "金利テーマのコアは維持。過熱圏のため新規買い増しは見送り・利確の二次候補。"
+   "sellProposal": "保有継続。金利感応で妥当性あり・売り急がず。"
   },
   "1629.T": {
-   "perCurrent": 15.74,
+   "perCurrent": 16.0,
    "bandLow": 7,
    "bandHigh": 15,
    "bandMedian": 11,
    "percentile": 100,
    "status": "rich",
    "note": "%タイル100・商社/卸売指数・保有。バフェット買い/ROE再評価で再レーティング・上限圏。コア維持・買い増し見送り。",
-   "asOf": "2026-07-02",
+   "asOf": "2026-07-04",
    "bandBasis": "TTM",
    "bandConfidence": "low",
-   "bandNote": "実体はNEXT FUNDS 商社・卸売(TOPIX-17)上場投信=総合商社中心(三菱商事/三井物産等)。プロンプトの『機械セクターETF』は誤り(機械はTOPIX-17別コード1624)。商社は歴史的に5〜10倍の万年割安だったがバフェット買い/ROE再評価で2025年以降12〜16倍へ再レーティング。アンカー16.12はレンジ高値圏。"
+   "bandNote": "実体はNEXT FUNDS 商社・卸売(TOPIX-17)上場投信=総合商社中心(三菱商事/三井物産等)。プロンプトの『機械セクターETF』は誤り(機械はTOPIX-17別コード1624)。商社は歴史的に5〜10倍の万年割安だったがバフェット買い/ROE再評価で2025年以降12〜16倍へ再レーティング。アンカー16.12はレンジ高値圏。",
+   "sellProposal": "保有継続。急ぐトリム不要・監視。"
   },
   "8050.T": {
    "sectorMedian": {
@@ -836,14 +843,14 @@
     "etf": "1625.T",
     "asOf": "2026-06-25"
    },
-   "perCurrent": 29.94,
+   "perCurrent": 29.97,
    "bandLow": 12,
    "bandHigh": 26,
    "bandMedian": 17,
    "percentile": 100,
    "status": "rich",
    "note": "PER29・%タイル100・verdict=trap(一過性益)・priceMom1Y+257%のwinner・保有。",
-   "asOf": "2026-07-02",
+   "asOf": "2026-07-04",
    "bandBasis": "TTM",
    "bandConfidence": "low",
    "bandNote": "セイコーグループ。利益ボラが大きくirbankでは赤字期(マイナスPER)も含むためTTM PERレンジが不安定。黒字期の常用域は概ね12〜20倍。アンカー28.14はバンド上限超=高値圏で、足元の利益減/一過性要因による分母縮小の可能性。理由不確実につきconfidence=low・バンド広め。",
@@ -879,7 +886,7 @@
     "epsRev90d": null,
     "rsVsSector": null
    },
-   "sellProposal": "winner利確1/4を発議。trap属性ゆえ深追いせず。"
+   "sellProposal": "winner利確1/4。"
   },
   "9983.T": {
    "sectorMedian": {
@@ -889,14 +896,14 @@
     "etf": "1630.T",
     "asOf": "2026-06-25"
    },
-   "perCurrent": 53.19,
+   "perCurrent": 54.31,
    "bandLow": 25,
    "bandHigh": 55,
    "bandMedian": 38,
-   "percentile": 94,
+   "percentile": 98,
    "status": "rich",
    "note": "PER54・%タイル97・ファストリ高PE常態・rich_real・保有。",
-   "asOf": "2026-07-02",
+   "asOf": "2026-07-04",
    "bandBasis": "TTM",
    "bandConfidence": "med",
    "bandNote": "ファーストリテイリング。investing/irbank で2010〜2025のPERレンジは約15.4〜107.6倍と極端に広い高PE常態のグロース株。常用コア域は概ね30〜50倍。アンカー54.01はレンジ高値圏(従前watchlist 75%タイル相当)。高PE常態のためバンドは広めに設定。",
@@ -933,7 +940,7 @@
     "epsRev90d": null,
     "rsVsSector": null
    },
-   "sellProposal": "1/4トリム利確を発議。コア維持・急がない。"
+   "sellProposal": "1/4トリム利確（急がない）。"
   },
   "ACWI": {
    "value": {
@@ -947,50 +954,51 @@
    "percentile": 89,
    "status": "rich",
    "note": "%タイル86・全世界株(オルカンproxy)・trailing上端近辺。新規買い見送り。",
-   "asOf": "2026-07-02",
+   "asOf": "2026-07-04",
    "bandBasis": "TTM(ETF)",
    "bandConfidence": "med",
    "bandNote": "Yahoo trailingPE anchor 23.26 (全世界・MSCI ACWI)。MSCI ACWIのTTM P/Eは過去5-10年で概ね15(2022底)〜24(高値圏)、5年平均~20。現23.26はバンド上端付近=高値圏。VTとほぼ同等の全世界エクスポージャだが米大型成長偏重でやや高め。confidence med。"
   },
   "1477.T": {
-   "perCurrent": 17.12,
+   "perCurrent": 17.35,
    "bandLow": 12,
    "bandHigh": 18,
    "bandMedian": 15,
-   "percentile": 85,
+   "percentile": 89,
    "status": "rich",
    "note": "%タイル80・日本株最小分散ETF・中上位。発議なし・監視。",
-   "asOf": "2026-07-02",
+   "asOf": "2026-07-04",
    "bandBasis": "TTM",
    "bandConfidence": "low",
    "bandNote": "実体はiシェアーズ MSCI 日本株最小分散(Minimum Variance)ETF=大中型低ボラ・ディフェンシブ。プロンプトの『ハイ配当ETF系』は誤り(高配当は1478)。構成はTOPIX大型株中心でTTM PERはTOPIX並み+ディフェンシブ・プレミアムで概ね13〜18倍。アンカー17.19はレンジ上端寄り。指数固有のPER時系列が薄くconfidence=low。"
   },
   "2516.T": {
-   "perCurrent": 17.45,
+   "perCurrent": 17.94,
    "bandLow": 14,
    "bandHigh": 30,
    "bandMedian": 20,
-   "percentile": 22,
+   "percentile": 25,
    "status": "cheap",
    "note": "%タイル16だが赤字混在でPER不安定・NM化しやすく分位採点不適。bandConfidence low。hold相当=発議なし。",
-   "asOf": "2026-07-02",
+   "asOf": "2026-07-04",
    "bandBasis": "TTM",
    "bandConfidence": "low",
-   "bandNote": "東証グロース市場250指数連動ETF(旧マザーズ/新興小型グロース)。構成に赤字・高PE銘柄を多く含み指数TTM PERは算定方式依存で大きく振れる(概ね15〜30倍、赤字計上時はNM気味)。アンカー17.39はバンド下〜中位だが信頼性低。新興指数で履歴が薄くhold相当・confidence=low。"
+   "bandNote": "東証グロース市場250指数連動ETF(旧マザーズ/新興小型グロース)。構成に赤字・高PE銘柄を多く含み指数TTM PERは算定方式依存で大きく振れる(概ね15〜30倍、赤字計上時はNM気味)。アンカー17.39はバンド下〜中位だが信頼性低。新興指数で履歴が薄くhold相当・confidence=low。",
+   "buyProposal": "現時点は監視のみ（触媒確認まで新規発議見送り）。"
   },
   "200A.T": {
-   "perCurrent": 48.02,
+   "perCurrent": 50.1,
    "bandLow": 20,
    "bandHigh": 55,
    "bandMedian": 35,
-   "percentile": 80,
+   "percentile": 86,
    "status": "rich",
    "note": "PER52・%タイル90・保有・半導体二重集中。薄履歴ETFで分位信頼度低だが絶対水準突出。",
-   "asOf": "2026-07-02",
+   "asOf": "2026-07-04",
    "bandBasis": "TTM",
    "bandConfidence": "low",
    "bandNote": "NEXT FUNDS 日経半導体株指数連動ETF(東京エレクトロン/アドバンテスト等30銘柄)、2024/6上場で履歴が極端に薄くhold相当。主力4銘柄の予想PER平均は約39.5倍、半導体はサイクルでTTM PERが15〜50倍超まで大きく振れる。アンカー53.45はAI需要でレンジ高値圏。設定新しくバンド薄くconfidence=low。",
-   "sellProposal": "SMHトリム後に半導体13%超なら5-10%トリムを発議(二段目)。"
+   "sellProposal": "SMHトリム後に5-10%二段目トリム。"
   },
   "SPCX": {
    "perCurrent": null,
@@ -1007,7 +1015,7 @@
    "bandNote": "上場6/12で履歴極薄=自前PERバンド未確立。trailing EPSが揃うまで%タイル算定不可。週次Opusでバンド初期化を検討。"
   },
   "ひふみ投信": {
-   "perCurrent": 31.97,
+   "perCurrent": 28.95,
    "coverage": 0.3638,
    "source": "fund-monthly-top10",
    "asOf": "2026-05",
@@ -1016,13 +1024,13 @@
      "code": "8001.T",
      "name": "伊藤忠商事",
      "w": 0.0528,
-     "per": 14.47
+     "per": 14.75
     },
     {
      "code": "5802.T",
      "name": "住友電気工業",
      "w": 0.0513,
-     "per": 47.85
+     "per": 22.47
     },
     {
      "code": "6723.T",
@@ -1034,49 +1042,50 @@
      "code": "7012.T",
      "name": "川崎重工業",
      "w": 0.0411,
-     "per": 21.37
+     "per": 21.79
     },
     {
      "code": "8002.T",
      "name": "丸紅",
      "w": 0.0406,
-     "per": 14.14
+     "per": 15.04
     },
     {
      "code": "8035.T",
      "name": "東京エレクトロン",
      "w": 0.0392,
-     "per": 58.22
+     "per": 58.48
     },
     {
      "code": "8411.T",
      "name": "みずほフィナンシャルグループ",
      "w": 0.038,
-     "per": 15.53
+     "per": 16.06
     },
     {
      "code": "8802.T",
      "name": "三菱地所",
      "w": 0.0352,
-     "per": 21.88
+     "per": 23.2
     },
     {
      "code": "8031.T",
      "name": "三井物産",
      "w": 0.0328,
-     "per": 15.65
+     "per": 15.82
     },
     {
      "code": "6981.T",
      "name": "村田製作所",
      "w": 0.0328,
-     "per": 85.48
+     "per": 87.08
     }
    ],
-   "status": "na"
+   "status": "na",
+   "percentile": null
   },
   "ひふみマイクロスコープpro": {
-   "perCurrent": 21.19,
+   "perCurrent": 22.65,
    "coverage": 0.2643,
    "source": "fund-monthly-top10",
    "asOf": "2026-05",
@@ -1085,43 +1094,43 @@
      "code": "6544.T",
      "name": "ジャパンエレベーターサービスHD",
      "w": 0.0374,
-     "per": 42.37
+     "per": 44.64
     },
     {
      "code": "3139.T",
      "name": "ラクト・ジャパン",
      "w": 0.029,
-     "per": 7.59
+     "per": 7.77
     },
     {
      "code": "9554.T",
      "name": "ＡＶｉＣ",
      "w": 0.0269,
-     "per": 16.16
+     "per": 17.23
     },
     {
      "code": "6200.T",
      "name": "インソース",
      "w": 0.026,
-     "per": 11.89
+     "per": 12.23
     },
     {
      "code": "4666.T",
      "name": "パーク24",
      "w": 0.0259,
-     "per": 9
+     "per": 9.21
     },
     {
      "code": "2782.T",
      "name": "セリア",
      "w": 0.0255,
-     "per": 16.33
+     "per": 16.34
     },
     {
      "code": "4258.T",
      "name": "網屋",
      "w": 0.0248,
-     "per": 40.16
+     "per": 49.83
     },
     {
      "code": "3480.T",
@@ -1133,16 +1142,17 @@
      "code": "2157.T",
      "name": "コシダカHD",
      "w": 0.023,
-     "per": 14.08
+     "per": 14.43
     },
     {
      "code": "7381.T",
      "name": "北國フィナンシャルHD",
      "w": 0.0223,
-     "per": 18.42
+     "per": 18.65
     }
    ],
-   "status": "na"
+   "status": "na",
+   "percentile": null
   }
  }
 }
