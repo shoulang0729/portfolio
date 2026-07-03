@@ -18,6 +18,8 @@ import { loadChart, setRange, closeModal, handleOverlayClick } from './chart.js'
 import { switchTab } from './tabs.js';
 import { reloadBriefing } from './briefing.js';
 import { loadMfHoldings } from './networth.js';
+import { buildPositionsFromMf } from './holdings-from-mf.js';
+import { FUND_DEFS } from './funds.js';
 import { setupEventListeners } from './init.js';
 import {
   renderHeatmapList,
@@ -477,8 +479,7 @@ function init() {
 
   renderStats();
 
-  // Money Forward 実値（mf-holdings）を読み込み、資産総額・キャッシュ比率に反映（非同期・失敗時はライブ証券にフォールバック）
-  loadMfHoldings().then(() => renderStats()).catch(() => {});
+  // Money Forward 実値はメイン async ブロック内で loadMfHoldings() として取得・反映する
 
   // stats バーは常に表示。目アイコンは金額マスク状態（state.statsMasked）を反映。
   const _eye = document.getElementById('stats-eye');
@@ -510,14 +511,29 @@ function init() {
     }
   } catch {}
 
-  // 起動時に KV から保有銘柄を読み込んでから価格取得
+  // 起動時に mf-holdings → KV の順で保有銘柄を読み込んでから価格取得
   (async () => {
     try {
       // 0. sessionStorage → IDB マイグレーション（初回のみ有効）、その後 IDB からメモリ復元
       await migrateFromSessionStorage();
       await restoreFromIDB();
-      // 1. KV から保有銘柄を取得（あれば positions.js の内容を上書き）
-      const loaded = await loadPositionsFromKV();
+      // 1. mf-holdings から保有銘柄を構築（優先）。失敗 or 空の場合は KV にフォールバック
+      let mfLoaded = false;
+      try {
+        const mf = await loadMfHoldings();
+        if (mf) {
+          const mfPositions = buildPositionsFromMf(mf, FUND_DEFS);
+          if (mfPositions.length > 0) {
+            positions.splice(0, positions.length, ...mfPositions);
+            renderStats();
+            renderHeatmap();
+            mfLoaded = true;
+          }
+        }
+      } catch (e) {
+        console.warn('[init] mf-holdings load failed, falling back to KV:', e);
+      }
+      const loaded = mfLoaded ? false : await loadPositionsFromKV();
       if (loaded) { renderStats(); renderHeatmap(); }
       // 1b. 分散ファンドの実セクター比率を Yahoo topHoldings から取得（fire-and-forget）
       loadTopHoldings().then(() => {
