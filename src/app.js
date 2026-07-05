@@ -18,6 +18,8 @@ import { loadChart, setRange, closeModal, handleOverlayClick } from './chart.js'
 import { switchTab } from './tabs.js';
 import { reloadBriefing } from './briefing.js';
 import { loadMfHoldings } from './networth.js';
+import { FUND_DEFS } from './funds.js';
+import { buildPositionsFromMf } from './holdings-from-mf.js';
 import { setupEventListeners } from './init.js';
 import {
   renderHeatmapList,
@@ -44,6 +46,9 @@ import { renderRiskCharts } from './risk-charts.js';
 
 // ── フォールバックスクリプトから参照できるように renderHeatmap を window に登録 ──
 window.renderHeatmap       = renderHeatmap;
+
+/** mf-holdings からの positions 差し替えが成功したか（KV フォールバック判定用） */
+let _mfPositionsLoaded = false;
 
 // ── ステータスバー クリック更新 ──
 async function refreshNow() {
@@ -477,8 +482,21 @@ function init() {
 
   renderStats();
 
-  // Money Forward 実値（mf-holdings）を読み込み、資産総額・キャッシュ比率に反映（非同期・失敗時はライブ証券にフォールバック）
-  loadMfHoldings().then(() => renderStats()).catch(() => {});
+  // Money Forward 実値（mf-holdings）を読み込み、資産総額・キャッシュ比率に反映
+  // 成功時は保有タイルも mf-holdings 由来に差し替え（#534）
+  loadMfHoldings().then(mf => {
+    renderStats();
+    if (mf) {
+      const mfPositions = buildPositionsFromMf(mf, FUND_DEFS);
+      if (mfPositions.length > 0) {
+        positions.splice(0, positions.length, ...mfPositions);
+        _mfPositionsLoaded = true;
+        renderStats();
+        renderHeatmap();
+        renderHeatmapList();
+      }
+    }
+  }).catch(() => {});
 
   // stats バーは常に表示。目アイコンは金額マスク状態（state.statsMasked）を反映。
   const _eye = document.getElementById('stats-eye');
@@ -516,8 +534,8 @@ function init() {
       // 0. sessionStorage → IDB マイグレーション（初回のみ有効）、その後 IDB からメモリ復元
       await migrateFromSessionStorage();
       await restoreFromIDB();
-      // 1. KV から保有銘柄を取得（あれば positions.js の内容を上書き）
-      const loaded = await loadPositionsFromKV();
+      // 1. KV から保有銘柄を取得（mf-holdings 未取得時のフォールバック）
+      const loaded = !_mfPositionsLoaded && await loadPositionsFromKV();
       if (loaded) { renderStats(); renderHeatmap(); }
       // 1b. 分散ファンドの実セクター比率を Yahoo topHoldings から取得（fire-and-forget）
       loadTopHoldings().then(() => {

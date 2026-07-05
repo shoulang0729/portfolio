@@ -1,10 +1,13 @@
 {
   "processed": [
-    {"number": 243, "title": "bug: auth-ui.js ローカルPINハッシュをサーバー同期成功前に更新してしまう", "summary": "src/auth-ui.js の _pcSubmit() でサーバー同期 (await fetch) を先に実行し、成功後のみ localStorage を更新するよう修正。失敗時はエラーメッセージを表示して変更を中断する。"}
+    {"number": 534, "title": "保有の単一ソース化：mf-holdings からヒートマップ自動反映（SpaceX/NLR 手動追加を廃止）", "summary": "src/holdings-from-mf.js を新規作成し buildPositionsFromMf() を実装。app.js で loadMfHoldings() 成功時に positions を mf-holdings 由来に差し替え（KV は失敗時フォールバック）。index.html バージョンを 20260705A に更新。"}
   ],
   "skipped": [
-    {"number": 220, "title": "[Risk Exposure] サマリーバーの「対象N銘柄」を構成銘柄数(look-through)にしたい", "reason": "Wait ラベル"},
-    {"number": 193, "title": "feat: スナップショット自動保存（1日2回）＋ Claude 自動分析レポート生成", "reason": "Wait ラベル"},
-    {"number": 16, "title": "perf: Worker レート制限の KV レイテンシーを Cloudflare ダッシュボード設定に移行", "reason": "Wait ラベル"}
+    {"number": 367, "title": "ソースコードレビュー: 脆弱性・矛盾・高度化の提案", "reason": "Wait ラベル"},
+    {"number": 306, "title": "refactor: Cloudflare Worker を route/service/provider 単位に分割する", "reason": "Wait ラベル"},
+    {"number": 305, "title": "feat: ETF/投信の look-through 構成銘柄取得パイプラインを実データ化する", "reason": "Wait ラベル"},
+    {"number": 304, "title": "feat: Target Allocation とリバランス提案を追加する", "reason": "Wait ラベル"},
+    {"number": 301, "title": "feat: Portfolio Timeline でスナップショット履歴と変化分析を扱う", "reason": "Wait ラベル"},
+    {"number": 220, "title": "[Risk Exposure] サマリーバーの「対象N銘柄」を構成銘柄数(look-through)にしたい", "reason": "Wait ラベル"}
   ]
 }
