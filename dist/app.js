@@ -6932,6 +6932,185 @@ function switchTab(name) {
   if (name === "briefing") renderBriefing();
 }
 
+// src/holdings-from-mf.js
+var MF_SYMBOL_OVERRIDES = {
+  "200A": { ySymbol: "200A.T", cat: "\u65E5\u672C\u682A\u30FBETF", cur: "JPY" },
+  SPCX: { isProxy: true, cur: "JPY", proxyName: "SpaceX\uFF08SPCX \u30E9\u30A4\u30D6\u4FA1\u683C\u672A\u691C\u8A3C\u30FBMF\u5B9F\u5024\u8868\u793A\uFF09" }
+};
+var SECURITY_CATS = /* @__PURE__ */ new Set(["\u65E5\u672C\u682A\u30FBETF", "\u7C73\u56FD\u682A\u30FBETF", "\u6295\u8CC7\u4FE1\u8A17"]);
+var JP_CODE_RE = /^[0-9][0-9A-Z]{3}$/;
+function matchFundDef(name, fundDefs) {
+  for (const def of fundDefs) {
+    if (Array.isArray(def.patterns) && def.patterns.some((pat) => name.includes(pat))) return def;
+  }
+  return null;
+}
+function toPosition(row, fundDefs) {
+  if (!row || typeof row !== "object") return null;
+  const cat = row.cat;
+  if (!SECURITY_CATS.has(cat)) return null;
+  const name = String(row.name || "");
+  const value = Number(row.value) || 0;
+  if (value <= 0) return null;
+  const mfPrice = Number(row.price) || 0;
+  const avgCost = Number(row.avgCost) || 0;
+  let ySymbol = row.ySymbol ? String(row.ySymbol) : "";
+  let outCat = cat;
+  let outName = name;
+  let isProxy = false;
+  let proxyName;
+  let symbol = "";
+  if (cat === "\u6295\u8CC7\u4FE1\u8A17") {
+    const def = matchFundDef(name, fundDefs);
+    if (!def) return null;
+    symbol = def.symbol;
+    outName = def.canonicalName || name;
+    ySymbol = def.ySymbol;
+    proxyName = def.proxyName;
+    isProxy = true;
+  } else {
+    if (!ySymbol) return null;
+    const ov = MF_SYMBOL_OVERRIDES[ySymbol.replace(/\.T$/, "")];
+    if (ov) {
+      if (ov.ySymbol) ySymbol = ov.ySymbol;
+      if (ov.cat) outCat = ov.cat;
+      if (ov.isProxy) isProxy = true;
+      if (ov.proxyName) proxyName = ov.proxyName;
+    }
+    if (outCat === "\u65E5\u672C\u682A\u30FBETF" && !ySymbol.includes(".") && JP_CODE_RE.test(ySymbol)) {
+      ySymbol = `${ySymbol}.T`;
+    }
+    symbol = ySymbol.replace(/\.T$/, "");
+  }
+  const ovCur = MF_SYMBOL_OVERRIDES[symbol] && MF_SYMBOL_OVERRIDES[symbol].cur;
+  const cur = ovCur || (outCat === "\u7C73\u56FD\u682A\u30FBETF" && !ySymbol.endsWith(".T") ? "USD" : "JPY");
+  const shares = mfPrice > 0 ? Math.round(value / mfPrice) : 0;
+  if (shares <= 0) {
+    isProxy = true;
+  }
+  const cost = avgCost > 0 && shares > 0 ? avgCost * shares : 0;
+  const pnl = cost > 0 ? value - cost : 0;
+  const pnlPct = cost > 0 ? pnl / cost * 100 : 0;
+  const price = cur === "USD" && !isProxy ? 0 : mfPrice;
+  const pos = {
+    symbol,
+    name: outName,
+    cat: outCat,
+    shares,
+    price,
+    avgCost,
+    value,
+    pnl,
+    pnlPct,
+    dayPct: null,
+    dayCh: null,
+    cur,
+    ySymbol
+  };
+  if (isProxy) pos.isProxy = true;
+  if (proxyName) pos.proxyName = proxyName;
+  return pos;
+}
+function mergeInto(map, p) {
+  const cost = p.avgCost > 0 && p.shares > 0 ? p.avgCost * p.shares : 0;
+  const existing = map.get(p.symbol);
+  if (!existing) {
+    map.set(p.symbol, { ...p, _cost: cost });
+    return;
+  }
+  existing.value += p.value;
+  existing.shares += p.shares;
+  existing._cost += cost;
+  if (!existing.price && p.price) existing.price = p.price;
+  if (p.isProxy) existing.isProxy = true;
+}
+function buildPositionsFromMf(mf, fundDefs) {
+  if (!mf || !Array.isArray(mf.holdings)) return [];
+  const defs = Array.isArray(fundDefs) ? fundDefs : [];
+  const map = /* @__PURE__ */ new Map();
+  for (const row of mf.holdings) {
+    const p = toPosition(row, defs);
+    if (p) mergeInto(map, p);
+  }
+  return [...map.values()].map(({ _cost, ...p }) => {
+    if (_cost > 0 && p.shares > 0) {
+      p.avgCost = Math.round(_cost / p.shares * 100) / 100;
+      p.pnl = p.value - _cost;
+      p.pnlPct = p.pnl / _cost * 100;
+    }
+    return p;
+  });
+}
+
+// src/funds.js
+var FUND_DEFS = [
+  {
+    patterns: ["\u5168\u4E16\u754C\u682A\u5F0F"],
+    symbol: "\u30AA\u30EB\u30AB\u30F3",
+    canonicalName: "eMAXIS Slim \u5168\u4E16\u754C\u682A\u5F0F(\u30AA\u30FC\u30EB\u30FB\u30AB\u30F3\u30C8\u30EA\u30FC)",
+    ySymbol: "ACWI",
+    proxyName: "iShares MSCI ACWI ETF"
+  },
+  {
+    // ひふみマイクロスコープpro / ひふみマイクロプラスプロ / 旧シンボル名
+    // 超小型株特化 → 東証グロース250（旧マザーズ指数）が運用実態に最も近い
+    patterns: ["\u30DE\u30A4\u30AF\u30ED\u30B9\u30B3\u30FC\u30D7", "\u30DE\u30A4\u30AF\u30ED\u30D7\u30E9\u30B9", "\u30DE\u30A4\u30AF\u30EDSP"],
+    symbol: "\u3072\u3075\u307FMS",
+    canonicalName: "\u3072\u3075\u307F\u30DE\u30A4\u30AF\u30ED\u30B9\u30B3\u30FC\u30D7pro",
+    ySymbol: "2516.T",
+    proxyName: "NEXT FUNDS \u6771\u8A3C\u30B0\u30ED\u30FC\u30B9\u5E02\u5834250\u6307\u6570ETF"
+  },
+  {
+    // ひふみクロスオーバーpro
+    // 上場/未上場混在のグローバル投資 → MSCI ACWI が最も近い
+    patterns: ["\u30AF\u30ED\u30B9\u30AA\u30FC\u30D0\u30FC", "\u3072\u3075\u307FXO"],
+    symbol: "\u3072\u3075\u307FXO",
+    canonicalName: "\u3072\u3075\u307F\u30AF\u30ED\u30B9\u30AA\u30FC\u30D0\u30FCpro",
+    ySymbol: "ACWI",
+    proxyName: "iShares MSCI ACWI ETF"
+  },
+  {
+    // ひふみ投信は最後（"ひふみ"は他にマッチしなかったときのフォールバック）
+    // 1312.T（TOPIX Small）は Yahoo Finance が履歴データを返さないため、
+    // ひふみMS と同じ 2516.T（東証グロース250）を採用（中小型成長テーマで類似）
+    patterns: ["\u3072\u3075\u307F\u6295\u4FE1", "\u3072\u3075\u307F"],
+    symbol: "\u3072\u3075\u307F\u6295\u4FE1",
+    canonicalName: "\u3072\u3075\u307F\u6295\u4FE1",
+    ySymbol: "2516.T",
+    proxyName: "NEXT FUNDS \u6771\u8A3C\u30B0\u30ED\u30FC\u30B9\u5E02\u5834250\u6307\u6570ETF"
+  }
+];
+function fundSymbolFromName(name) {
+  if (!name) return null;
+  for (const d of FUND_DEFS) {
+    if (d.patterns.some((p) => name.includes(p))) return d.symbol;
+  }
+  return null;
+}
+function fundProxyOf(symbol) {
+  const d = FUND_DEFS.find((d2) => d2.symbol === symbol);
+  return d ? { ySymbol: d.ySymbol, proxyName: d.proxyName } : null;
+}
+function canonicalizeFundPosition(p) {
+  if (!p || p.cat !== "\u6295\u8CC7\u4FE1\u8A17") return p;
+  const name = p.name || p.symbol || "";
+  for (const def of FUND_DEFS) {
+    if (def.patterns.some((pat) => name.includes(pat) || (p.symbol || "").includes(pat))) {
+      return {
+        ...p,
+        symbol: def.symbol,
+        name: def.canonicalName || p.name,
+        ySymbol: def.ySymbol,
+        // ← 強制上書き
+        proxyName: def.proxyName,
+        // ← 強制上書き
+        isProxy: true
+      };
+    }
+  }
+  return p;
+}
+
 // src/swipe.js
 var DIST_THRESHOLD = 60;
 var RATIO = 1.6;
@@ -7140,75 +7319,6 @@ function computeImportDiff(current, incoming) {
     return c && c.shares === p.shares && c.avgCost === p.avgCost;
   });
   return { added, removed, changed, unchanged };
-}
-
-// src/funds.js
-var FUND_DEFS = [
-  {
-    patterns: ["\u5168\u4E16\u754C\u682A\u5F0F"],
-    symbol: "\u30AA\u30EB\u30AB\u30F3",
-    canonicalName: "eMAXIS Slim \u5168\u4E16\u754C\u682A\u5F0F(\u30AA\u30FC\u30EB\u30FB\u30AB\u30F3\u30C8\u30EA\u30FC)",
-    ySymbol: "ACWI",
-    proxyName: "iShares MSCI ACWI ETF"
-  },
-  {
-    // ひふみマイクロスコープpro / ひふみマイクロプラスプロ / 旧シンボル名
-    // 超小型株特化 → 東証グロース250（旧マザーズ指数）が運用実態に最も近い
-    patterns: ["\u30DE\u30A4\u30AF\u30ED\u30B9\u30B3\u30FC\u30D7", "\u30DE\u30A4\u30AF\u30ED\u30D7\u30E9\u30B9", "\u30DE\u30A4\u30AF\u30EDSP"],
-    symbol: "\u3072\u3075\u307FMS",
-    canonicalName: "\u3072\u3075\u307F\u30DE\u30A4\u30AF\u30ED\u30B9\u30B3\u30FC\u30D7pro",
-    ySymbol: "2516.T",
-    proxyName: "NEXT FUNDS \u6771\u8A3C\u30B0\u30ED\u30FC\u30B9\u5E02\u5834250\u6307\u6570ETF"
-  },
-  {
-    // ひふみクロスオーバーpro
-    // 上場/未上場混在のグローバル投資 → MSCI ACWI が最も近い
-    patterns: ["\u30AF\u30ED\u30B9\u30AA\u30FC\u30D0\u30FC", "\u3072\u3075\u307FXO"],
-    symbol: "\u3072\u3075\u307FXO",
-    canonicalName: "\u3072\u3075\u307F\u30AF\u30ED\u30B9\u30AA\u30FC\u30D0\u30FCpro",
-    ySymbol: "ACWI",
-    proxyName: "iShares MSCI ACWI ETF"
-  },
-  {
-    // ひふみ投信は最後（"ひふみ"は他にマッチしなかったときのフォールバック）
-    // 1312.T（TOPIX Small）は Yahoo Finance が履歴データを返さないため、
-    // ひふみMS と同じ 2516.T（東証グロース250）を採用（中小型成長テーマで類似）
-    patterns: ["\u3072\u3075\u307F\u6295\u4FE1", "\u3072\u3075\u307F"],
-    symbol: "\u3072\u3075\u307F\u6295\u4FE1",
-    canonicalName: "\u3072\u3075\u307F\u6295\u4FE1",
-    ySymbol: "2516.T",
-    proxyName: "NEXT FUNDS \u6771\u8A3C\u30B0\u30ED\u30FC\u30B9\u5E02\u5834250\u6307\u6570ETF"
-  }
-];
-function fundSymbolFromName(name) {
-  if (!name) return null;
-  for (const d of FUND_DEFS) {
-    if (d.patterns.some((p) => name.includes(p))) return d.symbol;
-  }
-  return null;
-}
-function fundProxyOf(symbol) {
-  const d = FUND_DEFS.find((d2) => d2.symbol === symbol);
-  return d ? { ySymbol: d.ySymbol, proxyName: d.proxyName } : null;
-}
-function canonicalizeFundPosition(p) {
-  if (!p || p.cat !== "\u6295\u8CC7\u4FE1\u8A17") return p;
-  const name = p.name || p.symbol || "";
-  for (const def of FUND_DEFS) {
-    if (def.patterns.some((pat) => name.includes(pat) || (p.symbol || "").includes(pat))) {
-      return {
-        ...p,
-        symbol: def.symbol,
-        name: def.canonicalName || p.name,
-        ySymbol: def.ySymbol,
-        // ← 強制上書き
-        proxyName: def.proxyName,
-        // ← 強制上書き
-        isProxy: true
-      };
-    }
-  }
-  return p;
 }
 
 // src/csv.js
@@ -8510,8 +8620,10 @@ function init() {
   if (panelBriefing) panelBriefing.hidden = true;
   if (panelAi) panelAi.hidden = true;
   renderStats();
-  loadMfHoldings().then(() => renderStats()).catch(() => {
-  });
+  const mfHoldingsPromise = loadMfHoldings().then((mf) => {
+    renderStats();
+    return mf;
+  }).catch(() => null);
   const _eye = document.getElementById("stats-eye");
   if (_eye) _eye.classList.toggle("hidden", state.statsMasked);
   const _eyeSlash = document.getElementById("eye-slash");
@@ -8537,7 +8649,17 @@ function init() {
     try {
       await migrateFromSessionStorage();
       await restoreFromIDB();
-      const loaded = await loadPositionsFromKV();
+      let loaded = false;
+      try {
+        const mfPositions = buildPositionsFromMf(await mfHoldingsPromise, FUND_DEFS);
+        if (mfPositions.length > 0) {
+          positions.splice(0, positions.length, ...mfPositions);
+          loaded = true;
+        }
+      } catch (e) {
+        console.warn("[init] buildPositionsFromMf failed:", e);
+      }
+      if (!loaded) loaded = await loadPositionsFromKV();
       if (loaded) {
         renderStats();
         renderHeatmap();
