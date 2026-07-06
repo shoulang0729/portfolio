@@ -49,6 +49,7 @@ Toshio → Mulmo（設計・指示書）→ VS Code（実装）→ PR → Toshio
 ## 守ること（要点・詳細は CLAUDE.md）
 
 - **1 Task = 1 ブランチ = 1 PR = 1 Issue**。ベースは必ず `main`、push 前に `git pull --rebase`。
+- **Issue の発行は設計レーンの行為**。実装中に設計側の問題（生成プロンプトのドリフト・仕様の矛盾等）に気づいたら、実装者は新 Issue を起こさず**元 Issue のコメント欄に報告**する。別 Issue への切り出しは設計側（Mulmo / Toshio）が判断する（2026-07-06 追加・#540 の経緯から）。
 - **squash マージのみ＋ブランチ auto-delete**。feature ブランチは残さない。
 - バージョン: `index.html` の `?v=YYYYMMDDX` を CSS / JS / SW 全部揃えて bump。`dist/app.js` は CI 自動ビルド（手 commit 不可）。
 - 品質ゲートを green に: `vitest` / `eslint` / `prettier` / `check:types` / `check:circular` / `e2e`。
