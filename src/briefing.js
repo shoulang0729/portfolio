@@ -33,6 +33,28 @@ function _syncFrameTheme() {
   }
 }
 
+/**
+ * #538: 生成 HTML のトレンド表（table.mkt）は中列「直近の読み」に長文が入るのに
+ * td が white-space:nowrap のため、隣の「バイアス」列バッジと重なって見切れる。
+ * CSS は各号に焼き込まれ・将来号もクラウド（MulmoClaude）が生成するため、アプリ側で
+ * iframe に補正スタイルを注入して過去号・将来号を一括で救済する。数値のみのマクロ表
+ * セルはスペースが無く折り返されない＝無害。
+ */
+function _injectBriefingFixups() {
+  if (!_frame) return;
+  try {
+    const idoc = _frame.contentDocument;
+    const head = idoc?.head;
+    if (!head || idoc.getElementById('bf-fixup')) return;
+    const style = idoc.createElement('style');
+    style.id = 'bf-fixup';
+    style.textContent = 'table.mkt td{white-space:normal;vertical-align:top;}';
+    head.appendChild(style);
+  } catch {
+    /* cross-origin 等は無視 */
+  }
+}
+
 /** 親アプリの data-theme 変化を監視して iframe に伝搬（一度だけ設置） */
 function _ensureThemeObserver() {
   if (_themeObserver) return;
@@ -122,6 +144,7 @@ export function renderBriefing(force = false) {
       _frame = frame;
       if (_frame) {
         _frame.addEventListener('load', () => {
+          _injectBriefingFixups();
           _syncFrameTheme();
           _fitFrame();
         });
