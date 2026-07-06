@@ -18,6 +18,8 @@ import { loadChart, setRange, closeModal, handleOverlayClick } from './chart.js'
 import { switchTab } from './tabs.js';
 import { reloadBriefing } from './briefing.js';
 import { loadMfHoldings } from './networth.js';
+import { buildPositionsFromMf } from './holdings-from-mf.js';
+import { FUND_DEFS } from './funds.js';
 import { setupEventListeners } from './init.js';
 import {
   renderHeatmapList,
@@ -477,8 +479,12 @@ function init() {
 
   renderStats();
 
-  // Money Forward 実値（mf-holdings）を読み込み、資産総額・キャッシュ比率に反映（非同期・失敗時はライブ証券にフォールバック）
-  loadMfHoldings().then(() => renderStats()).catch(() => {});
+  // Money Forward 実値（mf-holdings）を読み込み、資産総額・キャッシュ比率に反映（非同期・失敗時はライブ証券にフォールバック）。
+  // 生 JSON は保有タイルの単一ソース（#534）としても再利用するため promise を保持する（二重 fetch 回避。
+  // networth.js は無改修＝集計の正はそのまま）。
+  const mfHoldingsPromise = loadMfHoldings()
+    .then((mf) => { renderStats(); return mf; })
+    .catch(() => null);
 
   // stats バーは常に表示。目アイコンは金額マスク状態（state.statsMasked）を反映。
   const _eye = document.getElementById('stats-eye');
@@ -516,8 +522,20 @@ function init() {
       // 0. sessionStorage → IDB マイグレーション（初回のみ有効）、その後 IDB からメモリ復元
       await migrateFromSessionStorage();
       await restoreFromIDB();
-      // 1. KV から保有銘柄を取得（あれば positions.js の内容を上書き）
-      const loaded = await loadPositionsFromKV();
+      // 1. mf-holdings.json を保有の単一ソースとして positions を置換（#534）。
+      //    取得失敗・変換結果が空のときは従来の KV(positions.json) 経路にフォールバック。
+      let loaded = false;
+      try {
+        const mfPositions = buildPositionsFromMf(await mfHoldingsPromise, FUND_DEFS);
+        if (mfPositions.length > 0) {
+          positions.splice(0, positions.length, ...mfPositions);
+          loaded = true;
+        }
+      } catch (e) {
+        console.warn('[init] buildPositionsFromMf failed:', e);
+      }
+      // 1a. フォールバック: KV から保有銘柄を取得（あれば positions.js の内容を上書き）
+      if (!loaded) loaded = await loadPositionsFromKV();
       if (loaded) { renderStats(); renderHeatmap(); }
       // 1b. 分散ファンドの実セクター比率を Yahoo topHoldings から取得（fire-and-forget）
       loadTopHoldings().then(() => {
