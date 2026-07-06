@@ -5574,6 +5574,19 @@ function _syncFrameTheme() {
   } catch {
   }
 }
+function _injectBriefingFixups() {
+  if (!_frame) return;
+  try {
+    const idoc = _frame.contentDocument;
+    const head = idoc?.head;
+    if (!head || idoc.getElementById("bf-fixup")) return;
+    const style = idoc.createElement("style");
+    style.id = "bf-fixup";
+    style.textContent = "table.mkt td{white-space:normal;vertical-align:top;}";
+    head.appendChild(style);
+  } catch {
+  }
+}
 function _ensureThemeObserver() {
   if (_themeObserver) return;
   _themeObserver = new MutationObserver(_syncFrameTheme);
@@ -5644,6 +5657,7 @@ function renderBriefing(force = false) {
     _frame = frame;
     if (_frame) {
       _frame.addEventListener("load", () => {
+        _injectBriefingFixups();
         _syncFrameTheme();
         _fitFrame();
       });
