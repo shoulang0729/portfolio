@@ -696,22 +696,36 @@ function buildRiskOverviewCard(japanTruePct) {
     taAvailable && maxMembers.length
       ? maxMembers.map((m) => `<span class="htag">${escapeHTML(m.name)} <b>${m.pct.toFixed(1)}%</b></span>`).join('')
       : '';
-  const concVal = taAvailable && maxLabel ? `${escapeHTML(maxLabel)} ${maxPct.toFixed(1)}%` : '—';
-  // #545: テーマ集中(strict)と地域・ホーム偏り(lenient)は別レンズ。同じ「日本」の 16%↔28% が矛盾に見えないようクロス参照。
-  const jpXref =
-    japanTruePct != null && isFinite(japanTruePct)
-      ? ` ※これはテーマ集中レンズ。国・ホーム偏り＝投信込みの真の日本比率は地域カード（${japanTruePct.toFixed(1)}%）を参照。`
-      : '';
+  // #550: テーマ主役を "vs cap" 表記に（%単独で"日本の比率"と誤読させない）。
+  const concCap = maxCap != null ? ` ／上限${maxCap}%${concOver ? ' ⚠超過' : ''}` : '';
+  const concVal = taAvailable && maxLabel ? `${escapeHTML(maxLabel)} ${maxPct.toFixed(1)}%${concCap}` : '—';
   const concRow = rmrow(
     'i-target',
-    '最大集中（テーマ集中）',
+    '最大集中（テーマ集中＝選んだ賭け）',
     concOver ? 'bad' : 'ok',
-    concOver ? '高い' : '適正',
+    concOver ? '超過' : '適正',
     concVal,
     concOver,
     concHolds,
-    `最も偏ったテーマ。テーマ別上限(cap)超で赤（cap未設定は20%超）。構成銘柄を表示。${jpXref}`
+    `テーマ集中レンズ。テーマ別上限(cap)超で赤＝${concOver ? 'トリム候補' : '対応不要'}（cap未設定は20%超）。トリム対象はこのテーマのバスケットで日本株全体ではない。国・ホーム偏りは下の緑の行を参照。`
   );
+
+  // #550: 国・ホーム偏り（許容レンズ）をテーマ集中の直下に並置＝2レンズを一目で。真の日本国比率(ルックスルー)を同格で可視化。
+  const HOME_JP_LIMIT = 35;
+  const homeWarn = japanTruePct != null && isFinite(japanTruePct) && japanTruePct > HOME_JP_LIMIT;
+  const homeRow =
+    japanTruePct != null && isFinite(japanTruePct)
+      ? rmrow(
+          'i-home',
+          '国・ホーム偏り（日本・許容レンズ）',
+          homeWarn ? 'warn' : 'ok',
+          homeWarn ? '要注意' : '許容内',
+          `日本(ルックスルー) ${japanTruePct.toFixed(1)}% ／許容${HOME_JP_LIMIT}%`,
+          homeWarn,
+          '',
+          `投信ルックスルー後の真の日本国比率。数百銘柄に分散＝ほぼ市場ベータのため許容＝${homeWarn ? '目安超で要注意。' : '対応不要。'}日本の大きさ単独では赤にしない。`
+        )
+      : '';
 
   // 右値＝件数「N件」、ピル＝状態語、明細は全件（他N件で省略しない・#502 B）
   let overVal = '0件';
@@ -776,7 +790,7 @@ function buildRiskOverviewCard(japanTruePct) {
       <div class="rv-badge">${ric(breaches === 0 ? 'i-shield' : 'i-warn')}</div>
       <div><div class="rv-t">${escapeHTML(vt)}</div><div class="rv-s">${escapeHTML(vs)}</div></div>
     </div>
-    ${cashRow}${concRow}${overRow}${themeRow}`;
+    ${cashRow}${concRow}${homeRow}${overRow}${themeRow}`;
 
   return card;
 }
