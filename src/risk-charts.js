@@ -570,12 +570,15 @@ function buildRiskOverviewCard() {
   }
   /** @type {string|null} */
   let maxLabel = null;
+  /** @type {string|null} */
+  let maxTheme = null; // #544: cap 判定用の生テーマキー
   let maxPct = 0;
   /** @type {Array<{name:string, pct:number}>} */
   let maxMembers = [];
   for (const [theme, used] of Object.entries(themeUsedPct)) {
     if (used > maxPct) {
       maxPct = used;
+      maxTheme = theme;
       maxLabel = themeLabel(theme); // 自然言語化（#502 B）
       maxMembers = (themeMembers[theme] || []).slice().sort((a, b) => b.pct - a.pct);
     }
@@ -586,13 +589,16 @@ function buildRiskOverviewCard() {
       const pct = ((p.value || 0) / denom) * 100;
       if (pct > maxPct) {
         maxPct = pct;
+        maxTheme = null; // 単銘柄はテーマ cap 対象外 → 従来閾値へフォールバック
         maxLabel = p.symbol || '';
         maxMembers = [{ name: p.symbol || '', pct }];
       }
     }
   }
-  const concOver = taAvailable && maxPct > 20;
-  if (concOver) breaches++;
+  // #544: 最大集中の判定を一律20%からテーマ別キャップ基準へ統一。
+  // cap 未設定テーマ／単銘柄のみ従来閾値（20%）へフォールバック。breach 加算は overThemes 計算後（二重カウント回避）。
+  const maxCap = maxTheme ? getThemeCap(maxTheme) : null;
+  const concOver = taAvailable && (maxCap != null ? maxPct > maxCap : maxPct > 20);
 
   // 3. 過大ポジ（gapPct = current − target が 0.5pt 超）
   /** @type {Array<{name:string, cur:number, target:number|null, pt:number}>} */
@@ -634,6 +640,10 @@ function buildRiskOverviewCard() {
     }
   }
   if (overThemes.length > 0) breaches++;
+
+  // #544: 最大集中の breach は、テーマ cap 超過（overThemes）と二重カウントしない。
+  // cap 未設定テーマ／単銘柄の閾値超過のみ、最大集中として独立に breach 加算する。
+  if (concOver && !(maxTheme && overThemes.some((o) => o.theme === maxTheme))) breaches++;
 
   // ── 総合判定バナー（緑/黄/赤） ──
   const vCls = breaches === 0 ? 'ok' : breaches === 1 ? 'warn' : 'bad';
@@ -687,7 +697,7 @@ function buildRiskOverviewCard() {
     concVal,
     concOver,
     concHolds,
-    '最も偏ったテーマ。20%超で赤。構成銘柄を表示。'
+    '最も偏ったテーマ。テーマ別上限(cap)超で赤（cap未設定は20%超）。構成銘柄を表示。'
   );
 
   // 右値＝件数「N件」、ピル＝状態語、明細は全件（他N件で省略しない・#502 B）
