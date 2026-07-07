@@ -1,5 +1,7 @@
 # handoff: mf-holdings.json を保有の単一ソースにしてヒートマップ自動反映
 
+> ✅ **実装完了（2026-07-07・PM盤面スタンプ）**＝Issue #534 → PR #542（`v=20260706B`・マージ済）。`mf-holdings` を保有の単一ソース化し、ヒートマップ（＋Value/Risk）が自動反映。SpaceX/NLR の手動 `positions.json` 追加を廃止。CI green・Issue クローズ済。
+
 - 起票: 2026-06-29 / Mulmo（投資コンサルmode・設計レーン）
 - 対応 Issue: **#534**（SpaceX 手動追加 → 本設計に supersede）
 - 実装: VS Code / **load-bearing 大改修につき Toshio 事前レビュー**
