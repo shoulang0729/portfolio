@@ -93,3 +93,20 @@
 - 2026-06-28 の要判断「umbrella #515 close後、残P2-P5を別Issue起票するか」→ **別Issue不要**で解決。VS Code 側が umbrella #515 を再オープンせず P2-P5 を直接実装し、P5（#522）で close。追跡の漏れなし。
 
 **🟡 監視中**：Wait バックログ6件（#367/#306/#305/#304/#301/#220）変化なし。タブ順入替＋表示名 Value→Valuation（PR#524/#523・handoff無しの軽微UI）はマージ済・要対応なし。新規の要判断項目なし。
+
+---
+
+## 2026-07-07（PM盤面モニタ）
+
+**🔴 設計差し戻し / CI red**：なし（open PR は #543 auto-fix のみ・CI green）。
+
+**🟠 要対応（Mulmo設計レーン・Toshio確認）**
+- **Briefing 生成ドリフト（Issue#540・#538 の根本原因）**：VS Code → Mulmo 申し送り。トレンド表のセル生成が レイアウトリファレンス（`docs/handoff/assets/2026-06-25-briefing-layout-reference.html`）から乖離（`.perf`→`.mkt`・短値→長文で overflow）。**アプリ側は PR#539 で防御済み・Issue はクローズ済**だが、根治は **Mulmo 側の Briefing 生成プロンプト（briefing skill / spec）をリファレンス準拠に是正**すること。→ 次回 briefing 生成前に skill/spec のトレンド表セル仕様を確認・是正するか Toshio 判断。**コードには触れない。**
+
+**✅ 完了スタンプ（設計正本に反映・Mulmo docs PR）**
+- Risk 集中度の一貫化 **①最大集中カードのテーマ別キャップ統一**（PR#547 / Issue#544）＋**②③テーマ集中(strict)/地域ホーム偏り(lenient)のレンズ分離統一**（PR#548 / Issue#545）→ handoff `2026-07-06-risk-concentration-coherence.md` に実装完了スタンプ。日本ホーム許容の警告閾値＝総資産35%（本人確認済み）。
+- 保有の単一ソース化（mf-holdings → ヒートマップ自動反映・PR#542 / Issue#534）→ handoff `2026-06-29-mf-holdings-as-holdings-source.md` に実装完了スタンプ。SpaceX/NLR 手動追加を廃止。
+- Wiki `investment-system-upgrade-plan.md` に「Risk 集中度の一貫化」「保有の単一ソース化」節を追記。
+- 補記：PR#541（実装者は元Issue コメントで報告する規約追記）・PR#539（Briefing トレンド表 overflow 解消）もマージ済。
+
+**🟡 監視中**：Wait バックログ6件（#367/#306/#305/#304/#301/#220）変化なし。#220 は20日超未更新だが `Wait` 付き意図的バックログ＝要対応ではない。open PR #543 は auto-fix（取り込み owner=VS Code）。
