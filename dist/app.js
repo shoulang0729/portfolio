@@ -5201,28 +5201,29 @@ function buildRiskOverviewCard(japanTruePct) {
   );
   const concHolds = taAvailable && maxMembers.length ? maxMembers.map((m) => `<span class="htag">${escapeHTML(m.name)} <b>${m.pct.toFixed(1)}%</b></span>`).join("") : "";
   const concCap = maxCap != null ? ` \uFF0F\u4E0A\u9650${maxCap}%${concOver ? " \u26A0\u8D85\u904E" : ""}` : "";
-  const concVal = taAvailable && maxLabel ? `${escapeHTML(maxLabel)} ${maxPct.toFixed(1)}%${concCap}` : "\u2014";
+  const concVal = taAvailable && maxLabel ? `<span class="rmv-nm">${escapeHTML(maxLabel)}</span><span class="rmv-sub">${maxPct.toFixed(1)}%${concCap}</span>` : "\u2014";
   const concRow = rmrow(
     "i-target",
-    "\u6700\u5927\u96C6\u4E2D\uFF08\u30C6\u30FC\u30DE\u96C6\u4E2D\uFF1D\u9078\u3093\u3060\u8CED\u3051\uFF09",
+    "\u30C6\u30FC\u30DE\u96C6\u4E2D",
     concOver ? "bad" : "ok",
     concOver ? "\u8D85\u904E" : "\u9069\u6B63",
     concVal,
     concOver,
     concHolds,
-    `\u30C6\u30FC\u30DE\u96C6\u4E2D\u30EC\u30F3\u30BA\u3002\u30C6\u30FC\u30DE\u5225\u4E0A\u9650(cap)\u8D85\u3067\u8D64\uFF1D${concOver ? "\u30C8\u30EA\u30E0\u5019\u88DC" : "\u5BFE\u5FDC\u4E0D\u8981"}\uFF08cap\u672A\u8A2D\u5B9A\u306F20%\u8D85\uFF09\u3002\u30C8\u30EA\u30E0\u5BFE\u8C61\u306F\u3053\u306E\u30C6\u30FC\u30DE\u306E\u30D0\u30B9\u30B1\u30C3\u30C8\u3067\u65E5\u672C\u682A\u5168\u4F53\u3067\u306F\u306A\u3044\u3002\u56FD\u30FB\u30DB\u30FC\u30E0\u504F\u308A\u306F\u4E0B\u306E\u7DD1\u306E\u884C\u3092\u53C2\u7167\u3002`
+    concOver ? "\u30C8\u30EA\u30E0\u5019\u88DC\uFF08\u5BFE\u8C61\uFF1D\u3053\u306E\u30D0\u30B9\u30B1\u30C3\u30C8\u3002\u65E5\u672C\u682A\u5168\u4F53\u3067\u306F\u306A\u3044\uFF09" : ""
   );
   const HOME_JP_LIMIT = 35;
   const homeWarn = japanTruePct != null && isFinite(japanTruePct) && japanTruePct > HOME_JP_LIMIT;
+  const homeVal = japanTruePct != null && isFinite(japanTruePct) ? `<span class="rmv-nm">\u65E5\u672C(\u30EB\u30C3\u30AF\u30B9\u30EB\u30FC)</span><span class="rmv-sub">${japanTruePct.toFixed(1)}% \uFF0F\u8A31\u5BB9${HOME_JP_LIMIT}%</span>` : "\u2014";
   const homeRow = japanTruePct != null && isFinite(japanTruePct) ? rmrow(
     "i-home",
-    "\u56FD\u30FB\u30DB\u30FC\u30E0\u504F\u308A\uFF08\u65E5\u672C\u30FB\u8A31\u5BB9\u30EC\u30F3\u30BA\uFF09",
+    "\u56FD\u30FB\u30DB\u30FC\u30E0\u504F\u308A",
     homeWarn ? "warn" : "ok",
     homeWarn ? "\u8981\u6CE8\u610F" : "\u8A31\u5BB9\u5185",
-    `\u65E5\u672C(\u30EB\u30C3\u30AF\u30B9\u30EB\u30FC) ${japanTruePct.toFixed(1)}% \uFF0F\u8A31\u5BB9${HOME_JP_LIMIT}%`,
+    homeVal,
     homeWarn,
     "",
-    `\u6295\u4FE1\u30EB\u30C3\u30AF\u30B9\u30EB\u30FC\u5F8C\u306E\u771F\u306E\u65E5\u672C\u56FD\u6BD4\u7387\u3002\u6570\u767E\u9298\u67C4\u306B\u5206\u6563\uFF1D\u307B\u307C\u5E02\u5834\u30D9\u30FC\u30BF\u306E\u305F\u3081\u8A31\u5BB9\uFF1D${homeWarn ? "\u76EE\u5B89\u8D85\u3067\u8981\u6CE8\u610F\u3002" : "\u5BFE\u5FDC\u4E0D\u8981\u3002"}\u65E5\u672C\u306E\u5927\u304D\u3055\u5358\u72EC\u3067\u306F\u8D64\u306B\u3057\u306A\u3044\u3002`
+    homeWarn ? "\u76EE\u5B89\u8D85\u3067\u8981\u6CE8\u610F" : ""
   ) : "";
   let overVal = "0\u4EF6";
   let overHolds = "";
