@@ -1036,11 +1036,15 @@ table.t td { font-size: var(--fs-sm); font-weight: 700; border-bottom: 1px solid
 .rmic { width: 30px; height: 30px; border-radius: 9px; background: var(--surface2); display: flex; align-items: center; justify-content: center; flex: none; }
 .rmic .ric { color: var(--text2); }
 .rmbody { flex: 1; min-width: 0; }
-.rml1 { display: flex; align-items: baseline; gap: 7px; }
-.rml { font-size: var(--fs-base); font-weight: 600; color: var(--text2); }
-.rmv { font-size: var(--fs-lg); font-weight: 800; margin-left: auto; color: var(--text); }
+.rml1 { display: flex; align-items: flex-start; gap: 7px; }
+.rml { font-size: var(--fs-base); font-weight: 600; color: var(--text2); white-space: nowrap; }
+/* #552: ヒーロー数字は右寄せ2段（1段目=名前 / 2段目=数字・vs cap）で縦割れを防止 */
+.rmv { font-size: var(--fs-lg); font-weight: 800; margin-left: auto; color: var(--text); display: flex; flex-direction: column; align-items: flex-end; line-height: 1.25; text-align: right; }
 .rmv.warn { color: var(--warn); }
-.rpill { font-size: var(--fs-xs); font-weight: 700; border-radius: 20px; padding: 2px 8px; }
+.rmv-nm { font-size: var(--fs-sm); font-weight: 600; color: var(--text2); }
+.rmv-sub { white-space: nowrap; }
+/* #552: メダルは縦割れ禁止 */
+.rpill { font-size: var(--fs-xs); font-weight: 700; border-radius: 20px; padding: 2px 8px; white-space: nowrap; }
 .rpill.ok { background: color-mix(in srgb, var(--tone-good) 16%, transparent); color: var(--tone-good); }
 .rpill.warn { background: color-mix(in srgb, var(--tone-ok) 18%, transparent); color: var(--tone-ok); }
 .rpill.bad { background: color-mix(in srgb, var(--tone-warn) 16%, transparent); color: var(--tone-warn); }
