@@ -67,7 +67,7 @@ async function loadRegionData() {
  * D-6: 真の地域エクスポージャ（ルックスルー）カードを生成する。
  * 筆頭＝日本 真% ｜ ACWIベンチ5% ｜ ホームバイアス +Xpt。
  * @param {Array<{symbol?:string, ySymbol?:string, value?:number|null}>} holdings
- * @returns {Promise<HTMLElement>}
+ * @returns {Promise<{card: HTMLElement, japanTruePct: number}>} #545: 真の日本国比率を要約へクロス参照
  */
 async function buildRegionCard(assets, manualSymbols) {
   const { regionMap, regionWeights, asOf } = await loadRegionData();
@@ -165,15 +165,22 @@ async function buildRegionCard(assets, manualSymbols) {
   body.appendChild(legend);
 
   // マザーマーケット（日本）偏り＝円グラフの下（japanHomeBias 流用・新規計算なし・ACWI は参考値）
+  // #545: ホームバイアスは lenient。総資産の35%までは許容（情報）、超で「要注意（黄）」へ格上げ。
+  // 日本の大きさ単独では赤にしない（設計思想＝マザーマーケット偏り許容）。分母＝総資産ベース（表示主数値と同物差し）。
+  const HOME_JP_LIMIT = 35; // 日本ホーム許容の警告閾値（%・ルックスルー後・総資産ベース）
+  const homeWarn = bias.japanPct > HOME_JP_LIMIT;
   const ratio = bias.benchPct > 0 ? bias.japanPct / bias.benchPct : null;
   const biasSign = bias.biasPt >= 0 ? '+' : '';
   const ratioTxt = ratio != null ? `（約${ratio.toFixed(ratio >= 10 ? 0 : 1)}倍）` : '';
   const tiltTxt = bias.biasPt >= 0 ? '世界平均より日本に厚い。' : '世界平均より日本は控えめ。';
+  const homeBandTxt = homeWarn
+    ? `目安${HOME_JP_LIMIT}%超＝要注意（黄）。ホームマーケットにつき高め許容だが、この水準は要確認。`
+    : `ホームマーケットにつき〜${HOME_JP_LIMIT}%目安まで許容（情報）。`;
   card.insertAdjacentHTML(
     'beforeend',
-    `<div class="rgn-bias"><div class="rgn-bias-ic">${ric('i-home')}</div><div class="rgn-bias-body">` +
-      `<div class="rgn-bias-h"><span>マザーマーケット（日本）への偏り</span><span class="rgn-bias-v">日本 ${bias.japanPct.toFixed(1)}%</span></div>` +
-      `<div class="rgn-bias-cap">世界株指数(ACWI)の日本比率${bias.benchPct.toFixed(0)}%に対し ${biasSign}${bias.biasPt.toFixed(1)}pt${ratioTxt}。${tiltTxt}</div>` +
+    `<div class="rgn-bias${homeWarn ? ' warn' : ''}"><div class="rgn-bias-ic">${ric('i-home')}</div><div class="rgn-bias-body">` +
+      `<div class="rgn-bias-h"><span>マザーマーケット（日本）への偏り${homeWarn ? ' ⚠要注意' : '（許容内）'}</span><span class="rgn-bias-v${homeWarn ? ' warn' : ''}">日本 ${bias.japanPct.toFixed(1)}%</span></div>` +
+      `<div class="rgn-bias-cap">世界株指数(ACWI)の日本比率${bias.benchPct.toFixed(0)}%に対し ${biasSign}${bias.biasPt.toFixed(1)}pt${ratioTxt}。${tiltTxt}${homeBandTxt}</div>` +
       `</div></div>`
   );
 
@@ -182,7 +189,8 @@ async function buildRegionCard(assets, manualSymbols) {
   note.textContent = `ACWI ${bias.benchPct.toFixed(0)}%は世界平均の参考値で、合わせる必要はなく日本への傾きの目安。地域構成比は静的（鮮度 ${asOf || '—'}・四半期更新）。`;
   card.appendChild(note);
 
-  return card;
+  // #545: 真の日本国比率（ルックスルー後・総資産ベース）をリスク要約へクロス参照させる。
+  return { card, japanTruePct: bias.japanPct };
 }
 
 // ── D-1 ストレスシナリオ（名前付き歴史イベント）──────────────────────────────
@@ -534,7 +542,7 @@ function cardTitle(iconId, name, tag) {
  * 総合判定バナー＋4行（アイコン/ラベル/状態ピル/値/該当銘柄/一言）。
  * @returns {HTMLElement}
  */
-function buildRiskOverviewCard() {
+function buildRiskOverviewCard(japanTruePct) {
   const card = document.createElement('div');
   card.className = 'risk-overview';
 
@@ -689,15 +697,20 @@ function buildRiskOverviewCard() {
       ? maxMembers.map((m) => `<span class="htag">${escapeHTML(m.name)} <b>${m.pct.toFixed(1)}%</b></span>`).join('')
       : '';
   const concVal = taAvailable && maxLabel ? `${escapeHTML(maxLabel)} ${maxPct.toFixed(1)}%` : '—';
+  // #545: テーマ集中(strict)と地域・ホーム偏り(lenient)は別レンズ。同じ「日本」の 16%↔28% が矛盾に見えないようクロス参照。
+  const jpXref =
+    japanTruePct != null && isFinite(japanTruePct)
+      ? ` ※これはテーマ集中レンズ。国・ホーム偏り＝投信込みの真の日本比率は地域カード（${japanTruePct.toFixed(1)}%）を参照。`
+      : '';
   const concRow = rmrow(
     'i-target',
-    '最大集中（テーマ）',
+    '最大集中（テーマ集中）',
     concOver ? 'bad' : 'ok',
     concOver ? '高い' : '適正',
     concVal,
     concOver,
     concHolds,
-    '最も偏ったテーマ。テーマ別上限(cap)超で赤（cap未設定は20%超）。構成銘柄を表示。'
+    `最も偏ったテーマ。テーマ別上限(cap)超で赤（cap未設定は20%超）。構成銘柄を表示。${jpXref}`
   );
 
   // 右値＝件数「N件」、ピル＝状態語、明細は全件（他N件で省略しない・#502 B）
@@ -1101,13 +1114,13 @@ export async function renderRiskCharts() {
   const quantCard = await buildQuantCard(positions);
   if (_riskRenderSeq !== myRun) return;
   const manualSymbols = manualAssets.map((a) => a.symbol);
-  const regionCard = await buildRegionCard(assets, manualSymbols);
+  const { card: regionCard, japanTruePct } = await buildRegionCard(assets, manualSymbols);
   if (_riskRenderSeq !== myRun) return;
 
   wrap.textContent = '';
 
   // ── リスク要約カード（Phase 4 v1）────────────────────────────────────────
-  wrap.appendChild(buildRiskOverviewCard());
+  wrap.appendChild(buildRiskOverviewCard(japanTruePct));
   // ── /リスク要約カード ────────────────────────────────────────────────────
 
   // ── クオンツ・リスクカード（Phase 4b）────────────────────────────────────

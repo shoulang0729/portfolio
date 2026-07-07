@@ -4863,19 +4863,22 @@ async function buildRegionCard(assets, manualSymbols) {
     legend.appendChild(li);
   });
   body.appendChild(legend);
+  const HOME_JP_LIMIT = 35;
+  const homeWarn = bias.japanPct > HOME_JP_LIMIT;
   const ratio = bias.benchPct > 0 ? bias.japanPct / bias.benchPct : null;
   const biasSign = bias.biasPt >= 0 ? "+" : "";
   const ratioTxt = ratio != null ? `\uFF08\u7D04${ratio.toFixed(ratio >= 10 ? 0 : 1)}\u500D\uFF09` : "";
   const tiltTxt = bias.biasPt >= 0 ? "\u4E16\u754C\u5E73\u5747\u3088\u308A\u65E5\u672C\u306B\u539A\u3044\u3002" : "\u4E16\u754C\u5E73\u5747\u3088\u308A\u65E5\u672C\u306F\u63A7\u3048\u3081\u3002";
+  const homeBandTxt = homeWarn ? `\u76EE\u5B89${HOME_JP_LIMIT}%\u8D85\uFF1D\u8981\u6CE8\u610F\uFF08\u9EC4\uFF09\u3002\u30DB\u30FC\u30E0\u30DE\u30FC\u30B1\u30C3\u30C8\u306B\u3064\u304D\u9AD8\u3081\u8A31\u5BB9\u3060\u304C\u3001\u3053\u306E\u6C34\u6E96\u306F\u8981\u78BA\u8A8D\u3002` : `\u30DB\u30FC\u30E0\u30DE\u30FC\u30B1\u30C3\u30C8\u306B\u3064\u304D\u301C${HOME_JP_LIMIT}%\u76EE\u5B89\u307E\u3067\u8A31\u5BB9\uFF08\u60C5\u5831\uFF09\u3002`;
   card.insertAdjacentHTML(
     "beforeend",
-    `<div class="rgn-bias"><div class="rgn-bias-ic">${ric("i-home")}</div><div class="rgn-bias-body"><div class="rgn-bias-h"><span>\u30DE\u30B6\u30FC\u30DE\u30FC\u30B1\u30C3\u30C8\uFF08\u65E5\u672C\uFF09\u3078\u306E\u504F\u308A</span><span class="rgn-bias-v">\u65E5\u672C ${bias.japanPct.toFixed(1)}%</span></div><div class="rgn-bias-cap">\u4E16\u754C\u682A\u6307\u6570(ACWI)\u306E\u65E5\u672C\u6BD4\u7387${bias.benchPct.toFixed(0)}%\u306B\u5BFE\u3057 ${biasSign}${bias.biasPt.toFixed(1)}pt${ratioTxt}\u3002${tiltTxt}</div></div></div>`
+    `<div class="rgn-bias${homeWarn ? " warn" : ""}"><div class="rgn-bias-ic">${ric("i-home")}</div><div class="rgn-bias-body"><div class="rgn-bias-h"><span>\u30DE\u30B6\u30FC\u30DE\u30FC\u30B1\u30C3\u30C8\uFF08\u65E5\u672C\uFF09\u3078\u306E\u504F\u308A${homeWarn ? " \u26A0\u8981\u6CE8\u610F" : "\uFF08\u8A31\u5BB9\u5185\uFF09"}</span><span class="rgn-bias-v${homeWarn ? " warn" : ""}">\u65E5\u672C ${bias.japanPct.toFixed(1)}%</span></div><div class="rgn-bias-cap">\u4E16\u754C\u682A\u6307\u6570(ACWI)\u306E\u65E5\u672C\u6BD4\u7387${bias.benchPct.toFixed(0)}%\u306B\u5BFE\u3057 ${biasSign}${bias.biasPt.toFixed(1)}pt${ratioTxt}\u3002${tiltTxt}${homeBandTxt}</div></div></div>`
   );
   const note = document.createElement("div");
   note.className = "risk-coverage-note";
   note.textContent = `ACWI ${bias.benchPct.toFixed(0)}%\u306F\u4E16\u754C\u5E73\u5747\u306E\u53C2\u8003\u5024\u3067\u3001\u5408\u308F\u305B\u308B\u5FC5\u8981\u306F\u306A\u304F\u65E5\u672C\u3078\u306E\u50BE\u304D\u306E\u76EE\u5B89\u3002\u5730\u57DF\u69CB\u6210\u6BD4\u306F\u9759\u7684\uFF08\u9BAE\u5EA6 ${asOf || "\u2014"}\u30FB\u56DB\u534A\u671F\u66F4\u65B0\uFF09\u3002`;
   card.appendChild(note);
-  return card;
+  return { card, japanTruePct: bias.japanPct };
 }
 var _stressEvents = null;
 async function loadStressEvents() {
@@ -5085,7 +5088,7 @@ function cardTitle(iconId, name, tag) {
   const tagHTML = tag ? `<span class="tag">${escapeHTML(tag)}</span>` : "";
   return `<div class="card-ttl"><span class="tic">${ric(iconId)}</span>${escapeHTML(name)}${tagHTML}</div>`;
 }
-function buildRiskOverviewCard() {
+function buildRiskOverviewCard(japanTruePct) {
   const card = document.createElement("div");
   card.className = "risk-overview";
   const totals = getMfTotals();
@@ -5198,15 +5201,16 @@ function buildRiskOverviewCard() {
   );
   const concHolds = taAvailable && maxMembers.length ? maxMembers.map((m) => `<span class="htag">${escapeHTML(m.name)} <b>${m.pct.toFixed(1)}%</b></span>`).join("") : "";
   const concVal = taAvailable && maxLabel ? `${escapeHTML(maxLabel)} ${maxPct.toFixed(1)}%` : "\u2014";
+  const jpXref = japanTruePct != null && isFinite(japanTruePct) ? ` \u203B\u3053\u308C\u306F\u30C6\u30FC\u30DE\u96C6\u4E2D\u30EC\u30F3\u30BA\u3002\u56FD\u30FB\u30DB\u30FC\u30E0\u504F\u308A\uFF1D\u6295\u4FE1\u8FBC\u307F\u306E\u771F\u306E\u65E5\u672C\u6BD4\u7387\u306F\u5730\u57DF\u30AB\u30FC\u30C9\uFF08${japanTruePct.toFixed(1)}%\uFF09\u3092\u53C2\u7167\u3002` : "";
   const concRow = rmrow(
     "i-target",
-    "\u6700\u5927\u96C6\u4E2D\uFF08\u30C6\u30FC\u30DE\uFF09",
+    "\u6700\u5927\u96C6\u4E2D\uFF08\u30C6\u30FC\u30DE\u96C6\u4E2D\uFF09",
     concOver ? "bad" : "ok",
     concOver ? "\u9AD8\u3044" : "\u9069\u6B63",
     concVal,
     concOver,
     concHolds,
-    "\u6700\u3082\u504F\u3063\u305F\u30C6\u30FC\u30DE\u3002\u30C6\u30FC\u30DE\u5225\u4E0A\u9650(cap)\u8D85\u3067\u8D64\uFF08cap\u672A\u8A2D\u5B9A\u306F20%\u8D85\uFF09\u3002\u69CB\u6210\u9298\u67C4\u3092\u8868\u793A\u3002"
+    `\u6700\u3082\u504F\u3063\u305F\u30C6\u30FC\u30DE\u3002\u30C6\u30FC\u30DE\u5225\u4E0A\u9650(cap)\u8D85\u3067\u8D64\uFF08cap\u672A\u8A2D\u5B9A\u306F20%\u8D85\uFF09\u3002\u69CB\u6210\u9298\u67C4\u3092\u8868\u793A\u3002${jpXref}`
   );
   let overVal = "0\u4EF6";
   let overHolds = "";
@@ -5484,10 +5488,10 @@ async function renderRiskCharts() {
   const quantCard = await buildQuantCard(positions);
   if (_riskRenderSeq !== myRun) return;
   const manualSymbols = manualAssets.map((a) => a.symbol);
-  const regionCard = await buildRegionCard(assets, manualSymbols);
+  const { card: regionCard, japanTruePct } = await buildRegionCard(assets, manualSymbols);
   if (_riskRenderSeq !== myRun) return;
   wrap.textContent = "";
-  wrap.appendChild(buildRiskOverviewCard());
+  wrap.appendChild(buildRiskOverviewCard(japanTruePct));
   wrap.appendChild(quantCard);
   const sumInfo = getClassificationSummary(assets);
   const summary = document.createElement("div");

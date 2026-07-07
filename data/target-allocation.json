@@ -42,7 +42,7 @@
       "members": ["MSFT", "AMZN", "AAPL", "GOOGL", "TSLA", "PLTR"]
     },
     "japan_theme": {
-      "cap": 10,
+      "cap": 13,
       "members": ["1615.T", "1629.T", "9983.T", "8050.T", "6301.T"]
     },
     "commodity_miner": {
