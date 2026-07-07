@@ -5111,11 +5111,13 @@ function buildRiskOverviewCard() {
     (themeMembers[theme] = themeMembers[theme] || []).push({ name: p.symbol || "", pct: currentPct });
   }
   let maxLabel = null;
+  let maxTheme = null;
   let maxPct = 0;
   let maxMembers = [];
   for (const [theme, used] of Object.entries(themeUsedPct)) {
     if (used > maxPct) {
       maxPct = used;
+      maxTheme = theme;
       maxLabel = themeLabel(theme);
       maxMembers = (themeMembers[theme] || []).slice().sort((a, b) => b.pct - a.pct);
     }
@@ -5125,13 +5127,14 @@ function buildRiskOverviewCard() {
       const pct = (p.value || 0) / denom * 100;
       if (pct > maxPct) {
         maxPct = pct;
+        maxTheme = null;
         maxLabel = p.symbol || "";
         maxMembers = [{ name: p.symbol || "", pct }];
       }
     }
   }
-  const concOver = taAvailable && maxPct > 20;
-  if (concOver) breaches++;
+  const maxCap = maxTheme ? getThemeCap(maxTheme) : null;
+  const concOver = taAvailable && (maxCap != null ? maxPct > maxCap : maxPct > 20);
   const overPos = [];
   for (const { p, tkey, currentPct } of resolved) {
     if (!tkey) continue;
@@ -5165,6 +5168,7 @@ function buildRiskOverviewCard() {
     }
   }
   if (overThemes.length > 0) breaches++;
+  if (concOver && !(maxTheme && overThemes.some((o) => o.theme === maxTheme))) breaches++;
   const vCls = breaches === 0 ? "ok" : breaches === 1 ? "warn" : "bad";
   const vt = breaches === 0 ? "\u30EA\u30B9\u30AF\u4F4E \u2014 \u95BE\u5024\u62B5\u89E6\u306A\u3057" : breaches === 1 ? "\u6CE8\u610F \u2014 1\u4EF6\u304C\u57FA\u6E96\u30AA\u30FC\u30D0\u30FC" : `\u8981\u6CE8\u610F \u2014 ${breaches}\u4EF6\u304C\u57FA\u6E96\u30AA\u30FC\u30D0\u30FC`;
   const subBits = [];
@@ -5202,7 +5206,7 @@ function buildRiskOverviewCard() {
     concVal,
     concOver,
     concHolds,
-    "\u6700\u3082\u504F\u3063\u305F\u30C6\u30FC\u30DE\u300220%\u8D85\u3067\u8D64\u3002\u69CB\u6210\u9298\u67C4\u3092\u8868\u793A\u3002"
+    "\u6700\u3082\u504F\u3063\u305F\u30C6\u30FC\u30DE\u3002\u30C6\u30FC\u30DE\u5225\u4E0A\u9650(cap)\u8D85\u3067\u8D64\uFF08cap\u672A\u8A2D\u5B9A\u306F20%\u8D85\uFF09\u3002\u69CB\u6210\u9298\u67C4\u3092\u8868\u793A\u3002"
   );
   let overVal = "0\u4EF6";
   let overHolds = "";
