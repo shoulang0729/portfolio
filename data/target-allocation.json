@@ -30,15 +30,15 @@
   },
   "themeCaps": {
     "semiconductor": {
-      "cap": 13,
+      "cap": 10,
       "members": ["SMH", "200A.T"]
     },
     "ai_power": {
-      "cap": 10,
+      "cap": 11,
       "members": ["NLR", "DTCR", "URA"]
     },
     "megatech": {
-      "cap": 15,
+      "cap": 13,
       "members": ["MSFT", "AMZN", "AAPL", "GOOGL", "TSLA", "PLTR"]
     },
     "japan_theme": {
