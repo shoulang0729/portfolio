@@ -696,34 +696,41 @@ function buildRiskOverviewCard(japanTruePct) {
     taAvailable && maxMembers.length
       ? maxMembers.map((m) => `<span class="htag">${escapeHTML(m.name)} <b>${m.pct.toFixed(1)}%</b></span>`).join('')
       : '';
-  // #550: テーマ主役を "vs cap" 表記に（%単独で"日本の比率"と誤読させない）。
+  // #550/#552: テーマ主役を "vs cap" 表記に（%単独で"日本の比率"と誤読させない）。ヒーロー数字は縦割れ回避で2段化。
   const concCap = maxCap != null ? ` ／上限${maxCap}%${concOver ? ' ⚠超過' : ''}` : '';
-  const concVal = taAvailable && maxLabel ? `${escapeHTML(maxLabel)} ${maxPct.toFixed(1)}%${concCap}` : '—';
+  const concVal =
+    taAvailable && maxLabel
+      ? `<span class="rmv-nm">${escapeHTML(maxLabel)}</span><span class="rmv-sub">${maxPct.toFixed(1)}%${concCap}</span>`
+      : '—';
   const concRow = rmrow(
     'i-target',
-    '最大集中（テーマ集中＝選んだ賭け）',
+    'テーマ集中',
     concOver ? 'bad' : 'ok',
     concOver ? '超過' : '適正',
     concVal,
     concOver,
     concHolds,
-    `テーマ集中レンズ。テーマ別上限(cap)超で赤＝${concOver ? 'トリム候補' : '対応不要'}（cap未設定は20%超）。トリム対象はこのテーマのバスケットで日本株全体ではない。国・ホーム偏りは下の緑の行を参照。`
+    concOver ? 'トリム候補（対象＝このバスケット。日本株全体ではない）' : ''
   );
 
-  // #550: 国・ホーム偏り（許容レンズ）をテーマ集中の直下に並置＝2レンズを一目で。真の日本国比率(ルックスルー)を同格で可視化。
+  // #550: 国・ホーム偏り（許容レンズ）をテーマ集中の直下に並置＝2レンズを一目で。#552: タイトル短縮・説明はメダル＋数字に集約。
   const HOME_JP_LIMIT = 35;
   const homeWarn = japanTruePct != null && isFinite(japanTruePct) && japanTruePct > HOME_JP_LIMIT;
+  const homeVal =
+    japanTruePct != null && isFinite(japanTruePct)
+      ? `<span class="rmv-nm">日本(ルックスルー)</span><span class="rmv-sub">${japanTruePct.toFixed(1)}% ／許容${HOME_JP_LIMIT}%</span>`
+      : '—';
   const homeRow =
     japanTruePct != null && isFinite(japanTruePct)
       ? rmrow(
           'i-home',
-          '国・ホーム偏り（日本・許容レンズ）',
+          '国・ホーム偏り',
           homeWarn ? 'warn' : 'ok',
           homeWarn ? '要注意' : '許容内',
-          `日本(ルックスルー) ${japanTruePct.toFixed(1)}% ／許容${HOME_JP_LIMIT}%`,
+          homeVal,
           homeWarn,
           '',
-          `投信ルックスルー後の真の日本国比率。数百銘柄に分散＝ほぼ市場ベータのため許容＝${homeWarn ? '目安超で要注意。' : '対応不要。'}日本の大きさ単独では赤にしない。`
+          homeWarn ? '目安超で要注意' : ''
         )
       : '';
 
