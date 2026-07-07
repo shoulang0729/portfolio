@@ -50,7 +50,7 @@ export const THEME_LABELS = {
   semiconductor: '半導体',
   ai_power: 'AI電力',
   megatech: 'メガテック',
-  japan_theme: '日本テーマ株',
+  japan_theme: '日本フォーカス',
   commodity_miner: '資源・鉱山',
   silver: '銀',
   space: '宇宙',
