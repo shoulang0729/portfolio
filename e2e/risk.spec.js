@@ -13,9 +13,9 @@ test('Risk タブが信号機リデザインで描画される（#488）', async
   await page.locator('[data-tab="risk"]').click();
   await expect(page.locator('#panel-risk')).toBeVisible();
 
-  // ①リスク要約: 信号機バナー＋行が出る
+  // ①リスク要約: 信号機バナー＋統一セクション（#564）が出る
   await expect(page.locator('.risk-overview .rv')).toBeVisible();
-  await expect(page.locator('.risk-overview .rmrow').first()).toBeVisible();
+  await expect(page.locator('.risk-overview .rms-sec').first()).toBeVisible();
   // 自前アイコン（絵文字廃止）が使われている
   await expect(page.locator('.risk-overview .ric').first()).toBeVisible();
 
