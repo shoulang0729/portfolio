@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>リスク要約 統一デザイン案</title>
+<style>
+  :root{
+    --bg:#1c1917; --surface:#26211e; --surface2:#302a26; --border:#3a332e;
+    --text:#f2ede9; --text2:#b8ab9f; --text3:#8a7d72; --accent:#cc785c;
+    --red:#e05d47; --red-bg:#3a201b; --green:#5ea87f; --green-bg:#1f2e26;
+    --amber:#d69a4c; --amber-bg:#332612;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased;}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;padding:16px;max-width:430px;margin:0 auto;}
+  .cap{font-size:12px;color:var(--text3);margin:2px 2px 14px;line-height:1.55;}
+  .cap b{color:var(--text2);}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:15px 16px;margin-bottom:11px;}
+  .hd{display:flex;align-items:center;gap:9px;}
+  .ic{width:30px;height:30px;border-radius:9px;background:var(--surface2);display:flex;align-items:center;justify-content:center;flex:none;color:var(--text2);font-size:15px;}
+  .ttl{font-size:15px;font-weight:700;}
+  .pill{margin-left:auto;flex:none;white-space:nowrap;font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;}
+  .pill.bad{background:var(--red-bg);color:var(--red);}
+  .pill.ok{background:var(--green-bg);color:var(--green);}
+  .pill.warn{background:var(--amber-bg);color:var(--amber);}
+
+  .row{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);}
+  .row:first-of-type{border-top:none;padding-top:0;}
+  .ent{font-size:12.5px;color:var(--text2);font-weight:600;margin-bottom:3px;}
+  .metric{display:flex;align-items:baseline;flex-wrap:wrap;gap:8px;}
+  .big{font-size:24px;font-weight:800;line-height:1;letter-spacing:-.01em;}
+  .big.bad{color:var(--red);} .big.ok{color:var(--green);} .big.warn{color:var(--amber);}
+  .sub{font-size:12.5px;color:var(--text3);font-weight:600;}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;}
+  .chip{background:var(--surface2);border:1px solid var(--border);border-radius:7px;font-size:11.5px;color:var(--text2);padding:4px 8px;}
+  .chip b{color:var(--text);margin-left:3px;}
+  /* コンパクト行（過大ポジ）＝1行・小さめ */
+  .mini{display:flex;align-items:baseline;gap:8px;font-size:12.5px;margin-top:8px;line-height:1.3;}
+  .mini .sym{font-weight:700;color:var(--text2);min-width:52px;flex:none;}
+  .mini .ctx{color:var(--text3);flex:1;}
+  .mini .pt{color:var(--amber);font-weight:700;flex:none;white-space:nowrap;}
+  .mini.top .pt{font-size:15px;font-weight:800;}
+  .mini.top .sym{color:var(--text);}
+  .body-pad{margin-top:11px;}
+  h1{font-size:13px;color:var(--text2);font-weight:700;margin:2px 0 4px;}
+  .tag{font-size:10px;color:var(--accent);border:1px solid var(--accent);border-radius:5px;padding:2px 6px;margin-left:6px;}
+</style>
+</head>
+<body>
+  <h1>リスク要約 統一デザイン案 v5<span class="tag">MOCK</span></h1>
+  <div class="cap">順序＝<b>現金 → 過大ポジ → テーマ集中 → 国・ホーム偏り</b>。全カード同じ stat-block／テーマ集中は cap超過を統合列挙／過大ポジはコンパクト・最大ズレ強調。</div>
+
+  <!-- ① 投資用キャッシュ -->
+  <div class="card">
+    <div class="hd"><span class="ic">◔</span><span class="ttl">投資用キャッシュ比率</span><span class="pill ok">適正</span></div>
+    <div class="row">
+      <div class="ent">投資資産に対する現金</div>
+      <div class="metric"><span class="big ok">7.3%</span><span class="sub">適正レンジ 5–20%</span></div>
+    </div>
+  </div>
+
+  <!-- ② 過大ポジ（コンパクト・1行リスト・最大ズレ強調） -->
+  <div class="card">
+    <div class="hd"><span class="ic">⤢</span><span class="ttl">過大ポジ</span><span class="pill warn">注意 5件</span></div>
+    <div class="body-pad">
+      <div class="mini top"><span class="sym">SMH</span><span class="ctx">目標5% → 現7.2%</span><span class="pt">+2.2pt</span></div>
+      <div class="mini"><span class="sym">9983</span><span class="ctx">目標1% → 現3.3%</span><span class="pt">+1.9pt</span></div>
+      <div class="mini"><span class="sym">8050</span><span class="ctx">目標1% → 現2.7%</span><span class="pt">+1.3pt</span></div>
+      <div class="mini"><span class="sym">200A</span><span class="ctx">目標5% → 現6.0%</span><span class="pt">+1.0pt</span></div>
+      <div class="mini"><span class="sym">オルカン</span><span class="ctx">目標11% → 現11.9%</span><span class="pt">+0.9pt</span></div>
+    </div>
+  </div>
+
+  <!-- ③ テーマ集中（=テーマ集中＋テーマ上限超過を統合／cap超過を全列挙） -->
+  <div class="card">
+    <div class="hd"><span class="ic">◎</span><span class="ttl">テーマ集中</span><span class="pill bad">超過 2件</span></div>
+    <div class="row">
+      <div class="ent">日本フォーカス</div>
+      <div class="metric"><span class="big bad">16.0%</span><span class="sub">上限 13%</span></div>
+      <div class="chips"><span class="chip">1615<b>5.4%</b></span><span class="chip">1629<b>4.2%</b></span><span class="chip">9983<b>3.3%</b></span><span class="chip">8050<b>2.7%</b></span><span class="chip">6301<b>0.4%</b></span></div>
+    </div>
+    <div class="row">
+      <div class="ent">半導体</div>
+      <div class="metric"><span class="big bad">13.1%</span><span class="sub">上限 10%</span></div>
+      <div class="chips"><span class="chip">SMH<b>7.2%</b></span><span class="chip">200A<b>6.0%</b></span></div>
+    </div>
+  </div>
+
+  <!-- ④ 国・ホーム偏り -->
+  <div class="card">
+    <div class="hd"><span class="ic">⌂</span><span class="ttl">国・ホーム偏り</span><span class="pill ok">許容内</span></div>
+    <div class="row">
+      <div class="ent">日本（投信ルックスルー）</div>
+      <div class="metric"><span class="big ok">27.8%</span><span class="sub">許容 35%</span></div>
+    </div>
+  </div>
+</body>
+</html>
