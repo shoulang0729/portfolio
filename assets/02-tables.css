@@ -463,6 +463,9 @@ table.t td { font-size: var(--fs-sm); font-weight: 700; border-bottom: 1px solid
 @media (min-width: 760px) {
   .risk-grid { grid-template-columns: 1fr 1fr; }
 }
+/* grid item は min-width:auto でコンテンツ min-content が列幅を押し広げ横スクロールに
+   なるため 0 に（最狭幅320px対策・#559） */
+.risk-grid > .risk-card { min-width: 0; }
 /* 共通タブグリッド（#525 R2・§3）。カード=セル / .span-all=全幅 */
 .tab-grid { display: grid; gap: 12px; grid-template-columns: 1fr; }
 @media (min-width: 760px) {
@@ -568,6 +571,9 @@ table.t td { font-size: var(--fs-sm); font-weight: 700; border-bottom: 1px solid
   justify-content: center;
   gap: 14px;
   flex: 1;
+  /* 最狭幅で凡例をドーナツ下に落とす（円+凡例横並びの min-content ≈353px が
+     カードを押し広げないように・#559） */
+  flex-wrap: wrap;
 }
 .risk-donut {
   flex: none;
