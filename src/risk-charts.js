@@ -692,45 +692,58 @@ function buildRiskOverviewCard(japanTruePct) {
     '投資資産のうち現金。5〜20%が適正レンジ。'
   );
 
+  // ── 集中2レンズの stat block（#557・モック準拠）─────────────────────────────
+  // ヒーロー数字を右端に押し込まず「対象名（小）→ 大きな%＋上限＋判定（baseline flex-wrap）」の
+  // 通常フロー縦積みに＝狭幅でも折り返してカード内に収まる（右端はみ出し・見切れゼロ）。
+  // pill は右上 nowrap。テーマ=赤(bad)/国=緑(ok) で2カード同一の型。数値・判定ロジックは不変。
+  const statRow = (icon, title, tone, pillTxt, ent, bigTxt, subTxt, verdictTxt, holdsHTML, note) => `
+    <div class="rmrow rmstat">
+      <div class="rmic">${ric(icon)}</div>
+      <div class="rmbody">
+        <div class="rml1"><span class="rml">${escapeHTML(title)}</span><span class="rpill ${tone}">${escapeHTML(pillTxt)}</span></div>
+        <div class="rms-ent">${escapeHTML(ent)}</div>
+        <div class="rms-metric"><span class="rms-big ${tone}">${escapeHTML(bigTxt)}</span>${subTxt ? `<span class="rms-sub">${escapeHTML(subTxt)}</span>` : ''}${verdictTxt ? `<span class="rms-verdict ${tone}">${escapeHTML(verdictTxt)}</span>` : ''}</div>
+        ${holdsHTML ? `<div class="rholds">${holdsHTML}</div>` : ''}
+        ${note ? `<div class="rmcap">${escapeHTML(note)}</div>` : ''}
+      </div>
+    </div>`;
+
   const concHolds =
     taAvailable && maxMembers.length
       ? maxMembers.map((m) => `<span class="htag">${escapeHTML(m.name)} <b>${m.pct.toFixed(1)}%</b></span>`).join('')
       : '';
-  // #550/#552: テーマ主役を "vs cap" 表記に（%単独で"日本の比率"と誤読させない）。ヒーロー数字は縦割れ回避で2段化。
-  const concCap = maxCap != null ? ` ／上限${maxCap}%${concOver ? ' ⚠超過' : ''}` : '';
-  const concVal =
+  const concRow =
     taAvailable && maxLabel
-      ? `<span class="rmv-nm">${escapeHTML(maxLabel)}</span><span class="rmv-sub">${maxPct.toFixed(1)}%${concCap}</span>`
-      : '—';
-  const concRow = rmrow(
-    'i-target',
-    'テーマ集中',
-    concOver ? 'bad' : 'ok',
-    concOver ? '超過' : '適正',
-    concVal,
-    concOver,
-    concHolds,
-    concOver ? 'トリム候補（対象＝このバスケット。日本株全体ではない）' : ''
-  );
+      ? statRow(
+          'i-target',
+          'テーマ集中',
+          concOver ? 'bad' : 'ok',
+          concOver ? '超過' : '適正',
+          maxLabel,
+          `${maxPct.toFixed(1)}%`,
+          maxCap != null ? `上限 ${maxCap}%` : '',
+          concOver ? '⚠ 超過' : '適正',
+          concHolds,
+          concOver ? 'トリム候補。対象＝このバスケット（日本株全体ではない）。' : ''
+        )
+      : statRow('i-target', 'テーマ集中', 'ok', '—', '—', '—', '', '', '', '');
 
-  // #550: 国・ホーム偏り（許容レンズ）をテーマ集中の直下に並置＝2レンズを一目で。#552: タイトル短縮・説明はメダル＋数字に集約。
+  // #550: 国・ホーム偏り（許容レンズ）をテーマ集中の直下に並置＝2レンズを一目で。
   const HOME_JP_LIMIT = 35;
   const homeWarn = japanTruePct != null && isFinite(japanTruePct) && japanTruePct > HOME_JP_LIMIT;
-  const homeVal =
-    japanTruePct != null && isFinite(japanTruePct)
-      ? `<span class="rmv-nm">日本(ルックスルー)</span><span class="rmv-sub">${japanTruePct.toFixed(1)}% ／許容${HOME_JP_LIMIT}%</span>`
-      : '—';
   const homeRow =
     japanTruePct != null && isFinite(japanTruePct)
-      ? rmrow(
+      ? statRow(
           'i-home',
           '国・ホーム偏り',
           homeWarn ? 'warn' : 'ok',
           homeWarn ? '要注意' : '許容内',
-          homeVal,
-          homeWarn,
+          '日本（投信ルックスルー）',
+          `${japanTruePct.toFixed(1)}%`,
+          `許容 ${HOME_JP_LIMIT}%`,
+          homeWarn ? '⚠ 要注意' : '対応不要',
           '',
-          homeWarn ? '目安超で要注意' : ''
+          ''
         )
       : '';
 
