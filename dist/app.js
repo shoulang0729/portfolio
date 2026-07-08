@@ -5180,118 +5180,82 @@ function buildRiskOverviewCard(japanTruePct) {
   if (overPos.length) subBits.push(`\u904E\u5927\u30DD\u30B8${overPos.length}\u4EF6`);
   if (overThemes.length) subBits.push("\u30C6\u30FC\u30DE\u4E0A\u9650\u8D85\u904E");
   const vs = subBits.length ? `${subBits.join("\u30FB")}\u3002\u5024\u52D5\u304D\u306F\u4E0B\u306E\u30AF\u30AA\u30F3\u30C4\u3078\u3002` : "\u96C6\u4E2D\u30FB\u904E\u5927\u30DD\u30B8\u30FB\u30AD\u30E3\u30C3\u30B7\u30E5\u30FB\u30C6\u30FC\u30DE\u4E0A\u9650\u3059\u3079\u3066\u9069\u6B63\u570F\u3002\u5024\u52D5\u304D\u306F\u4E0B\u306E\u30AF\u30AA\u30F3\u30C4\u3078\u3002";
-  const rmrow = (icon, label, pillCls, pillTxt, valHTML, valWarn, holdsHTML, cap) => `
-    <div class="rmrow">
-      <div class="rmic">${ric(icon)}</div>
-      <div class="rmbody">
-        <div class="rml1"><span class="rml">${escapeHTML(label)}</span><span class="rpill ${pillCls}">${escapeHTML(pillTxt)}</span><span class="rmv${valWarn ? " warn" : ""}">${valHTML}</span></div>
-        ${holdsHTML ? `<div class="rholds">${holdsHTML}</div>` : ""}
-        <div class="rmcap">${escapeHTML(cap)}</div>
-      </div>
+  const sec = (icon, title, pillCls, pillTxt, bodyHTML) => `
+    <div class="rms-sec">
+      <div class="rms-hd"><div class="rmic">${ric(icon)}</div><span class="rms-ttl">${escapeHTML(title)}</span><span class="rpill ${pillCls}">${escapeHTML(pillTxt)}</span></div>
+      ${bodyHTML}
     </div>`;
-  const cashRow = rmrow(
+  const entry = (ent, tone, bigTxt, subTxt, chipsHTML) => `
+    <div class="rms-row">
+      <div class="rms-ent">${escapeHTML(ent)}</div>
+      <div class="rms-metric"><span class="rms-big ${tone}">${escapeHTML(bigTxt)}</span>${subTxt ? `<span class="rms-sub">${escapeHTML(subTxt)}</span>` : ""}</div>
+      ${chipsHTML ? `<div class="rholds">${chipsHTML}</div>` : ""}
+    </div>`;
+  const cashSec = sec(
     "i-coin",
     "\u6295\u8CC7\u7528\u30AD\u30E3\u30C3\u30B7\u30E5\u6BD4\u7387",
     cashOut ? "warn" : "ok",
     cashOut ? "\u7BC4\u56F2\u5916" : "\u9069\u6B63",
-    escapeHTML(cashVal),
-    cashOut,
-    "",
-    "\u6295\u8CC7\u8CC7\u7523\u306E\u3046\u3061\u73FE\u91D1\u30025\u301C20%\u304C\u9069\u6B63\u30EC\u30F3\u30B8\u3002"
+    entry("\u6295\u8CC7\u8CC7\u7523\u306B\u5BFE\u3059\u308B\u73FE\u91D1", cashOut ? "warn" : "ok", cashVal, "\u9069\u6B63\u30EC\u30F3\u30B8 5\u201320%", "")
   );
-  const statRow = (icon, title, tone, pillTxt, ent, bigTxt, subTxt, verdictTxt, holdsHTML, note) => `
-    <div class="rmrow rmstat">
-      <div class="rmic">${ric(icon)}</div>
-      <div class="rmbody">
-        <div class="rml1"><span class="rml">${escapeHTML(title)}</span><span class="rpill ${tone}">${escapeHTML(pillTxt)}</span></div>
-        <div class="rms-ent">${escapeHTML(ent)}</div>
-        <div class="rms-metric"><span class="rms-big ${tone}">${escapeHTML(bigTxt)}</span>${subTxt ? `<span class="rms-sub">${escapeHTML(subTxt)}</span>` : ""}${verdictTxt ? `<span class="rms-verdict ${tone}">${escapeHTML(verdictTxt)}</span>` : ""}</div>
-        ${holdsHTML ? `<div class="rholds">${holdsHTML}</div>` : ""}
-        ${note ? `<div class="rmcap">${escapeHTML(note)}</div>` : ""}
-      </div>
-    </div>`;
-  const concHolds = taAvailable && maxMembers.length ? maxMembers.map((m) => `<span class="htag">${escapeHTML(m.name)} <b>${m.pct.toFixed(1)}%</b></span>`).join("") : "";
-  const concRow = taAvailable && maxLabel ? statRow(
-    "i-target",
-    "\u30C6\u30FC\u30DE\u96C6\u4E2D",
-    concOver ? "bad" : "ok",
-    concOver ? "\u8D85\u904E" : "\u9069\u6B63",
-    maxLabel,
-    `${maxPct.toFixed(1)}%`,
-    maxCap != null ? `\u4E0A\u9650 ${maxCap}%` : "",
-    concOver ? "\u26A0 \u8D85\u904E" : "\u9069\u6B63",
-    concHolds,
-    concOver ? "\u30C8\u30EA\u30E0\u5019\u88DC\u3002\u5BFE\u8C61\uFF1D\u3053\u306E\u30D0\u30B9\u30B1\u30C3\u30C8\uFF08\u65E5\u672C\u682A\u5168\u4F53\u3067\u306F\u306A\u3044\uFF09\u3002" : ""
-  ) : statRow("i-target", "\u30C6\u30FC\u30DE\u96C6\u4E2D", "ok", "\u2014", "\u2014", "\u2014", "", "", "", "");
+  const overBody = overPos.length ? `<div class="rms-minis">${overPos.map(
+    (o, i) => `<div class="rms-mini${i === 0 ? " top" : ""}"><span class="sym">${escapeHTML(o.name)}</span><span class="ctx">\u76EE\u6A19${o.target != null ? o.target.toFixed(0) : "\u2014"}% \u2192 \u73FE${o.cur.toFixed(1)}%</span><span class="pt">+${o.pt.toFixed(1)}pt</span></div>`
+  ).join("")}</div>` : `<div class="rms-row"><div class="rms-ent">\u76EE\u6A19\u914D\u5206\u3092\u4E0A\u56DE\u308B\u4FDD\u6709\u306F\u306A\u3057</div></div>`;
+  const overSec = sec(
+    "i-expand",
+    "\u904E\u5927\u30DD\u30B8",
+    overPos.length ? "warn" : "ok",
+    overPos.length ? `\u6CE8\u610F ${overPos.length}\u4EF6` : "\u306A\u3057",
+    overBody
+  );
+  const themeChips = (theme) => (themeMembers[theme] || []).slice().sort((a, b) => b.pct - a.pct).map((m) => `<span class="htag">${escapeHTML(m.name)} <b>${m.pct.toFixed(1)}%</b></span>`).join("");
+  let concBody;
+  let concPillCls;
+  let concPillTxt;
+  if (overThemes.length) {
+    const sorted = overThemes.slice().sort((a, b) => b.used - a.used);
+    concBody = sorted.map((o) => entry(themeLabel(o.theme), "bad", `${o.used.toFixed(1)}%`, `\u4E0A\u9650 ${o.cap}%`, themeChips(o.theme))).join("");
+    concPillCls = "bad";
+    concPillTxt = `\u8D85\u904E ${overThemes.length}\u4EF6`;
+  } else if (taAvailable && maxLabel) {
+    const concHolds = maxMembers.length ? maxMembers.map((m) => `<span class="htag">${escapeHTML(m.name)} <b>${m.pct.toFixed(1)}%</b></span>`).join("") : "";
+    concBody = entry(
+      maxLabel,
+      concOver ? "bad" : "ok",
+      `${maxPct.toFixed(1)}%`,
+      maxCap != null ? `\u4E0A\u9650 ${maxCap}%` : "\u76EE\u5B89 20%",
+      concHolds
+    );
+    concPillCls = concOver ? "bad" : "ok";
+    concPillTxt = concOver ? "\u8D85\u904E" : "\u9069\u6B63";
+  } else {
+    concBody = entry("\u2014", "ok", "\u2014", "", "");
+    concPillCls = "ok";
+    concPillTxt = "\u2014";
+  }
+  const concSec = sec("i-target", "\u30C6\u30FC\u30DE\u96C6\u4E2D", concPillCls, concPillTxt, concBody);
   const HOME_JP_LIMIT = 35;
   const homeWarn = japanTruePct != null && isFinite(japanTruePct) && japanTruePct > HOME_JP_LIMIT;
-  const homeRow = japanTruePct != null && isFinite(japanTruePct) ? statRow(
+  const homeSec = japanTruePct != null && isFinite(japanTruePct) ? sec(
     "i-home",
     "\u56FD\u30FB\u30DB\u30FC\u30E0\u504F\u308A",
     homeWarn ? "warn" : "ok",
     homeWarn ? "\u8981\u6CE8\u610F" : "\u8A31\u5BB9\u5185",
-    "\u65E5\u672C\uFF08\u6295\u4FE1\u30EB\u30C3\u30AF\u30B9\u30EB\u30FC\uFF09",
-    `${japanTruePct.toFixed(1)}%`,
-    `\u8A31\u5BB9 ${HOME_JP_LIMIT}%`,
-    homeWarn ? "\u26A0 \u8981\u6CE8\u610F" : "\u5BFE\u5FDC\u4E0D\u8981",
-    "",
-    ""
+    entry(
+      "\u65E5\u672C\uFF08\u6295\u4FE1\u30EB\u30C3\u30AF\u30B9\u30EB\u30FC\uFF09",
+      homeWarn ? "warn" : "ok",
+      `${japanTruePct.toFixed(1)}%`,
+      `\u8A31\u5BB9 ${HOME_JP_LIMIT}%`,
+      ""
+    )
   ) : "";
-  let overVal = "0\u4EF6";
-  let overHolds = "";
-  let overPill = "ok";
-  let overPillTxt = "\u306A\u3057";
-  let overWarn = false;
-  if (overPos.length) {
-    overVal = `${overPos.length}\u4EF6`;
-    overWarn = true;
-    overPill = "warn";
-    overPillTxt = "\u6CE8\u610F";
-    overHolds = overPos.map(
-      (o) => `<span class="htag hot">${escapeHTML(o.name)} <b>\u76EE\u6A19${o.target != null ? o.target.toFixed(0) : "\u2014"}%\u2192\u73FE${o.cur.toFixed(1)}%\uFF08+${o.pt.toFixed(1)}pt\uFF09</b></span>`
-    ).join("");
-  }
-  const overRow = rmrow(
-    "i-expand",
-    "\u904E\u5927\u30DD\u30B8\uFF08\u76EE\u6A19\u8D85\u904E\uFF09",
-    overPill,
-    overPillTxt,
-    overVal,
-    overWarn,
-    overHolds,
-    "\u76EE\u6A19\u914D\u5206\u3092\u4E0A\u56DE\u308B\u4FDD\u6709\u3002pt\uFF1D\u73FE\u30A6\u30A7\u30A4\u30C8\u2212\u76EE\u6A19\u30A6\u30A7\u30A4\u30C8\uFF08\u7528\u8A9E\u89E3\u8AAC\u300C\u76EE\u6A19\u8D85\u904Ept\u300D\uFF09\u3002"
-  );
-  let themeVal = "0\u4EF6";
-  let themeHolds = "";
-  let themePill = "ok";
-  let themePillTxt = "\u306A\u3057";
-  let themeWarn = false;
-  if (overThemes.length) {
-    themeVal = `${overThemes.length}\u4EF6`;
-    themeWarn = true;
-    themePill = "bad";
-    themePillTxt = "\u8D85\u904E";
-    themeHolds = overThemes.map(
-      (o) => `<span class="htag hot">${escapeHTML(themeLabel(o.theme))} <b>${o.used.toFixed(1)}%&gt;${o.cap}%</b></span>`
-    ).join("");
-  }
-  const themeRow = rmrow(
-    "i-layers",
-    "\u30C6\u30FC\u30DE\u4E0A\u9650\u8D85\u904E",
-    themePill,
-    themePillTxt,
-    themeVal,
-    themeWarn,
-    themeHolds,
-    "\u4E0A\u9650\u3092\u8D85\u3048\u305F\u30C6\u30FC\u30DE\u3002\u306A\u3057\uFF1D\u5065\u5168\u3002"
-  );
   card.innerHTML = `
     ${cardTitle("i-shield", "\u30EA\u30B9\u30AF\u8981\u7D04", "\u81F4\u547D\u50B7\u3092\u907F\u3051\u3089\u308C\u3066\u3044\u308B\u304B")}
     <div class="rv ${vCls}">
       <div class="rv-badge">${ric(breaches === 0 ? "i-shield" : "i-warn")}</div>
       <div><div class="rv-t">${escapeHTML(vt)}</div><div class="rv-s">${escapeHTML(vs)}</div></div>
     </div>
-    ${cashRow}${concRow}${homeRow}${overRow}${themeRow}`;
+    ${cashSec}${overSec}${concSec}${homeSec}`;
   return card;
 }
 function _pct1(v, forcePlus = false) {
