@@ -670,147 +670,116 @@ function buildRiskOverviewCard(japanTruePct) {
     ? `${subBits.join('・')}。値動きは下のクオンツへ。`
     : '集中・過大ポジ・キャッシュ・テーマ上限すべて適正圏。値動きは下のクオンツへ。';
 
-  // ── 行ヘルパー ──
-  const rmrow = (icon, label, pillCls, pillTxt, valHTML, valWarn, holdsHTML, cap) => `
-    <div class="rmrow">
-      <div class="rmic">${ric(icon)}</div>
-      <div class="rmbody">
-        <div class="rml1"><span class="rml">${escapeHTML(label)}</span><span class="rpill ${pillCls}">${escapeHTML(pillTxt)}</span><span class="rmv${valWarn ? ' warn' : ''}">${valHTML}</span></div>
-        ${holdsHTML ? `<div class="rholds">${holdsHTML}</div>` : ''}
-        <div class="rmcap">${escapeHTML(cap)}</div>
-      </div>
+  // ── 統一 stat-block（#564・モック 2026-07-08-risk-summary-unified-mock.html 準拠）──
+  // 全セクション同型: ヘッダー（アイコン箱＋タイトル＋右pill）＋ body。
+  // 少数×文脈あり（現金/テーマ集中/国ホーム）＝大きな stat row（対象名→大%→上限/許容）。
+  // 多数×単純（過大ポジ）＝コンパクト1行×N（最大ズレのみ強調）。
+  // 判定テキスト（⚠超過・トリム候補 等）は出さない＝pill＋色＋"%>上限%"で伝える。
+  // 表示のみの再構成＝集計/判定ロジック（breaches・cap・region）は不変。
+  const sec = (icon, title, pillCls, pillTxt, bodyHTML) => `
+    <div class="rms-sec">
+      <div class="rms-hd"><div class="rmic">${ric(icon)}</div><span class="rms-ttl">${escapeHTML(title)}</span><span class="rpill ${pillCls}">${escapeHTML(pillTxt)}</span></div>
+      ${bodyHTML}
+    </div>`;
+  const entry = (ent, tone, bigTxt, subTxt, chipsHTML) => `
+    <div class="rms-row">
+      <div class="rms-ent">${escapeHTML(ent)}</div>
+      <div class="rms-metric"><span class="rms-big ${tone}">${escapeHTML(bigTxt)}</span>${subTxt ? `<span class="rms-sub">${escapeHTML(subTxt)}</span>` : ''}</div>
+      ${chipsHTML ? `<div class="rholds">${chipsHTML}</div>` : ''}
     </div>`;
 
-  const cashRow = rmrow(
+  // ① 投資用キャッシュ比率
+  const cashSec = sec(
     'i-coin',
     '投資用キャッシュ比率',
     cashOut ? 'warn' : 'ok',
     cashOut ? '範囲外' : '適正',
-    escapeHTML(cashVal),
-    cashOut,
-    '',
-    '投資資産のうち現金。5〜20%が適正レンジ。'
+    entry('投資資産に対する現金', cashOut ? 'warn' : 'ok', cashVal, '適正レンジ 5–20%', '')
   );
 
-  // ── 集中2レンズの stat block（#557・モック準拠）─────────────────────────────
-  // ヒーロー数字を右端に押し込まず「対象名（小）→ 大きな%＋上限＋判定（baseline flex-wrap）」の
-  // 通常フロー縦積みに＝狭幅でも折り返してカード内に収まる（右端はみ出し・見切れゼロ）。
-  // pill は右上 nowrap。テーマ=赤(bad)/国=緑(ok) で2カード同一の型。数値・判定ロジックは不変。
-  const statRow = (icon, title, tone, pillTxt, ent, bigTxt, subTxt, verdictTxt, holdsHTML, note) => `
-    <div class="rmrow rmstat">
-      <div class="rmic">${ric(icon)}</div>
-      <div class="rmbody">
-        <div class="rml1"><span class="rml">${escapeHTML(title)}</span><span class="rpill ${tone}">${escapeHTML(pillTxt)}</span></div>
-        <div class="rms-ent">${escapeHTML(ent)}</div>
-        <div class="rms-metric"><span class="rms-big ${tone}">${escapeHTML(bigTxt)}</span>${subTxt ? `<span class="rms-sub">${escapeHTML(subTxt)}</span>` : ''}${verdictTxt ? `<span class="rms-verdict ${tone}">${escapeHTML(verdictTxt)}</span>` : ''}</div>
-        ${holdsHTML ? `<div class="rholds">${holdsHTML}</div>` : ''}
-        ${note ? `<div class="rmcap">${escapeHTML(note)}</div>` : ''}
-      </div>
-    </div>`;
+  // ② 過大ポジ（コンパクト1行×N・最大ズレ=先頭のみ強調）
+  const overBody = overPos.length
+    ? `<div class="rms-minis">${overPos
+        .map(
+          (o, i) =>
+            `<div class="rms-mini${i === 0 ? ' top' : ''}"><span class="sym">${escapeHTML(o.name)}</span><span class="ctx">目標${o.target != null ? o.target.toFixed(0) : '—'}% → 現${o.cur.toFixed(1)}%</span><span class="pt">+${o.pt.toFixed(1)}pt</span></div>`
+        )
+        .join('')}</div>`
+    : `<div class="rms-row"><div class="rms-ent">目標配分を上回る保有はなし</div></div>`;
+  const overSec = sec(
+    'i-expand',
+    '過大ポジ',
+    overPos.length ? 'warn' : 'ok',
+    overPos.length ? `注意 ${overPos.length}件` : 'なし',
+    overBody
+  );
 
-  const concHolds =
-    taAvailable && maxMembers.length
+  // ③ テーマ集中（テーマ上限超過を統合＝cap 超過テーマを全列挙。二重表示解消・#564）
+  const themeChips = (theme) =>
+    (themeMembers[theme] || [])
+      .slice()
+      .sort((a, b) => b.pct - a.pct)
+      .map((m) => `<span class="htag">${escapeHTML(m.name)} <b>${m.pct.toFixed(1)}%</b></span>`)
+      .join('');
+  let concBody;
+  let concPillCls;
+  let concPillTxt;
+  if (overThemes.length) {
+    const sorted = overThemes.slice().sort((a, b) => b.used - a.used);
+    concBody = sorted
+      .map((o) => entry(themeLabel(o.theme), 'bad', `${o.used.toFixed(1)}%`, `上限 ${o.cap}%`, themeChips(o.theme)))
+      .join('');
+    concPillCls = 'bad';
+    concPillTxt = `超過 ${overThemes.length}件`;
+  } else if (taAvailable && maxLabel) {
+    // 超過ゼロの日＝最大テーマ1行＋pill 適正
+    const concHolds = maxMembers.length
       ? maxMembers.map((m) => `<span class="htag">${escapeHTML(m.name)} <b>${m.pct.toFixed(1)}%</b></span>`).join('')
       : '';
-  const concRow =
-    taAvailable && maxLabel
-      ? statRow(
-          'i-target',
-          'テーマ集中',
-          concOver ? 'bad' : 'ok',
-          concOver ? '超過' : '適正',
-          maxLabel,
-          `${maxPct.toFixed(1)}%`,
-          maxCap != null ? `上限 ${maxCap}%` : '',
-          concOver ? '⚠ 超過' : '適正',
-          concHolds,
-          concOver ? 'トリム候補。対象＝このバスケット（日本株全体ではない）。' : ''
-        )
-      : statRow('i-target', 'テーマ集中', 'ok', '—', '—', '—', '', '', '', '');
+    concBody = entry(
+      maxLabel,
+      concOver ? 'bad' : 'ok',
+      `${maxPct.toFixed(1)}%`,
+      maxCap != null ? `上限 ${maxCap}%` : '目安 20%',
+      concHolds
+    );
+    concPillCls = concOver ? 'bad' : 'ok';
+    concPillTxt = concOver ? '超過' : '適正';
+  } else {
+    concBody = entry('—', 'ok', '—', '', '');
+    concPillCls = 'ok';
+    concPillTxt = '—';
+  }
+  const concSec = sec('i-target', 'テーマ集中', concPillCls, concPillTxt, concBody);
 
-  // #550: 国・ホーム偏り（許容レンズ）をテーマ集中の直下に並置＝2レンズを一目で。
+  // ④ 国・ホーム偏り（日本のみ＝自国オーバーウェイトだけが偏りリスク。全景は下段の地域ドーナツ担当）
   const HOME_JP_LIMIT = 35;
   const homeWarn = japanTruePct != null && isFinite(japanTruePct) && japanTruePct > HOME_JP_LIMIT;
-  const homeRow =
+  const homeSec =
     japanTruePct != null && isFinite(japanTruePct)
-      ? statRow(
+      ? sec(
           'i-home',
           '国・ホーム偏り',
           homeWarn ? 'warn' : 'ok',
           homeWarn ? '要注意' : '許容内',
-          '日本（投信ルックスルー）',
-          `${japanTruePct.toFixed(1)}%`,
-          `許容 ${HOME_JP_LIMIT}%`,
-          homeWarn ? '⚠ 要注意' : '対応不要',
-          '',
-          ''
+          entry(
+            '日本（投信ルックスルー）',
+            homeWarn ? 'warn' : 'ok',
+            `${japanTruePct.toFixed(1)}%`,
+            `許容 ${HOME_JP_LIMIT}%`,
+            ''
+          )
         )
       : '';
 
-  // 右値＝件数「N件」、ピル＝状態語、明細は全件（他N件で省略しない・#502 B）
-  let overVal = '0件';
-  let overHolds = '';
-  let overPill = 'ok';
-  let overPillTxt = 'なし';
-  let overWarn = false;
-  if (overPos.length) {
-    overVal = `${overPos.length}件`;
-    overWarn = true;
-    overPill = 'warn';
-    overPillTxt = '注意';
-    overHolds = overPos
-      .map(
-        (o) =>
-          `<span class="htag hot">${escapeHTML(o.name)} <b>目標${o.target != null ? o.target.toFixed(0) : '—'}%→現${o.cur.toFixed(1)}%（+${o.pt.toFixed(1)}pt）</b></span>`
-      )
-      .join('');
-  }
-  const overRow = rmrow(
-    'i-expand',
-    '過大ポジ（目標超過）',
-    overPill,
-    overPillTxt,
-    overVal,
-    overWarn,
-    overHolds,
-    '目標配分を上回る保有。pt＝現ウェイト−目標ウェイト（用語解説「目標超過pt」）。'
-  );
-
-  let themeVal = '0件';
-  let themeHolds = '';
-  let themePill = 'ok';
-  let themePillTxt = 'なし';
-  let themeWarn = false;
-  if (overThemes.length) {
-    themeVal = `${overThemes.length}件`;
-    themeWarn = true;
-    themePill = 'bad';
-    themePillTxt = '超過';
-    themeHolds = overThemes
-      .map(
-        (o) =>
-          `<span class="htag hot">${escapeHTML(themeLabel(o.theme))} <b>${o.used.toFixed(1)}%&gt;${o.cap}%</b></span>`
-      )
-      .join('');
-  }
-  const themeRow = rmrow(
-    'i-layers',
-    'テーマ上限超過',
-    themePill,
-    themePillTxt,
-    themeVal,
-    themeWarn,
-    themeHolds,
-    '上限を超えたテーマ。なし＝健全。'
-  );
-
+  // 順序（確定・#564）: 現金 → 過大ポジ → テーマ集中 → 国・ホーム偏り
   card.innerHTML = `
     ${cardTitle('i-shield', 'リスク要約', '致命傷を避けられているか')}
     <div class="rv ${vCls}">
       <div class="rv-badge">${ric(breaches === 0 ? 'i-shield' : 'i-warn')}</div>
       <div><div class="rv-t">${escapeHTML(vt)}</div><div class="rv-s">${escapeHTML(vs)}</div></div>
     </div>
-    ${cashRow}${concRow}${homeRow}${overRow}${themeRow}`;
+    ${cashSec}${overSec}${concSec}${homeSec}`;
 
   return card;
 }
