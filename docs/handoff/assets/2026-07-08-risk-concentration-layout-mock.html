@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Risk 集中カード リデザイン案</title>
+<style>
+  :root{
+    --bg:#1c1917; --surface:#26211e; --surface2:#302a26; --border:#3a332e;
+    --text:#f2ede9; --text2:#b8ab9f; --text3:#8a7d72; --accent:#cc785c;
+    --red:#e05d47; --red-bg:#3a201b; --green:#5ea87f; --green-bg:#1f2e26;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased;}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;padding:16px;max-width:430px;margin:0 auto;}
+  .cap{font-size:12px;color:var(--text3);margin:4px 2px 14px;line-height:1.5;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:15px 16px;margin-bottom:12px;}
+
+  /* header row: icon + title (left)  ...  pill (right) */
+  .hd{display:flex;align-items:center;gap:9px;}
+  .ic{width:30px;height:30px;border-radius:9px;background:var(--surface2);display:flex;align-items:center;justify-content:center;flex:none;color:var(--text2);font-size:15px;}
+  .ttl{font-size:15px;font-weight:700;letter-spacing:.02em;}
+  .pill{margin-left:auto;flex:none;white-space:nowrap;font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;}
+  .pill.bad{background:var(--red-bg);color:var(--red);}
+  .pill.ok{background:var(--green-bg);color:var(--green);}
+
+  /* stat block: entity label (small) over a metric line */
+  .stat{margin-top:12px;}
+  .ent{font-size:12.5px;color:var(--text2);font-weight:600;margin-bottom:3px;}
+  .metric{display:flex;align-items:baseline;flex-wrap:wrap;gap:8px;}
+  .big{font-size:26px;font-weight:800;line-height:1;letter-spacing:-.01em;}
+  .big.bad{color:var(--red);} .big.ok{color:var(--green);}
+  .sub{font-size:13px;color:var(--text3);font-weight:600;}
+  .verdict{font-size:12.5px;font-weight:700;}
+  .verdict.bad{color:var(--red);} .verdict.ok{color:var(--green);}
+
+  .chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:13px;}
+  .chip{background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--text2);padding:5px 9px;}
+  .chip b{color:var(--text);font-weight:700;margin-left:3px;}
+  .note{font-size:12px;color:var(--text3);margin-top:11px;line-height:1.5;}
+  h1{font-size:13px;color:var(--text2);font-weight:700;margin:2px 0 10px;}
+  .tag{font-size:10px;color:var(--accent);border:1px solid var(--accent);border-radius:5px;padding:2px 6px;margin-left:6px;vertical-align:middle;}
+</style>
+</head>
+<body>
+  <h1>リデザイン案：集中カード<span class="tag">MOCK</span></h1>
+  <div class="cap">要点：ヒーロー数字を右端に押し込まず、<b>「対象名（小）→ 大きな％（左寄せ）→ 上限・判定（小）」</b>の縦積みに。はみ出し・見切れゼロ。テーマ＝赤、国＝緑で一目。</div>
+
+  <!-- テーマ集中 -->
+  <div class="card">
+    <div class="hd">
+      <span class="ic">◎</span>
+      <span class="ttl">テーマ集中</span>
+      <span class="pill bad">超過</span>
+    </div>
+    <div class="stat">
+      <div class="ent">日本フォーカス</div>
+      <div class="metric">
+        <span class="big bad">16.0%</span>
+        <span class="sub">上限 13%</span>
+        <span class="verdict bad">⚠ 超過</span>
+      </div>
+    </div>
+    <div class="chips">
+      <span class="chip">1615<b>5.4%</b></span>
+      <span class="chip">1629<b>4.2%</b></span>
+      <span class="chip">9983<b>3.3%</b></span>
+      <span class="chip">8050<b>2.7%</b></span>
+      <span class="chip">6301<b>0.4%</b></span>
+    </div>
+    <div class="note">トリム候補。対象＝このバスケット（日本株全体ではない）。国・ホーム偏りは下段を参照。</div>
+  </div>
+
+  <!-- 国・ホーム偏り -->
+  <div class="card">
+    <div class="hd">
+      <span class="ic">⌂</span>
+      <span class="ttl">国・ホーム偏り</span>
+      <span class="pill ok">許容内</span>
+    </div>
+    <div class="stat">
+      <div class="ent">日本（投信ルックスルー）</div>
+      <div class="metric">
+        <span class="big ok">27.8%</span>
+        <span class="sub">許容 35%</span>
+        <span class="verdict ok">対応不要</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
