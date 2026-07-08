@@ -383,13 +383,17 @@ def verify(c, doc, rows, summary):
     imported_labels = set()
     for t in tables:
         kind = t["kind"]
-        label = t.get("summaryLabel", "")
-        key = _norm(label)
-        imported_labels.add(key)
-        want_total = summary.get(key)
-        if want_total is None:
-            notify(f"サマリ欠落: 種類『{label}』の内訳サマリ値が読めず。DOM 変化を疑う。")
+        # summaryLabel は文字列 or 文字列リスト（MF が内訳サマリ行を分割した種類は複数ラベルを合算）。
+        labels = t.get("summaryLabel", "")
+        if isinstance(labels, str):
+            labels = [labels]
+        keys = [_norm(l) for l in labels]
+        imported_labels.update(keys)
+        missing = [labels[i] for i, k in enumerate(keys) if summary.get(k) is None]
+        if missing:
+            notify(f"サマリ欠落: 種類『{'/'.join(missing)}』の内訳サマリ値が読めず。DOM 変化を疑う。")
             sys.exit(3)
+        want_total = sum(summary[k] for k in keys)
         excl_kind = sum(r["value"] for r in rows
                         if r.get("kind") == kind
                         and _account_excluded(r.get("institution", ""), exclude_accounts))
