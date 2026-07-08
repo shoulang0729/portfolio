@@ -123,7 +123,8 @@
           "selector": "table.table-bordered.table-depo",
           "rawCategory": "預金・現金",
           "cols": { "name": 0, "value": 1, "institution": 2 },
-          "summaryLabel": "預金・現金・暗号資産",
+          "summaryLabel": ["預金・現金", "暗号資産"],
+          "summaryLabelNote": "MF が内訳サマリを『預金・現金』『暗号資産』の2行に分割（2026-07 実機確認）。depo kind は現金＋暗号を含むため両ラベルを合算して照合。fetch_mf.py verify() は summaryLabel の文字列/リスト両対応。",
           "cryptoKeywords": ["ビットコイン", "イーサリアム", "暗号"],
           "cryptoRawCategory": "暗号資産"
         }
