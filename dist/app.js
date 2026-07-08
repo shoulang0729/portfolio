@@ -5199,31 +5199,43 @@ function buildRiskOverviewCard(japanTruePct) {
     "",
     "\u6295\u8CC7\u8CC7\u7523\u306E\u3046\u3061\u73FE\u91D1\u30025\u301C20%\u304C\u9069\u6B63\u30EC\u30F3\u30B8\u3002"
   );
+  const statRow = (icon, title, tone, pillTxt, ent, bigTxt, subTxt, verdictTxt, holdsHTML, note) => `
+    <div class="rmrow rmstat">
+      <div class="rmic">${ric(icon)}</div>
+      <div class="rmbody">
+        <div class="rml1"><span class="rml">${escapeHTML(title)}</span><span class="rpill ${tone}">${escapeHTML(pillTxt)}</span></div>
+        <div class="rms-ent">${escapeHTML(ent)}</div>
+        <div class="rms-metric"><span class="rms-big ${tone}">${escapeHTML(bigTxt)}</span>${subTxt ? `<span class="rms-sub">${escapeHTML(subTxt)}</span>` : ""}${verdictTxt ? `<span class="rms-verdict ${tone}">${escapeHTML(verdictTxt)}</span>` : ""}</div>
+        ${holdsHTML ? `<div class="rholds">${holdsHTML}</div>` : ""}
+        ${note ? `<div class="rmcap">${escapeHTML(note)}</div>` : ""}
+      </div>
+    </div>`;
   const concHolds = taAvailable && maxMembers.length ? maxMembers.map((m) => `<span class="htag">${escapeHTML(m.name)} <b>${m.pct.toFixed(1)}%</b></span>`).join("") : "";
-  const concCap = maxCap != null ? ` \uFF0F\u4E0A\u9650${maxCap}%${concOver ? " \u26A0\u8D85\u904E" : ""}` : "";
-  const concVal = taAvailable && maxLabel ? `<span class="rmv-nm">${escapeHTML(maxLabel)}</span><span class="rmv-sub">${maxPct.toFixed(1)}%${concCap}</span>` : "\u2014";
-  const concRow = rmrow(
+  const concRow = taAvailable && maxLabel ? statRow(
     "i-target",
     "\u30C6\u30FC\u30DE\u96C6\u4E2D",
     concOver ? "bad" : "ok",
     concOver ? "\u8D85\u904E" : "\u9069\u6B63",
-    concVal,
-    concOver,
+    maxLabel,
+    `${maxPct.toFixed(1)}%`,
+    maxCap != null ? `\u4E0A\u9650 ${maxCap}%` : "",
+    concOver ? "\u26A0 \u8D85\u904E" : "\u9069\u6B63",
     concHolds,
-    concOver ? "\u30C8\u30EA\u30E0\u5019\u88DC\uFF08\u5BFE\u8C61\uFF1D\u3053\u306E\u30D0\u30B9\u30B1\u30C3\u30C8\u3002\u65E5\u672C\u682A\u5168\u4F53\u3067\u306F\u306A\u3044\uFF09" : ""
-  );
+    concOver ? "\u30C8\u30EA\u30E0\u5019\u88DC\u3002\u5BFE\u8C61\uFF1D\u3053\u306E\u30D0\u30B9\u30B1\u30C3\u30C8\uFF08\u65E5\u672C\u682A\u5168\u4F53\u3067\u306F\u306A\u3044\uFF09\u3002" : ""
+  ) : statRow("i-target", "\u30C6\u30FC\u30DE\u96C6\u4E2D", "ok", "\u2014", "\u2014", "\u2014", "", "", "", "");
   const HOME_JP_LIMIT = 35;
   const homeWarn = japanTruePct != null && isFinite(japanTruePct) && japanTruePct > HOME_JP_LIMIT;
-  const homeVal = japanTruePct != null && isFinite(japanTruePct) ? `<span class="rmv-nm">\u65E5\u672C(\u30EB\u30C3\u30AF\u30B9\u30EB\u30FC)</span><span class="rmv-sub">${japanTruePct.toFixed(1)}% \uFF0F\u8A31\u5BB9${HOME_JP_LIMIT}%</span>` : "\u2014";
-  const homeRow = japanTruePct != null && isFinite(japanTruePct) ? rmrow(
+  const homeRow = japanTruePct != null && isFinite(japanTruePct) ? statRow(
     "i-home",
     "\u56FD\u30FB\u30DB\u30FC\u30E0\u504F\u308A",
     homeWarn ? "warn" : "ok",
     homeWarn ? "\u8981\u6CE8\u610F" : "\u8A31\u5BB9\u5185",
-    homeVal,
-    homeWarn,
+    "\u65E5\u672C\uFF08\u6295\u4FE1\u30EB\u30C3\u30AF\u30B9\u30EB\u30FC\uFF09",
+    `${japanTruePct.toFixed(1)}%`,
+    `\u8A31\u5BB9 ${HOME_JP_LIMIT}%`,
+    homeWarn ? "\u26A0 \u8981\u6CE8\u610F" : "\u5BFE\u5FDC\u4E0D\u8981",
     "",
-    homeWarn ? "\u76EE\u5B89\u8D85\u3067\u8981\u6CE8\u610F" : ""
+    ""
   ) : "";
   let overVal = "0\u4EF6";
   let overHolds = "";
