@@ -48,7 +48,11 @@ function _injectBriefingFixups() {
     if (!head || idoc.getElementById('bf-fixup')) return;
     const style = idoc.createElement('style');
     style.id = 'bf-fixup';
-    style.textContent = 'table.mkt td{white-space:normal;vertical-align:top;}';
+    style.textContent = [
+      'table.mkt td{white-space:normal;vertical-align:top;word-break:break-word;}',
+      'table.mkt th:nth-child(2),table.mkt td:nth-child(2){width:42%;text-align:left;}',
+      'table.mkt th:nth-child(3),table.mkt td:nth-child(3){width:29%;word-break:normal;overflow-wrap:anywhere;}',
+    ].join('');
     head.appendChild(style);
   } catch {
     /* cross-origin 等は無視 */
