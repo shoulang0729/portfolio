@@ -6902,7 +6902,6 @@ var PERIODS2 = [
   { id: "10y", label: "10\u5E74", months: 120 },
   { id: "all", label: "\u5168\u671F\u9593", months: null }
 ];
-var MASK = "\u2022\u2022\u2022\u2022\u2022\u2022";
 var _data = null;
 var _period = "1y";
 var _mode = "amount";
@@ -6916,18 +6915,19 @@ function totalOf(r) {
   return CATS.reduce((s, c) => s + (Number(r[c.key]) || 0), 0);
 }
 function fmtYen2(v) {
-  if (_eye) return MASK;
-  return `\xA5${Math.round(v).toLocaleString("ja-JP")}`;
+  const s = `\xA5${Math.round(v).toLocaleString("ja-JP")}`;
+  return _eye ? maskAmount(s) : s;
 }
 function fmtOku(v) {
-  if (_eye) return MASK;
-  return `${(v / 1e8).toFixed(2)}\u5104`;
+  const s = `${(v / 1e8).toFixed(2)}\u5104`;
+  return _eye ? maskAmount(s) : s;
 }
 function fmtAxisYen(v) {
-  if (_eye) return "\u2022\u2022\u2022";
-  if (v >= 1e8) return `${(v / 1e8).toFixed(v >= 1e9 ? 0 : 1)}\u5104`;
-  if (v >= 1e4) return `${Math.round(v / 1e4).toLocaleString("ja-JP")}\u4E07`;
-  return String(v);
+  let s;
+  if (v >= 1e8) s = `${(v / 1e8).toFixed(v >= 1e9 ? 0 : 1)}\u5104`;
+  else if (v >= 1e4) s = `${Math.round(v / 1e4).toLocaleString("ja-JP")}\u4E07`;
+  else s = String(v);
+  return _eye ? maskAmount(s) : s;
 }
 function filterByPeriod(series, periodId) {
   const p = PERIODS2.find((x) => x.id === periodId);
@@ -6968,10 +6968,12 @@ async function renderWealthTab() {
   const cashRatio = latestTotal > 0 ? (Number(latest.cash) || 0) / latestTotal * 100 : 0;
   const multiple = firstTotal > 0 ? latestTotal / firstTotal : null;
   const activeCats = CATS.filter((c) => view.some((r) => (Number(r[c.key]) || 0) > 0));
+  const multTxt = multiple == null ? "\u2014" : `\xD7${multiple.toFixed(1)}`;
+  const okuRange = `${_eye ? maskAmount((firstTotal / 1e8).toFixed(2)) : (firstTotal / 1e8).toFixed(2)}\u2192${fmtOku(latestTotal)}`;
   const kpis = `<div class="we-kpis">
-    <div class="we-kpi"><div class="l">\u8CC7\u7523\u7DCF\u984D\uFF08${escapeHTML(latest.date)}\uFF09</div><div class="v">${escapeHTML(fmtYen2(latestTotal))}</div></div>
-    <div class="we-kpi"><div class="l">\u73FE\u91D1\u6BD4\u7387</div><div class="v">${cashRatio.toFixed(1)}<small>%</small></div></div>
-    <div class="we-kpi"><div class="l">\u958B\u8A2D\u6765\uFF08${escapeHTML(first.date)}\u301C\uFF09</div><div class="v">${_eye || multiple == null ? MASK : `\xD7${multiple.toFixed(1)}`}<small>${_eye || multiple == null ? "" : ` / ${fmtOku(firstTotal)}\u2192${fmtOku(latestTotal)}`}</small></div></div>
+    <div class="we-kpi"><div class="l">\u8CC7\u7523\u7DCF\u984D</div><div class="v">${escapeHTML(fmtYen2(latestTotal))}</div><div class="sub2">${escapeHTML(latest.date)}</div></div>
+    <div class="we-kpi"><div class="l">\u73FE\u91D1\u6BD4\u7387</div><div class="v">${cashRatio.toFixed(1)}<small>%</small></div><div class="sub2">&nbsp;</div></div>
+    <div class="we-kpi"><div class="l">\u958B\u8A2D\u6765</div><div class="v">${escapeHTML(_eye ? maskAmount(multTxt) : multTxt)}</div><div class="sub2">${escapeHTML(okuRange)}</div></div>
   </div>`;
   const periodSeg = `<span class="seg we-seg">${PERIODS2.map(
     (p) => `<button class="${_period === p.id ? "on" : ""}" data-period="${p.id}" aria-pressed="${_period === p.id}">${p.label}</button>`
