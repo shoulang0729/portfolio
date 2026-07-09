@@ -6880,6 +6880,242 @@ async function renderValuationTab() {
   });
 }
 
+// src/wealth.js
+var CATS = [
+  { key: "equity", label: "\u682A\u5F0F(\u73FE\u7269)", color: "#cc785c" },
+  { key: "fund", label: "\u6295\u8CC7\u4FE1\u8A17", color: "#7ba0c4" },
+  { key: "pension", label: "\u5E74\u91D1", color: "#9c8fbc" },
+  { key: "cash", label: "\u9810\u91D1\u30FB\u73FE\u91D1", color: "#6fae86" },
+  { key: "insurance", label: "\u4FDD\u967A", color: "#d9a441" },
+  { key: "crypto", label: "\u6697\u53F7\u8CC7\u7523", color: "#c98a5e" },
+  { key: "bond", label: "\u50B5\u5238", color: "#b0b0b0" },
+  { key: "fx", label: "FX", color: "#8c8c8c" },
+  { key: "equityMargin", label: "\u682A\u5F0F(\u4FE1\u7528)", color: "#e09070" },
+  { key: "points", label: "\u30DD\u30A4\u30F3\u30C8", color: "#c9c2b8" }
+];
+var PERIODS2 = [
+  { id: "3m", label: "3\u30F6\u6708", months: 3 },
+  { id: "6m", label: "6\u30F6\u6708", months: 6 },
+  { id: "1y", label: "1\u5E74", months: 12 },
+  { id: "3y", label: "3\u5E74", months: 36 },
+  { id: "5y", label: "5\u5E74", months: 60 },
+  { id: "10y", label: "10\u5E74", months: 120 },
+  { id: "all", label: "\u5168\u671F\u9593", months: null }
+];
+var MASK = "\u2022\u2022\u2022\u2022\u2022\u2022";
+var _data = null;
+var _period = "1y";
+var _mode = "amount";
+var _log = false;
+var _eye = false;
+try {
+  _eye = localStorage.getItem("hm-wealth-eye") === "1";
+} catch {
+}
+function totalOf(r) {
+  return CATS.reduce((s, c) => s + (Number(r[c.key]) || 0), 0);
+}
+function fmtYen2(v) {
+  if (_eye) return MASK;
+  return `\xA5${Math.round(v).toLocaleString("ja-JP")}`;
+}
+function fmtOku(v) {
+  if (_eye) return MASK;
+  return `${(v / 1e8).toFixed(2)}\u5104`;
+}
+function fmtAxisYen(v) {
+  if (_eye) return "\u2022\u2022\u2022";
+  if (v >= 1e8) return `${(v / 1e8).toFixed(v >= 1e9 ? 0 : 1)}\u5104`;
+  if (v >= 1e4) return `${Math.round(v / 1e4).toLocaleString("ja-JP")}\u4E07`;
+  return String(v);
+}
+function filterByPeriod(series, periodId) {
+  const p = PERIODS2.find((x) => x.id === periodId);
+  if (!p || p.months == null || series.length === 0) return series;
+  const last = new Date(series[series.length - 1].date);
+  const from = new Date(last);
+  from.setMonth(from.getMonth() - p.months);
+  return series.filter((r) => new Date(r.date) >= from);
+}
+async function loadHistory() {
+  if (_data) return _data;
+  const r = await fetch(`data/mf-history.json?_=${Date.now()}`);
+  if (!r.ok) throw new Error(`mf-history ${r.status}`);
+  const j = await r.json();
+  _data = { series: Array.isArray(j.series) ? j.series : [] };
+  return _data;
+}
+async function renderWealthTab() {
+  const wrap = document.getElementById("wealth-wrap");
+  if (!wrap) return;
+  if (typeof d3 === "undefined") return;
+  let series;
+  try {
+    series = (await loadHistory()).series;
+  } catch {
+    wrap.innerHTML = '<div class="val-soon">\u8CC7\u7523\u63A8\u79FB\u30C7\u30FC\u30BF\uFF08data/mf-history.json\uFF09\u3092\u53D6\u5F97\u3067\u304D\u307E\u305B\u3093\u3067\u3057\u305F\u3002</div>';
+    return;
+  }
+  if (!series.length) {
+    wrap.innerHTML = '<div class="val-soon">\u8CC7\u7523\u63A8\u79FB\u30C7\u30FC\u30BF\u304C\u307E\u3060\u3042\u308A\u307E\u305B\u3093\u3002</div>';
+    return;
+  }
+  const view = filterByPeriod(series, _period);
+  const latest = series[series.length - 1];
+  const first = series[0];
+  const latestTotal = totalOf(latest);
+  const firstTotal = totalOf(first);
+  const cashRatio = latestTotal > 0 ? (Number(latest.cash) || 0) / latestTotal * 100 : 0;
+  const multiple = firstTotal > 0 ? latestTotal / firstTotal : null;
+  const activeCats = CATS.filter((c) => view.some((r) => (Number(r[c.key]) || 0) > 0));
+  const kpis = `<div class="we-kpis">
+    <div class="we-kpi"><div class="l">\u8CC7\u7523\u7DCF\u984D\uFF08${escapeHTML(latest.date)}\uFF09</div><div class="v">${escapeHTML(fmtYen2(latestTotal))}</div></div>
+    <div class="we-kpi"><div class="l">\u73FE\u91D1\u6BD4\u7387</div><div class="v">${cashRatio.toFixed(1)}<small>%</small></div></div>
+    <div class="we-kpi"><div class="l">\u958B\u8A2D\u6765\uFF08${escapeHTML(first.date)}\u301C\uFF09</div><div class="v">${_eye || multiple == null ? MASK : `\xD7${multiple.toFixed(1)}`}<small>${_eye || multiple == null ? "" : ` / ${fmtOku(firstTotal)}\u2192${fmtOku(latestTotal)}`}</small></div></div>
+  </div>`;
+  const periodSeg = `<span class="seg we-seg">${PERIODS2.map(
+    (p) => `<button class="${_period === p.id ? "on" : ""}" data-period="${p.id}" aria-pressed="${_period === p.id}">${p.label}</button>`
+  ).join("")}</span>`;
+  const modeSeg = `<span class="seg we-seg">
+    <button class="${_mode === "amount" ? "on" : ""}" data-mode="amount" aria-pressed="${_mode === "amount"}">\u91D1\u984D</button>
+    <button class="${_mode === "pct" ? "on" : ""}" data-mode="pct" aria-pressed="${_mode === "pct"}">\u69CB\u6210\u6BD4%</button>
+  </span>`;
+  const logChk = `<label class="we-chk"><input type="checkbox" id="we-log" ${_log ? "checked" : ""}> \u5BFE\u6570\u8EF8\uFF08\u7DCF\u8CC7\u7523\uFF09</label>`;
+  const eyeBtn = `<button class="eye-btn we-eye" id="we-eye" title="\u91D1\u984D\u306E\u8868\u793A\uFF0F\u30DE\u30B9\u30AF" aria-label="\u91D1\u984D\u3092\u8868\u793A\u307E\u305F\u306F\u30DE\u30B9\u30AF" aria-pressed="${_eye}">
+    <svg width="18" height="14" viewBox="0 0 18 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M9 1C5 1 1.5 4 1 7c.5 3 3.5 6 8 6s7.5-3 8-6c-.5-3-4-6-8-6z" stroke="currentColor" stroke-width="1.5" fill="none"/>
+      <circle cx="9" cy="7" r="2.5" stroke="currentColor" stroke-width="1.5" fill="none"/>
+      <line x1="2" y1="2" x2="16" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="display:${_eye ? "" : "none"}"/>
+    </svg>
+  </button>`;
+  const legend = `<div class="we-lgs">${activeCats.map((c) => `<span class="we-lg"><i style="background:${c.color}"></i>${escapeHTML(c.label)}</span>`).join("")}</div>`;
+  wrap.innerHTML = `
+    ${kpis}
+    <div class="card we-card">
+      <div class="we-bar">${periodSeg}${eyeBtn}</div>
+      <div class="we-bar">${modeSeg}${logChk}</div>
+      ${_log ? "" : legend}
+      <div id="we-main-chart"></div>
+    </div>
+    <div class="card we-card"><h2 class="we-h2">\u73FE\u91D1\u6BD4\u7387\u306E\u63A8\u79FB\uFF08%\uFF09</h2><div id="we-cash-chart"></div></div>
+    <div class="card we-card"><h2 class="we-h2">\u5E74\u672B\u30B5\u30DE\u30EA</h2><div class="we-table-wrap">${yearTableHTML(series)}</div></div>`;
+  drawMainChart(view, activeCats);
+  drawCashChart(view);
+  wrap.querySelectorAll("[data-period]").forEach(
+    (b) => b.addEventListener("click", () => {
+      _period = /** @type {HTMLElement} */
+      b.dataset.period || "1y";
+      renderWealthTab();
+    })
+  );
+  wrap.querySelectorAll("[data-mode]").forEach(
+    (b) => b.addEventListener("click", () => {
+      _mode = /** @type {HTMLElement} */
+      b.dataset.mode === "pct" ? "pct" : "amount";
+      renderWealthTab();
+    })
+  );
+  const log = wrap.querySelector("#we-log");
+  if (log)
+    log.addEventListener("change", () => {
+      _log = /** @type {HTMLInputElement} */
+      log.checked;
+      renderWealthTab();
+    });
+  const eye = wrap.querySelector("#we-eye");
+  if (eye)
+    eye.addEventListener("click", () => {
+      _eye = !_eye;
+      try {
+        localStorage.setItem("hm-wealth-eye", _eye ? "1" : "0");
+      } catch {
+      }
+      renderWealthTab();
+    });
+}
+function yearTableHTML(series) {
+  const byYear = {};
+  for (const r of series) {
+    const y = r.date.slice(0, 4);
+    const target = (/* @__PURE__ */ new Date(`${y}-12-31`)).getTime();
+    const cur = byYear[y];
+    if (!cur || Math.abs(new Date(r.date).getTime() - target) < Math.abs(new Date(cur.date).getTime() - target)) {
+      byYear[y] = r;
+    }
+  }
+  const lastYear = series[series.length - 1].date.slice(0, 4);
+  byYear[lastYear] = series[series.length - 1];
+  const rows = Object.keys(byYear).sort().map((y) => {
+    const r = byYear[y];
+    const t = totalOf(r);
+    const cashPct = t > 0 ? (Number(r.cash) || 0) / t * 100 : 0;
+    const eqPct = t > 0 ? (Number(r.equity) || 0) / t * 100 : 0;
+    return `<tr><td>${escapeHTML(y)}</td><td>${escapeHTML(fmtYen2(t))}</td><td>${cashPct.toFixed(1)}%</td><td>${eqPct.toFixed(1)}%</td></tr>`;
+  }).join("");
+  return `<table class="t we-table"><thead><tr><th>\u5E74</th><th>\u7DCF\u8CC7\u7523</th><th>\u73FE\u91D1\u6BD4\u7387</th><th>\u682A\u5F0F\u6BD4\u7387</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+function chartBox(el, height) {
+  const width = Math.max(280, el.clientWidth || 320);
+  const margin = { top: 8, right: 12, bottom: 22, left: 46 };
+  return { width, height, margin, iw: width - margin.left - margin.right, ih: height - margin.top - margin.bottom };
+}
+function drawMainChart(view, activeCats) {
+  const el = document.getElementById("we-main-chart");
+  if (!el || view.length === 0) return;
+  const { width, height, margin, iw, ih } = chartBox(el, 300);
+  const svg = d3.select(el).append("svg").attr("viewBox", `0 0 ${width} ${height}`).attr("width", "100%").attr("role", "img").attr("aria-label", "\u8CC7\u7523\u63A8\u79FB\u30C1\u30E3\u30FC\u30C8");
+  const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+  const dates = view.map((r) => new Date(r.date));
+  const x = d3.scaleTime().domain([dates[0], dates[dates.length - 1]]).range([0, iw]);
+  const xAxis = d3.axisBottom(x).ticks(Math.min(6, view.length)).tickSizeOuter(0);
+  if (_log) {
+    const totals = view.map((r) => ({ date: new Date(r.date), v: totalOf(r) }));
+    const min = d3.min(totals, (d) => d.v) || 1;
+    const max = d3.max(totals, (d) => d.v) || 1;
+    const y = d3.scaleLog().domain([Math.max(1, min * 0.9), max * 1.05]).range([ih, 0]);
+    g.append("g").attr("class", "we-grid").call(
+      d3.axisLeft(y).ticks(5, (d) => fmtAxisYen(d)).tickSize(-iw)
+    );
+    const line = d3.line().x((d) => x(d.date)).y((d) => y(d.v));
+    g.append("path").datum(totals).attr("fill", "none").attr("stroke", "#cc785c").attr("stroke-width", 2).attr("d", line);
+  } else {
+    const keys = activeCats.map((c) => c.key);
+    const colorOf = Object.fromEntries(activeCats.map((c) => [c.key, c.color]));
+    const stack = d3.stack().keys(keys).value((r, k) => Number(r[k]) || 0);
+    if (_mode === "pct") stack.offset(d3.stackOffsetExpand);
+    const stacked = stack(view);
+    const yMax = _mode === "pct" ? 1 : (d3.max(view, (r) => totalOf(r)) || 1) * 1.05;
+    const y = d3.scaleLinear().domain([0, yMax]).range([ih, 0]);
+    g.append("g").attr("class", "we-grid").call(
+      d3.axisLeft(y).ticks(5).tickFormat((d) => _mode === "pct" ? `${Math.round(Number(d) * 100)}%` : fmtAxisYen(Number(d))).tickSize(-iw)
+    );
+    const area = d3.area().x((d, i) => x(new Date(view[i].date))).y0((d) => y(d[0])).y1((d) => y(d[1]));
+    g.selectAll("path.we-area").data(stacked).join("path").attr("class", "we-area").attr("fill", (d) => colorOf[d.key]).attr("fill-opacity", 0.85).attr("d", area).append("title").text((d) => activeCats.find((c) => c.key === d.key)?.label || d.key);
+  }
+  g.append("g").attr("class", "we-axis").attr("transform", `translate(0,${ih})`).call(xAxis);
+}
+function drawCashChart(view) {
+  const el = document.getElementById("we-cash-chart");
+  if (!el || view.length === 0) return;
+  const { width, height, margin, iw, ih } = chartBox(el, 170);
+  const svg = d3.select(el).append("svg").attr("viewBox", `0 0 ${width} ${height}`).attr("width", "100%").attr("role", "img").attr("aria-label", "\u73FE\u91D1\u6BD4\u7387\u306E\u63A8\u79FB\u30C1\u30E3\u30FC\u30C8");
+  const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+  const pts = view.map((r) => {
+    const t = totalOf(r);
+    return { date: new Date(r.date), v: t > 0 ? (Number(r.cash) || 0) / t * 100 : 0 };
+  });
+  const x = d3.scaleTime().domain([pts[0].date, pts[pts.length - 1].date]).range([0, iw]);
+  const y = d3.scaleLinear().domain([0, Math.max(10, (d3.max(pts, (d) => d.v) || 10) * 1.1)]).range([ih, 0]);
+  g.append("g").attr("class", "we-grid").call(
+    d3.axisLeft(y).ticks(5).tickFormat((d) => `${d}%`).tickSize(-iw)
+  );
+  const area = d3.area().x((d) => x(d.date)).y0(ih).y1((d) => y(d.v));
+  const line = d3.line().x((d) => x(d.date)).y((d) => y(d.v));
+  g.append("path").datum(pts).attr("fill", "#6fae86").attr("fill-opacity", 0.18).attr("d", area);
+  g.append("path").datum(pts).attr("fill", "none").attr("stroke", "#6fae86").attr("stroke-width", 2).attr("d", line);
+  g.append("g").attr("class", "we-axis").attr("transform", `translate(0,${ih})`).call(d3.axisBottom(x).ticks(Math.min(6, pts.length)).tickSizeOuter(0));
+}
+
 // src/tabs.js
 function switchTab(name) {
   if (name === "watchlist") name = "list";
@@ -6893,12 +7129,14 @@ function switchTab(name) {
   const panelList = document.getElementById("panel-list");
   const panelRisk = document.getElementById("panel-risk");
   const panelValue = document.getElementById("panel-value");
+  const panelWealth = document.getElementById("panel-wealth");
   const panelBriefing = document.getElementById("panel-briefing");
   const panelAi = document.getElementById("panel-ai");
   if (panelHeatmap) panelHeatmap.hidden = name !== "heatmap";
   if (panelList) panelList.hidden = name !== "list";
   if (panelRisk) panelRisk.hidden = name !== "risk";
   if (panelValue) panelValue.hidden = name !== "value";
+  if (panelWealth) panelWealth.hidden = name !== "wealth";
   if (panelBriefing) panelBriefing.hidden = name !== "briefing";
   if (panelAi) panelAi.hidden = name !== "ai";
   document.querySelectorAll(".tab-btn[data-tab]").forEach((b) => {
@@ -6925,6 +7163,7 @@ function switchTab(name) {
   }
   if (name === "risk") renderRiskCharts();
   if (name === "value") renderValuationTab();
+  if (name === "wealth") renderWealthTab();
   if (name === "briefing") renderBriefing();
 }
 
@@ -8620,8 +8859,8 @@ function init() {
     renderStats();
     return mf;
   }).catch(() => null);
-  const _eye = document.getElementById("stats-eye");
-  if (_eye) _eye.classList.toggle("hidden", state.statsMasked);
+  const _eye2 = document.getElementById("stats-eye");
+  if (_eye2) _eye2.classList.toggle("hidden", state.statsMasked);
   const _eyeSlash = document.getElementById("eye-slash");
   if (_eyeSlash) _eyeSlash.style.display = state.statsMasked ? "" : "none";
   updateSlColStyle();
