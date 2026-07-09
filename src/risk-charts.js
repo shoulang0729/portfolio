@@ -681,10 +681,11 @@ function buildRiskOverviewCard(japanTruePct) {
       <div class="rms-hd"><div class="rmic">${ric(icon)}</div><span class="rms-ttl">${escapeHTML(title)}</span><span class="rpill ${pillCls}">${escapeHTML(pillTxt)}</span></div>
       ${bodyHTML}
     </div>`;
+  // 行＝左:対象名／右:値（補助テキスト＋大きな数字）の2カラム。大きな数字は min-width＋右揃えで
+  // 全カード右端の同じ縦ラインに揃える（#566・右揃えモック準拠）。
   const entry = (ent, tone, bigTxt, subTxt, chipsHTML) => `
     <div class="rms-row">
-      <div class="rms-ent">${escapeHTML(ent)}</div>
-      <div class="rms-metric"><span class="rms-big ${tone}">${escapeHTML(bigTxt)}</span>${subTxt ? `<span class="rms-sub">${escapeHTML(subTxt)}</span>` : ''}</div>
+      <div class="rms-line"><div class="rms-ent">${escapeHTML(ent)}</div><div class="rms-val">${subTxt ? `<span class="rms-sub">${escapeHTML(subTxt)}</span>` : ''}<span class="rms-big ${tone}">${escapeHTML(bigTxt)}</span></div></div>
       ${chipsHTML ? `<div class="rholds">${chipsHTML}</div>` : ''}
     </div>`;
 
@@ -702,7 +703,7 @@ function buildRiskOverviewCard(japanTruePct) {
     ? `<div class="rms-minis">${overPos
         .map(
           (o, i) =>
-            `<div class="rms-mini${i === 0 ? ' top' : ''}"><span class="sym">${escapeHTML(o.name)}</span><span class="ctx">目標${o.target != null ? o.target.toFixed(0) : '—'}% → 現${o.cur.toFixed(1)}%</span><span class="pt">+${o.pt.toFixed(1)}pt</span></div>`
+            `<div class="rms-mini${i === 0 ? ' top' : ''}"><span class="lft"><b>${escapeHTML(o.name)}</b>目標${o.target != null ? o.target.toFixed(0) : '—'}% → 現${o.cur.toFixed(1)}%</span><span class="pt">+${o.pt.toFixed(1)}pt</span></div>`
         )
         .join('')}</div>`
     : `<div class="rms-row"><div class="rms-ent">目標配分を上回る保有はなし</div></div>`;
