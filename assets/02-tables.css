@@ -1128,3 +1128,30 @@ table.t td { font-size: var(--fs-sm); font-weight: 700; border-bottom: 1px solid
   margin: 4px 0 0;
 }
 /* ── /Risk quant (Phase 4b) ── */
+
+/* ── Wealth タブ（資産推移・#568・モック 2026-07-09-wealth-tab-mock.html 準拠）── */
+.we-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px; }
+@media (max-width: 520px) { .we-kpis { grid-template-columns: 1fr; } }
+.we-kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
+.we-kpi .l { font-size: var(--fs-sm); color: var(--text2); }
+.we-kpi .v { font-size: var(--fs-lg); font-weight: 700; margin-top: 3px; font-variant-numeric: tabular-nums; }
+.we-kpi .v small { font-size: var(--fs-sm); color: var(--text2); font-weight: 600; }
+.we-card { padding: 12px; }
+.we-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+.we-seg button { padding: 5px 11px; font-size: var(--fs-sm); }
+.we-chk { font-size: var(--fs-sm); color: var(--text2); display: inline-flex; align-items: center; gap: 5px; }
+/* .eye-btn 基底は絶対配置（カード右上用）のため、バー内では通常フローに戻す */
+.we-eye { position: static; margin-left: auto; border: 1px solid var(--border); background: var(--surface2); border-radius: 8px; width: 34px; height: 30px; display: inline-flex; align-items: center; justify-content: center; color: var(--text2); cursor: pointer; }
+.we-lgs { display: flex; flex-wrap: wrap; gap: 8px 12px; margin-bottom: 8px; }
+.we-lg { display: inline-flex; align-items: center; gap: 5px; font-size: var(--fs-sm); color: var(--text2); }
+.we-lg i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.we-h2 { font-size: var(--fs-base); font-weight: 700; color: var(--text2); margin: 0 0 8px; }
+.we-grid .tick line { stroke: var(--border2); }
+.we-grid .domain { display: none; }
+.we-grid .tick text, .we-axis .tick text { fill: var(--text2); font-size: 10px; }
+.we-axis .domain { stroke: var(--border); }
+.we-table-wrap { overflow-x: auto; }
+.we-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.we-table th { text-align: right; padding: 6px 8px; }
+.we-table td { text-align: right; padding: 6px 8px; }
+.we-table th:first-child, .we-table td:first-child { text-align: left; }

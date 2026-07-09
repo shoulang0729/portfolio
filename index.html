@@ -24,10 +24,10 @@
 
 <!-- スタイルシート -->
 
-<link rel="stylesheet" href="assets/01-base.css?v=20260709B">
-<link rel="stylesheet" href="assets/02-tables.css?v=20260709B">
-<link rel="stylesheet" href="assets/03-misc.css?v=20260709B">
-<link rel="stylesheet" href="assets/04-auth.css?v=20260709B">
+<link rel="stylesheet" href="assets/01-base.css?v=20260709C">
+<link rel="stylesheet" href="assets/02-tables.css?v=20260709C">
+<link rel="stylesheet" href="assets/03-misc.css?v=20260709C">
+<link rel="stylesheet" href="assets/04-auth.css?v=20260709C">
 
 <!-- assets/05-ai-tab.css は src/_disabled/05-ai-tab.css に移動（AIタブ無効化中）-->
 <!-- 銘柄リスト列表示制御（JS が動的に書き込む） -->
@@ -193,6 +193,8 @@
     <button class="tab-btn" data-tab="value" role="tab" aria-selected="false" data-action="switchTab" data-arg="value" title="バリュエーション（スコアカード）">Valuation</button>
     <button class="tab-btn" data-tab="risk" role="tab" aria-selected="false"
             data-action="switchTab" data-arg="risk" title="Risk（集中度・通貨・国・セクター）">Risk</button>
+    <button class="tab-btn" data-tab="wealth" role="tab" aria-selected="false"
+            data-action="switchTab" data-arg="wealth" title="資産推移（MF実データ）">Wealth</button>
     <button class="tab-btn" data-tab="briefing" role="tab" aria-selected="false"
             data-action="switchTab" data-arg="briefing" title="週次 Briefing（相場観・保有・アクション）">Briefing</button>
     <!-- AI相談タブは現在無効化中（必要になったら戻す） -->
@@ -287,6 +289,9 @@
 </section><!-- /panel-risk -->
 
 <!-- 週次 Briefing パネル（タブ6：MulmoClaude生成のモバイルHTMLをiframe表示） -->
+<!-- Wealth（資産推移・MF実データ）パネル（#568） -->
+<section id="panel-wealth" class="tab-panel" hidden><div id="wealth-wrap"></div></section>
+
 <section id="panel-briefing" class="tab-panel" hidden></section>
 
 <!-- AI相談パネルは現在無効化中（タブも非表示） -->
@@ -338,14 +343,14 @@
 
 <!-- ES Module エントリーポイント（全ファイルを import する単一スクリプト） -->
 
-<script type="module" src="dist/app.js?v=20260709B"></script>
+<script type="module" src="dist/app.js?v=20260709C"></script>
 
 
 <!-- PWA Service Worker 登録 -->
 <script>
 if ('serviceWorker' in navigator) {
 
-navigator.serviceWorker.register('./sw.js?v=20260709B').catch(() => {});
+navigator.serviceWorker.register('./sw.js?v=20260709C').catch(() => {});
 
 }
 </script>
