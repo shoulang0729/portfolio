@@ -12,7 +12,7 @@
 //   - X 軸はデータ点をそのまま打つ（直近=日次・過去=月末の混在。補間しない）
 // ══════════════════════════════════════════════════════════════
 
-import { escapeHTML } from './utils.js';
+import { escapeHTML, maskAmount } from './utils.js';
 
 /** カテゴリ定義（表示順・色は仕様書の表に従う。テーマ非依存の系列色） */
 const CATS = [
@@ -39,8 +39,6 @@ const PERIODS = [
   { id: 'all', label: '全期間', months: null },
 ];
 
-const MASK = '••••••';
-
 /** @type {{series: Array<Record<string, any>>}|null} ロード済みデータ（1回だけ fetch） */
 let _data = null;
 /** UI 状態（タブ内ローカル） */
@@ -57,24 +55,25 @@ function totalOf(r) {
   return CATS.reduce((s, c) => s + (Number(r[c.key]) || 0), 0);
 }
 
-/** 金額表示（目隠し対応） */
+/** 金額表示。目隠しは Briefing/statsバーと同一の maskAmount（数字のみ*・¥とカンマ保持・設計追記） */
 function fmtYen(v) {
-  if (_eye) return MASK;
-  return `¥${Math.round(v).toLocaleString('ja-JP')}`;
+  const s = `¥${Math.round(v).toLocaleString('ja-JP')}`;
+  return _eye ? maskAmount(s) : s;
 }
 
-/** 億表記（0.18億 等・目隠し対応） */
+/** 億表記（5.73億 等・目隠しは maskAmount） */
 function fmtOku(v) {
-  if (_eye) return MASK;
-  return `${(v / 1e8).toFixed(2)}億`;
+  const s = `${(v / 1e8).toFixed(2)}億`;
+  return _eye ? maskAmount(s) : s;
 }
 
-/** Y軸の金額目盛（億/万で短縮・目隠し時は伏字） */
+/** Y軸の金額目盛（億/万で短縮・目隠しは maskAmount） */
 function fmtAxisYen(v) {
-  if (_eye) return '•••';
-  if (v >= 1e8) return `${(v / 1e8).toFixed(v >= 1e9 ? 0 : 1)}億`;
-  if (v >= 1e4) return `${Math.round(v / 1e4).toLocaleString('ja-JP')}万`;
-  return String(v);
+  let s;
+  if (v >= 1e8) s = `${(v / 1e8).toFixed(v >= 1e9 ? 0 : 1)}億`;
+  else if (v >= 1e4) s = `${Math.round(v / 1e4).toLocaleString('ja-JP')}万`;
+  else s = String(v);
+  return _eye ? maskAmount(s) : s;
 }
 
 /** 期間フィルタ（最新日付から月単位で起点を算出） */
@@ -129,11 +128,13 @@ export async function renderWealthTab() {
   // 表示レンジ内で常に 0 のカテゴリは凡例・チャートから省略（仕様）
   const activeCats = CATS.filter((c) => view.some((r) => (Number(r[c.key]) || 0) > 0));
 
-  // ── KPI（3枚） ──
+  // ── KPI（3枚・常に横並び・値は右寄せ・補助は下段 sub2 に分離＝設計追記 2026-07-09） ──
+  const multTxt = multiple == null ? '—' : `×${multiple.toFixed(1)}`;
+  const okuRange = `${_eye ? maskAmount((firstTotal / 1e8).toFixed(2)) : (firstTotal / 1e8).toFixed(2)}→${fmtOku(latestTotal)}`;
   const kpis = `<div class="we-kpis">
-    <div class="we-kpi"><div class="l">資産総額（${escapeHTML(latest.date)}）</div><div class="v">${escapeHTML(fmtYen(latestTotal))}</div></div>
-    <div class="we-kpi"><div class="l">現金比率</div><div class="v">${cashRatio.toFixed(1)}<small>%</small></div></div>
-    <div class="we-kpi"><div class="l">開設来（${escapeHTML(first.date)}〜）</div><div class="v">${_eye || multiple == null ? MASK : `×${multiple.toFixed(1)}`}<small>${_eye || multiple == null ? '' : ` / ${fmtOku(firstTotal)}→${fmtOku(latestTotal)}`}</small></div></div>
+    <div class="we-kpi"><div class="l">資産総額</div><div class="v">${escapeHTML(fmtYen(latestTotal))}</div><div class="sub2">${escapeHTML(latest.date)}</div></div>
+    <div class="we-kpi"><div class="l">現金比率</div><div class="v">${cashRatio.toFixed(1)}<small>%</small></div><div class="sub2">&nbsp;</div></div>
+    <div class="we-kpi"><div class="l">開設来</div><div class="v">${escapeHTML(_eye ? maskAmount(multTxt) : multTxt)}</div><div class="sub2">${escapeHTML(okuRange)}</div></div>
   </div>`;
 
   // ── コントロール（期間ピル＋目隠し／表示切替＋対数） ──
