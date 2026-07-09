@@ -5187,8 +5187,7 @@ function buildRiskOverviewCard(japanTruePct) {
     </div>`;
   const entry = (ent, tone, bigTxt, subTxt, chipsHTML) => `
     <div class="rms-row">
-      <div class="rms-ent">${escapeHTML(ent)}</div>
-      <div class="rms-metric"><span class="rms-big ${tone}">${escapeHTML(bigTxt)}</span>${subTxt ? `<span class="rms-sub">${escapeHTML(subTxt)}</span>` : ""}</div>
+      <div class="rms-line"><div class="rms-ent">${escapeHTML(ent)}</div><div class="rms-val">${subTxt ? `<span class="rms-sub">${escapeHTML(subTxt)}</span>` : ""}<span class="rms-big ${tone}">${escapeHTML(bigTxt)}</span></div></div>
       ${chipsHTML ? `<div class="rholds">${chipsHTML}</div>` : ""}
     </div>`;
   const cashSec = sec(
@@ -5199,7 +5198,7 @@ function buildRiskOverviewCard(japanTruePct) {
     entry("\u6295\u8CC7\u8CC7\u7523\u306B\u5BFE\u3059\u308B\u73FE\u91D1", cashOut ? "warn" : "ok", cashVal, "\u9069\u6B63\u30EC\u30F3\u30B8 5\u201320%", "")
   );
   const overBody = overPos.length ? `<div class="rms-minis">${overPos.map(
-    (o, i) => `<div class="rms-mini${i === 0 ? " top" : ""}"><span class="sym">${escapeHTML(o.name)}</span><span class="ctx">\u76EE\u6A19${o.target != null ? o.target.toFixed(0) : "\u2014"}% \u2192 \u73FE${o.cur.toFixed(1)}%</span><span class="pt">+${o.pt.toFixed(1)}pt</span></div>`
+    (o, i) => `<div class="rms-mini${i === 0 ? " top" : ""}"><span class="lft"><b>${escapeHTML(o.name)}</b>\u76EE\u6A19${o.target != null ? o.target.toFixed(0) : "\u2014"}% \u2192 \u73FE${o.cur.toFixed(1)}%</span><span class="pt">+${o.pt.toFixed(1)}pt</span></div>`
   ).join("")}</div>` : `<div class="rms-row"><div class="rms-ent">\u76EE\u6A19\u914D\u5206\u3092\u4E0A\u56DE\u308B\u4FDD\u6709\u306F\u306A\u3057</div></div>`;
   const overSec = sec(
     "i-expand",
