@@ -1130,12 +1130,14 @@ table.t td { font-size: var(--fs-sm); font-weight: 700; border-bottom: 1px solid
 /* ── /Risk quant (Phase 4b) ── */
 
 /* ── Wealth タブ（資産推移・#568・モック 2026-07-09-wealth-tab-mock.html 準拠）── */
-.we-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px; }
-@media (max-width: 520px) { .we-kpis { grid-template-columns: 1fr; } }
-.we-kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
-.we-kpi .l { font-size: var(--fs-sm); color: var(--text2); }
-.we-kpi .v { font-size: var(--fs-lg); font-weight: 700; margin-top: 3px; font-variant-numeric: tabular-nums; }
-.we-kpi .v small { font-size: var(--fs-sm); color: var(--text2); font-weight: 600; }
+/* KPI 3枚は常に横並び（折り返さない・設計追記 2026-07-09）。9桁¥は container-query＋clamp で自動縮小。
+   値は右寄せ＋tabular-nums・補助は下段 sub2（値の行に詰め込まない） */
+.we-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+.we-kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; container-type: inline-size; min-width: 0; }
+.we-kpi .l { font-size: var(--fs-sm); color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.we-kpi .v { font-weight: 700; margin-top: 3px; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; font-size: clamp(13px, 11cqi, 19px); }
+.we-kpi .v small { font-size: 0.62em; color: var(--text2); font-weight: 600; }
+.we-kpi .sub2 { font-size: var(--fs-sm); color: var(--text2); text-align: right; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .we-card { padding: 12px; }
 .we-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
 .we-seg button { padding: 5px 11px; font-size: var(--fs-sm); }
