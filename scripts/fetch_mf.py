@@ -479,11 +479,30 @@ def do_run(c):
             f.write("\n")
         git_commit_push()
         print(f"OK imported={doc['totals']['imported']:,} holdings={len(doc['holdings'])}")
+        # 保有取得成功後に履歴も非致命的に取得（失敗しても保有処理は成功扱い）
+        _run_history_script()
     except SystemExit:
         raise  # notify 済みの意図的 exit（2/3/5）はそのまま伝播
     except Exception as e:
         notify(f"想定外エラーで中止: {type(e).__name__}: {e}")
         sys.exit(1)
+
+
+def _run_history_script():
+    """資産推移 CSV 取得スクリプトを非致命的に呼び出す。
+    失敗しても保有処理の成功ステータスは変えない（例外を握りつぶして stderr に1行出すだけ）。
+    """
+    try:
+        history_script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fetch_mf_history.py")
+        result = subprocess.run(
+            [sys.executable, history_script],
+            check=False,
+            capture_output=False,
+        )
+        if result.returncode != 0:
+            print(f"[history] fetch_mf_history.py exited with code {result.returncode}", file=sys.stderr)
+    except Exception as e:
+        print(f"[history] fetch_mf_history.py の起動に失敗（無視）: {e}", file=sys.stderr)
 
 
 if __name__ == "__main__":
