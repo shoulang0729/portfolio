@@ -92,6 +92,8 @@ https://raw.githubusercontent.com/shoulang0729/portfolio/main/data/mf-history.js
 
 目隠し ON 時: 資産総額・開設来倍率は伏字。現金比率はそのまま。
 
+**数値の揃え（確定・2026-07-09）**: KPI カードの値・年末サマリ表の数値列は **右寄せ**＋`font-variant-numeric: tabular-nums`（桁が揃う等幅数字）。ラベルは左のまま。
+
 ---
 
 ## カテゴリ色
