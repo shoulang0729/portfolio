@@ -78,7 +78,8 @@ https://raw.githubusercontent.com/shoulang0729/portfolio/main/data/mf-history.js
 ### 目隠しボタン
 - 既存 `#stats-eye` と同じ SVG（eye + eye-slash 線）を流用
 - `localStorage` キー `hm-wealth-eye` で永続化
-- ON 時: 金額（KPI・Y 軸・ツールチップ・年末表の金額列）を伏字（`••••••`）。**構成比%・各種比率は隠さない**
+- ON 時: 金額（KPI・Y 軸・ツールチップ・年末表の金額列）を伏字。**構成比%・各種比率は隠さない**
+- **伏字の表記は Briefing / statsバーと同一＝`src/fmt.js` の `maskAmount`**（`String(s).replace(/[0-9]/g,'*')`）を使う。例: `¥573,286,603 → ¥***,***,***`（数字のみ `*`・¥ とカンマは残す）。`••••••` のような独自表記は使わない
 
 ---
 
@@ -90,7 +91,9 @@ https://raw.githubusercontent.com/shoulang0729/portfolio/main/data/mf-history.js
 | 現金比率 | `cash / 総資産 * 100` |
 | 開設来倍率 | `最新総資産 / 初回総資産`（例: ×31.5） |
 
-目隠し ON 時: 資産総額・開設来倍率は伏字。現金比率はそのまま。
+目隠し ON 時: 資産総額・開設来倍率は伏字（`maskAmount`）。現金比率はそのまま。
+
+**KPI カードのレイアウト（確定・2026-07-09）**: 3 枚を**常に横並び**（`grid-template-columns:repeat(3,1fr)`）で、狭幅でも折り返さない。各カード＝ラベル（1行・省略可）／値（大・右寄せ・`white-space:nowrap`）／補助（下段・右寄せ小＝資産総額は日付 `2026-07-09`、開設来は `0.18→5.73億` 等）。値が長い（¥9桁）ので**コンテナクエリ＋clamp で自動縮小**（`.kpi{container-type:inline-size}` ＋ `.v{font-size:clamp(13px,11cqi,19px)}`）。日付・倍率明細は値と同じ行に詰め込まず**下段 `.sub2` に分離**してごちゃつきを防ぐ。
 
 **数値の揃え（確定・2026-07-09）**: KPI カードの値・年末サマリ表の数値列は **右寄せ**＋`font-variant-numeric: tabular-nums`（桁が揃う等幅数字）。ラベルは左のまま。
 
