@@ -1,18 +1,18 @@
 {
- "updated": "2026-07-14-0506",
- "note": "PER採点の単一ストア(symbol→valuation)。保有テーブル・ウォッチリスト・Briefingが共有参照。保有∪ウォッチを和集合で1回採点(重複計算なし)。%タイルは概算。PER非該当(金GLDM/銀SLV/債券JPST,SHV)は本ストアに含めず=アプリは'–'表示。 [2026-06-18 バンドをTTM(Yahoo trailingPE)基準で全面再構築。日次はwatchlist-per.mjsがYahoo trailingPEで%タイル/status自動更新。ETF/シクリカル/新規上場はconfidence低・bandNote参照] [2026-06-19 個別株9銘柄に quality/momentum/value拡張(FCF利回り・還元) を追加。wacc仮置き米8/日6。qScore=Piotroski。8050/6301はAltman Zグレーゾーン注意。] [2026-06-27 土曜バンドレビュー実施・据え置き(Opus判断)。sellProposal/buyProposalを段B判断で更新。] [2026-06-30 段B(Opus)判断でsellProposal/buyProposal更新。SMH最優先トリム・MSFT/DTCR/AMZN買い発議。] [2026-07-01 段C(Sonnet)書き戻し。段B判断反映。日経72366・米テック軟調・じっちゃま中立格下げ・後藤FRB独立性維持。] [2026-07-02 段C(Sonnet)書き戻し。日経70475(+40%/6m)・VIX16.45鎮静・ハンセン-9.14%/1m。じっちゃま中立格下げ継続・後藤FRBタカ派・NFP通過待ち。SMH最優先トリム/MSFT最優先買い/DTCR/AMZN継続発議。] [2026-07-03 段C(Sonnet)書き戻し。日経68733(-5.02%/1w急調整)・6月NFP+57K大幅下振れ・VIX16.59鎮静。スタンス=中立(やや守り)。半導体13.8%・キャッシュ7.4%。SMH最優先トリム/MSFT最優先買い/DTCR/AMZN/6016.T継続発議。] [2026-07-04 段C(Sonnet)書き戻し。土曜バンドレビュー(rebuildBands=true)。日経69744(+0.55%/1w)・TOPIX+2.67%/1w・Nasdaq-4.66%/1m・ハンセン-11.46%/1m。スタンス=中立(半導体トリム優先・押し目は質を選別)。半導体13.7%・キャッシュ7.3%。SMH最優先トリム/MSFT最優先買い/DTCR/AMZN/6016.T継続。3033.HK/PLTR/LITE低confidence扱い。] [2026-07-05 段C(Sonnet)書き戻し。日曜(rebuildBands=false)。日経69744(+0.55%/1w)・ハンセン+2.99%/1w(-8.91%/1m)・Nasdaq-4.66%/1m。スタンス=中立(守り気味・質を選別して押し目)。半導体13.7%・キャッシュ7.3%。SMH最優先トリム/MSFT最優先買い（%タイル0・cheap_real）/DTCR/AMZN/6016.T継続。ゆな先生7/4新着TOTO静電チャック追加。] [2026-07-06 段C(Sonnet)書き戻し。月曜(rebuildBands=false)。日経69744(+0.55%/1w)・TOPIX+2.67%/1w・ハンセン+2.99%/1w(-8.91%/1m)・Nasdaq-4.66%/1m。スタンス=中立(守り気味・質を選別して押し目)。半導体13.7%・キャッシュ7.3%。SMH最優先トリム/MSFT最優先買い（%タイル0・cheap_real）/DTCR/AMZN/6016.T継続。じっちゃま7/6号：夏枯れ底堅い・ボラ銘柄鬼門・地味大型株移行推奨。] [2026-07-07 段C(Sonnet)書き戻し。火曜(rebuildBands=false)。日経69738(+0.39%/1w)・TOPIX+3.22%/1w・ハンセン+2.99%/1w(-8.91%/1m)・Nasdaq-4.66%/1m。スタンス=中立(守り気味・半導体トリム優先／押し目は質を選別)。半導体13.7%・キャッシュ7.3%。SMH最優先トリム/MSFT最優先買い（%タイル0・cheap_real）/DTCR/AMZN/6016.T継続。じっちゃま7/6号：夏枯れ底堅い・ボラ銘柄鬼門・地味大型株移行推奨。後藤マイクロン1.5兆円対日投資。ゆな7/4TOTO静電チャック。] [2026-07-08 段C(Sonnet)書き戻し。水曜(rebuildBands=false)。日経68257(-2.58%/1w)・TOPIX+0.14%/1w・ハンセン+2.56%/1w(-10.37%/6m)・VIX15.57(-11.78%/1w・鎮静)。スタンス=中立(強気寄り・利益確定＆分散フェーズ)。半導体14.2%・キャッシュ7.3%（目標12-13%未達）。SMH最優先トリム/MSFT最優先買い（%タイル0・cheap_real・bandLow割れ）/DTCR/AMZN/6016.T継続。じっちゃま7/6号：夏枯れ底堅い・ボラ銘柄鬼門・地味大型株移行推奨。後藤マイクロン1.5兆円対日投資・FRBタカ派継続。中島CPU希少資源時代・フォトニクスAI DC必須。ゆな7/4TOTO静電チャック。藤沢第738号AIトークン製造工場・DRAM御三家保有継続。COPX:fair→cheap変化・ILF:rich→fair変化。] [2026-07-09 段C(Sonnet)書き戻し。木曜(rebuildBands=false)。日経66819(-5.19%/1w急落・反動調整)・TOPIX+0.18%/1w・ハンセン+2.69%/1w(-12.03%/6m)・VIX16.13鎮静。スタンス=中立(やや守り・利確でキャッシュ復元＆質へ振替)。半導体13.7%・キャッシュ7.3%（目標12-13%未達）。SMH最優先トリム/MSFT最優先買い（%タイル0・cheap_real）/DTCR確認済み実行/AMZN/6016.T継続。じっちゃま7/6号：夏枯れ底堅い・ボラ銘柄鬼門・地味大型株移行推奨。藤沢第738号：AIツルハシ急落は押し目・DRAM御三家+キオクシア保有継続。後藤マイクロン1.5兆円対日投資・FRBタカ派継続。中島NVIDIAがGroq買収・Vera Rubin統合。ゆな7/4TOTO静電チャック。MF保有データstale(staleDays=3・7/6時点)。kvResyncA:16銘柄同期済みread-back検証OK。] [2026-07-10 段C(Sonnet)書き戻し。金曜(rebuildBands=false)。日経67743(-1.44%/1w)・TOPIX+0.25%/1w・ハンセン+5.76%/1w(-8.54%/6m)・VIX16.9鎮静。スタンス=中立(やや守り・利確でキャッシュ復元＆質へ振替)。半導体13.5%・キャッシュ7.4%（目標12-13%未達）。SMH最優先トリム/MSFT最優先買い（%タイル0・cheap_real・bandLow割れ）/DTCR確認済み実行/AMZN/6016.T継続。じっちゃま7/6号：夏枯れ底堅い・ボラ銘柄鬼門・地味大型株移行推奨。藤沢第738号：AIツルハシ急落は押し目・DRAM御三家+キオクシア保有継続。後藤マイクロン1.5兆円対日投資・FRBタカ派継続。中島NVIDIAがGroq買収・Vera Rubin統合。ゆな7/4TOTO静電チャック。] [2026-07-11 段C(Sonnet)書き戻し。土曜バンドレビュー(rebuildBands=true)。日経68558(-1.7%/1w)・TOPIX-0.47%/1w・ハンセン+4.23%/1w(-8.1%/6m)・VIX15.84(-1.92%/1w鎮静)。スタンス=中立(やや慎重・高値圏で守りを固め割安大型へ資金回す)。半導体13.7%・キャッシュ7.4%（目標12-13%未達）。SMH最優先トリム（PER39.6・%タイル80）/MSFT最優先買い（%タイル0・cheap_real・bandLow割れ）/DTCR確認済み実行/AMZN/6016.T継続。後藤SKハイニックスNASDAQ上場・AIメモリ人気投票・増産→過剰リスク。中島NVIDIAがGroq買収・Vera Rubin統合・電力の壁が根本制約。土曜バンドレビュー：大半のバンド据置き（TTM再構築済み・過去レンジ低頻度更新）。] [2026-07-13 段C(Sonnet)書き戻し。月曜(rebuildBands=false)。日経68558(-1.7%/1w・最高値圏)・S&P500 7575(+1.23%/1w)・ハンセン+3.53%/1w・TOPIX-0.47%/1w・VIX15.84(-1.92%/1w・低位)。スタンス=中立(やや慎重・高値圏・防御優先)。半導体13.7%・キャッシュ7.4%（目標12-13%未達）。SMH最優先トリム（PER39.6・%タイル80）/MSFT最優先買い（%タイル0・cheap_real・bandLow割れ）/DTCR即実行・確認済み/AMZN$245以下保留/6016.T/3033.HK小口。売り継続：200A.T/9983.T/8050.T。ゆな先生7/13再要約更新。後藤SKハイニックスNASDAQ上場完了・AIメモリ増産→過剰サイクルリスク・FRBタカ派継続。7/14 CPI・7/28-29 FOMC密集。kvResyncA:16銘柄同期済みread-back検証OK。MFデータ当日鮮度OK(stale=false)。] [2026-07-14 段C(Sonnet)書き戻し。火曜(rebuildBands=false)。日経67242(-3.58%/1w)・S&P500 7575(+1.23%/1w・最高値)・ハンセン+3.53%/1w・TOPIX-2.27%/1w・VIX15.03(-4.93%/1w・低位)。スタンス=中立〜やや慎重（高値・CPI待ち・防御優先）。半導体13.3%・キャッシュ7.4%（目標12-13%未達）。本日7/14 米6月CPI・Warsh上下院連続公聴会・7/28-29 FOMC密集。SMH最優先トリム（PER37.9・%タイル74）/MSFT最優先買い（%タイル0・cheap_real・bandLow割れ・7/28決算前）/DTCR即実行・確認済み/AMZN$245以下保留/6016.T/3033.HK小口。売り継続：200A.T(fair)/9983.T/8050.T/1306.T条件付き。じっちゃま7/13号中立・Q2 EPS+22%・IPOウィンドウ継続・ボラ鬼門。ゆな7/13再要約・TOTO静電チャック・Alphabet最大ポジ。後藤FRBタカ派・SKハイニックスADR増産→過剰サイクルリスク。中島NVIDIA Groq買収・電力の壁。藤沢AIトークン工場・DRAM御三家継続。MFデータ当日鮮度OK(stale=false)。]",
- "asOf": "2026-07-14",
+ "updated": "2026-07-15-auto-per",
+ "note": "PER採点の単一ストア(symbol→valuation)。保有テーブル・ウォッチリスト・Briefingが共有参照。保有∪ウォッチを和集合で1回採点(重複計算なし)。%タイルは概算。PER非該当(金GLDM/銀SLV/債券JPST,SHV)は本ストアに含めず=アプリは'–'表示。 [2026-06-18 バンドをTTM(Yahoo trailingPE)基準で全面再構築。日次はwatchlist-per.mjsがYahoo trailingPEで%タイル/status自動更新。ETF/シクリカル/新規上場はconfidence低・bandNote参照] [2026-06-19 個別株9銘柄に quality/momentum/value拡張(FCF利回り・還元) を追加。wacc仮置き米8/日6。qScore=Piotroski。8050/6301はAltman Zグレーゾーン注意。] [2026-06-27 土曜バンドレビュー実施・据え置き(Opus判断)。sellProposal/buyProposalを段B判断で更新。] [2026-06-30 段B(Opus)判断でsellProposal/buyProposal更新。SMH最優先トリム・MSFT/DTCR/AMZN買い発議。] [2026-07-01 段C(Sonnet)書き戻し。段B判断反映。日経72366・米テック軟調・じっちゃま中立格下げ・後藤FRB独立性維持。] [2026-07-02 段C(Sonnet)書き戻し。日経70475(+40%/6m)・VIX16.45鎮静・ハンセン-9.14%/1m。じっちゃま中立格下げ継続・後藤FRBタカ派・NFP通過待ち。SMH最優先トリム/MSFT最優先買い/DTCR/AMZN継続発議。] [2026-07-03 段C(Sonnet)書き戻し。日経68733(-5.02%/1w急調整)・6月NFP+57K大幅下振れ・VIX16.59鎮静。スタンス=中立(やや守り)。半導体13.8%・キャッシュ7.4%。SMH最優先トリム/MSFT最優先買い/DTCR/AMZN/6016.T継続発議。] [2026-07-04 段C(Sonnet)書き戻し。土曜バンドレビュー(rebuildBands=true)。日経69744(+0.55%/1w)・TOPIX+2.67%/1w・Nasdaq-4.66%/1m・ハンセン-11.46%/1m。スタンス=中立(半導体トリム優先・押し目は質を選別)。半導体13.7%・キャッシュ7.3%。SMH最優先トリム/MSFT最優先買い/DTCR/AMZN/6016.T継続。3033.HK/PLTR/LITE低confidence扱い。] [2026-07-05 段C(Sonnet)書き戻し。日曜(rebuildBands=false)。日経69744(+0.55%/1w)・ハンセン+2.99%/1w(-8.91%/1m)・Nasdaq-4.66%/1m。スタンス=中立(守り気味・質を選別して押し目)。半導体13.7%・キャッシュ7.3%。SMH最優先トリム/MSFT最優先買い（%タイル0・cheap_real）/DTCR/AMZN/6016.T継続。ゆな先生7/4新着TOTO静電チャック追加。] [2026-07-06 段C(Sonnet)書き戻し。月曜(rebuildBands=false)。日経69744(+0.55%/1w)・TOPIX+2.67%/1w・ハンセン+2.99%/1w(-8.91%/1m)・Nasdaq-4.66%/1m。スタンス=中立(守り気味・質を選別して押し目)。半導体13.7%・キャッシュ7.3%。SMH最優先トリム/MSFT最優先買い（%タイル0・cheap_real）/DTCR/AMZN/6016.T継続。じっちゃま7/6号：夏枯れ底堅い・ボラ銘柄鬼門・地味大型株移行推奨。] [2026-07-07 段C(Sonnet)書き戻し。火曜(rebuildBands=false)。日経69738(+0.39%/1w)・TOPIX+3.22%/1w・ハンセン+2.99%/1w(-8.91%/1m)・Nasdaq-4.66%/1m。スタンス=中立(守り気味・半導体トリム優先／押し目は質を選別)。半導体13.7%・キャッシュ7.3%。SMH最優先トリム/MSFT最優先買い（%タイル0・cheap_real）/DTCR/AMZN/6016.T継続。じっちゃま7/6号：夏枯れ底堅い・ボラ銘柄鬼門・地味大型株移行推奨。後藤マイクロン1.5兆円対日投資。ゆな7/4TOTO静電チャック。] [2026-07-08 段C(Sonnet)書き戻し。水曜(rebuildBands=false)。日経68257(-2.58%/1w)・TOPIX+0.14%/1w・ハンセン+2.56%/1w(-10.37%/6m)・VIX15.57(-11.78%/1w・鎮静)。スタンス=中立(強気寄り・利益確定＆分散フェーズ)。半導体14.2%・キャッシュ7.3%（目標12-13%未達）。SMH最優先トリム/MSFT最優先買い（%タイル0・cheap_real・bandLow割れ）/DTCR/AMZN/6016.T継続。じっちゃま7/6号：夏枯れ底堅い・ボラ銘柄鬼門・地味大型株移行推奨。後藤マイクロン1.5兆円対日投資・FRBタカ派継続。中島CPU希少資源時代・フォトニクスAI DC必須。ゆな7/4TOTO静電チャック。藤沢第738号AIトークン製造工場・DRAM御三家保有継続。COPX:fair→cheap変化・ILF:rich→fair変化。] [2026-07-09 段C(Sonnet)書き戻し。木曜(rebuildBands=false)。日経66819(-5.19%/1w急落・反動調整)・TOPIX+0.18%/1w・ハンセン+2.69%/1w(-12.03%/6m)・VIX16.13鎮静。スタンス=中立(やや守り・利確でキャッシュ復元＆質へ振替)。半導体13.7%・キャッシュ7.3%（目標12-13%未達）。SMH最優先トリム/MSFT最優先買い（%タイル0・cheap_real）/DTCR確認済み実行/AMZN/6016.T継続。じっちゃま7/6号：夏枯れ底堅い・ボラ銘柄鬼門・地味大型株移行推奨。藤沢第738号：AIツルハシ急落は押し目・DRAM御三家+キオクシア保有継続。後藤マイクロン1.5兆円対日投資・FRBタカ派継続。中島NVIDIAがGroq買収・Vera Rubin統合。ゆな7/4TOTO静電チャック。MF保有データstale(staleDays=3・7/6時点)。kvResyncA:16銘柄同期済みread-back検証OK。] [2026-07-10 段C(Sonnet)書き戻し。金曜(rebuildBands=false)。日経67743(-1.44%/1w)・TOPIX+0.25%/1w・ハンセン+5.76%/1w(-8.54%/6m)・VIX16.9鎮静。スタンス=中立(やや守り・利確でキャッシュ復元＆質へ振替)。半導体13.5%・キャッシュ7.4%（目標12-13%未達）。SMH最優先トリム/MSFT最優先買い（%タイル0・cheap_real・bandLow割れ）/DTCR確認済み実行/AMZN/6016.T継続。じっちゃま7/6号：夏枯れ底堅い・ボラ銘柄鬼門・地味大型株移行推奨。藤沢第738号：AIツルハシ急落は押し目・DRAM御三家+キオクシア保有継続。後藤マイクロン1.5兆円対日投資・FRBタカ派継続。中島NVIDIAがGroq買収・Vera Rubin統合。ゆな7/4TOTO静電チャック。] [2026-07-11 段C(Sonnet)書き戻し。土曜バンドレビュー(rebuildBands=true)。日経68558(-1.7%/1w)・TOPIX-0.47%/1w・ハンセン+4.23%/1w(-8.1%/6m)・VIX15.84(-1.92%/1w鎮静)。スタンス=中立(やや慎重・高値圏で守りを固め割安大型へ資金回す)。半導体13.7%・キャッシュ7.4%（目標12-13%未達）。SMH最優先トリム（PER39.6・%タイル80）/MSFT最優先買い（%タイル0・cheap_real・bandLow割れ）/DTCR確認済み実行/AMZN/6016.T継続。後藤SKハイニックスNASDAQ上場・AIメモリ人気投票・増産→過剰リスク。中島NVIDIAがGroq買収・Vera Rubin統合・電力の壁が根本制約。土曜バンドレビュー：大半のバンド据置き（TTM再構築済み・過去レンジ低頻度更新）。] [2026-07-13 段C(Sonnet)書き戻し。月曜(rebuildBands=false)。日経68558(-1.7%/1w・最高値圏)・S&P500 7575(+1.23%/1w)・ハンセン+3.53%/1w・TOPIX-0.47%/1w・VIX15.84(-1.92%/1w・低位)。スタンス=中立(やや慎重・高値圏・防御優先)。半導体13.7%・キャッシュ7.4%（目標12-13%未達）。SMH最優先トリム（PER39.6・%タイル80）/MSFT最優先買い（%タイル0・cheap_real・bandLow割れ）/DTCR即実行・確認済み/AMZN$245以下保留/6016.T/3033.HK小口。売り継続：200A.T/9983.T/8050.T。ゆな先生7/13再要約更新。後藤SKハイニックスNASDAQ上場完了・AIメモリ増産→過剰サイクルリスク・FRBタカ派継続。7/14 CPI・7/28-29 FOMC密集。kvResyncA:16銘柄同期済みread-back検証OK。MFデータ当日鮮度OK(stale=false)。] [2026-07-14 段C(Sonnet)書き戻し。火曜(rebuildBands=false)。日経67242(-3.58%/1w)・S&P500 7575(+1.23%/1w・最高値)・ハンセン+3.53%/1w・TOPIX-2.27%/1w・VIX15.03(-4.93%/1w・低位)。スタンス=中立〜やや慎重（高値・CPI待ち・防御優先）。半導体13.3%・キャッシュ7.4%（目標12-13%未達）。本日7/14 米6月CPI・Warsh上下院連続公聴会・7/28-29 FOMC密集。SMH最優先トリム（PER37.9・%タイル74）/MSFT最優先買い（%タイル0・cheap_real・bandLow割れ・7/28決算前）/DTCR即実行・確認済み/AMZN$245以下保留/6016.T/3033.HK小口。売り継続：200A.T(fair)/9983.T/8050.T/1306.T条件付き。じっちゃま7/13号中立・Q2 EPS+22%・IPOウィンドウ継続・ボラ鬼門。ゆな7/13再要約・TOTO静電チャック・Alphabet最大ポジ。後藤FRBタカ派・SKハイニックスADR増産→過剰サイクルリスク。中島NVIDIA Groq買収・電力の壁。藤沢AIトークン工場・DRAM御三家継続。MFデータ当日鮮度OK(stale=false)。] [2026-07-15 段C(Sonnet)書き戻し。水曜(rebuildBands=false)。日経67743(-0.75%/1w)・S&P500 7515(-0.29%/1w・最高値圏)・ハンセン+2.53%/1w・TOPIX+1.19%/1w・VIX17.16(+10.2%/1w・ボラ再拡大の兆し)。スタンス=中立(やや慎重)。半導体13.2%・キャッシュ7.4%（目標12-13%未達）。Warsh上院公聴会7/15・7/22 Alphabet決算・7/28 MSFT/FOMC密集。SMH最優先トリム（PER38.86・%タイル77）/MSFT最優先買い（%タイル0・cheap_real・bandLow割れ・7/28決算前）/DTCR即実行・確認済み/AMZN$245以下保留/6016.T/3033.HK小口。売り継続：200A.T(fair)/9983.T/8050.T。じっちゃま7/13号中立・Q2 EPS+22%・ボラ鬼門。ゆな7/15再要約・TOTO静電チャック・Alphabet最大ポジ。後藤FRBタカ派・SKハイニックスADR増産→過剰サイクルリスク。中島Groq買収・電力の壁・カスタムチップ多層化。藤沢739号メモリ低PER歴史的ミスプライス・DRAM御三家継続。MFデータ当日鮮度OK(stale=false)。kvResyncA:16銘柄同期済みread-back検証OK。]",
+ "asOf": "2026-07-15",
  "valuations": {
   "VEA": {
    "value": {
     "perTrail": 18.64,
     "perSource": "fund-trailing"
    },
-   "perCurrent": 17.99,
+   "perCurrent": 18.2,
    "bandLow": 12,
    "bandHigh": 18.5,
    "bandMedian": 15,
-   "percentile": 92,
+   "percentile": 95,
    "status": "rich",
    "note": "%タイル97・先進国ex-US・監視中rich。新規買い見送り。",
    "asOf": "2026-07-14",
@@ -26,11 +26,11 @@
     "perTrail": 17.77,
     "perSource": "fund-trailing"
    },
-   "perCurrent": 17.69,
+   "perCurrent": 17.77,
    "bandLow": 12,
    "bandHigh": 18,
    "bandMedian": 14.5,
-   "percentile": 95,
+   "percentile": 96,
    "status": "rich",
    "note": "%タイル97・欧州株上限寄り。条件付き買い(原油低下+ホルムズ正常化)は条件未達＝据置。",
    "asOf": "2026-07-14",
@@ -51,11 +51,11 @@
     "perTrail": 14.7,
     "evEbitda": 95.1
    },
-   "perCurrent": 14.29,
+   "perCurrent": 14.74,
    "bandLow": 12,
    "bandHigh": 35,
    "bandMedian": 20,
-   "percentile": 10,
+   "percentile": 12,
    "status": "cheap",
    "note": "舶用エンジン小型(J-ENG)。%タイル9・cheap。bandConfidence low(低流動・利益ボラ大)・市場の質△。",
    "asOf": "2026-07-14",
@@ -75,14 +75,14 @@
    "buyProposal": "¥8,500以下小口指値（低優先・低流動ゆえ慎重）。市場の質△・利益ボラ大につき打診止まり。"
   },
   "SMH": {
-   "perCurrent": 37.91,
+   "perCurrent": 38.86,
    "bandLow": 18,
    "bandHigh": 45,
    "bandMedian": 28,
-   "percentile": 74,
+   "percentile": 77,
    "status": "rich",
-   "note": "PER39.6・%タイル80・保有・半導体集中13.7%の主因。AI需要ピーク圏マルチプル。bandConfidence low(算定差大)だが絶対水準突出。",
-   "asOf": "2026-07-14",
+   "note": "PER38.86・%タイル77・保有・半導体集中13.2%の主因。AI需要ピーク圏マルチプル。bandConfidence low(算定差大)だが絶対水準突出。",
+   "asOf": "2026-07-15",
    "bandBasis": "TTM(ETF)",
    "bandConfidence": "low",
    "bandNote": "Semiconductor基準=Yahoo trailingPE。半導体は強いシクリカル+成長でP/Eレンジが極めて広い。サイクル谷(2018末/2022下期)は18-22、平時25-30、AIブーム拡大局面(2024-26)は40-45超。アンカー44.23はバンド最上端(~90%タイル)=台帳🔴rich/90%と整合し現在のAI需要バリュエーション拡大を反映。⚠Yahoo TTM≈42 vs Investing.com≈29.34と算定差大。EPS急変でTTMが大きくブレるためconfidence=low。",
@@ -100,11 +100,11 @@
     "etf": "1624.T",
     "asOf": "2026-06-25"
    },
-   "perCurrent": 15.48,
+   "perCurrent": 15.39,
    "bandLow": 9,
    "bandHigh": 18,
    "bandMedian": 13,
-   "percentile": 72,
+   "percentile": 71,
    "status": "rich",
    "note": "%タイル72・コマツ・シクリカル(利益-14%YoY)・常用域上。監視・発議なし。",
    "asOf": "2026-07-14",
@@ -148,11 +148,11 @@
    }
   },
   "1306.T": {
-   "perCurrent": 17.36,
+   "perCurrent": 17.5,
    "bandLow": 12,
    "bandHigh": 18,
    "bandMedian": 14.5,
-   "percentile": 89,
+   "percentile": 92,
    "status": "rich",
    "note": "%タイル92・TOPIX ETF最高値圏・保有・日本株コア。日経過熱の裏返し。",
    "asOf": "2026-07-14",
@@ -166,11 +166,11 @@
     "perTrail": 22.51,
     "perSource": "fund-trailing"
    },
-   "perCurrent": 22.24,
+   "perCurrent": 22.38,
    "bandLow": 15,
    "bandHigh": 24,
    "bandMedian": 19,
-   "percentile": 80,
+   "percentile": 82,
    "status": "rich",
    "note": "%タイル83・全世界株バンド上位。監視・新規買い見送り。",
    "asOf": "2026-07-14",
@@ -184,7 +184,7 @@
     "perTrail": 16.9,
     "perSource": "fund-trailing"
    },
-   "perCurrent": 17.76,
+   "perCurrent": 17.79,
    "bandLow": 12.5,
    "bandHigh": 18.5,
    "bandMedian": 15.5,
@@ -202,7 +202,7 @@
     "perTrail": 24.1,
     "perSource": "fund-trailing"
    },
-   "perCurrent": 29.04,
+   "perCurrent": 28.48,
    "bandLow": 16.5,
    "bandHigh": 25,
    "bandMedian": 20.5,
@@ -220,11 +220,11 @@
     "perTrail": 25.07,
     "perSource": "fund-trailing"
    },
-   "perCurrent": 25.73,
+   "perCurrent": 25.38,
    "bandLow": 19,
    "bandHigh": 26,
    "bandMedian": 22.5,
-   "percentile": 96,
+   "percentile": 91,
    "status": "rich",
    "note": "%タイル94・生活必需・上端寄り。非保有・監視。",
    "asOf": "2026-07-14",
@@ -238,11 +238,11 @@
     "perTrail": 22.13,
     "perSource": "fund-trailing"
    },
-   "perCurrent": 19.7,
+   "perCurrent": 19.79,
    "bandLow": 18,
    "bandHigh": 32,
    "bandMedian": 24,
-   "percentile": 12,
+   "percentile": 13,
    "status": "cheap",
    "note": "AI電力/データセンター本丸。bandConfidence low(REIT偏重・履歴薄)だがテーマ触媒◎(中島/ゆな整合)。",
    "asOf": "2026-07-14",
@@ -264,7 +264,7 @@
    "value": {
     "targetGapPct": 31
    },
-   "perCurrent": 135,
+   "perCurrent": 143.45,
    "bandLow": 20,
    "bandHigh": 90,
    "bandMedian": 45,
@@ -335,7 +335,7 @@
    "value": {
     "targetGapPct": 8
    },
-   "perCurrent": 289.74,
+   "perCurrent": 304.22,
    "bandLow": 40,
    "bandHigh": 140,
    "bandMedian": 80,
@@ -373,11 +373,11 @@
    "sellProposal": "N/A（監視）。新規買い見送り。"
   },
   "ASHR": {
-   "perCurrent": 16.57,
+   "perCurrent": 17.04,
    "bandLow": 11,
    "bandHigh": 18,
    "bandMedian": 13.5,
-   "percentile": 80,
+   "percentile": 86,
    "status": "rich",
    "asOf": "2026-07-14",
    "note": "%タイル86・中国A株ラリーで割高側。藤沢の本丸だが監視中rich。今は追いかけ見送り。",
@@ -387,11 +387,11 @@
    "sellProposal": "N/A（監視）。今は追いかけ見送り。"
   },
   "3033.HK": {
-   "perCurrent": 17.85,
+   "perCurrent": 17.89,
    "bandLow": 15,
    "bandHigh": 40,
    "bandMedian": 22,
-   "percentile": 11,
+   "percentile": 12,
    "status": "cheap",
    "asOf": "2026-07-14",
    "note": "ハンセンTECH・バンド下半分=過熱なし。bandConfidence low(2020設定・履歴薄で分位信頼度低)。ハンセン1w+4.23%反発。",
@@ -410,11 +410,11 @@
     "source": "finnhub-peers",
     "asOf": "2026-06-25"
    },
-   "perCurrent": 38.42,
+   "perCurrent": 38.16,
    "bandLow": 24,
    "bandHigh": 40,
    "bandMedian": 30,
-   "percentile": 90,
+   "percentile": 88,
    "status": "rich",
    "note": "%タイル89・rich_real寄りだがバンド内・5年平均30.5。非保有・新規買い見送り。",
    "asOf": "2026-07-14",
@@ -466,7 +466,7 @@
     "source": "finnhub-peers",
     "asOf": "2026-06-25"
    },
-   "perCurrent": 29.55,
+   "perCurrent": 29.6,
    "bandLow": 24,
    "bandHigh": 55,
    "bandMedian": 35,
@@ -523,11 +523,11 @@
     "source": "finnhub-peers",
     "asOf": "2026-06-25"
    },
-   "perCurrent": 26.89,
+   "perCurrent": 27.42,
    "bandLow": 18,
    "bandHigh": 35,
    "bandMedian": 25,
-   "percentile": 52,
+   "percentile": 55,
    "status": "fair",
    "note": "%タイル55・中立・ゆな先生最大ポジ・バンド中位。ホールド・発議なし。",
    "asOf": "2026-07-14",
@@ -576,7 +576,7 @@
     "source": "finnhub-peers",
     "asOf": "2026-06-25"
    },
-   "perCurrent": 23.29,
+   "perCurrent": 22.95,
    "bandLow": 24,
    "bandHigh": 42,
    "bandMedian": 32,
@@ -633,7 +633,7 @@
     "source": "finnhub-peers",
     "asOf": "2026-06-25"
    },
-   "perCurrent": 358.87,
+   "perCurrent": 356.92,
    "bandLow": 40,
    "bandHigh": 250,
    "bandMedian": 120,
@@ -683,12 +683,12 @@
    "value": {
     "cyclical": true
    },
-   "perCurrent": 16.62,
+   "perCurrent": 17.6,
    "bandLow": 10,
    "bandHigh": 30,
    "bandMedian": 18,
-   "percentile": 33,
-   "status": "cheap",
+   "percentile": 38,
+   "status": "fair",
    "note": "銅鉱山シクリカル・%タイル36。銅=AI電力/電化の川上テーマ。bandConfidence low。",
    "asOf": "2026-07-14",
    "buyProposal": "押し目で少額打診候補（急がない・銅価併読）。",
@@ -697,11 +697,11 @@
    "bandNote": "Global X 銅鉱山ETF=高シクリカル(コモディティのレバレッジ的値動き)。銅価ピーク(2021 >$4.5/lb)では鉱山利益最大化でPE圧縮(10〜12)、価格下落・コスト上昇局面では利益縮小でPE拡大(30+)。現アンカー20.12はサイクル中位。source間で16.3〜23とブレ。コモディティ価格次第で大きく振れるためバンド位置のみで割安判断不可、銅価サイクルを併読。出典: Yahoo/Investing.com/stockanalysis/Statista(2026-06取得)。"
   },
   "ILF": {
-   "perCurrent": 12.17,
+   "perCurrent": 12.39,
    "bandLow": 8,
    "bandHigh": 15,
    "bandMedian": 11,
-   "percentile": 60,
+   "percentile": 63,
    "status": "fair",
    "note": "%タイル62・中南米・rich→fairへ低下。バンド中位・構造割安だが通貨/資源依存で変動大。発議なし・監視継続。",
    "asOf": "2026-07-14",
@@ -713,11 +713,11 @@
    "value": {
     "cyclical": true
    },
-   "perCurrent": 34.7,
+   "perCurrent": 36,
    "bandLow": 15,
    "bandHigh": 55,
    "bandMedian": 30,
-   "percentile": 49,
+   "percentile": 53,
    "status": "fair",
    "note": "%タイル53・レアアース鉱山・赤字混在でPER NM気味。bandConfidence low。発議なし。",
    "asOf": "2026-07-14",
@@ -730,11 +730,11 @@
     "perTrail": 29.34,
     "perSource": "fund-trailing"
    },
-   "perCurrent": 28.63,
+   "perCurrent": 28.51,
    "bandLow": 22,
    "bandHigh": 40,
    "bandMedian": 30,
-   "percentile": 37,
+   "percentile": 36,
    "status": "fair",
    "note": "%タイル39・防衛テック・2023設定で履歴薄・上限圏。地政学触媒強いがマルチプル圧縮リスク大。発議見送り。",
    "asOf": "2026-07-14",
@@ -746,7 +746,7 @@
    "value": {
     "cyclical": true
    },
-   "perCurrent": 21.08,
+   "perCurrent": 21.16,
    "bandLow": 9,
    "bandHigh": 20,
    "bandMedian": 13,
@@ -769,11 +769,11 @@
     "source": "finnhub-peers",
     "asOf": "2026-06-25"
    },
-   "perCurrent": 146.11,
+   "perCurrent": 151.95,
    "bandLow": 130,
    "bandHigh": 450,
    "bandMedian": 280,
-   "percentile": 5,
+   "percentile": 7,
    "status": "cheap",
    "note": "%タイル4だがrich_fake(見せかけの割高)。自前過去比の割安に過ぎず絶対バリュエーション(fwdPE81・EV/EBITDA149)は過熱。",
    "asOf": "2026-07-14",
@@ -817,7 +817,7 @@
    "buyProposal": "新規買い見送り。%タイル低は自己過去比のアヤ・追わない。"
   },
   "1615.T": {
-   "perCurrent": 16.87,
+   "perCurrent": 16.59,
    "bandLow": 8,
    "bandHigh": 15,
    "bandMedian": 11,
@@ -831,7 +831,7 @@
    "sellProposal": "保有継続。金利感応で妥当性あり・売り急がず。買い増し見送り。"
   },
   "1629.T": {
-   "perCurrent": 15.84,
+   "perCurrent": 15.81,
    "bandLow": 7,
    "bandHigh": 15,
    "bandMedian": 11,
@@ -852,7 +852,7 @@
     "etf": "1625.T",
     "asOf": "2026-06-25"
    },
-   "perCurrent": 27.04,
+   "perCurrent": 27.44,
    "bandLow": 12,
    "bandHigh": 26,
    "bandMedian": 17,
@@ -905,11 +905,11 @@
     "etf": "1630.T",
     "asOf": "2026-06-25"
    },
-   "perCurrent": 52.07,
+   "perCurrent": 51.16,
    "bandLow": 25,
    "bandHigh": 55,
    "bandMedian": 38,
-   "percentile": 90,
+   "percentile": 87,
    "status": "rich",
    "note": "PER52.7・%タイル92・rich_real・高PE常態・保有・日本株コア。",
    "asOf": "2026-07-14",
@@ -956,11 +956,11 @@
     "perTrail": 23.28,
     "perSource": "fund-trailing"
    },
-   "perCurrent": 23.02,
+   "perCurrent": 23.17,
    "bandLow": 15,
    "bandHigh": 24,
    "bandMedian": 19,
-   "percentile": 89,
+   "percentile": 91,
    "status": "rich",
    "note": "%タイル92・全世界株(オルカンproxy)・trailing上端近辺。監視。",
    "asOf": "2026-07-14",
@@ -970,11 +970,11 @@
    "sellProposal": "N/A（監視）。新規買い見送り。"
   },
   "1477.T": {
-   "perCurrent": 16.82,
+   "perCurrent": 17.04,
    "bandLow": 12,
    "bandHigh": 18,
    "bandMedian": 15,
-   "percentile": 80,
+   "percentile": 84,
    "status": "rich",
    "note": "%タイル82・日本株最小分散ETF・中上位。bandConfidence low。監視・発議なし。",
    "asOf": "2026-07-14",
@@ -984,11 +984,11 @@
    "sellProposal": "N/A（監視）。発議なし。"
   },
   "2516.T": {
-   "perCurrent": 19.43,
+   "perCurrent": 19.6,
    "bandLow": 14,
    "bandHigh": 30,
    "bandMedian": 20,
-   "percentile": 34,
+   "percentile": 35,
    "status": "fair",
    "note": "東証グロース250指数・%タイル35だが赤字混在でPER NM化しやすく分位採点不適。監視のみ・発議見送り。",
    "asOf": "2026-07-14",
@@ -998,11 +998,11 @@
    "buyProposal": "監視のみ（触媒確認まで新規発議見送り）。"
   },
   "200A.T": {
-   "perCurrent": 41.64,
+   "perCurrent": 42.41,
    "bandLow": 20,
    "bandHigh": 55,
    "bandMedian": 35,
-   "percentile": 62,
+   "percentile": 64,
    "status": "fair",
    "note": "PER44.6・%タイル70・保有・半導体二重集中。薄履歴ETFで分位信頼度低だが絶対水準突出。",
    "asOf": "2026-07-14",
@@ -1026,7 +1026,7 @@
    "bandNote": "上場6/12で履歴極薄=自前PERバンド未確立。trailing EPSが揃うまで%タイル算定不可。週次Opusでバンド初期化を検討。"
   },
   "ひふみ投信": {
-   "perCurrent": 27.06,
+   "perCurrent": 27.12,
    "coverage": 0.3638,
    "source": "fund-monthly-top10",
    "asOf": "2026-05",
@@ -1035,13 +1035,13 @@
      "code": "8001.T",
      "name": "伊藤忠商事",
      "w": 0.0528,
-     "per": 14.68
+     "per": 14.87
     },
     {
      "code": "5802.T",
      "name": "住友電気工業",
      "w": 0.0513,
-     "per": 20.98
+     "per": 20.78
     },
     {
      "code": "6723.T",
@@ -1053,50 +1053,50 @@
      "code": "7012.T",
      "name": "川崎重工業",
      "w": 0.0411,
-     "per": 20.97
+     "per": 20.8
     },
     {
      "code": "8002.T",
      "name": "丸紅",
      "w": 0.0406,
-     "per": 14.72
+     "per": 14.9
     },
     {
      "code": "8035.T",
      "name": "東京エレクトロン",
      "w": 0.0392,
-     "per": 57.16
+     "per": 57.01
     },
     {
      "code": "8411.T",
      "name": "みずほフィナンシャルグループ",
      "w": 0.038,
-     "per": 16.75
+     "per": 16.85
     },
     {
      "code": "8802.T",
      "name": "三菱地所",
      "w": 0.0352,
-     "per": 22.78
+     "per": 23.14
     },
     {
      "code": "8031.T",
      "name": "三井物産",
      "w": 0.0328,
-     "per": 15.76
+     "per": 16.15
     },
     {
      "code": "6981.T",
      "name": "村田製作所",
      "w": 0.0328,
-     "per": 71.28
+     "per": 71.19
     }
    ],
    "status": "na",
    "percentile": null
   },
   "ひふみマイクロスコープpro": {
-   "perCurrent": 22.75,
+   "perCurrent": 23.13,
    "coverage": 0.2643,
    "source": "fund-monthly-top10",
    "asOf": "2026-05",
@@ -1105,43 +1105,43 @@
      "code": "6544.T",
      "name": "ジャパンエレベーターサービスHD",
      "w": 0.0374,
-     "per": 44.74
+     "per": 44.62
     },
     {
      "code": "3139.T",
      "name": "ラクト・ジャパン",
      "w": 0.029,
-     "per": 7.94
+     "per": 8.08
     },
     {
      "code": "9554.T",
      "name": "ＡＶｉＣ",
      "w": 0.0269,
-     "per": 17.37
+     "per": 17.84
     },
     {
      "code": "6200.T",
      "name": "インソース",
      "w": 0.026,
-     "per": 12.43
+     "per": 12.6
     },
     {
      "code": "4666.T",
      "name": "パーク24",
      "w": 0.0259,
-     "per": 9.07
+     "per": 9.15
     },
     {
      "code": "2782.T",
      "name": "セリア",
      "w": 0.0255,
-     "per": 16.6
+     "per": 16.63
     },
     {
      "code": "4258.T",
      "name": "網屋",
      "w": 0.0248,
-     "per": 49.22
+     "per": 51.75
     },
     {
      "code": "3480.T",
@@ -1153,13 +1153,13 @@
      "code": "2157.T",
      "name": "コシダカHD",
      "w": 0.023,
-     "per": 15.44
+     "per": 15.65
     },
     {
      "code": "7381.T",
      "name": "北國フィナンシャルHD",
      "w": 0.0223,
-     "per": 18.59
+     "per": 19.11
     }
    ],
    "status": "na",
