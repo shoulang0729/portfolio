@@ -12,7 +12,7 @@
 //   - X 軸はデータ点をそのまま打つ（直近=日次・過去=月末の混在。補間しない）
 // ══════════════════════════════════════════════════════════════
 
-import { escapeHTML, maskAmount } from './utils.js';
+import { escapeHTML, maskAmount, cssVar } from './utils.js';
 
 /** カテゴリ定義（表示順・色は仕様書の表に従う。テーマ非依存の系列色） */
 const CATS = [
@@ -283,7 +283,7 @@ function drawMainChart(view, activeCats) {
     g.append('path')
       .datum(totals)
       .attr('fill', 'none')
-      .attr('stroke', '#cc785c')
+      .attr('stroke', cssVar('--accent'))
       .attr('stroke-width', 2)
       .attr('d', line);
   } else {
@@ -367,8 +367,9 @@ function drawCashChart(view) {
     .line()
     .x((d) => x(d.date))
     .y((d) => y(d.v));
-  g.append('path').datum(pts).attr('fill', '#6fae86').attr('fill-opacity', 0.18).attr('d', area);
-  g.append('path').datum(pts).attr('fill', 'none').attr('stroke', '#6fae86').attr('stroke-width', 2).attr('d', line);
+  const cashColor = cssVar('--wealth-cash');
+  g.append('path').datum(pts).attr('fill', cashColor).attr('fill-opacity', 0.18).attr('d', area);
+  g.append('path').datum(pts).attr('fill', 'none').attr('stroke', cashColor).attr('stroke-width', 2).attr('d', line);
   g.append('g')
     .attr('class', 'we-axis')
     .attr('transform', `translate(0,${ih})`)

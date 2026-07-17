@@ -96,6 +96,19 @@ html[data-theme="dark"] {
   --danger:  #FF3B30;  /* エラー・破壊的操作 */
   --success: #34C759;  /* 成功・確定 */
   --warn:    #FF9F0A;  /* 警告・コード強調 */
+  /* チャート専用カラー */
+  --chart-up:      #30D158;  /* 価格上昇ライン（iPhone Stocks グリーン） */
+  --chart-down:    #FF453A;  /* 価格下落ライン（iPhone Stocks レッド） */
+  --chart-proxy:   #e3b341;  /* 代替インデックス注記 */
+  --chart-ma5:     #5ac8fa;  /* 5日移動平均 */
+  --chart-ma200:   #2e90d8;  /* 200日移動平均 */
+  --chart-ma50w:   #1a5fa0;  /* 50週移動平均 */
+  --chart-link:    #007AFF;  /* アクティブ状態・リンク色 */
+  /* セル文字色（ヒートマップ背景輝度に応じて切替） */
+  --cell-text-dark:    #1C1C1E;  /* 明るいセル上のテキスト */
+  --cell-text-light:   #FFFFFF;  /* 暗いセル上のテキスト */
+  /* Wealth タブ: カテゴリ別系列色（テーマ非依存・仕様書の表に従う） */
+  --wealth-cash:       #6fae86;  /* 預金・現金系列色 */
 }
 /* @media (prefers-color-scheme: dark) は app.js の applyTheme() が
    matchMedia で解決して data-theme="dark" を明示セットするため不要。
@@ -555,7 +568,7 @@ body {
   transition: background 0.12s;
 }
 .range-btn:hover { background: var(--surface3); }
-.range-btn.active { background: #007AFF; border-color: #007AFF; color: #fff; }
+.range-btn.active { background: var(--chart-link); border-color: var(--chart-link); color: var(--cell-text-light); }
 .chart-loading { text-align: center; padding: 60px 20px; color: var(--text2); font-size: 14px; }
 .chart-error { text-align: center; padding: 60px 20px; color: var(--danger); font-size: 14px; }
 .chart-stats {

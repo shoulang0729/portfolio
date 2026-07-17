@@ -17,7 +17,7 @@ function _lum(c) {
 function getCellTextColor(hexColor) {
   const c = d3.color(hexColor);
   if (!c) return cssVar('--text');
-  return _lum(c) > 0.35 ? '#1C1C1E' : '#FFFFFF';
+  return _lum(c) > 0.35 ? cssVar('--cell-text-dark') : cssVar('--cell-text-light');
 }
 
 function getCellTextColorSub(hexColor) {

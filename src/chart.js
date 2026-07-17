@@ -34,9 +34,9 @@ function _calcMA(points, n) {
 function _buildMAStyles(points) {
   const enough = points.length >= 2;
   return [
-    { data: enough ? _calcMA(points, 5)   : [], color: '#5ac8fa', width: 1,   opacity: 0.85, label: '5日MA'   },
-    { data: enough ? _calcMA(points, 200) : [], color: '#2e90d8', width: 1.4, opacity: 0.90, label: '200日MA' },
-    { data: enough ? _calcMA(points, 50)  : [], color: '#1a5fa0', width: 1.8, opacity: 0.90, label: '50週MA'  },
+    { data: enough ? _calcMA(points, 5)   : [], color: cssVar('--chart-ma5'),   width: 1,   opacity: 0.85, label: '5日MA'   },
+    { data: enough ? _calcMA(points, 200) : [], color: cssVar('--chart-ma200'), width: 1.4, opacity: 0.90, label: '200日MA' },
+    { data: enough ? _calcMA(points, 50)  : [], color: cssVar('--chart-ma50w'), width: 1.8, opacity: 0.90, label: '50週MA'  },
   ];
 }
 
@@ -259,7 +259,7 @@ function _renderChartStats(points, avgCost, cur, maStyles) {
 function openChart(pos) {
   state.currentPos = pos;
   const proxyNote = pos.isProxy
-    ? ` <span class="modal-sym" style="color:#e3b341">※ ${escapeHTML(pos.proxyName)}</span>`
+    ? ` <span class="modal-sym" style="color:var(--chart-proxy)">※ ${escapeHTML(pos.proxyName)}</span>`
     : ` <span class="modal-sym">${escapeHTML(pos.symbol)}</span>`;
   document.getElementById('modal-title').innerHTML = escapeHTML(pos.name) + proxyNote;
   updateRangeBtns();
@@ -374,7 +374,7 @@ function renderChart(points, interval = '1d', dateFmt = '%m/%d') {
   const fp = points[0].close;
   const lastPrice = points[points.length - 1].close;
   // iPhone Stocks スタイル: 期間始値との比較でグリーン/レッド
-  const lineColor = (lastPrice >= fp) ? '#30D158' : '#FF453A';
+  const lineColor = (lastPrice >= fp) ? cssVar('--chart-up') : cssVar('--chart-down');
 
   // 移動平均計算
   const maStyles = _buildMAStyles(points);
