@@ -15,8 +15,8 @@
   "pension",
   "points"
  ],
- "updatedAt": "2026-07-18",
- "count": 160,
+ "updatedAt": "2026-07-19",
+ "count": 161,
  "series": [
   {
    "date": "2014-09-30",
@@ -2246,13 +2246,27 @@
   },
   {
    "date": "2026-07-18",
-   "total": 650786174,
-   "cash": 62274840,
-   "equity": 324632293,
+   "total": 649045899,
+   "cash": 60678592,
+   "equity": 324765336,
    "equityMargin": 0,
-   "fund": 130086977,
+   "fund": 129772581,
    "bond": 0,
-   "crypto": 2997752,
+   "crypto": 3035078,
+   "fx": 0,
+   "insurance": 3585494,
+   "pension": 39050001,
+   "points": 153881
+  },
+  {
+   "date": "2026-07-19",
+   "total": 649045899,
+   "cash": 60678592,
+   "equity": 324765336,
+   "equityMargin": 0,
+   "fund": 129772581,
+   "bond": 0,
+   "crypto": 3035078,
    "fx": 0,
    "insurance": 3585494,
    "pension": 39050001,
