@@ -12,20 +12,20 @@
 //   - X 軸はデータ点をそのまま打つ（直近=日次・過去=月末の混在。補間しない）
 // ══════════════════════════════════════════════════════════════
 
-import { escapeHTML, maskAmount } from './utils.js';
+import { cssVar, escapeHTML, maskAmount } from './utils.js';
 
 /** カテゴリ定義（表示順・色は仕様書の表に従う。テーマ非依存の系列色） */
 const CATS = [
-  { key: 'equity', label: '株式(現物)', color: '#cc785c' },
-  { key: 'fund', label: '投資信託', color: '#7ba0c4' },
-  { key: 'pension', label: '年金', color: '#9c8fbc' },
-  { key: 'cash', label: '預金・現金', color: '#6fae86' },
-  { key: 'insurance', label: '保険', color: '#d9a441' },
-  { key: 'crypto', label: '暗号資産', color: '#c98a5e' },
-  { key: 'bond', label: '債券', color: '#b0b0b0' },
-  { key: 'fx', label: 'FX', color: '#8c8c8c' },
-  { key: 'equityMargin', label: '株式(信用)', color: '#e09070' },
-  { key: 'points', label: 'ポイント', color: '#c9c2b8' },
+  { key: 'equity', label: '株式(現物)', cssVarKey: '--asset-equity' },
+  { key: 'fund', label: '投資信託', cssVarKey: '--asset-fund' },
+  { key: 'pension', label: '年金', cssVarKey: '--asset-pension' },
+  { key: 'cash', label: '預金・現金', cssVarKey: '--asset-cash' },
+  { key: 'insurance', label: '保険', cssVarKey: '--asset-insurance' },
+  { key: 'crypto', label: '暗号資産', cssVarKey: '--asset-crypto' },
+  { key: 'bond', label: '債券', cssVarKey: '--asset-bond' },
+  { key: 'fx', label: 'FX', cssVarKey: '--asset-fx' },
+  { key: 'equityMargin', label: '株式(信用)', cssVarKey: '--asset-equity-margin' },
+  { key: 'points', label: 'ポイント', cssVarKey: '--asset-points' },
 ];
 
 /** 期間ピル定義（months=null は全期間） */
@@ -155,7 +155,7 @@ export async function renderWealthTab() {
     </svg>
   </button>`;
   const legend = `<div class="we-lgs">${activeCats
-    .map((c) => `<span class="we-lg"><i style="background:${c.color}"></i>${escapeHTML(c.label)}</span>`)
+    .map((c) => `<span class="we-lg"><i style="background:${cssVar(c.cssVarKey)}"></i>${escapeHTML(c.label)}</span>`)
     .join('')}</div>`;
 
   // ── DOM 骨格 ──
@@ -283,12 +283,12 @@ function drawMainChart(view, activeCats) {
     g.append('path')
       .datum(totals)
       .attr('fill', 'none')
-      .attr('stroke', '#cc785c')
+      .attr('stroke', cssVar('--accent'))
       .attr('stroke-width', 2)
       .attr('d', line);
   } else {
     const keys = activeCats.map((c) => c.key);
-    const colorOf = Object.fromEntries(activeCats.map((c) => [c.key, c.color]));
+    const colorOf = Object.fromEntries(activeCats.map((c) => [c.key, cssVar(c.cssVarKey)]));
     const stack = d3
       .stack()
       .keys(keys)
@@ -367,8 +367,8 @@ function drawCashChart(view) {
     .line()
     .x((d) => x(d.date))
     .y((d) => y(d.v));
-  g.append('path').datum(pts).attr('fill', '#6fae86').attr('fill-opacity', 0.18).attr('d', area);
-  g.append('path').datum(pts).attr('fill', 'none').attr('stroke', '#6fae86').attr('stroke-width', 2).attr('d', line);
+  g.append('path').datum(pts).attr('fill', cssVar('--chart-cash')).attr('fill-opacity', 0.18).attr('d', area);
+  g.append('path').datum(pts).attr('fill', 'none').attr('stroke', cssVar('--chart-cash')).attr('stroke-width', 2).attr('d', line);
   g.append('g')
     .attr('class', 'we-axis')
     .attr('transform', `translate(0,${ih})`)
