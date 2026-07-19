@@ -225,26 +225,41 @@ async function netWorthCardHTML() {
       <div class="val-soon">負債データ未取得（次回の MF 取り込み後に3層表示されます・#577）</div></div>`;
   }
   const real = mf.realAssetsTotal || 0;
+  const gross = mf.imported + real; // 総資産 ＝ 運用 ＋ 実物
+  const nw =
+    typeof mf.netWorthComputed === 'number' ? mf.netWorthComputed : gross - mf.liabilitiesTotal;
+  const oku = (n) => `${(n / 1e8).toFixed(2)}億`;
+  const pctUn = gross > 0 ? (mf.imported / gross) * 100 : 0;
+  const pctRe = gross > 0 ? (real / gross) * 100 : 0;
   const liabs = getMfLiabilities() || [];
   const liabRows = liabs
     .map(
       (l) =>
-        `<tr class="we-nw-sub"><td>　${escapeHTML(l.tag ? `${l.tag}（${l.institution}）` : l.institution)}</td><td>−${escapeHTML(fmtYen(l.balance))}</td></tr>`
+        `<tr class="we-nw-sub"><td>${escapeHTML(l.tag ? `${l.tag}（${l.institution}）` : l.institution)}</td><td>−${escapeHTML(fmtYen(l.balance))}</td></tr>`
     )
     .join('');
-  const realCell = real > 0 ? escapeHTML(fmtYen(real)) : '<span class="we-nw-na">—（real-assets 未投入）</span>';
-  const nw = typeof mf.netWorthComputed === 'number' ? mf.netWorthComputed : mf.imported + real - mf.liabilitiesTotal;
-  return `<div class="card we-card"><h2 class="we-h2">ネットワース</h2>
+  const realCell =
+    real > 0 ? escapeHTML(fmtYen(real)) : '<span class="we-nw-na">—（未投入）</span>';
+  const bar =
+    real > 0
+      ? `<div class="we-nw-bar"><span class="we-nw-seg s-un" style="width:${pctUn.toFixed(1)}%"></span><span class="we-nw-seg s-re" style="width:${pctRe.toFixed(1)}%"></span></div>
+      <div class="we-nw-legend"><span><i class="s-un"></i>運用 ${pctUn.toFixed(0)}%</span><span><i class="s-re"></i>実物 ${pctRe.toFixed(0)}%</span><span class="we-nw-gross">総資産 ${escapeHTML(fmtYen(gross))}</span></div>`
+      : '';
+  return `<div class="card we-card we-nwcard">
+    <div class="we-nw-head"><h2 class="we-h2">ネットワース</h2><span class="we-nw-asof">${escapeHTML(mf.asOf || '')}</span></div>
+    <div class="we-nw-hero"><span class="we-nw-herolbl">純資産</span><span class="we-nw-heroamt">${escapeHTML(fmtYen(nw))}</span><span class="we-nw-herooku">≒ ${oku(nw)}</span></div>
+    ${bar}
     <div class="we-table-wrap"><table class="t we-table we-nw">
       <tbody>
-        <tr><td>運用資産（MF取込）</td><td>${escapeHTML(fmtYen(mf.imported))}</td></tr>
-        <tr><td>実物資産（掛目後）</td><td>${realCell}</td></tr>
-        <tr><td>負債</td><td>−${escapeHTML(fmtYen(mf.liabilitiesTotal))}</td></tr>
+        <tr><td><span class="we-op"> </span>運用資産</td><td>${escapeHTML(fmtYen(mf.imported))}</td></tr>
+        <tr><td><span class="we-op">＋</span>実物資産（掛目後）</td><td>${realCell}</td></tr>
+        <tr class="we-nw-subtotal"><td><span class="we-op">＝</span>総資産</td><td>${escapeHTML(fmtYen(gross))}</td></tr>
+        <tr class="we-nw-liab"><td><span class="we-op">−</span>負債</td><td>−${escapeHTML(fmtYen(mf.liabilitiesTotal))}</td></tr>
         ${liabRows}
-        <tr class="we-nw-total"><td>純資産（計算）</td><td>${escapeHTML(fmtYen(nw))}</td></tr>
+        <tr class="we-nw-total"><td><span class="we-op">＝</span>純資産</td><td>${escapeHTML(fmtYen(nw))}</td></tr>
       </tbody>
     </table></div>
-    <div class="we-nw-note">参考: MF総資産（資産グロス・生値）= ${escapeHTML(fmtYen(mf.netWorth))}。実物資産・負債は運用アロケーション（Risk/リバランス）には含めない。</div>
+    <div class="we-nw-note">実物資産＝AI査定(HowMa)×掛目（都市部1.0／地方0.65）の採用値。<b>実物資産・負債は運用アロケーション（Risk / リバランス）の分母に含めない。</b>※MF表示の総資産(${escapeHTML(fmtYen(mf.netWorth))})は基準が異なるため非採用。</div>
   </div>`;
 }
 

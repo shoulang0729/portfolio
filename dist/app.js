@@ -7065,23 +7065,33 @@ async function netWorthCardHTML() {
       <div class="val-soon">\u8CA0\u50B5\u30C7\u30FC\u30BF\u672A\u53D6\u5F97\uFF08\u6B21\u56DE\u306E MF \u53D6\u308A\u8FBC\u307F\u5F8C\u306B3\u5C64\u8868\u793A\u3055\u308C\u307E\u3059\u30FB#577\uFF09</div></div>`;
   }
   const real = mf.realAssetsTotal || 0;
+  const gross = mf.imported + real;
+  const nw = typeof mf.netWorthComputed === "number" ? mf.netWorthComputed : gross - mf.liabilitiesTotal;
+  const oku = (n) => `${(n / 1e8).toFixed(2)}\u5104`;
+  const pctUn = gross > 0 ? mf.imported / gross * 100 : 0;
+  const pctRe = gross > 0 ? real / gross * 100 : 0;
   const liabs = getMfLiabilities() || [];
   const liabRows = liabs.map(
-    (l) => `<tr class="we-nw-sub"><td>\u3000${escapeHTML(l.tag ? `${l.tag}\uFF08${l.institution}\uFF09` : l.institution)}</td><td>\u2212${escapeHTML(fmtYen2(l.balance))}</td></tr>`
+    (l) => `<tr class="we-nw-sub"><td>${escapeHTML(l.tag ? `${l.tag}\uFF08${l.institution}\uFF09` : l.institution)}</td><td>\u2212${escapeHTML(fmtYen2(l.balance))}</td></tr>`
   ).join("");
-  const realCell = real > 0 ? escapeHTML(fmtYen2(real)) : '<span class="we-nw-na">\u2014\uFF08real-assets \u672A\u6295\u5165\uFF09</span>';
-  const nw = typeof mf.netWorthComputed === "number" ? mf.netWorthComputed : mf.imported + real - mf.liabilitiesTotal;
-  return `<div class="card we-card"><h2 class="we-h2">\u30CD\u30C3\u30C8\u30EF\u30FC\u30B9</h2>
+  const realCell = real > 0 ? escapeHTML(fmtYen2(real)) : '<span class="we-nw-na">\u2014\uFF08\u672A\u6295\u5165\uFF09</span>';
+  const bar = real > 0 ? `<div class="we-nw-bar"><span class="we-nw-seg s-un" style="width:${pctUn.toFixed(1)}%"></span><span class="we-nw-seg s-re" style="width:${pctRe.toFixed(1)}%"></span></div>
+      <div class="we-nw-legend"><span><i class="s-un"></i>\u904B\u7528 ${pctUn.toFixed(0)}%</span><span><i class="s-re"></i>\u5B9F\u7269 ${pctRe.toFixed(0)}%</span><span class="we-nw-gross">\u7DCF\u8CC7\u7523 ${escapeHTML(fmtYen2(gross))}</span></div>` : "";
+  return `<div class="card we-card we-nwcard">
+    <div class="we-nw-head"><h2 class="we-h2">\u30CD\u30C3\u30C8\u30EF\u30FC\u30B9</h2><span class="we-nw-asof">${escapeHTML(mf.asOf || "")}</span></div>
+    <div class="we-nw-hero"><span class="we-nw-herolbl">\u7D14\u8CC7\u7523</span><span class="we-nw-heroamt">${escapeHTML(fmtYen2(nw))}</span><span class="we-nw-herooku">\u2252 ${oku(nw)}</span></div>
+    ${bar}
     <div class="we-table-wrap"><table class="t we-table we-nw">
       <tbody>
-        <tr><td>\u904B\u7528\u8CC7\u7523\uFF08MF\u53D6\u8FBC\uFF09</td><td>${escapeHTML(fmtYen2(mf.imported))}</td></tr>
-        <tr><td>\u5B9F\u7269\u8CC7\u7523\uFF08\u639B\u76EE\u5F8C\uFF09</td><td>${realCell}</td></tr>
-        <tr><td>\u8CA0\u50B5</td><td>\u2212${escapeHTML(fmtYen2(mf.liabilitiesTotal))}</td></tr>
+        <tr><td><span class="we-op"> </span>\u904B\u7528\u8CC7\u7523</td><td>${escapeHTML(fmtYen2(mf.imported))}</td></tr>
+        <tr><td><span class="we-op">\uFF0B</span>\u5B9F\u7269\u8CC7\u7523\uFF08\u639B\u76EE\u5F8C\uFF09</td><td>${realCell}</td></tr>
+        <tr class="we-nw-subtotal"><td><span class="we-op">\uFF1D</span>\u7DCF\u8CC7\u7523</td><td>${escapeHTML(fmtYen2(gross))}</td></tr>
+        <tr class="we-nw-liab"><td><span class="we-op">\u2212</span>\u8CA0\u50B5</td><td>\u2212${escapeHTML(fmtYen2(mf.liabilitiesTotal))}</td></tr>
         ${liabRows}
-        <tr class="we-nw-total"><td>\u7D14\u8CC7\u7523\uFF08\u8A08\u7B97\uFF09</td><td>${escapeHTML(fmtYen2(nw))}</td></tr>
+        <tr class="we-nw-total"><td><span class="we-op">\uFF1D</span>\u7D14\u8CC7\u7523</td><td>${escapeHTML(fmtYen2(nw))}</td></tr>
       </tbody>
     </table></div>
-    <div class="we-nw-note">\u53C2\u8003: MF\u7DCF\u8CC7\u7523\uFF08\u8CC7\u7523\u30B0\u30ED\u30B9\u30FB\u751F\u5024\uFF09= ${escapeHTML(fmtYen2(mf.netWorth))}\u3002\u5B9F\u7269\u8CC7\u7523\u30FB\u8CA0\u50B5\u306F\u904B\u7528\u30A2\u30ED\u30B1\u30FC\u30B7\u30E7\u30F3\uFF08Risk/\u30EA\u30D0\u30E9\u30F3\u30B9\uFF09\u306B\u306F\u542B\u3081\u306A\u3044\u3002</div>
+    <div class="we-nw-note">\u5B9F\u7269\u8CC7\u7523\uFF1DAI\u67FB\u5B9A(HowMa)\xD7\u639B\u76EE\uFF08\u90FD\u5E02\u90E81.0\uFF0F\u5730\u65B90.65\uFF09\u306E\u63A1\u7528\u5024\u3002<b>\u5B9F\u7269\u8CC7\u7523\u30FB\u8CA0\u50B5\u306F\u904B\u7528\u30A2\u30ED\u30B1\u30FC\u30B7\u30E7\u30F3\uFF08Risk / \u30EA\u30D0\u30E9\u30F3\u30B9\uFF09\u306E\u5206\u6BCD\u306B\u542B\u3081\u306A\u3044\u3002</b>\u203BMF\u8868\u793A\u306E\u7DCF\u8CC7\u7523(${escapeHTML(fmtYen2(mf.netWorth))})\u306F\u57FA\u6E96\u304C\u7570\u306A\u308B\u305F\u3081\u975E\u63A1\u7528\u3002</div>
   </div>`;
 }
 function yearTableHTML(series) {
