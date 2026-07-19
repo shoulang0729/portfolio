@@ -3338,7 +3338,25 @@ function getMfTotals() {
   const securities = imported - cash - crypto2;
   const dryPowder = Math.max(0, cash - EMERGENCY_FUND);
   const cashRatio = imported > 0 ? dryPowder / imported * 100 : 0;
-  return { netWorth, imported, cash, crypto: crypto2, securities, dryPowder, cashRatio, emergencyFund: EMERGENCY_FUND, asOf: _mf.asOf };
+  const t = _mf.totals || {};
+  return {
+    netWorth,
+    imported,
+    cash,
+    crypto: crypto2,
+    securities,
+    dryPowder,
+    cashRatio,
+    emergencyFund: EMERGENCY_FUND,
+    asOf: _mf.asOf,
+    liabilitiesTotal: typeof t.liabilitiesTotal === "number" ? t.liabilitiesTotal : void 0,
+    realAssetsTotal: typeof t.realAssetsTotal === "number" ? t.realAssetsTotal : void 0,
+    netWorthComputed: typeof t.netWorthComputed === "number" ? t.netWorthComputed : void 0
+  };
+}
+function getMfLiabilities() {
+  if (!_mf || !Array.isArray(_mf.liabilities) || _mf.liabilities.length === 0) return null;
+  return _mf.liabilities;
 }
 function getMfManualAssets() {
   if (!_mf || !_mf.holdings) return null;
@@ -6992,6 +7010,7 @@ async function renderWealthTab() {
   const legend = `<div class="we-lgs">${activeCats.map((c) => `<span class="we-lg"><i style="background:${cssVar(c.cssVarKey)}"></i>${escapeHTML(c.label)}</span>`).join("")}</div>`;
   wrap.innerHTML = `
     ${kpis}
+    ${await netWorthCardHTML()}
     <div class="card we-card">
       <div class="we-bar">${periodSeg}${eyeBtn}</div>
       <div class="we-bar">${modeSeg}${logChk}</div>
@@ -7033,6 +7052,37 @@ async function renderWealthTab() {
       }
       renderWealthTab();
     });
+}
+async function netWorthCardHTML() {
+  let mf = getMfTotals();
+  if (!mf) {
+    await loadMfHoldings();
+    mf = getMfTotals();
+  }
+  if (!mf) return "";
+  if (typeof mf.liabilitiesTotal !== "number") {
+    return `<div class="card we-card"><h2 class="we-h2">\u30CD\u30C3\u30C8\u30EF\u30FC\u30B9</h2>
+      <div class="val-soon">\u8CA0\u50B5\u30C7\u30FC\u30BF\u672A\u53D6\u5F97\uFF08\u6B21\u56DE\u306E MF \u53D6\u308A\u8FBC\u307F\u5F8C\u306B3\u5C64\u8868\u793A\u3055\u308C\u307E\u3059\u30FB#577\uFF09</div></div>`;
+  }
+  const real = mf.realAssetsTotal || 0;
+  const liabs = getMfLiabilities() || [];
+  const liabRows = liabs.map(
+    (l) => `<tr class="we-nw-sub"><td>\u3000${escapeHTML(l.tag ? `${l.tag}\uFF08${l.institution}\uFF09` : l.institution)}</td><td>\u2212${escapeHTML(fmtYen2(l.balance))}</td></tr>`
+  ).join("");
+  const realCell = real > 0 ? escapeHTML(fmtYen2(real)) : '<span class="we-nw-na">\u2014\uFF08real-assets \u672A\u6295\u5165\uFF09</span>';
+  const nw = typeof mf.netWorthComputed === "number" ? mf.netWorthComputed : mf.imported + real - mf.liabilitiesTotal;
+  return `<div class="card we-card"><h2 class="we-h2">\u30CD\u30C3\u30C8\u30EF\u30FC\u30B9</h2>
+    <div class="we-table-wrap"><table class="t we-table we-nw">
+      <tbody>
+        <tr><td>\u904B\u7528\u8CC7\u7523\uFF08MF\u53D6\u8FBC\uFF09</td><td>${escapeHTML(fmtYen2(mf.imported))}</td></tr>
+        <tr><td>\u5B9F\u7269\u8CC7\u7523\uFF08\u639B\u76EE\u5F8C\uFF09</td><td>${realCell}</td></tr>
+        <tr><td>\u8CA0\u50B5</td><td>\u2212${escapeHTML(fmtYen2(mf.liabilitiesTotal))}</td></tr>
+        ${liabRows}
+        <tr class="we-nw-total"><td>\u7D14\u8CC7\u7523\uFF08\u8A08\u7B97\uFF09</td><td>${escapeHTML(fmtYen2(nw))}</td></tr>
+      </tbody>
+    </table></div>
+    <div class="we-nw-note">\u53C2\u8003: MF\u7DCF\u8CC7\u7523\uFF08\u8CC7\u7523\u30B0\u30ED\u30B9\u30FB\u751F\u5024\uFF09= ${escapeHTML(fmtYen2(mf.netWorth))}\u3002\u5B9F\u7269\u8CC7\u7523\u30FB\u8CA0\u50B5\u306F\u904B\u7528\u30A2\u30ED\u30B1\u30FC\u30B7\u30E7\u30F3\uFF08Risk/\u30EA\u30D0\u30E9\u30F3\u30B9\uFF09\u306B\u306F\u542B\u3081\u306A\u3044\u3002</div>
+  </div>`;
 }
 function yearTableHTML(series) {
   const byYear = {};
