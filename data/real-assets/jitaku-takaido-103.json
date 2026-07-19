@@ -1,0 +1,17 @@
+{
+  "id": "jitaku-takaido-103",
+  "name": "プラウド杉並高井戸サウス103",
+  "type": "自宅",
+  "region": "東京・杉並",
+  "valueHowMa": 88000000,
+  "haircut": 1.0,
+  "confidence": "中",
+  "valuationSource": "MoneyForward連携HowMa（自動・都市部・掛目1.0）",
+  "valuationDate": "2026-07-19",
+  "loanBank": "三菱UFJ銀行(代々木上原)",
+  "loanBalance": 30038112,
+  "loanRate": 1.175,
+  "loanRateType": "変動・元金均等",
+  "loanOrigDate": "2019-02-21",
+  "notes": "無収益(居住用)。現在非居住＝海外在住・将来居住前提で保有。住宅ローン控除の適用/繰延は税理士STR藤野へ確認中(2026-07)。都市部=HowMa信頼度高めのため掛目1.0。"
+}
