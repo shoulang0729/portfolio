@@ -132,9 +132,17 @@ export async function renderWealthTab() {
   // ── KPI（3枚・常に横並び・値は右寄せ・補助は下段 sub2 に分離＝設計追記 2026-07-09） ──
   const multTxt = multiple == null ? '—' : `×${multiple.toFixed(1)}`;
   const okuRange = `${_eye ? maskAmount((firstTotal / 1e8).toFixed(2)) : (firstTotal / 1e8).toFixed(2)}→${fmtOku(latestTotal)}`;
+  // 選択期間の増減額（静的総額より変化量が有用＝2026-07 ユーザー要望）。期間ピルに連動。
+  const periodLabel = (PERIODS.find((p) => p.id === _period) || {}).label || '期間';
+  const periodStart = view.length ? totalOf(view[0]) : firstTotal;
+  const periodDelta = latestTotal - periodStart;
+  const periodPct = periodStart > 0 ? (periodDelta / periodStart) * 100 : 0;
+  const up = periodDelta >= 0;
+  const deltaTxt = `${up ? '+' : '−'}${fmtYen(Math.abs(periodDelta))}`;
+  const cashAmt = Number(latest.cash) || 0;
   const kpis = `<div class="we-kpis">
-    <div class="we-kpi"><div class="l">資産総額</div><div class="v">${escapeHTML(fmtYen(latestTotal))}</div><div class="sub2">${escapeHTML(latest.date)}</div></div>
-    <div class="we-kpi"><div class="l">現金比率</div><div class="v">${cashRatio.toFixed(1)}<small>%</small></div><div class="sub2">&nbsp;</div></div>
+    <div class="we-kpi"><div class="l">${escapeHTML(periodLabel)}増減</div><div class="v we-delta ${up ? 'up' : 'down'}">${escapeHTML(_eye ? maskAmount(deltaTxt) : deltaTxt)}</div><div class="sub2 we-delta ${up ? 'up' : 'down'}">${up ? '+' : '−'}${Math.abs(periodPct).toFixed(1)}%</div></div>
+    <div class="we-kpi"><div class="l">現金</div><div class="v">${escapeHTML(_eye ? maskAmount(fmtYen(cashAmt)) : fmtYen(cashAmt))}</div><div class="sub2">比率 ${cashRatio.toFixed(1)}%</div></div>
     <div class="we-kpi"><div class="l">開設来</div><div class="v">${escapeHTML(_eye ? maskAmount(multTxt) : multTxt)}</div><div class="sub2">${escapeHTML(okuRange)}</div></div>
   </div>`;
 

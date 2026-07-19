@@ -6987,9 +6987,16 @@ async function renderWealthTab() {
   const activeCats = CATS.filter((c) => view.some((r) => (Number(r[c.key]) || 0) > 0));
   const multTxt = multiple == null ? "\u2014" : `\xD7${multiple.toFixed(1)}`;
   const okuRange = `${_eye ? maskAmount((firstTotal / 1e8).toFixed(2)) : (firstTotal / 1e8).toFixed(2)}\u2192${fmtOku(latestTotal)}`;
+  const periodLabel = (PERIODS2.find((p) => p.id === _period) || {}).label || "\u671F\u9593";
+  const periodStart = view.length ? totalOf(view[0]) : firstTotal;
+  const periodDelta = latestTotal - periodStart;
+  const periodPct = periodStart > 0 ? periodDelta / periodStart * 100 : 0;
+  const up = periodDelta >= 0;
+  const deltaTxt = `${up ? "+" : "\u2212"}${fmtYen2(Math.abs(periodDelta))}`;
+  const cashAmt = Number(latest.cash) || 0;
   const kpis = `<div class="we-kpis">
-    <div class="we-kpi"><div class="l">\u8CC7\u7523\u7DCF\u984D</div><div class="v">${escapeHTML(fmtYen2(latestTotal))}</div><div class="sub2">${escapeHTML(latest.date)}</div></div>
-    <div class="we-kpi"><div class="l">\u73FE\u91D1\u6BD4\u7387</div><div class="v">${cashRatio.toFixed(1)}<small>%</small></div><div class="sub2">&nbsp;</div></div>
+    <div class="we-kpi"><div class="l">${escapeHTML(periodLabel)}\u5897\u6E1B</div><div class="v we-delta ${up ? "up" : "down"}">${escapeHTML(_eye ? maskAmount(deltaTxt) : deltaTxt)}</div><div class="sub2 we-delta ${up ? "up" : "down"}">${up ? "+" : "\u2212"}${Math.abs(periodPct).toFixed(1)}%</div></div>
+    <div class="we-kpi"><div class="l">\u73FE\u91D1</div><div class="v">${escapeHTML(_eye ? maskAmount(fmtYen2(cashAmt)) : fmtYen2(cashAmt))}</div><div class="sub2">\u6BD4\u7387 ${cashRatio.toFixed(1)}%</div></div>
     <div class="we-kpi"><div class="l">\u958B\u8A2D\u6765</div><div class="v">${escapeHTML(_eye ? maskAmount(multTxt) : multTxt)}</div><div class="sub2">${escapeHTML(okuRange)}</div></div>
   </div>`;
   const periodSeg = `<span class="seg we-seg">${PERIODS2.map(
