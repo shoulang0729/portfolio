@@ -1,0 +1,18 @@
+{
+  "id": "shuueki-kakamino",
+  "name": "レジデンスかかみ野",
+  "type": "収益",
+  "region": "岐阜・各務原",
+  "valueHowMa": 91700000,
+  "haircut": 0.65,
+  "confidence": "低",
+  "valuationSource": "MoneyForward連携HowMa（自動・地方=誤差大・掛目0.65）",
+  "valuationDate": "2026-07-19",
+  "annualRentGross": 4140108,
+  "loanBank": "岐阜信用金庫",
+  "loanBalance": 51778561,
+  "loanRate": 1.0,
+  "loanRateType": "固定選択3年(2028/3まで)・元利均等",
+  "loanOrigDate": "2015-05-01",
+  "notes": "1棟8戸・駐車場15台。大和リビング管理。家賃345,009円/月。金利1.0%固定＜実質利回り3%台=プラスキャリー。地方AI査定は過大のため掛目0.65で採用。"
+}
