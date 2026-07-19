@@ -96,6 +96,47 @@ html[data-theme="dark"] {
   --danger:  #FF3B30;  /* エラー・破壊的操作 */
   --success: #34C759;  /* 成功・確定 */
   --warn:    #FF9F0A;  /* 警告・コード強調 */
+
+  /* ── categorical シリーズ配色（Risk ドーナツ等・Claude ウォームトーン基調）── */
+  --series-1:  #cc785c;
+  --series-2:  #6a8caf;
+  --series-3:  #c2a36b;
+  --series-4:  #7fa885;
+  --series-5:  #a878a8;
+  --series-6:  #d09a4e;
+  --series-7:  #5f9ea0;
+  --series-8:  #bd6b6b;
+  --series-9:  #8a9a5b;
+  --series-10: #9d8df1;
+  --series-11: #d4a0b8;
+  --series-12: #7ba6c9;
+  --series-unknown: #9ca3af;
+
+  /* ── Wealth 資産種別配色（種別ごとに意味づけされた固定色） ── */
+  --asset-equity:        #cc785c;
+  --asset-fund:          #7ba0c4;
+  --asset-pension:       #9c8fbc;
+  --asset-cash:          #6fae86;
+  --asset-insurance:     #d9a441;
+  --asset-crypto:        #c98a5e;
+  --asset-bond:          #b0b0b0;
+  --asset-fx:            #8c8c8c;
+  --asset-equity-margin: #e09070;
+  --asset-points:        #c9c2b8;
+
+  /* ── チャート線色 ── */
+  --chart-ma-fast:    #5ac8fa;  /* 5日MA */
+  --chart-ma-mid:     #2e90d8;  /* 200日MA */
+  --chart-ma-slow:    #1a5fa0;  /* 50週MA */
+  --chart-price-up:   #30D158;  /* iPhone Stocks 式・US式 上昇 */
+  --chart-price-down: #FF453A;  /* iPhone Stocks 式・US式 下落 */
+  --chart-cash:       #6fae86;  /* Wealth 現金比率チャート */
+
+  /* ── セル文字色（輝度で選ぶコントラスト ink・テーマ非依存） ── */
+  --ink-on-light:   #1C1C1E;
+  --ink-on-dark:    #FFFFFF;
+  --ink-on-light-2: rgba(0,0,0,0.55);
+  --ink-on-dark-2:  rgba(255,255,255,0.82);
 }
 /* @media (prefers-color-scheme: dark) は app.js の applyTheme() が
    matchMedia で解決して data-theme="dark" を明示セットするため不要。
