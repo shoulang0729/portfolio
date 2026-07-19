@@ -25,7 +25,7 @@ import { getAllHistorical } from './historical-cache.js';
 import { fetchSymbolHistory, batchWithRetry } from './data.js';
 import { state } from './state.js';
 import { computeLiquidity, ILLIQUID_DAYS } from './liquidity-calc.js';
-import { fmtJPYInt, fmtPctInt, escapeHTML } from './utils.js';
+import { cssVar, fmtJPYInt, fmtPctInt, escapeHTML } from './utils.js';
 import { glossaryHTML } from './glossary.js';
 import { positions } from './positions.js';
 import { MANUAL_ASSETS, MANUAL_SOURCES } from './manual-assets.js';
@@ -123,7 +123,7 @@ async function buildRegionCard(assets, manualSymbols) {
     .join('path')
     .attr('d', arc)
     .attr('class', (d) => (d.data.key === 'japan' ? 'is-jp' : null))
-    .attr('fill', (d, i) => PALETTE[i % PALETTE.length])
+    .attr('fill', (d, i) => cssVar(PALETTE_KEYS[i % PALETTE_KEYS.length]))
     .append('title')
     .text((d) => `${REGION_LABELS[d.data.key] || d.data.key}: ${fmtPctInt(d.data.pct)}`);
   const center = g.append('text').attr('class', 'risk-donut-center');
@@ -152,7 +152,7 @@ async function buildRegionCard(assets, manualSymbols) {
     const sw = document.createElement('span');
     sw.className = 'risk-legend-swatch';
     if (s.key === 'japan') sw.classList.add('is-jp');
-    else sw.style.background = PALETTE[i % PALETTE.length];
+    else sw.style.background = cssVar(PALETTE_KEYS[i % PALETTE_KEYS.length]);
     const name = document.createElement('span');
     name.className = 'risk-legend-name';
     name.textContent = REGION_LABELS[s.key] || s.key;
@@ -295,22 +295,22 @@ const LABELS = {
   },
 };
 
-/** カテゴリ配色（Claude ウォームトーン基調の categorical パレット） */
-const PALETTE = [
-  '#cc785c',
-  '#6a8caf',
-  '#c2a36b',
-  '#7fa885',
-  '#a878a8',
-  '#d09a4e',
-  '#5f9ea0',
-  '#bd6b6b',
-  '#8a9a5b',
-  '#9d8df1',
-  '#d4a0b8',
-  '#7ba6c9',
+/** カテゴリ配色（Claude ウォームトーン基調の categorical パレット）
+ * 描画時に cssVar() で評価することでテーマ切替に追従する。 */
+const PALETTE_KEYS = [
+  '--series-1',
+  '--series-2',
+  '--series-3',
+  '--series-4',
+  '--series-5',
+  '--series-6',
+  '--series-7',
+  '--series-8',
+  '--series-9',
+  '--series-10',
+  '--series-11',
+  '--series-12',
 ];
-const UNKNOWN_COLOR = '#9ca3af';
 
 /**
  * カテゴリキーの表示ラベルを返す。
@@ -425,7 +425,8 @@ function buildChartCard(dim, dimResult, dimSource) {
     .outerRadius(radius - 2);
 
   // 色割り当て（既知カテゴリはパレット順、__unknown__ はグレー固定）
-  const colorOf = (key, i) => (key === UNKNOWN_KEY ? UNKNOWN_COLOR : PALETTE[i % PALETTE.length]);
+  const colorOf = (key, i) =>
+    key === UNKNOWN_KEY ? cssVar('--series-unknown') : cssVar(PALETTE_KEYS[i % PALETTE_KEYS.length]);
 
   // 塗り分け色は固定パレット（テーマ非依存）。境界線(stroke)・中央文字色は
   // テーマ追従させるため CSS 側（var(--surface)/var(--text)）で指定する（ダークモード対応）。

@@ -17,13 +17,13 @@ function _lum(c) {
 function getCellTextColor(hexColor) {
   const c = d3.color(hexColor);
   if (!c) return cssVar('--text');
-  return _lum(c) > 0.35 ? '#1C1C1E' : '#FFFFFF';
+  return _lum(c) > 0.35 ? cssVar('--ink-on-light') : cssVar('--ink-on-dark');
 }
 
 function getCellTextColorSub(hexColor) {
   const c = d3.color(hexColor);
   if (!c) return cssVar('--text3');
-  return _lum(c) > 0.35 ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.82)';
+  return _lum(c) > 0.35 ? cssVar('--ink-on-light-2') : cssVar('--ink-on-dark-2');
 }
 
 export { cssVar, getCellTextColor, getCellTextColorSub };
