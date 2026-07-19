@@ -1187,3 +1187,6 @@ table.t td { font-size: var(--fs-sm); font-weight: 700; border-bottom: 1px solid
 .we-nw-subtotal td { font-weight: 700; border-top: 1px solid var(--border); }
 .we-nw-total td { font-weight: 800; font-size: 16px; border-top: 1px solid var(--border); }
 .we-nwcard .we-nw-note b { color: var(--text2); font-weight: 700; }
+/* KPI 期間増減の色（増＝赤／減＝緑・日本市場慣例。2026-07 資産総額カード置換） */
+.we-kpi .we-delta.up { color: var(--pos); }
+.we-kpi .we-delta.down { color: var(--neg); }
