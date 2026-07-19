@@ -237,6 +237,60 @@ def _txt_body(page):
         return ""
 
 
+# ── 負債スクレイピング（#577 スコープA・fail-soft） ─────────────────────────────
+def scrape_liabilities(page, c):
+    """/bs/liability の負債行を抽出する。成功時 rows=[{institution,name,balance}]、
+    失敗時 None（notify 済み）。
+
+    ★fail-soft（config fetch.liabilities.onFailure）: 負債の取得失敗・0行・
+    チェックサム不一致は notify して None を返すだけ。資産スナップショットの
+    commit は止めない（呼び出し側は None なら v4 互換形のまま出力する）。
+    DOM は実機未確認（2026-07-19）＝セレクタ/列は config だけで調整できる。
+    """
+    lc = c.get("fetch", {}).get("liabilities")
+    inc = c.get("include", {}).get("liabilities", {})
+    if not lc or not inc.get("enabled"):
+        return None
+    try:
+        f = c["fetch"]
+        page.goto(lc["url"], timeout=f["timeoutMs"], wait_until="networkidle")
+        page.wait_for_timeout(f.get("settleMs", 5000))
+        if f["loginCheck"]["redirectContains"] in page.url:
+            notify("負債: ログイン切れで /bs/liability を開けず。負債はスキップ。")
+            return None
+        total = _net_from_text(_txt_body(page), lc["totalRegex"])
+        cats = inc.get("categories", [])
+        cols = lc["table"]["cols"]
+        rows = []
+        tables = page.locator(lc["table"]["selector"])
+        for i in range(tables.count()):
+            trs = tables.nth(i).locator("tbody tr")
+            for j in range(trs.count()):
+                cells = _cells(trs.nth(j))
+                name = _at(cells, cols.get("name"))
+                bal = parse_amount(_at(cells, cols.get("balance")))
+                inst = _at(cells, cols.get("institution"))
+                if not name or bal <= 0:
+                    continue  # 空行/見出し/完済(0円)をスキップ
+                if cats and not any(k in name or k in inst for k in cats):
+                    continue  # 負債側 allowlist（部分一致・config include.liabilities）
+                rows.append({"institution": inst, "name": name, "balance": bal})
+        if not rows:
+            notify("負債: 行を1件も抽出できず。fetch.liabilities.table（セレクタ/列マップ）の実機確認を。負債はスキップ。")
+            return None
+        s = sum(r["balance"] for r in rows)
+        tol = lc.get("checksum", {}).get("tolerancePct", 1.0)
+        if total and not _within(s, total, tol):
+            notify(f"負債: チェックサム不一致 Σ{s:,} vs 負債総額{total:,}（±{tol}%超）。負債はスキップ。")
+            return None
+        if not total:
+            print("[liab] 負債総額が本文から読めず。行合計をそのまま採用（照合スキップ）", file=sys.stderr)
+        return rows
+    except Exception as e:  # 負債は資産を巻き込まない（fail-soft）
+        notify(f"負債: 取得中に例外 {type(e).__name__}: {e}。負債はスキップ。")
+        return None
+
+
 # ── 整形（除外/分類/シンボル/レコード化）→ v4 スキーマ ──────────────────────────
 def _account_excluded(institution, exclude_accounts):
     """口座/金融機関の除外判定。部分一致。ただし『マネックスCRYPT』は完全名のみ
@@ -336,6 +390,78 @@ def build(c, net, rows):
     }
 
 
+# ── v5: 負債・実物資産の付与（#577。verify 後に付与＝資産チェックサムに影響しない） ──
+def real_assets_total(c):
+    """data/real-assets/ の採用値（valueAdopted、無ければ valueHowMa×haircut、
+    さらに無ければ value）を合算する。コレクション未着地/読めないレコードは 0 扱い
+    （#577 A' は Mulmo の schema/レコード投入待ち）。"""
+    rel = c.get("realAssets", {}).get("dir", "data/real-assets")
+    d = os.path.join(ROOT, *rel.split("/"))
+    if not os.path.isdir(d):
+        return 0
+    total = 0
+    for fn in sorted(os.listdir(d)):
+        if not fn.endswith(".json"):
+            continue
+        try:
+            with open(os.path.join(d, fn), encoding="utf-8") as fp:
+                j = json.load(fp)
+        except Exception:
+            continue  # 壊れたレコードは合算しない（採用値の過大計上より欠落を選ぶ）
+        for r in j if isinstance(j, list) else [j]:
+            if not isinstance(r, dict):
+                continue
+            v = r.get("valueAdopted")
+            if not isinstance(v, (int, float)):
+                hw, hc = r.get("valueHowMa"), r.get("haircut")
+                if isinstance(hw, (int, float)):
+                    v = hw * (hc if isinstance(hc, (int, float)) else 1.0)
+                elif isinstance(r.get("value"), (int, float)):
+                    v = r["value"]
+                else:
+                    v = 0
+            total += int(round(v))
+    return total
+
+
+def _liab_tag(institution, name, account_map):
+    """liabilityAccountMap（口座名 部分一致）→ 物件/用途タグ。未マッチは空文字。"""
+    for k, v in account_map.items():
+        if k == "note":
+            continue
+        if k in (institution or "") or k in (name or ""):
+            return v
+    return ""
+
+
+def attach_liabilities(c, doc, liab_rows):
+    """負債取得成功時のみ v5 フィールドを doc に付与する（失敗時 None＝v4 互換形のまま）。
+
+    netWorthComputed = imported + realAssetsTotal − liabilitiesTotal（handoff 2026-07-19）。
+    既存 mfNetWorth（MF 画面の資産グロス生値）は比較用にそのまま残す。
+    """
+    if liab_rows is None:
+        return doc
+    m = c.get("liabilityAccountMap", {})
+    today = doc["asOf"]
+    doc["liabilities"] = [
+        {
+            "institution": r["institution"],
+            "name": r["name"],
+            "tag": _liab_tag(r["institution"], r["name"], m),
+            "balance": r["balance"],
+            "asOf": today,
+        }
+        for r in liab_rows
+    ]
+    lt = sum(r["balance"] for r in liab_rows)
+    ra = real_assets_total(c)
+    doc["totals"]["liabilitiesTotal"] = lt
+    doc["totals"]["realAssetsTotal"] = ra
+    doc["totals"]["netWorthComputed"] = doc["totals"]["imported"] + ra - lt
+    return doc
+
+
 # ── 検証（チェックサム ±1%）。不一致は書かず・コミットせず・通知して中止 ──────────────
 def _within(a, b, tol_pct):
     """a ≈ b を ±tol_pct% で判定（b 基準。b=0 は a=0 のみ許容）。"""
@@ -400,7 +526,7 @@ def verify(c, doc, rows, summary):
         want = want_total - excl_kind  # サマリは除外口座分を含むので差し引く
         got = sum(h["value"] for h in holdings if kind_by_cat.get(h["cat"]) == kind)
         if not _within(got, want, tol):
-            notify(f"種類ズレ: {label} 取込{got:,} vs (サマリ−除外){want:,}（±{tol}%超）。")
+            notify(f"種類ズレ: {'/'.join(labels)} 取込{got:,} vs (サマリ−除外){want:,}（±{tol}%超）。")
             sys.exit(3)
 
     # (3) mfNetWorth − Σ(非取込サマリ種類) − Σ(除外口座 holdings) ≈ imported ±tol%
@@ -465,20 +591,29 @@ def git_commit_push():
     sys.exit(5)
 
 
+def _scrape_all(page, c):
+    """資産（従来 scrape）→ 負債（fail-soft）の順に同一認証コンテキストで取得する。"""
+    net, rows, summary = scrape(page, c)
+    liab = scrape_liabilities(page, c)  # 失敗時 None（notify 済み・資産は続行）
+    return net, rows, summary, liab
+
+
 def do_run(c):
     """無人 run。想定外例外も必ず notify して中止する（無音失敗を作らない・#479 H1）。"""
     try:
-        net, rows, summary = with_page(c, headless=c["fetch"]["headless"], fn=lambda pg: scrape(pg, c))
+        net, rows, summary, liab = with_page(c, headless=c["fetch"]["headless"], fn=lambda pg: _scrape_all(pg, c))
         if not rows:
             notify("保有行を1件も抽出できず。fetch.dom（種類別テーブルのセレクタ/列マップ §7.1）を確認。")
             sys.exit(3)
         doc = build(c, net, rows)
         verify(c, doc, rows, summary)  # 失敗時 exit(>=2)＝コミットしない
+        doc = attach_liabilities(c, doc, liab)  # verify 後＝資産チェックサムに影響しない（#577）
         with open(OUT, "w", encoding="utf-8") as f:
             json.dump(doc, f, ensure_ascii=False, indent=2)
             f.write("\n")
         git_commit_push()
-        print(f"OK imported={doc['totals']['imported']:,} holdings={len(doc['holdings'])}")
+        liab_note = f" liabilities={doc['totals'].get('liabilitiesTotal', 0):,}" if "liabilities" in doc else ""
+        print(f"OK imported={doc['totals']['imported']:,} holdings={len(doc['holdings'])}{liab_note}")
         # 保有取得成功後に履歴も非致命的に取得（失敗しても保有処理は成功扱い）
         _run_history_script()
     except SystemExit:

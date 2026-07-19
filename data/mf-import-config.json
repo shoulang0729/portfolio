@@ -1,6 +1,6 @@
 {
-  "version": 4,
-  "updatedAt": "2026-06-14",
+  "version": 5,
+  "updatedAt": "2026-07-19",
   "purpose": "Claude for Chrome が MoneyForward (moneyforward.com/bs/portfolio) から data/mf-holdings.json を更新する際の取り込みルール。Chrome は取り込み前に必ず本ファイル(raw)を読み、ここに書かれたルールだけに従うこと。",
   "source": "https://moneyforward.com/bs/portfolio",
   "include": {
@@ -13,7 +13,17 @@
       "FX・商品先物",
       "その他・事業性資産"
     ],
-    "note": "allowlist。ここに無い種類は取り込まない。除外: ポイント・マイル / 保険 / 不動産 / 年金(2026/06 ユーザー判断で年金は全除外→カテゴリごと外した。みずほ信託外株が読み取り不可で口座名マッチが効かないためカテゴリ除外が確実)。"
+    "note": "allowlist。ここに無い種類は取り込まない。除外: ポイント・マイル / 保険 / 不動産 / 年金(2026/06 ユーザー判断で年金は全除外→カテゴリごと外した。みずほ信託外株が読み取り不可で口座名マッチが効かないためカテゴリ除外が確実)。※不動産の『資産としての取込』は引き続き除外（実物資産レイヤー data/real-assets/ が正・#577）。",
+    "liabilities": {
+      "enabled": true,
+      "categories": ["住宅ローン", "ローン", "借入"],
+      "note": "#577 スコープA。負債は holdings とは別の liabilities 配列に取り込む（運用アロケーションの分母に絶対に混ぜない）。categories は負債側 allowlist（部分一致）。rate/rateType は MF 画面に出ない場合が多く balance のみで可＝rate の正本は data/real-assets/ 側の手入力（二重管理回避・handoff 2026-07-19）。"
+    }
+  },
+  "liabilityAccountMap": {
+    "三菱UFJ銀行": "自宅",
+    "岐阜信用金庫": "かかみ野",
+    "note": "口座/金融機関名（部分一致）→ 物件/用途タグ。マッチしない負債は tag='' で取り込む（落とさない）。実測 2026-07-19: 自宅=三菱UFJ(代々木上原) 残30,038,112円・1.175%変動 / かかみ野=岐阜信金 残51,778,561円・1.000%固定選択3年 / 野口=完済0円。"
   },
   "exclude": {
     "accounts": [
@@ -46,16 +56,29 @@
     "note": "株式(現物)は市場で日米を判定する。日本株/ETF(4桁コード or .T) → 日本株・ETF / ySymbol=\"<code>.T\"。米国株/ETF → 米国株・ETF / ySymbol=ティッカー。"
   },
   "schema": {
-    "note": "★data/mf-holdings.json の正規スキーマ(v4 で確定)。Chrome はこの形でファイル全体を出力する。フロントの src/networth.js は holdings[].cat / holdings[].cur / holdings[].value / totals.imported / asOf の5つだけを読む(=load-bearing。これらは必須・名前変更不可)。それ以外は人間/将来ツール向けの付加情報。",
+    "note": "★data/mf-holdings.json の正規スキーマ(v5・#577 で liabilities 追加)。フロントの src/networth.js は holdings[].cat / holdings[].cur / holdings[].value / totals.imported / asOf の5つ＋(v5) liabilities[].balance / totals.liabilitiesTotal / totals.netWorthComputed を読む(=load-bearing。これらは必須・名前変更不可)。それ以外は人間/将来ツール向けの付加情報。liabilities の取得に失敗した場合は liabilities / liabilitiesTotal / netWorthComputed を出力しない（v4 互換形＝フロントは負債非表示に degrade）。",
     "top": {
       "asOf": "実行時刻 ISO8601 (例 2026-06-14)",
       "totals": "下記 totals 形",
-      "holdings": "下記 holding レコードの配列"
+      "holdings": "下記 holding レコードの配列",
+      "liabilities": "(v5・任意) 下記 liability レコードの配列。負債取得成功時のみ"
     },
     "totals": {
-      "mfNetWorth": "number — MF画面の総資産表示",
+      "mfNetWorth": "number — MF画面の総資産表示（資産グロス・生値。比較用に残す）",
       "imported": "number — Σ(holdings.value)。取り込んだ評価額の合計",
-      "excludedAccounts": "string[] — 除外した口座/金融機関名の配列(額ではなく名前のリスト)"
+      "excludedAccounts": "string[] — 除外した口座/金融機関名の配列(額ではなく名前のリスト)",
+      "liabilitiesTotal": "(v5・任意) number — Σ(liabilities.balance)。負債取得成功時のみ",
+      "netWorthComputed": "(v5・任意) number — imported + realAssetsTotal(data/real-assets/ の採用値合計・無ければ0) − liabilitiesTotal",
+      "realAssetsTotal": "(v5・任意) number — data/real-assets/ の採用値(valueAdopted=valueHowMa×haircut)合計。コレクション未着地なら 0"
+    },
+    "liability": {
+      "institution": "string — 金融機関/口座名",
+      "name": "string — ローン/借入名",
+      "tag": "string — liabilityAccountMap による物件/用途タグ（未マッチは空文字）",
+      "balance": "number — 残高(円・正の値)",
+      "rate": "(任意) number — 金利%（MF画面に出た場合のみ。正本は data/real-assets/ 側）",
+      "rateType": "(任意) string — 変動/固定 等",
+      "asOf": "string — 取得日"
     },
     "holding": {
       "required": {
@@ -133,6 +156,29 @@
         "selectors": ["table.table-condensed", "table.table-bordered.table-pns"],
         "note": "table-condensed=カレンダー部品（完全無視）。table-pns=保険/年金/ポイント（年金/保険/ポイント除外ルールに合致＝スキップ）。"
       }
+    },
+    "liabilities": {
+      "url": "https://moneyforward.com/bs/liability",
+      "totalRegex": "負債総額[：:]\\s*([0-9,]+)",
+      "table": {
+        "selector": "table.table-bordered",
+        "cols": { "name": 0, "balance": 1, "institution": 2 },
+        "colsNote": "★実機未確認（2026-07-19 設計時点・#577）。/bs/liability の負債一覧テーブルを 0始まり列インデックスで抽出する想定。初回実機 run で列ズレ/セレクタ不一致が出たら本 cols/selector だけ直せばよい（コード変更不要）。行の balance が 0 の行（完済）はスキップ。"
+      },
+      "checksum": {
+        "tolerancePct": 1.0,
+        "rule": "Σ(liabilities.balance) ≈ totalRegex の負債総額 ±1%。総額が読めなかった場合は行合計をそのまま採用（照合スキップ・通知のみ）。"
+      },
+      "onFailure": "★fail-soft（資産と分離・#577）: 負債の取得失敗・0行・チェックサム不一致は notify して liabilities を出力から省くだけ（v4 互換形）。資産スナップショットの commit は止めない。",
+      "note": "参考値（2026-07-19 実測）: 自宅ローン 30,038,112円（三菱UFJ）。かかみ野 51,778,561円（岐阜信金）は MF 登録有無が未確認＝出なくても異常ではない。"
+    },
+    "realEstate": {
+      "enabled": false,
+      "note": "#577 スコープA'（不動産 HowMa 評価額 → data/real-assets/ の valueHowMa 自動更新）は data/real-assets/ コレクション（Mulmo 側で作成）が未コミットのため無効。着地後に実機 DOM 確認とあわせて有効化する。採用値ルール: valueAdopted = valueHowMa × haircut（都市部/確度中〜高=1.0、地方/確度低=0.65）。ネットワース計算には valueAdopted を使う。"
     }
+  },
+  "realAssets": {
+    "dir": "data/real-assets",
+    "note": "実物資産レイヤー（handoff 2026-07-19 §B・Mulmo が schema/レコードを投入）。fetch_mf.py は存在すれば各レコードの採用値（valueAdopted、無ければ valueHowMa×haircut、さらに無ければ value）を合算して totals.realAssetsTotal / netWorthComputed に反映する。未着地なら 0 扱い。"
   }
 }

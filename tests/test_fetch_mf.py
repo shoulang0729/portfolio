@@ -67,11 +67,16 @@ def _fixture_rows():
 
 
 def _fixture_summary():
-    """内訳サマリ表（正規化キー）。種類別＝除外口座分を含む合計。"""
+    """内訳サマリ表（正規化キー）。種類別＝除外口座分を含む合計。
+
+    MF は 2026-07 から depo の内訳サマリを『預金・現金』『暗号資産』の2行に分割
+    （config summaryLabel がリスト化）。fixture も分割形に追従（#577 で更新）。
+    """
     return {
         fetch_mf._norm("株式(現物)"): SUM_EQ,
         fetch_mf._norm("投資信託"): SUM_MF,
-        fetch_mf._norm("預金・現金・暗号資産"): SUM_DEPO,
+        fetch_mf._norm("預金・現金"): SUM_DEPO - 3_500_000,
+        fetch_mf._norm("暗号資産"): 3_500_000,
         fetch_mf._norm("年金"): SUM_PENSION,
     }
 
@@ -236,6 +241,81 @@ class TestCells(unittest.TestCase):
         # 保有テーブルのデータ行は td のみ＝列インデックス不変
         tr = _FakeTr({"th, td": ["", "NTTデータグループ", "1", "4,400,412"]})
         self.assertEqual(fetch_mf._cells(tr), ["", "NTTデータグループ", "1", "4,400,412"])
+
+
+class TestLiabilities(unittest.TestCase):
+    """#577 スコープA: attach_liabilities / _liab_tag / real_assets_total の純ロジック検算。
+
+    scrape_liabilities の DOM 走査は実機（Mac mini headful）でのみ確認可能＝ここでは
+    build 後の付与ロジックと v4 互換 degrade を検証する。
+    """
+
+    LIAB_ROWS = [
+        {"institution": "三菱UFJ銀行", "name": "住宅ローン", "balance": 30_038_112},
+        {"institution": "岐阜信用金庫", "name": "アパートローン", "balance": 51_778_561},
+    ]
+
+    def setUp(self):
+        self.c = _load_config()
+        self.doc = fetch_mf.build(self.c, NET, _fixture_rows())
+
+    def test_attach_none_keeps_v4_shape(self):
+        # 負債取得失敗（None）→ v5 フィールドを一切足さない（fail-soft・フロント degrade）
+        doc = fetch_mf.attach_liabilities(self.c, dict(self.doc), None)
+        self.assertNotIn("liabilities", doc)
+        for k in ("liabilitiesTotal", "realAssetsTotal", "netWorthComputed"):
+            self.assertNotIn(k, doc["totals"])
+
+    def test_attach_success_adds_v5_fields(self):
+        c = dict(self.c)
+        c["realAssets"] = {"dir": "tests/fixtures/real-assets"}
+        doc = fetch_mf.attach_liabilities(c, json.loads(json.dumps(self.doc)), self.LIAB_ROWS)
+        self.assertEqual(doc["totals"]["liabilitiesTotal"], 81_816_673)
+        # fixture: 88,000,000(valueAdopted) + 65,000,000(valueHowMa×0.65) + 10,000,000(value) = 163,000,000
+        self.assertEqual(doc["totals"]["realAssetsTotal"], 163_000_000)
+        self.assertEqual(
+            doc["totals"]["netWorthComputed"],
+            doc["totals"]["imported"] + 163_000_000 - 81_816_673,
+        )
+        # liabilityAccountMap による物件タグ（部分一致）
+        by_inst = {l["institution"]: l for l in doc["liabilities"]}
+        self.assertEqual(by_inst["三菱UFJ銀行"]["tag"], "自宅")
+        self.assertEqual(by_inst["岐阜信用金庫"]["tag"], "かかみ野")
+        for l in doc["liabilities"]:
+            for k in ("institution", "name", "tag", "balance", "asOf"):
+                self.assertIn(k, l)
+
+    def test_attach_does_not_touch_holdings_or_asset_totals(self):
+        # ★AC3: 負債付与で運用側（holdings / imported / mfNetWorth）が 1 円も動かない
+        before = json.loads(json.dumps(self.doc))
+        c = dict(self.c)
+        c["realAssets"] = {"dir": "tests/fixtures/real-assets"}
+        doc = fetch_mf.attach_liabilities(c, json.loads(json.dumps(self.doc)), self.LIAB_ROWS)
+        self.assertEqual(doc["holdings"], before["holdings"])
+        self.assertEqual(doc["totals"]["imported"], before["totals"]["imported"])
+        self.assertEqual(doc["totals"]["mfNetWorth"], before["totals"]["mfNetWorth"])
+
+    def test_verify_ignores_liabilities(self):
+        # verify（資産チェックサム）は liabilities 付き doc でもそのまま通る
+        c = dict(self.c)
+        c["realAssets"] = {"dir": "tests/fixtures/real-assets"}
+        doc = fetch_mf.attach_liabilities(c, json.loads(json.dumps(self.doc)), self.LIAB_ROWS)
+        orig_notify = fetch_mf.notify
+        fetch_mf.notify = lambda *a, **k: None
+        try:
+            fetch_mf.verify(self.c, doc, _fixture_rows(), _fixture_summary())
+        finally:
+            fetch_mf.notify = orig_notify
+
+    def test_real_assets_total_absent_dir_is_zero(self):
+        c = {"realAssets": {"dir": "tests/fixtures/no-such-dir"}}
+        self.assertEqual(fetch_mf.real_assets_total(c), 0)
+
+    def test_liab_tag_unmatched_is_empty(self):
+        m = self.c["liabilityAccountMap"]
+        self.assertEqual(fetch_mf._liab_tag("どこかの銀行", "カーローン", m), "")
+        # note キーはタグとして扱わない
+        self.assertNotEqual(fetch_mf._liab_tag("三菱UFJ銀行", "", m), m.get("note"))
 
 
 if __name__ == "__main__":
