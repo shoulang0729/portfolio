@@ -1157,3 +1157,11 @@ table.t td { font-size: var(--fs-sm); font-weight: 700; border-bottom: 1px solid
 .we-table th { text-align: right; padding: 6px 8px; }
 .we-table td { text-align: right; padding: 6px 8px; }
 .we-table th:first-child, .we-table td:first-child { text-align: left; }
+
+/* ネットワース3層カード（#577） */
+.we-nw td { border-top: 1px solid var(--border2); }
+.we-nw tr:first-child td { border-top: none; }
+.we-nw-sub td { color: var(--text2); font-size: 12px; border-top: none; padding-top: 0; }
+.we-nw-total td { font-weight: 700; border-top: 1px solid var(--border); }
+.we-nw-na { color: var(--text3); }
+.we-nw-note { margin-top: 8px; font-size: 11px; color: var(--text3); }

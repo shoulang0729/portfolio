@@ -1,0 +1,19 @@
+[
+  {
+    "id": "residence-kakamino",
+    "name": "レジデンスかかみ野",
+    "type": "収益",
+    "valueHowMa": 100000000,
+    "haircut": 0.65,
+    "loanBalance": 51778561,
+    "confidence": "低"
+  },
+  {
+    "id": "comfort-noguchi",
+    "name": "コンフォール野口",
+    "type": "収益",
+    "value": 10000000,
+    "loanBalance": 0,
+    "confidence": "低"
+  }
+]

@@ -108,10 +108,39 @@ def parse(text):
 
 
 def merge(existing, new):
-    """日付キーで union（MF 最新で上書き）→ 日付昇順のリスト。"""
+    """日付キーで union（MF 最新で上書き）→ 日付昇順のリスト。
+
+    ★CSV に無いキー（liabilities 等・#577）は既存行から保護する：
+    new の行で丸ごと置き換えると、過去に刻んだ負債列が毎回消えるため
+    {**old, **new} で CSV 列だけ上書きする。
+    """
     by = {r["date"]: r for r in existing if r.get("date")}
-    by.update(new)
+    for d, r in new.items():
+        by[d] = {**by.get(d, {}), **r}
     return [by[d] for d in sorted(by.keys())]
+
+
+def stamp_liabilities(series):
+    """mf-holdings.json（fetch_mf.py が直前に更新）の liabilitiesTotal を
+    同じ日付の行に刻む（#577）。過去分はキー無し＝null 許容。
+
+    日付が一致する行が無い場合は何もしない（古い行に刻むと日付がズレるため）。
+    負債が未取得（v4 互換形）なら何もしない。
+    """
+    try:
+        with open(os.path.join(ROOT, "data", "mf-holdings.json"), encoding="utf-8") as f:
+            h = json.load(f)
+    except Exception:
+        return
+    lt = (h.get("totals") or {}).get("liabilitiesTotal")
+    as_of = h.get("asOf")
+    if not isinstance(lt, int) or not as_of:
+        return
+    for r in reversed(series):
+        if r.get("date") == as_of:
+            r["liabilities"] = lt
+            return
+    print(f"[liab] 履歴に {as_of} の行が無く負債列を刻めず（次回 CSV 反映後に自動解消）", file=sys.stderr)
 
 
 def _git(*args, check=True):
@@ -142,10 +171,11 @@ def main():
         with open(OUT, encoding="utf-8") as f:
             existing = json.load(f).get("series", [])
     series = merge(existing, new)
+    stamp_liabilities(series)  # #577: 当日行に負債残高を刻む（過去分は null 許容＝キー無し）
     out = {
         "source": "moneyforward.com/bs/history/csv",
         "unit": "JPY",
-        "columns": ["date"] + NUM_KEYS,
+        "columns": ["date"] + NUM_KEYS + ["liabilities"],
         "updatedAt": series[-1]["date"] if series else "",
         "count": len(series),
         "series": series,
