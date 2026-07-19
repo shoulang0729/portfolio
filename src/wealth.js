@@ -368,7 +368,12 @@ function drawCashChart(view) {
     .x((d) => x(d.date))
     .y((d) => y(d.v));
   g.append('path').datum(pts).attr('fill', cssVar('--chart-cash')).attr('fill-opacity', 0.18).attr('d', area);
-  g.append('path').datum(pts).attr('fill', 'none').attr('stroke', cssVar('--chart-cash')).attr('stroke-width', 2).attr('d', line);
+  g.append('path')
+    .datum(pts)
+    .attr('fill', 'none')
+    .attr('stroke', cssVar('--chart-cash'))
+    .attr('stroke-width', 2)
+    .attr('d', line);
   g.append('g')
     .attr('class', 'we-axis')
     .attr('transform', `translate(0,${ih})`)

@@ -298,9 +298,18 @@ const LABELS = {
 /** カテゴリ配色（Claude ウォームトーン基調の categorical パレット）
  * 描画時に cssVar() で評価することでテーマ切替に追従する。 */
 const PALETTE_KEYS = [
-  '--series-1', '--series-2', '--series-3', '--series-4',
-  '--series-5', '--series-6', '--series-7', '--series-8',
-  '--series-9', '--series-10', '--series-11', '--series-12',
+  '--series-1',
+  '--series-2',
+  '--series-3',
+  '--series-4',
+  '--series-5',
+  '--series-6',
+  '--series-7',
+  '--series-8',
+  '--series-9',
+  '--series-10',
+  '--series-11',
+  '--series-12',
 ];
 
 /**
@@ -416,7 +425,8 @@ function buildChartCard(dim, dimResult, dimSource) {
     .outerRadius(radius - 2);
 
   // 色割り当て（既知カテゴリはパレット順、__unknown__ はグレー固定）
-  const colorOf = (key, i) => (key === UNKNOWN_KEY ? cssVar('--series-unknown') : cssVar(PALETTE_KEYS[i % PALETTE_KEYS.length]));
+  const colorOf = (key, i) =>
+    key === UNKNOWN_KEY ? cssVar('--series-unknown') : cssVar(PALETTE_KEYS[i % PALETTE_KEYS.length]);
 
   // 塗り分け色は固定パレット（テーマ非依存）。境界線(stroke)・中央文字色は
   // テーマ追従させるため CSS 側（var(--surface)/var(--text)）で指定する（ダークモード対応）。
