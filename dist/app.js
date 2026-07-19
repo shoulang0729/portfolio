@@ -1532,12 +1532,12 @@ function _lum(c) {
 function getCellTextColor(hexColor) {
   const c = d3.color(hexColor);
   if (!c) return cssVar("--text");
-  return _lum(c) > 0.35 ? "#1C1C1E" : "#FFFFFF";
+  return _lum(c) > 0.35 ? cssVar("--ink-on-light") : cssVar("--ink-on-dark");
 }
 function getCellTextColorSub(hexColor) {
   const c = d3.color(hexColor);
   if (!c) return cssVar("--text3");
-  return _lum(c) > 0.35 ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.82)";
+  return _lum(c) > 0.35 ? cssVar("--ink-on-light-2") : cssVar("--ink-on-dark-2");
 }
 
 // src/table.js
@@ -2560,9 +2560,9 @@ function _calcMA(points, n) {
 function _buildMAStyles(points) {
   const enough = points.length >= 2;
   return [
-    { data: enough ? _calcMA(points, 5) : [], color: "#5ac8fa", width: 1, opacity: 0.85, label: "5\u65E5MA" },
-    { data: enough ? _calcMA(points, 200) : [], color: "#2e90d8", width: 1.4, opacity: 0.9, label: "200\u65E5MA" },
-    { data: enough ? _calcMA(points, 50) : [], color: "#1a5fa0", width: 1.8, opacity: 0.9, label: "50\u9031MA" }
+    { data: enough ? _calcMA(points, 5) : [], color: cssVar("--chart-ma-fast"), width: 1, opacity: 0.85, label: "5\u65E5MA" },
+    { data: enough ? _calcMA(points, 200) : [], color: cssVar("--chart-ma-mid"), width: 1.4, opacity: 0.9, label: "200\u65E5MA" },
+    { data: enough ? _calcMA(points, 50) : [], color: cssVar("--chart-ma-slow"), width: 1.8, opacity: 0.9, label: "50\u9031MA" }
   ];
 }
 function _drawChartContent(g, x, y, iW, iH, points, avgCost, cur, lineColor, defs, dateFmt, maStyles) {
@@ -2756,7 +2756,7 @@ function renderChart(points, interval = "1d", dateFmt = "%m/%d") {
   const { avgCost, cur } = state.currentPos;
   const fp = points[0].close;
   const lastPrice = points[points.length - 1].close;
-  const lineColor = lastPrice >= fp ? "#30D158" : "#FF453A";
+  const lineColor = lastPrice >= fp ? cssVar("--chart-price-up") : cssVar("--chart-price-down");
   const maStyles = _buildMAStyles(points);
   const svg = d3.select("#chart-svg").attr("width", W).attr("height", H);
   svg.selectAll("*").remove();
@@ -4840,7 +4840,7 @@ async function buildRegionCard(assets, manualSymbols) {
   const g = svg.append("g").attr("transform", `translate(${radius},${radius})`);
   const pie = d3.pie().value((d) => d.pct).sort(null);
   const arc = d3.arc().innerRadius(radius * 0.58).outerRadius(radius - 2);
-  g.selectAll("path").data(pie(slices)).join("path").attr("d", arc).attr("class", (d) => d.data.key === "japan" ? "is-jp" : null).attr("fill", (d, i) => PALETTE[i % PALETTE.length]).append("title").text((d) => `${REGION_LABELS[d.data.key] || d.data.key}: ${fmtPctInt(d.data.pct)}`);
+  g.selectAll("path").data(pie(slices)).join("path").attr("d", arc).attr("class", (d) => d.data.key === "japan" ? "is-jp" : null).attr("fill", (d, i) => cssVar(PALETTE_KEYS[i % PALETTE_KEYS.length])).append("title").text((d) => `${REGION_LABELS[d.data.key] || d.data.key}: ${fmtPctInt(d.data.pct)}`);
   const center = g.append("text").attr("class", "risk-donut-center");
   center.append("tspan").attr("x", 0).attr("dy", "-0.1em").attr("font-size", "13px").attr("font-weight", "700").attr("text-anchor", "middle").text(`${coveragePct.toFixed(0)}%`);
   center.append("tspan").attr("class", "risk-donut-center-sub").attr("x", 0).attr("dy", "1.3em").attr("font-size", "9px").attr("text-anchor", "middle").text("\u30AB\u30D0\u30EC\u30C3\u30B8");
@@ -4852,7 +4852,7 @@ async function buildRegionCard(assets, manualSymbols) {
     const sw = document.createElement("span");
     sw.className = "risk-legend-swatch";
     if (s.key === "japan") sw.classList.add("is-jp");
-    else sw.style.background = PALETTE[i % PALETTE.length];
+    else sw.style.background = cssVar(PALETTE_KEYS[i % PALETTE_KEYS.length]);
     const name = document.createElement("span");
     name.className = "risk-legend-name";
     name.textContent = REGION_LABELS[s.key] || s.key;
@@ -4960,21 +4960,20 @@ var LABELS = {
     crypto: "\u6697\u53F7\u8CC7\u7523"
   }
 };
-var PALETTE = [
-  "#cc785c",
-  "#6a8caf",
-  "#c2a36b",
-  "#7fa885",
-  "#a878a8",
-  "#d09a4e",
-  "#5f9ea0",
-  "#bd6b6b",
-  "#8a9a5b",
-  "#9d8df1",
-  "#d4a0b8",
-  "#7ba6c9"
+var PALETTE_KEYS = [
+  "--series-1",
+  "--series-2",
+  "--series-3",
+  "--series-4",
+  "--series-5",
+  "--series-6",
+  "--series-7",
+  "--series-8",
+  "--series-9",
+  "--series-10",
+  "--series-11",
+  "--series-12"
 ];
-var UNKNOWN_COLOR = "#9ca3af";
 function labelOf(dim, key) {
   if (key === UNKNOWN_KEY) return "\u4E0D\u660E";
   return LABELS[dim]?.[key] || key;
@@ -5032,7 +5031,7 @@ function buildChartCard(dim, dimResult, dimSource) {
   const g = svg.append("g").attr("transform", `translate(${radius},${radius})`);
   const pie = d3.pie().value((d) => d.value).sort(null);
   const arc = d3.arc().innerRadius(radius * 0.58).outerRadius(radius - 2);
-  const colorOf = (key, i) => key === UNKNOWN_KEY ? UNKNOWN_COLOR : PALETTE[i % PALETTE.length];
+  const colorOf = (key, i) => key === UNKNOWN_KEY ? cssVar("--series-unknown") : cssVar(PALETTE_KEYS[i % PALETTE_KEYS.length]);
   g.selectAll("path").data(pie(slices)).join("path").attr("d", arc).attr("fill", (d, i) => colorOf(d.data.key, i)).append("title").text((d) => `${labelOf(dim, d.data.key)}: ${fmtJPYInt(d.data.value)}\uFF08${fmtPctInt(d.data.pct)}\uFF09`);
   const coverage = dimResult.coverage;
   const center = g.append("text").attr("class", "risk-donut-center");
@@ -6882,16 +6881,16 @@ async function renderValuationTab() {
 
 // src/wealth.js
 var CATS = [
-  { key: "equity", label: "\u682A\u5F0F(\u73FE\u7269)", color: "#cc785c" },
-  { key: "fund", label: "\u6295\u8CC7\u4FE1\u8A17", color: "#7ba0c4" },
-  { key: "pension", label: "\u5E74\u91D1", color: "#9c8fbc" },
-  { key: "cash", label: "\u9810\u91D1\u30FB\u73FE\u91D1", color: "#6fae86" },
-  { key: "insurance", label: "\u4FDD\u967A", color: "#d9a441" },
-  { key: "crypto", label: "\u6697\u53F7\u8CC7\u7523", color: "#c98a5e" },
-  { key: "bond", label: "\u50B5\u5238", color: "#b0b0b0" },
-  { key: "fx", label: "FX", color: "#8c8c8c" },
-  { key: "equityMargin", label: "\u682A\u5F0F(\u4FE1\u7528)", color: "#e09070" },
-  { key: "points", label: "\u30DD\u30A4\u30F3\u30C8", color: "#c9c2b8" }
+  { key: "equity", label: "\u682A\u5F0F(\u73FE\u7269)", cssVarKey: "--asset-equity" },
+  { key: "fund", label: "\u6295\u8CC7\u4FE1\u8A17", cssVarKey: "--asset-fund" },
+  { key: "pension", label: "\u5E74\u91D1", cssVarKey: "--asset-pension" },
+  { key: "cash", label: "\u9810\u91D1\u30FB\u73FE\u91D1", cssVarKey: "--asset-cash" },
+  { key: "insurance", label: "\u4FDD\u967A", cssVarKey: "--asset-insurance" },
+  { key: "crypto", label: "\u6697\u53F7\u8CC7\u7523", cssVarKey: "--asset-crypto" },
+  { key: "bond", label: "\u50B5\u5238", cssVarKey: "--asset-bond" },
+  { key: "fx", label: "FX", cssVarKey: "--asset-fx" },
+  { key: "equityMargin", label: "\u682A\u5F0F(\u4FE1\u7528)", cssVarKey: "--asset-equity-margin" },
+  { key: "points", label: "\u30DD\u30A4\u30F3\u30C8", cssVarKey: "--asset-points" }
 ];
 var PERIODS2 = [
   { id: "3m", label: "3\u30F6\u6708", months: 3 },
@@ -6990,7 +6989,7 @@ async function renderWealthTab() {
       <line x1="2" y1="2" x2="16" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="display:${_eye ? "" : "none"}"/>
     </svg>
   </button>`;
-  const legend = `<div class="we-lgs">${activeCats.map((c) => `<span class="we-lg"><i style="background:${c.color}"></i>${escapeHTML(c.label)}</span>`).join("")}</div>`;
+  const legend = `<div class="we-lgs">${activeCats.map((c) => `<span class="we-lg"><i style="background:${cssVar(c.cssVarKey)}"></i>${escapeHTML(c.label)}</span>`).join("")}</div>`;
   wrap.innerHTML = `
     ${kpis}
     <div class="card we-card">
@@ -7079,10 +7078,10 @@ function drawMainChart(view, activeCats) {
       d3.axisLeft(y).ticks(5, (d) => fmtAxisYen(d)).tickSize(-iw)
     );
     const line = d3.line().x((d) => x(d.date)).y((d) => y(d.v));
-    g.append("path").datum(totals).attr("fill", "none").attr("stroke", "#cc785c").attr("stroke-width", 2).attr("d", line);
+    g.append("path").datum(totals).attr("fill", "none").attr("stroke", cssVar("--accent")).attr("stroke-width", 2).attr("d", line);
   } else {
     const keys = activeCats.map((c) => c.key);
-    const colorOf = Object.fromEntries(activeCats.map((c) => [c.key, c.color]));
+    const colorOf = Object.fromEntries(activeCats.map((c) => [c.key, cssVar(c.cssVarKey)]));
     const stack = d3.stack().keys(keys).value((r, k) => Number(r[k]) || 0);
     if (_mode === "pct") stack.offset(d3.stackOffsetExpand);
     const stacked = stack(view);
@@ -7113,8 +7112,8 @@ function drawCashChart(view) {
   );
   const area = d3.area().x((d) => x(d.date)).y0(ih).y1((d) => y(d.v));
   const line = d3.line().x((d) => x(d.date)).y((d) => y(d.v));
-  g.append("path").datum(pts).attr("fill", "#6fae86").attr("fill-opacity", 0.18).attr("d", area);
-  g.append("path").datum(pts).attr("fill", "none").attr("stroke", "#6fae86").attr("stroke-width", 2).attr("d", line);
+  g.append("path").datum(pts).attr("fill", cssVar("--chart-cash")).attr("fill-opacity", 0.18).attr("d", area);
+  g.append("path").datum(pts).attr("fill", "none").attr("stroke", cssVar("--chart-cash")).attr("stroke-width", 2).attr("d", line);
   g.append("g").attr("class", "we-axis").attr("transform", `translate(0,${ih})`).call(d3.axisBottom(x).ticks(Math.min(6, pts.length)).tickSizeOuter(0));
 }
 
