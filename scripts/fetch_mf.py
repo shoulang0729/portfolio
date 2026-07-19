@@ -390,6 +390,80 @@ def build(c, net, rows):
     }
 
 
+# ── 不動産評価額スクレイピング（#580 スコープA'・fail-soft） ────────────────────
+def scrape_real_estate(page, c):
+    """/bs/portfolio の不動産テーブルから物件ごとの評価額（HowMa連携値）を抽出する。
+
+    scrape() 直後（＝portfolio ページ表示中・負債ページ遷移前）に呼ぶこと。追加 goto 無し。
+    nameMap（双方向部分一致）でマッチした行の value 列を採用。
+    戻り値 {fileId: 評価額}。無効/失敗/0件は None（notify 済み・fail-soft: 既存 valueHowMa 維持）。
+    """
+    rc = c.get("fetch", {}).get("realEstate", {})
+    if not rc.get("enabled"):
+        return None
+    try:
+        name_map = {k: v for k, v in rc.get("nameMap", {}).items() if k != "note"}
+        cols = rc["table"]["cols"]
+        out = {}
+        tables = page.locator(rc["table"]["selector"])
+        for i in range(tables.count()):
+            trs = tables.nth(i).locator("tbody tr")
+            for j in range(trs.count()):
+                cells = _cells(trs.nth(j))
+                name = _at(cells, cols.get("name"))
+                val = parse_amount(_at(cells, cols.get("value")))
+                if not name or val <= 0:
+                    continue
+                for mf_name, fid in name_map.items():
+                    if (mf_name in name or name in mf_name) and fid not in out:
+                        out[fid] = val
+        if not out:
+            notify("不動産: 物件マッチ0件。fetch.realEstate（セレクタ/nameMap）の実機確認を。valueHowMa は維持。")
+            return None
+        return out
+    except Exception as e:  # 不動産は資産・負債を巻き込まない（fail-soft）
+        notify(f"不動産: 取得中に例外 {type(e).__name__}: {e}。valueHowMa は維持。")
+        return None
+
+
+def update_real_assets(c, re_vals):
+    """data/real-assets/<id>.json の valueHowMa だけを field-level merge で更新する（#580）。
+
+    掛目・ローン等の手入力項目は保持（valueHowMa 以外は書かない）。
+    前回比±guardPct%超は異常値として維持＋通知。値が同じならファイルを触らない。
+    戻り値: 更新したファイル数。
+    """
+    if not re_vals:
+        return 0
+    rel = c.get("realAssets", {}).get("dir", "data/real-assets")
+    d = os.path.join(ROOT, *rel.split("/"))
+    guard = c.get("fetch", {}).get("realEstate", {}).get("guardPct", 50)
+    updated = 0
+    for fid, val in re_vals.items():
+        path = os.path.join(d, f"{fid}.json")
+        if not os.path.isfile(path):
+            notify(f"不動産: {fid}.json が data/real-assets/ に無く更新できず（valueHowMa は維持）。")
+            continue
+        try:
+            with open(path, encoding="utf-8") as f:
+                rec = json.load(f)
+        except Exception as e:
+            notify(f"不動産: {fid}.json の読込に失敗 {type(e).__name__}: {e}（valueHowMa は維持）。")
+            continue
+        old = rec.get("valueHowMa")
+        if isinstance(old, (int, float)) and old > 0 and abs(val - old) / old * 100.0 > guard:
+            notify(f"不動産: {rec.get('name', fid)} の新値 {val:,} が前回 {int(old):,} 比 ±{guard}% 超（異常値扱い・維持）。")
+            continue
+        if old == val:
+            continue  # 変化なし＝無駄な diff/commit を作らない
+        rec["valueHowMa"] = val
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(rec, f, ensure_ascii=False, indent=2)
+            f.write("\n")
+        updated += 1
+    return updated
+
+
 # ── v5: 負債・実物資産の付与（#577。verify 後に付与＝資産チェックサムに影響しない） ──
 def real_assets_total(c):
     """data/real-assets/ の採用値（valueAdopted、無ければ valueHowMa×haircut、
@@ -555,10 +629,11 @@ def _rebase_in_progress():
 PUSH_RETRIES = 3  # push がレース（ref ロック）で弾かれた時の再試行回数
 
 
-def git_commit_push():
+def git_commit_push(extra_paths=()):
     """成功時のみ無人 commit&push。失敗は原状復帰して通知（#479 H2 / #490）。
 
-    - commit は data/mf-holdings.json にパス限定（事前ステージの巻き込み防止・#482 L3）。
+    - commit は data/mf-holdings.json（＋#580 で更新した data/real-assets/）に
+      パス限定（事前ステージの巻き込み防止・#482 L3）。
     - pull --rebase / push は staged 有無に関わらず実行＝前回 push 失敗で宙吊りの
       ローカル commit も回収する。
     - **push がレース（ref ロック）で弾かれたら pull --rebase からリトライ**して
@@ -567,9 +642,10 @@ def git_commit_push():
       `rebase --abort` し、notify して exit(5)。
     """
     today = datetime.date.today().isoformat()
-    _git("add", "data/mf-holdings.json", check=True)
+    paths = ["data/mf-holdings.json", *extra_paths]
+    _git("add", *paths, check=True)
     if _git("diff", "--cached", "--quiet").returncode != 0:
-        _git("commit", "--only", "data/mf-holdings.json",
+        _git("commit", "--only", *paths,
              "-m", f"data: refresh MF holdings snapshot ({today})", check=True)
     else:
         print("ステージ変更なし（未push commit があれば push のみ実施）")
@@ -592,28 +668,33 @@ def git_commit_push():
 
 
 def _scrape_all(page, c):
-    """資産（従来 scrape）→ 負債（fail-soft）の順に同一認証コンテキストで取得する。"""
+    """資産（従来 scrape）→ 不動産（同一ページ）→ 負債（別ページ・fail-soft）の順に
+    同一認証コンテキストで取得する。不動産は portfolio ページ表示中に読む必要があるため
+    負債（/bs/liability への遷移）より前。"""
     net, rows, summary = scrape(page, c)
+    re_vals = scrape_real_estate(page, c)  # 失敗時 None（notify 済み・#580）
     liab = scrape_liabilities(page, c)  # 失敗時 None（notify 済み・資産は続行）
-    return net, rows, summary, liab
+    return net, rows, summary, liab, re_vals
 
 
 def do_run(c):
     """無人 run。想定外例外も必ず notify して中止する（無音失敗を作らない・#479 H1）。"""
     try:
-        net, rows, summary, liab = with_page(c, headless=c["fetch"]["headless"], fn=lambda pg: _scrape_all(pg, c))
+        net, rows, summary, liab, re_vals = with_page(c, headless=c["fetch"]["headless"], fn=lambda pg: _scrape_all(pg, c))
         if not rows:
             notify("保有行を1件も抽出できず。fetch.dom（種類別テーブルのセレクタ/列マップ §7.1）を確認。")
             sys.exit(3)
         doc = build(c, net, rows)
         verify(c, doc, rows, summary)  # 失敗時 exit(>=2)＝コミットしない
+        ra_updated = update_real_assets(c, re_vals)  # #580: attach より前＝当日 totals に新値を反映
         doc = attach_liabilities(c, doc, liab)  # verify 後＝資産チェックサムに影響しない（#577）
         with open(OUT, "w", encoding="utf-8") as f:
             json.dump(doc, f, ensure_ascii=False, indent=2)
             f.write("\n")
-        git_commit_push()
+        git_commit_push(("data/real-assets",) if ra_updated else ())
         liab_note = f" liabilities={doc['totals'].get('liabilitiesTotal', 0):,}" if "liabilities" in doc else ""
-        print(f"OK imported={doc['totals']['imported']:,} holdings={len(doc['holdings'])}{liab_note}")
+        ra_note = f" realAssetsUpdated={ra_updated}" if ra_updated else ""
+        print(f"OK imported={doc['totals']['imported']:,} holdings={len(doc['holdings'])}{liab_note}{ra_note}")
         # 保有取得成功後に履歴も非致命的に取得（失敗しても保有処理は成功扱い）
         _run_history_script()
     except SystemExit:

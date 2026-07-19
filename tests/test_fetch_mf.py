@@ -318,5 +318,77 @@ class TestLiabilities(unittest.TestCase):
         self.assertNotEqual(fetch_mf._liab_tag("三菱UFJ銀行", "", m), m.get("note"))
 
 
+class TestUpdateRealAssets(unittest.TestCase):
+    """#580 スコープA': update_real_assets の field-level merge / ±guard% / fail-soft 検算。
+
+    scrape_real_estate の DOM 走査は実機のみ＝ここでは更新ロジックを一時ディレクトリで検証する。
+    """
+
+    REC = {
+        "id": "jitaku-takaido-103",
+        "name": "プラウド杉並高井戸サウス103",
+        "valueHowMa": 88_000_000,
+        "haircut": 1.0,
+        "loanBalance": 30_038_112,
+        "notes": "手入力メモ",
+    }
+
+    def setUp(self):
+        import tempfile
+
+        self._td = tempfile.TemporaryDirectory()
+        self.root = self._td.name
+        d = os.path.join(self.root, "data", "real-assets")
+        os.makedirs(d)
+        self.path = os.path.join(d, "jitaku-takaido-103.json")
+        with open(self.path, "w", encoding="utf-8") as f:
+            json.dump(self.REC, f, ensure_ascii=False)
+        self.c = {"realAssets": {"dir": "data/real-assets"}, "fetch": {"realEstate": {"guardPct": 50}}}
+        self._orig_root = fetch_mf.ROOT
+        self._orig_notify = fetch_mf.notify
+        fetch_mf.ROOT = self.root
+        self.notified = []
+        fetch_mf.notify = lambda msg, *a, **k: self.notified.append(msg)
+
+    def tearDown(self):
+        fetch_mf.ROOT = self._orig_root
+        fetch_mf.notify = self._orig_notify
+        self._td.cleanup()
+
+    def _read(self):
+        with open(self.path, encoding="utf-8") as f:
+            return json.load(f)
+
+    def test_updates_value_howma_only(self):
+        n = fetch_mf.update_real_assets(self.c, {"jitaku-takaido-103": 90_000_000})
+        self.assertEqual(n, 1)
+        rec = self._read()
+        self.assertEqual(rec["valueHowMa"], 90_000_000)
+        # field-level merge: 他フィールド（掛目/ローン/メモ）は保持
+        for k in ("haircut", "loanBalance", "notes", "name", "id"):
+            self.assertEqual(rec[k], self.REC[k])
+
+    def test_guard_blocks_abnormal_jump(self):
+        # 前回比 +50% 超（88M → 140M）は異常値扱い＝維持＋通知
+        n = fetch_mf.update_real_assets(self.c, {"jitaku-takaido-103": 140_000_000})
+        self.assertEqual(n, 0)
+        self.assertEqual(self._read()["valueHowMa"], 88_000_000)
+        self.assertTrue(any("±50%" in m for m in self.notified))
+
+    def test_missing_file_notifies_and_keeps_going(self):
+        n = fetch_mf.update_real_assets(self.c, {"no-such-id": 1_000_000, "jitaku-takaido-103": 90_000_000})
+        self.assertEqual(n, 1)  # 欠落は通知だけで他は更新
+        self.assertTrue(any("no-such-id" in m for m in self.notified))
+
+    def test_same_value_does_not_rewrite(self):
+        before = os.path.getmtime(self.path)
+        n = fetch_mf.update_real_assets(self.c, {"jitaku-takaido-103": 88_000_000})
+        self.assertEqual(n, 0)
+        self.assertEqual(os.path.getmtime(self.path), before)  # ファイル未接触＝無駄 commit なし
+
+    def test_none_is_noop(self):
+        self.assertEqual(fetch_mf.update_real_assets(self.c, None), 0)
+
+
 if __name__ == "__main__":
     unittest.main()
