@@ -322,13 +322,152 @@ class TestLiabilities(unittest.TestCase):
         self.assertNotEqual(fetch_mf._liab_tag("テスト銀行A", "", m), m.get("note"))
 
     def test_public_config_has_no_pii_mapping(self):
-        # ★#589 Phase1: 公開 config の liabilityAccountMap / realEstate.nameMap は note 以外空・
-        # 負債/不動産スクレイプは無効化（Phase2 の KV 移行まで）
+        # ★#589 Phase2: 負債/不動産スクレイプは KV 配信前提で再有効化されたが、
+        # 用途タグ・物件名の PII マッピングは引き続き公開 config に書かない（note 以外空）。
         cfg = _load_config()
         self.assertEqual([k for k in cfg["liabilityAccountMap"] if k != "note"], [])
         self.assertEqual([k for k in cfg["fetch"]["realEstate"]["nameMap"] if k != "note"], [])
-        self.assertFalse(cfg["include"]["liabilities"]["enabled"])
-        self.assertFalse(cfg["fetch"]["realEstate"]["enabled"])
+        self.assertTrue(cfg["include"]["liabilities"]["enabled"])
+        self.assertTrue(cfg["fetch"]["realEstate"]["enabled"])
+
+
+class TestSanitizeForPublic(unittest.TestCase):
+    """#589 Phase2: sanitize_for_public() が公開commit用コピーから機微フィールドを
+    確実に除去することを検算する（完全版 doc に liabilities があっても漏れない）。"""
+
+    def setUp(self):
+        c = _load_config()
+        c["liabilityAccountMap"] = {"テスト銀行A": "自宅", "note": "テスト用"}
+        c["realAssets"] = {"dir": "tests/fixtures/real-assets"}
+        doc = fetch_mf.build(c, NET, _fixture_rows())
+        self.full_doc = fetch_mf.attach_liabilities(
+            c, doc,
+            [{"institution": "テスト銀行A", "name": "住宅ローン", "balance": 33_000_000}],
+        )
+        # 完全版には機微フィールドが実際に存在することを前提として確認
+        self.assertIn("liabilities", self.full_doc)
+        self.assertIn("liabilitiesTotal", self.full_doc["totals"])
+
+    def test_removes_liabilities_and_sensitive_totals(self):
+        pub = fetch_mf.sanitize_for_public(self.full_doc)
+        self.assertNotIn("liabilities", pub)
+        for k in ("liabilitiesTotal", "realAssetsTotal", "netWorthComputed"):
+            self.assertNotIn(k, pub["totals"])
+
+    def test_keeps_v4_fields_and_holdings_unchanged(self):
+        pub = fetch_mf.sanitize_for_public(self.full_doc)
+        self.assertEqual(pub["holdings"], self.full_doc["holdings"])
+        self.assertEqual(pub["totals"]["imported"], self.full_doc["totals"]["imported"])
+        self.assertEqual(pub["totals"]["mfNetWorth"], self.full_doc["totals"]["mfNetWorth"])
+        self.assertEqual(pub["asOf"], self.full_doc["asOf"])
+
+    def test_does_not_mutate_original(self):
+        before = json.loads(json.dumps(self.full_doc))
+        fetch_mf.sanitize_for_public(self.full_doc)
+        self.assertEqual(self.full_doc, before)
+
+    def test_serializes_to_json_without_pii_keys(self):
+        # 直列化した文字列にも liabilities 関連キーが一切現れないこと（漏洩の最終防衛線）
+        pub = fetch_mf.sanitize_for_public(self.full_doc)
+        s = json.dumps(pub, ensure_ascii=False)
+        for forbidden in ("liabilities", "liabilitiesTotal", "realAssetsTotal", "netWorthComputed"):
+            self.assertNotIn(forbidden, s)
+
+
+class TestPushNetworthToWorker(unittest.TestCase):
+    """#589 Phase2: push_networth_to_worker() の fail-soft 挙動を検算する。
+    実ネットワーク呼び出しはしない（urllib.request.urlopen をモック）。"""
+
+    def setUp(self):
+        self.notified = []
+        self._orig_notify = fetch_mf.notify
+        fetch_mf.notify = lambda msg, *a, **k: self.notified.append(msg)
+        self._orig_env = dict(os.environ)
+
+    def tearDown(self):
+        fetch_mf.notify = self._orig_notify
+        os.environ.clear()
+        os.environ.update(self._orig_env)
+
+    def test_missing_env_notifies_and_returns_false(self):
+        os.environ.pop("MF_WORKER_URL", None)
+        os.environ.pop("MF_PIN_HASH", None)
+        result = fetch_mf.push_networth_to_worker({"asOf": "2026-07-21"})
+        self.assertFalse(result)
+        self.assertTrue(any("MF_WORKER_URL" in m for m in self.notified))
+
+    def test_success_returns_true_and_sends_pin_header(self):
+        os.environ["MF_WORKER_URL"] = "https://example.invalid"
+        os.environ["MF_PIN_HASH"] = "deadbeef"
+        captured = {}
+
+        class _FakeResponse:
+            status = 200
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+        def _fake_urlopen(req, timeout=None):
+            captured["url"] = req.full_url
+            captured["method"] = req.get_method()
+            captured["pin_hash"] = req.get_header("X-pin-hash")
+            return _FakeResponse()
+
+        orig_urlopen = fetch_mf.urllib.request.urlopen
+        fetch_mf.urllib.request.urlopen = _fake_urlopen
+        try:
+            result = fetch_mf.push_networth_to_worker({"asOf": "2026-07-21"})
+        finally:
+            fetch_mf.urllib.request.urlopen = orig_urlopen
+
+        self.assertTrue(result)
+        self.assertEqual(captured["url"], "https://example.invalid/networth")
+        self.assertEqual(captured["method"], "PUT")
+        self.assertEqual(captured["pin_hash"], "deadbeef")
+        self.assertEqual(self.notified, [])
+
+    def test_non_200_notifies_and_returns_false(self):
+        os.environ["MF_WORKER_URL"] = "https://example.invalid"
+        os.environ["MF_PIN_HASH"] = "deadbeef"
+
+        class _FakeResponse:
+            status = 500
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+        orig_urlopen = fetch_mf.urllib.request.urlopen
+        fetch_mf.urllib.request.urlopen = lambda req, timeout=None: _FakeResponse()
+        try:
+            result = fetch_mf.push_networth_to_worker({"asOf": "2026-07-21"})
+        finally:
+            fetch_mf.urllib.request.urlopen = orig_urlopen
+
+        self.assertFalse(result)
+        self.assertTrue(any("HTTP 500" in m for m in self.notified))
+
+    def test_exception_notifies_and_returns_false(self):
+        os.environ["MF_WORKER_URL"] = "https://example.invalid"
+        os.environ["MF_PIN_HASH"] = "deadbeef"
+
+        def _raise(req, timeout=None):
+            raise OSError("network down")
+
+        orig_urlopen = fetch_mf.urllib.request.urlopen
+        fetch_mf.urllib.request.urlopen = _raise
+        try:
+            result = fetch_mf.push_networth_to_worker({"asOf": "2026-07-21"})
+        finally:
+            fetch_mf.urllib.request.urlopen = orig_urlopen
+
+        self.assertFalse(result)
+        self.assertTrue(any("network down" in m for m in self.notified))
 
 
 class TestUpdateRealAssets(unittest.TestCase):
