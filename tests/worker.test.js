@@ -532,4 +532,102 @@ describe('worker/src/index.js helpers', () => {
       });
     });
   });
+
+  // ── /networth ネットワース機微データ（KV・PIN認証・#589 Phase2） ──
+  // 認証・GET/PUT の扱いは /positions と完全に同方式（GET: Origin のみ・PUT: X-Pin-Hash 必須）。
+  // handleNetworth と同一ロジックを KV Map で模擬して検算する。
+  describe('/networth handler semantics (mirrors /positions auth)', () => {
+    function verifyPinHashLike(pinHash, kvStore) {
+      if (!pinHash) return { status: 401, body: { error: '認証が必要です（X-Pin-Hash）' } };
+      const storedHash = kvStore.get('auth:pin-hash');
+      if (!storedHash) return { status: 428, body: { error: 'PIN初期設定が必要です' } };
+      if (pinHash !== storedHash) return { status: 401, body: { error: 'PIN認証失敗' } };
+      return null;
+    }
+
+    async function handleNetworthLike(method, kvStore, { pinHash, rawBody } = {}) {
+      if (method === 'GET') {
+        const val = kvStore.get('networth');
+        return { status: 200, body: val ? JSON.parse(val) : null };
+      }
+      if (method === 'PUT') {
+        const authErr = verifyPinHashLike(pinHash, kvStore);
+        if (authErr) return authErr;
+
+        let body;
+        try { body = JSON.parse(rawBody); } catch { return { status: 400, body: { error: 'JSON 不正' } }; }
+        if (!body || typeof body !== 'object' || Array.isArray(body)) {
+          return { status: 400, body: { error: 'object が必要です' } };
+        }
+        kvStore.set('networth', JSON.stringify(body));
+        return { status: 200, body: { ok: true } };
+      }
+      return { status: 405, body: { error: 'GET/PUT のみ許可' } };
+    }
+
+    it('GET: 未設定時は null を返す（配列ではなく単一ドキュメント・positions の [] と非対称）', async () => {
+      const kvStore = new Map();
+      const result = await handleNetworthLike('GET', kvStore);
+      expect(result).toEqual({ status: 200, body: null });
+    });
+
+    it('GET: PIN ヘッダーなしでも許可オリジンなら取得できる（/positions と同方式）', async () => {
+      const kvStore = new Map([['networth', JSON.stringify({ asOf: '2026-07-21', holdings: [] })]]);
+      const result = await handleNetworthLike('GET', kvStore);
+      expect(result.status).toBe(200);
+      expect(result.body).toEqual({ asOf: '2026-07-21', holdings: [] });
+    });
+
+    it('PUT: X-Pin-Hash ヘッダーが無ければ 401', async () => {
+      const kvStore = new Map([['auth:pin-hash', 'hash-existing']]);
+      const result = await handleNetworthLike('PUT', kvStore, { rawBody: '{}' });
+      expect(result.status).toBe(401);
+      expect(kvStore.has('networth')).toBe(false);
+    });
+
+    it('PUT: PIN 未設定サーバーでは 428', async () => {
+      const kvStore = new Map();
+      const result = await handleNetworthLike('PUT', kvStore, { pinHash: 'anything', rawBody: '{}' });
+      expect(result.status).toBe(428);
+    });
+
+    it('PUT: PIN 不一致は 401', async () => {
+      const kvStore = new Map([['auth:pin-hash', 'hash-correct']]);
+      const result = await handleNetworthLike('PUT', kvStore, { pinHash: 'hash-wrong', rawBody: '{}' });
+      expect(result.status).toBe(401);
+      expect(kvStore.has('networth')).toBe(false);
+    });
+
+    it('PUT: 不正 JSON は 400', async () => {
+      const kvStore = new Map([['auth:pin-hash', 'hash-correct']]);
+      const result = await handleNetworthLike('PUT', kvStore, { pinHash: 'hash-correct', rawBody: '{not json' });
+      expect(result.status).toBe(400);
+      expect(kvStore.has('networth')).toBe(false);
+    });
+
+    it('PUT: 配列は object ではないため 400（positions の /watchlist・/positions とは逆に単一ドキュメント必須）', async () => {
+      const kvStore = new Map([['auth:pin-hash', 'hash-correct']]);
+      const result = await handleNetworthLike('PUT', kvStore, { pinHash: 'hash-correct', rawBody: '[1,2,3]' });
+      expect(result.status).toBe(400);
+    });
+
+    it('PUT: PIN 認証成功かつ object body なら保存され、機微フィールドを含んでも素通しする', async () => {
+      const kvStore = new Map([['auth:pin-hash', 'hash-correct']]);
+      const doc = {
+        asOf: '2026-07-21',
+        totals: { imported: 1000, liabilitiesTotal: 200, realAssetsTotal: 300, netWorthComputed: 1100 },
+        holdings: [{ cat: '現金・預金', cur: 'JPY', value: 1000 }],
+        liabilities: [{ institution: 'テスト銀行', name: '住宅ローン', tag: '自宅', balance: 200, asOf: '2026-07-21' }],
+      };
+      const result = await handleNetworthLike('PUT', kvStore, { pinHash: 'hash-correct', rawBody: JSON.stringify(doc) });
+      expect(result).toEqual({ status: 200, body: { ok: true } });
+      expect(JSON.parse(kvStore.get('networth'))).toEqual(doc);
+    });
+
+    it('GET/PUT 以外のメソッドは 405', async () => {
+      const kvStore = new Map();
+      const result = await handleNetworthLike('DELETE', kvStore);
+      expect(result.status).toBe(405);
+    });
+  });
 });

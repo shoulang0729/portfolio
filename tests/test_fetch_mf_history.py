@@ -25,14 +25,14 @@ class TestMergePreservesExtraKeys(unittest.TestCase):
     def test_csv_overwrite_keeps_liabilities(self):
         # 既存行に負債列が刻まれている。CSV 再取得（同日付・負債列なし）で消えてはいけない。
         existing = [
-            {"date": "2026-07-18", "total": 100, "cash": 10, "liabilities": 81_816_673},
+            {"date": "2026-07-18", "total": 100, "cash": 10, "liabilities": 12_345_678},
             {"date": "2026-07-17", "total": 99, "cash": 9},
         ]
         new = {"2026-07-18": {"date": "2026-07-18", "total": 101, "cash": 11}}
         out = fetch_mf_history.merge(existing, new)
         by = {r["date"]: r for r in out}
         self.assertEqual(by["2026-07-18"]["total"], 101)  # CSV 列は最新で上書き
-        self.assertEqual(by["2026-07-18"]["liabilities"], 81_816_673)  # 保護
+        self.assertEqual(by["2026-07-18"]["liabilities"], 12_345_678)  # 保護
         self.assertNotIn("liabilities", by["2026-07-17"])  # 過去分は null 許容＝キー無し
 
     def test_new_dates_appended_sorted(self):
@@ -56,15 +56,15 @@ class TestStampLiabilities(unittest.TestCase):
 
     def test_stamps_matching_date_only(self):
         series = [{"date": "2026-07-18", "total": 1}, {"date": "2026-07-19", "total": 2}]
-        doc = {"asOf": "2026-07-19", "totals": {"liabilitiesTotal": 81_816_673}}
+        doc = {"asOf": "2026-07-19", "totals": {"liabilitiesTotal": 12_345_678}}
         self._with_holdings(doc, series)
-        self.assertEqual(series[1]["liabilities"], 81_816_673)
+        self.assertEqual(series[1]["liabilities"], 12_345_678)
         self.assertNotIn("liabilities", series[0])
 
     def test_no_matching_date_leaves_series_untouched(self):
         # 対応日の行が無い＝どの行にも刻まない（古い行に刻むと日付がズレるため）
         series = [{"date": "2026-07-18", "total": 1}]
-        doc = {"asOf": "2026-07-19", "totals": {"liabilitiesTotal": 81_816_673}}
+        doc = {"asOf": "2026-07-19", "totals": {"liabilitiesTotal": 12_345_678}}
         self._with_holdings(doc, series)
         self.assertNotIn("liabilities", series[0])
 

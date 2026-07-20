@@ -14,6 +14,12 @@
 ⚠ 資格情報（cookie・TG トークン等）はログ/コミットに出さない。
 ⚠ DOM 構造は data/mf-import-config.json の fetch.dom（資産種類別テーブル＋列インデックスマップ）。
   handoff §7（2026-06-22 実機 headful で確定）。headless はブロックされるため headless:false 固定。
+
+★#589 Phase2（docs/handoff/2026-07-20-networth-privacy-hardening.md）: 負債/実物資産込みの
+完全版は push_networth_to_worker() で PIN 認証つき Worker PUT /networth(KV) へ送るだけで、
+公開リポには sanitize_for_public() で機微フィールドを除去したコピー（v4 互換形）だけを commit
+する。環境変数 MF_WORKER_URL / MF_PIN_HASH が未設定でも fail-soft（notify のみ）で公開 commit
+フローは止まらない。
 """
 import os
 import re
@@ -536,6 +542,23 @@ def attach_liabilities(c, doc, liab_rows):
     return doc
 
 
+# ── 公開コミット用サニタイズ（#589 Phase2） ─────────────────────────────
+# 完全版（liabilities 込み・Worker /networth KV 送信用）から機微フィールドを
+# 除去したコピーを作る。公開リポ（data/mf-holdings.json）にはこちらだけを書く。
+_SANITIZE_TOTALS_FIELDS = ("liabilitiesTotal", "realAssetsTotal", "netWorthComputed")
+
+
+def sanitize_for_public(doc):
+    """機微フィールド（liabilities 配列 / totals の負債・実物資産・計算純資産）を
+    除いた deep copy を返す（v4 互換形）。引数 doc は変更しない。"""
+    public_doc = json.loads(json.dumps(doc))
+    public_doc.pop("liabilities", None)
+    totals = public_doc.get("totals", {})
+    for k in _SANITIZE_TOTALS_FIELDS:
+        totals.pop(k, None)
+    return public_doc
+
+
 # ── 検証（チェックサム ±1%）。不一致は書かず・コミットせず・通知して中止 ──────────────
 def _within(a, b, tol_pct):
     """a ≈ b を ±tol_pct% で判定（b 基準。b=0 は a=0 のみ許容）。"""
@@ -615,6 +638,42 @@ def verify(c, doc, rows, summary):
         sys.exit(3)
 
 
+# ── Worker /networth(KV) 送信（#589 Phase2・fail-soft） ─────────────────────
+# 完全版 doc（liabilities/realAssetsTotal/netWorthComputed 込み）を PIN 認証つき
+# Worker PUT /networth に送る。公開リポへの commit（sanitize 済み v4 形）とは
+# 完全に独立＝ここが失敗しても git_commit_push は必ず実行される（fail-soft）。
+def push_networth_to_worker(doc):
+    """Worker PUT /networth(KV) へ完全版 doc を送信する。
+
+    環境変数:
+      MF_WORKER_URL — Worker のベース URL（例: https://portfolio-proxy.<account>.workers.dev）
+      MF_PIN_HASH   — PUT /positions と同じ PIN ハッシュ（SHA-256 hex 文字列）。
+                      X-Pin-Hash ヘッダーにそのまま使う（生の PIN ではない）。
+    どちらか未設定、または送信失敗時は notify のみで False を返す（公開 commit フローは止めない）。
+    """
+    worker_url = os.environ.get("MF_WORKER_URL")
+    pin_hash = os.environ.get("MF_PIN_HASH")
+    if not worker_url or not pin_hash:
+        notify("networth: MF_WORKER_URL/MF_PIN_HASH が未設定のため Worker 送信をスキップ（公開 commit は継続）。")
+        return False
+    try:
+        body = json.dumps(doc).encode("utf-8")
+        req = urllib.request.Request(
+            f"{worker_url.rstrip('/')}/networth",
+            data=body,
+            method="PUT",
+            headers={"Content-Type": "application/json", "X-Pin-Hash": pin_hash},
+        )
+        with urllib.request.urlopen(req, timeout=15) as res:
+            if res.status != 200:
+                notify(f"networth: Worker PUT /networth が HTTP {res.status} を返却。")
+                return False
+        return True
+    except Exception as e:
+        notify(f"networth: Worker PUT /networth 送信失敗 {type(e).__name__}: {e}。公開 commit は継続。")
+        return False
+
+
 # ── 出力＆無人 commit/push（成功時のみ・承認不要） ─────────────────────────────
 def _git(*args, check=False):
     return subprocess.run(["git", "-C", ROOT, *args], check=check)
@@ -687,14 +746,17 @@ def do_run(c):
         doc = build(c, net, rows)
         verify(c, doc, rows, summary)  # 失敗時 exit(>=2)＝コミットしない
         ra_updated = update_real_assets(c, re_vals)  # #580: attach より前＝当日 totals に新値を反映
-        doc = attach_liabilities(c, doc, liab)  # verify 後＝資産チェックサムに影響しない（#577）
+        doc = attach_liabilities(c, doc, liab)  # verify 後＝資産チェックサムに影響しない（#577）＝完全版（KV送信用）
+        pushed = push_networth_to_worker(doc)  # #589 Phase2: 完全版を Worker KV へ（fail-soft・失敗しても続行）
+        public_doc = sanitize_for_public(doc)  # 公開 commit 用（機微フィールド除去・v4互換）
         with open(OUT, "w", encoding="utf-8") as f:
-            json.dump(doc, f, ensure_ascii=False, indent=2)
+            json.dump(public_doc, f, ensure_ascii=False, indent=2)
             f.write("\n")
         git_commit_push(("data/real-assets",) if ra_updated else ())
         liab_note = f" liabilities={doc['totals'].get('liabilitiesTotal', 0):,}" if "liabilities" in doc else ""
         ra_note = f" realAssetsUpdated={ra_updated}" if ra_updated else ""
-        print(f"OK imported={doc['totals']['imported']:,} holdings={len(doc['holdings'])}{liab_note}{ra_note}")
+        kv_note = f" kvPushed={pushed}"
+        print(f"OK imported={doc['totals']['imported']:,} holdings={len(doc['holdings'])}{liab_note}{ra_note}{kv_note}")
         # 保有取得成功後に履歴も非致命的に取得（失敗しても保有処理は成功扱い）
         _run_history_script()
     except SystemExit:
