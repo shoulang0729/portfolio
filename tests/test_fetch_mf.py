@@ -252,7 +252,7 @@ class TestLiabilities(unittest.TestCase):
 
     # ★合成データ（#589: 実残高・実金融機関の組は公開リポに置かない）
     LIAB_ROWS = [
-        {"institution": "テスト銀行A", "name": "住宅ローン", "balance": 33_000_000},
+        {"institution": "テスト銀行A", "name": "住宅ローン", "balance": 32_000_000},
         {"institution": "テスト銀行B", "name": "アパートローン", "balance": 55_000_000},
     ]
     # liabilityAccountMap は #589 Phase1 で公開 config から撤去（空）済み＝テストは合成マップを使う
@@ -274,12 +274,12 @@ class TestLiabilities(unittest.TestCase):
         c = dict(self.c)
         c["realAssets"] = {"dir": "tests/fixtures/real-assets"}
         doc = fetch_mf.attach_liabilities(c, json.loads(json.dumps(self.doc)), self.LIAB_ROWS)
-        self.assertEqual(doc["totals"]["liabilitiesTotal"], ***REMOVED***)
+        self.assertEqual(doc["totals"]["liabilitiesTotal"], 87_000_000)
         # fixture: 80,000,000(valueAdopted) + 65,000,000(valueHowMa×0.65) + 10,000,000(value) = 155,000,000
         self.assertEqual(doc["totals"]["realAssetsTotal"], 155_000_000)
         self.assertEqual(
             doc["totals"]["netWorthComputed"],
-            doc["totals"]["imported"] + 155_000_000 - ***REMOVED***,
+            doc["totals"]["imported"] + 155_000_000 - 87_000_000,
         )
         # liabilityAccountMap による用途タグ（部分一致）
         by_inst = {l["institution"]: l for l in doc["liabilities"]}
