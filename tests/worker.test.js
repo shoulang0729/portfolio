@@ -534,9 +534,11 @@ describe('worker/src/index.js helpers', () => {
   });
 
   // ── /networth ネットワース機微データ（KV・PIN認証・#589 Phase2） ──
-  // 認証・GET/PUT の扱いは /positions と完全に同方式（GET: Origin のみ・PUT: X-Pin-Hash 必須）。
+  // ★GET/PUT とも X-Pin-Hash 必須（AC3「機微データは認証後のみ」）。/positions と異なり
+  // GET も PIN 必須: Origin ゲートは Origin ヘッダを送らない curl 等を弾けないため
+  // （2026-07-21 実測・/positions 側の同件は Issue #367 スコープ）。
   // handleNetworth と同一ロジックを KV Map で模擬して検算する。
-  describe('/networth handler semantics (mirrors /positions auth)', () => {
+  describe('/networth handler semantics (PIN auth on both GET and PUT)', () => {
     function verifyPinHashLike(pinHash, kvStore) {
       if (!pinHash) return { status: 401, body: { error: '認証が必要です（X-Pin-Hash）' } };
       const storedHash = kvStore.get('auth:pin-hash');
@@ -547,6 +549,8 @@ describe('worker/src/index.js helpers', () => {
 
     async function handleNetworthLike(method, kvStore, { pinHash, rawBody } = {}) {
       if (method === 'GET') {
+        const authErr = verifyPinHashLike(pinHash, kvStore);
+        if (authErr) return authErr;
         const val = kvStore.get('networth');
         return { status: 200, body: val ? JSON.parse(val) : null };
       }
@@ -565,17 +569,30 @@ describe('worker/src/index.js helpers', () => {
       return { status: 405, body: { error: 'GET/PUT のみ許可' } };
     }
 
-    it('GET: 未設定時は null を返す（配列ではなく単一ドキュメント・positions の [] と非対称）', async () => {
-      const kvStore = new Map();
-      const result = await handleNetworthLike('GET', kvStore);
+    it('GET: PIN 認証成功かつ未設定 KV なら null を返す（配列ではなく単一ドキュメント）', async () => {
+      const kvStore = new Map([['auth:pin-hash', 'hash-correct']]);
+      const result = await handleNetworthLike('GET', kvStore, { pinHash: 'hash-correct' });
       expect(result).toEqual({ status: 200, body: null });
     });
 
-    it('GET: PIN ヘッダーなしでも許可オリジンなら取得できる（/positions と同方式）', async () => {
-      const kvStore = new Map([['networth', JSON.stringify({ asOf: '2026-07-21', holdings: [] })]]);
+    it('★GET: X-Pin-Hash ヘッダーなしは 401（curl の Origin なしバイパス対策・AC3）', async () => {
+      const kvStore = new Map([
+        ['auth:pin-hash', 'hash-correct'],
+        ['networth', JSON.stringify({ asOf: '2026-07-21', holdings: [] })],
+      ]);
       const result = await handleNetworthLike('GET', kvStore);
-      expect(result.status).toBe(200);
-      expect(result.body).toEqual({ asOf: '2026-07-21', holdings: [] });
+      expect(result.status).toBe(401);
+    });
+
+    it('GET: PIN 不一致は 401・一致なら機微データを返す', async () => {
+      const kvStore = new Map([
+        ['auth:pin-hash', 'hash-correct'],
+        ['networth', JSON.stringify({ asOf: '2026-07-21', holdings: [] })],
+      ]);
+      expect((await handleNetworthLike('GET', kvStore, { pinHash: 'hash-wrong' })).status).toBe(401);
+      const ok = await handleNetworthLike('GET', kvStore, { pinHash: 'hash-correct' });
+      expect(ok.status).toBe(200);
+      expect(ok.body).toEqual({ asOf: '2026-07-21', holdings: [] });
     });
 
     it('PUT: X-Pin-Hash ヘッダーが無ければ 401', async () => {

@@ -1087,18 +1087,22 @@ async function handlePositions(request, env, origin, ctx) {
 }
 
 // ── ネットワース機微データ（KV・非公開・#589 Phase2）────────────────────
-// 認証は /positions と完全に同方式:
-//   GET: 許可オリジンからのみ取得可能（PIN不要）
-//   PUT: 許可オリジンかつ X-Pin-Hash ヘッダーによる PIN 認証が必須
+// ★GET/PUT とも X-Pin-Hash による PIN 認証必須（handoff AC3「機微データは認証後のみ」）。
+//   /positions と異なり GET も PIN 必須にする: オリジンゲートは Origin ヘッダを
+//   送らない非ブラウザクライアント（curl 等）を弾けないため、Origin 判定だけでは
+//   負債・純資産が公開読み出し可能になってしまう（2026-07-21 実測で確認・#589）。
+//   ※/positions の GET が同じ理由で curl 読み出し可能な件は既存 Issue #367 スコープ。
 // mf-holdings 完全版（liabilities/realAssetsTotal/netWorthComputed 等の機微
 // フィールドを含みうる）をそのまま JSON で保存・配信する。公開リポには一切
-// 書かない（GitHub ミラーは行わない）＝ここが positions との唯一の差分。
+// 書かない（GitHub ミラーは行わない）。
 // スキーマ検証は最小限（object であること）。実体の型は消費側
 // （src/networth.js）が吸収する。
 async function handleNetworth(request, env, origin) {
   if (!env.KV) return errRes('KV 未設定', 500, origin);
 
   if (request.method === 'GET') {
+    const authErr = await verifyPinHash(request, env, origin);
+    if (authErr) return authErr;
     const val = await env.KV.get('networth');
     return jsonRes(val ? JSON.parse(val) : null, 200, origin);
   }
