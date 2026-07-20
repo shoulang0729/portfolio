@@ -22,13 +22,13 @@ const V5_DOC = {
   ...V4_DOC,
   totals: {
     ...V4_DOC.totals,
-    liabilitiesTotal: 81_816_673,
-    realAssetsTotal: 163_000_000,
-    netWorthComputed: 375_000_000 + 163_000_000 - 81_816_673,
+    liabilitiesTotal: 88_000_000,
+    realAssetsTotal: 155_000_000,
+    netWorthComputed: 375_000_000 + 155_000_000 - 88_000_000,
   },
   liabilities: [
-    { institution: '三菱UFJ銀行', name: '住宅ローン', tag: '自宅', balance: 30_038_112, asOf: '2026-07-19' },
-    { institution: '岐阜信用金庫', name: 'アパートローン', tag: 'かかみ野', balance: 51_778_561, asOf: '2026-07-19' },
+    { institution: 'テスト銀行A', name: '住宅ローン', tag: '自宅', balance: 33_000_000, asOf: '2026-07-19' },
+    { institution: 'テスト銀行B', name: 'アパートローン', tag: '収益', balance: 55_000_000, asOf: '2026-07-19' },
   ],
 };
 
@@ -58,9 +58,9 @@ describe('networth v5（#577）', () => {
   it('v5 形で負債・実物資産・計算純資産を公開する', async () => {
     await loadDoc(V5_DOC);
     const t = getMfTotals();
-    expect(t.liabilitiesTotal).toBe(81_816_673);
-    expect(t.realAssetsTotal).toBe(163_000_000);
-    expect(t.netWorthComputed).toBe(375_000_000 + 163_000_000 - 81_816_673);
+    expect(t.liabilitiesTotal).toBe(88_000_000);
+    expect(t.realAssetsTotal).toBe(155_000_000);
+    expect(t.netWorthComputed).toBe(375_000_000 + 155_000_000 - 88_000_000);
     expect(getMfLiabilities()).toHaveLength(2);
     expect(getMfLiabilities()[0].tag).toBe('自宅');
   });
