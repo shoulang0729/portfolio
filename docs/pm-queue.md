@@ -6,6 +6,19 @@
 
 ---
 
+## 2026-07-20（PM盤面モニタ・③／#589 履歴パージ完了・Mac mini 残）
+
+**🟢 #589 リポ/コード側 完了**：PR #590（HEAD 除去）／#591（合成値衝突回避）／#592（Phase2 Worker `/networth` KV）／#593（GET も PIN 認証・AC3）に加え、**Phase1 履歴パージ＋force-push を VS Code が実行完了**。`data/real-assets/*` は origin/main 履歴から消滅（path-log 空）＝**受入①②達成**（公開URL/raw/履歴いずれからも機微データ取得不可）。Mulmo サンドボックス clone は `reset --hard origin/main` で再同期済。
+
+**🔴 残（Toshio・Mac mini ローカルのみ・#589 は OPEN 維持）**
+- **re-clone 必須**（force-push で旧 clone が履歴乖離／次回 MF バッチ前に）。
+- **launchd env**：`MF_WORKER_URL=https://portfolio-proxy.shoulang.workers.dev`／`MF_PIN_HASH`＝`/positions` PUT と同じ PIN ハッシュ（Secret・リポ非記載）。
+- → これが済めば Mulmo が完了スタンプ＋**#589 クローズ**。
+
+**📌 教訓**：force-push（履歴 rewrite）後は **Mulmo サンドボックス clone も乖離**する→`git fetch`＋`reset --hard origin/main` で再同期してから docs 作業する（古い履歴上で commit すると sequencer 破損・pick 重複の罠）。
+
+---
+
 ## 2026-07-20（PM盤面モニタ・②／ワークフロー改定＋#589 Phase2）
 
 **🔴 要対応（Toshio・P0 残作業）**

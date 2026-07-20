@@ -6,11 +6,16 @@
 - 関連: #577 系 / `data/mf-holdings.json` / `data/real-assets/` / `worker/`
 
 ## 実装ログ（VS Code が更新 / クローズは Mulmo 盤面モニタ）
-- ステータス: **S2:in-progress（Phase2 済・Phase1 履歴パージ残）**
-- [x] Phase2 実装＝PR #592 マージ（2026-07-20）＝Worker `GET/PUT /networth`(KV・/positions同方式)＋`networth.js` フォールバック degrade＋パイプライン `push_networth_to_worker()`／公開commitは `sanitize_for_public()` の v4 のみ。品質ゲート green・コミット diff 機微文字列0件。`?v=20260721A`。**現HEADから `data/real-assets/*.json` 削除・`mf-holdings.json` の `liabilities` 除去済**（`Refs #589` で自動クローズ回避）。
-- [ ] **Phase1 履歴パージ（残・P0）**：`git filter-repo`/BFG で過去コミットの機微ブロブをパージ → **force-push（破壊的＝Toshio 事前確認・フルクローンで実行）**。**これが完了するまで git 履歴から旧データが復元可能＝受入②未達＝#589 はクローズしない。**
-- [ ] マージ後運用（Toshio/VS Code）：親が `npx wrangler deploy`／Mac mini env `MF_WORKER_URL`・`MF_PIN_HASH` 設定（Secrets 扱い）。
-- [ ] （Mulmo）Phase1 完了確認→pm-queue 記録→**#589 クローズ**
+- ステータス: **S2:in-progress（リポ/コード側 完了・Mac mini 運用のみ残）**
+- [x] Phase1 HEAD 除去＝PR #590（`data/real-assets/*.json` 削除・`mf-holdings.json` の `liabilities` 除去）／PR #591（履歴パージの実値衝突回避で合成負債値 88M→87M）。
+- [x] Phase2 実装＝PR #592（Worker `GET/PUT /networth`(KV・/positions同方式)＋`networth.js` フォールバック degrade＋`push_networth_to_worker()`／公開commitは `sanitize_for_public()` の v4 のみ・品質ゲート green・機微文字列0件・`?v=20260721A`）。
+- [x] GET 認証強化＝PR #593（`/networth` の GET にも PIN 認証必須・AC3 準拠・`?v=20260721B`）。
+- [x] **Phase1 履歴パージ＋force-push 完了**（2026-07-20・VS Code 実行）＝`data/real-assets/*` は origin/main 履歴から消滅（path-log 空）確認。**受入①②達成（公開URL・raw・履歴いずれからも機微データ取得不可）**。Mulmo サンドボックス clone も `reset --hard origin/main` で再同期済。
+- [ ] **マージ後運用（Toshio・Mac mini ローカルのみ＝残）**：
+  - **re-clone 必須**（force-push で旧 clone が履歴乖離／次回バッチ前に）。
+  - **launchd env 設定**：`MF_WORKER_URL=https://portfolio-proxy.shoulang.workers.dev`／`MF_PIN_HASH`＝`/positions` PUT と同じ PIN ハッシュ（**Secret・リポに書かない**）。
+  - （`wrangler deploy` は親が実行済み前提＝`/networth` が本番稼働）。
+- [ ] （Mulmo）Mac mini 完了を Toshio 確認→pm-queue 記録→**#589 クローズ**
 
 > 実装 PR は `Closes #589` を**打たない**（`Refs #589`）。force-push は破壊的＝Toshio 事前確認・フルクローンで実行。詳細＝`docs/mulmo-vscode-workflow.md`「実装ステータスの見える化＆クローズ権限」。
 
