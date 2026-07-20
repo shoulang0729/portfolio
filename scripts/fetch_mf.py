@@ -407,8 +407,12 @@ def scrape_real_estate(page, c):
     rc = c.get("fetch", {}).get("realEstate", {})
     if not rc.get("enabled"):
         return None
+    name_map = {k: v for k, v in rc.get("nameMap", {}).items() if k != "note"}
+    if not name_map:
+        # #589 Phase1 で公開 config から物件名マップ（PII）を撤去済み＝意図した空。
+        # 非公開ストアのマップが用意されるまで静かにスキップ（毎日の誤通知を防ぐ）。
+        return None
     try:
-        name_map = {k: v for k, v in rc.get("nameMap", {}).items() if k != "note"}
         cols = rc["table"]["cols"]
         out = {}
         tables = page.locator(rc["table"]["selector"])
