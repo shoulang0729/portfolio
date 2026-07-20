@@ -1,6 +1,8 @@
 # data/real-assets/ — 実物資産（不動産）レイヤー
 
-不動産の評価額・掛目・紐づくローンを1物件1JSONで持つ、**リポジトリ内の素のデータ**（MulmoClaudeの「コレクション」ではない）。`scripts/fetch_mf.py` の `real_assets_total()` がこのディレクトリの `*.json` を読み、`totals.realAssetsTotal` / `netWorthComputed` を算出する。アプリの Wealth タブ（ネットワース3層）が表示する。
+> **★#589 Phase1（プライバシー・ハードニング）**: 本リポは PUBLIC のため、物件レコード（`*.json`・物件名/評価額/ローン等のPII）は**公開リポから撤去済み**。実体は Phase2 で Worker KV / 非公開ストアに移す。以下は形状仕様のドキュメントとして残す。
+
+不動産の評価額・掛目・紐づくローンを1物件1JSONで持つデータレイヤー。`scripts/fetch_mf.py` の `real_assets_total()` がこのディレクトリの `*.json` を読み、`totals.realAssetsTotal` / `netWorthComputed` を算出する（レコード不在時は 0＝fail-soft）。アプリの Wealth タブ（ネットワース3層）が表示する。
 
 ## レコード形状（1物件=1 .json）
 | キー | 意味 |
