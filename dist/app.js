@@ -3326,7 +3326,9 @@ async function loadMfHoldings() {
 }
 async function _loadFromWorker() {
   try {
-    const r = await fetchWithTimeout(`${WORKER_URL}/networth`, 1e4);
+    const pinHash = _getActivePinHash();
+    if (!pinHash) return null;
+    const r = await fetchWithTimeout(`${WORKER_URL}/networth`, 1e4, { headers: { "X-Pin-Hash": pinHash } });
     if (!r.ok) throw new Error(`networth ${r.status}`);
     const doc = await r.json();
     if (!doc || typeof doc !== "object" || !doc.holdings) return null;
