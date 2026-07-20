@@ -402,7 +402,7 @@ npm run build:watch  # ウォッチモード
 ### 並列起動時の必須ルール
 
 1. **ベースブランチは必ず `main`**。他 Agent のブランチをベースにしない（過去事故: Agent E が test/e2e-expansion を D3 ブランチベースで作り、D3 PR が宙に浮いた）
-2. **1 Task = 1 ブランチ = 1 PR = 1 Issue**。`Closes #XX` は **1 PR のみ**、他は `Refs #XX`（同 Issue を複数 PR で `Closes` すると自動 close が壊れる）
+2. **1 Task = 1 ブランチ = 1 PR = 1 Issue**。**実装 PR は `Closes #XX` を打たず `Refs #XX`**（クローズ権限は Mulmo 盤面モニタ＝完了スタンプ後に閉じる。詳細＝`docs/mulmo-vscode-workflow.md`「実装ステータスの見える化＆クローズ権限」）。`Closes` を使うのは Mulmo docs レーン内 PR・自動 PR 等、設計スタンプ不要なケースのみ（その場合も 1 Issue 1 `Closes`）
 3. **push 前に必ず `git pull --rebase origin main`**（コンフリクト解消責任は各 Agent）
 4. **動作変更がある Task は CI を待ってからマージ**。`npm run check:types` `npm run check:circular` `npm run test:e2e` のうち、CI 側でしか実行できないもの（E2E）は admin 権限の親（Opus）が監視
 
