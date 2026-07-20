@@ -17,6 +17,7 @@
 
 import { WORKER_URL } from './config.js';
 import { fetchWithTimeout } from './data.js';
+import { _getActivePinHash } from './auth-pin.js';
 
 const MF_URL = 'data/mf-holdings.json';
 /** 生活防衛資金（キャッシュ比率の分子・分母から除外）。2026/06 ユーザー決定 */
@@ -44,10 +45,14 @@ export async function loadMfHoldings() {
   return _mf;
 }
 
-/** Worker KV から取得。失敗/空データは null（呼び出し側でフォールバック判定）。 */
+/** Worker KV から取得。失敗/空データは null（呼び出し側でフォールバック判定）。
+ * ★GET も PIN 認証必須（#589 AC3・curl の Origin なしバイパス対策）＝
+ * 未認証（PIN ハッシュ無し）なら Worker を叩かず即フォールバック（負債非表示 degrade）。 */
 async function _loadFromWorker() {
   try {
-    const r = await fetchWithTimeout(`${WORKER_URL}/networth`, 10000);
+    const pinHash = _getActivePinHash();
+    if (!pinHash) return null; // 未ログイン＝公開ファイル（サニタイズ済み）へ
+    const r = await fetchWithTimeout(`${WORKER_URL}/networth`, 10000, { headers: { 'X-Pin-Hash': pinHash } });
     if (!r.ok) throw new Error(`networth ${r.status}`);
     const doc = await r.json();
     if (!doc || typeof doc !== 'object' || !doc.holdings) return null;
