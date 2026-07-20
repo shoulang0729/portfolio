@@ -135,6 +135,24 @@
 
 ---
 
+## 2026-07-20（PM盤面モニタ）
+
+**🔴 設計差し戻し / CI red**：なし（open PR は #586 auto-fix〔checks なし・VS Code owner〕のみ・CI red なし・設計矛盾コメントなし）。
+
+**🟠 要確認（Toshio・軽微・設計方式の差異）**
+- **スコープB「実物資産レイヤー」の実装方式が設計正本と異なる**：handoff `2026-07-19-mf-liabilities-and-real-assets.md` §B は「新コレクション `real-assets`（**Mulmo が** schema 作成・レコード投入）」を設計していたが、実装は **PR#581 でコレクションを廃止し `data/real-assets/*.json` の素の in-repo JSON 化**に収束（`#580` の前提として確定）、A'（PR#582）で MF不動産評価額を自動更新する形になった。→ **Mulmo が別途 `real-assets` コレクションを作る必要はなくなった**（当初想定＝コレクション運用は不採用）。機能要件（実物資産を運用簿と分離して文脈表示のみに使う）は充足しており緊急度なし。方式変更の追認は Toshio 判断。**教訓：データ層の持ち方（コレクション vs in-repo JSON）は実装レーンで確定することがある。cap/閾値だけでなく「データモデル」も handoff と突き合わせる。**
+
+**✅ 完了スタンプ（設計正本に反映・Mulmo docs PR）**
+- **MF負債スクレイピング＋ネットワース3層表示（スコープA）**（PR#579・`#577`）→ handoff `2026-07-19-mf-liabilities-and-real-assets.md` に実装完了スタンプ。運用/実物/負債の3層＋純資産・運用アロケーション不変（AC3回帰）・`mf-history.json` 負債列（AC4）。
+- **MF不動産評価額の自動取込（スコープA'）**（PR#582 / Issue#580 クローズ）→ 同 handoff にスタンプ。`data/real-assets/*.json` 評価額の自動更新。
+- **ネットワースUI 仕上げ**（PR#583 プレビュー→PR#584 カード リデザイン→PR#585 Wealth KPI 刷新）→ 同 handoff にスタンプ。
+- **ハードコード hex → CSS トークン統一**（PR#576〔Auto daily-issues〕/ Issue#574 クローズ）→ handoff `2026-07-17-hardcode-hex-tokens.md` に実装完了スタンプ。verbatim トークン化で見た目不変。
+- Wiki `investment-system-upgrade-plan.md` に「MF負債＋実物資産レイヤー・ネットワース3層」「ハードコード hex → CSS トークン統一」の2節を追記。
+
+**🟡 監視中**：Wait バックログ6件（#367/#306/#305/#304/#301/#220）変化なし＝意図的バックログ（要対応ではない）。open PR #586 は auto-fix（取り込み owner=VS Code・Mulmo は触らない）。
+
+---
+
 ## 2026-07-10（PM盤面モニタ）
 
 **🔴 設計差し戻し / CI red**：なし（open PR は #571 auto-fix・#539 のみ・CI red なし・設計矛盾コメントなし）。
