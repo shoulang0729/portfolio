@@ -1185,6 +1185,7 @@ table.t td { font-size: var(--fs-sm); font-weight: 700; border-bottom: 1px solid
 .we-nw-legend .we-nw-gross { margin-left: auto; font-weight: 700; color: var(--text); }
 .we-op { display: inline-block; width: 1.5em; color: var(--text3); font-weight: 700; }
 .we-nw-subtotal td { font-weight: 700; border-top: 1px solid var(--border); }
+.we-nw-liab td { font-weight: 600; color: var(--neg); border-top: 1px solid var(--border); }
 .we-nw-total td { font-weight: 800; font-size: 16px; border-top: 1px solid var(--border); }
 .we-nwcard .we-nw-note b { color: var(--text2); font-weight: 700; }
 /* KPI 期間増減の色（増＝赤／減＝緑・日本市場慣例。2026-07 資産総額カード置換） */
