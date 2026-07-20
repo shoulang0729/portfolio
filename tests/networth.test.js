@@ -23,12 +23,12 @@ const V5_DOC = {
   totals: {
     ...V4_DOC.totals,
     liabilitiesTotal: ***REMOVED***,
-    realAssetsTotal: ***REMOVED***,
-    netWorthComputed: 375_000_000 + ***REMOVED*** - ***REMOVED***,
+    realAssetsTotal: 155_000_000,
+    netWorthComputed: 375_000_000 + 155_000_000 - ***REMOVED***,
   },
   liabilities: [
-    { institution: '三菱UFJ銀行', name: '住宅ローン', tag: '自宅', balance: ***REMOVED***, asOf: '2026-07-19' },
-    { institution: '岐阜信用金庫', name: 'アパートローン', tag: '■■■', balance: ***REMOVED***, asOf: '2026-07-19' },
+    { institution: 'テスト銀行A', name: '住宅ローン', tag: '自宅', balance: 33_000_000, asOf: '2026-07-19' },
+    { institution: 'テスト銀行B', name: 'アパートローン', tag: '収益', balance: 55_000_000, asOf: '2026-07-19' },
   ],
 };
 
@@ -59,8 +59,8 @@ describe('networth v5（#577）', () => {
     await loadDoc(V5_DOC);
     const t = getMfTotals();
     expect(t.liabilitiesTotal).toBe(***REMOVED***);
-    expect(t.realAssetsTotal).toBe(***REMOVED***);
-    expect(t.netWorthComputed).toBe(375_000_000 + ***REMOVED*** - ***REMOVED***);
+    expect(t.realAssetsTotal).toBe(155_000_000);
+    expect(t.netWorthComputed).toBe(375_000_000 + 155_000_000 - ***REMOVED***);
     expect(getMfLiabilities()).toHaveLength(2);
     expect(getMfLiabilities()[0].tag).toBe('自宅');
   });

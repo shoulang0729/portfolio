@@ -250,13 +250,17 @@ class TestLiabilities(unittest.TestCase):
     build 後の付与ロジックと v4 互換 degrade を検証する。
     """
 
+    # ★合成データ（#589: 実残高・実金融機関の組は公開リポに置かない）
     LIAB_ROWS = [
-        {"institution": "三菱UFJ銀行", "name": "住宅ローン", "balance": ***REMOVED***},
-        {"institution": "岐阜信用金庫", "name": "アパートローン", "balance": ***REMOVED***},
+        {"institution": "テスト銀行A", "name": "住宅ローン", "balance": 33_000_000},
+        {"institution": "テスト銀行B", "name": "アパートローン", "balance": 55_000_000},
     ]
+    # liabilityAccountMap は #589 Phase1 で公開 config から撤去（空）済み＝テストは合成マップを使う
+    LIAB_MAP = {"テスト銀行A": "自宅", "テスト銀行B": "収益", "note": "テスト用"}
 
     def setUp(self):
         self.c = _load_config()
+        self.c["liabilityAccountMap"] = dict(self.LIAB_MAP)
         self.doc = fetch_mf.build(self.c, NET, _fixture_rows())
 
     def test_attach_none_keeps_v4_shape(self):
@@ -271,16 +275,16 @@ class TestLiabilities(unittest.TestCase):
         c["realAssets"] = {"dir": "tests/fixtures/real-assets"}
         doc = fetch_mf.attach_liabilities(c, json.loads(json.dumps(self.doc)), self.LIAB_ROWS)
         self.assertEqual(doc["totals"]["liabilitiesTotal"], ***REMOVED***)
-        # fixture: ***REMOVED***(valueAdopted) + 65,000,000(valueHowMa×0.65) + 10,000,000(value) = ***REMOVED***
-        self.assertEqual(doc["totals"]["realAssetsTotal"], ***REMOVED***)
+        # fixture: 80,000,000(valueAdopted) + 65,000,000(valueHowMa×0.65) + 10,000,000(value) = 155,000,000
+        self.assertEqual(doc["totals"]["realAssetsTotal"], 155_000_000)
         self.assertEqual(
             doc["totals"]["netWorthComputed"],
-            doc["totals"]["imported"] + ***REMOVED*** - ***REMOVED***,
+            doc["totals"]["imported"] + 155_000_000 - ***REMOVED***,
         )
-        # liabilityAccountMap による物件タグ（部分一致）
+        # liabilityAccountMap による用途タグ（部分一致）
         by_inst = {l["institution"]: l for l in doc["liabilities"]}
-        self.assertEqual(by_inst["三菱UFJ銀行"]["tag"], "自宅")
-        self.assertEqual(by_inst["岐阜信用金庫"]["tag"], "■■■")
+        self.assertEqual(by_inst["テスト銀行A"]["tag"], "自宅")
+        self.assertEqual(by_inst["テスト銀行B"]["tag"], "収益")
         for l in doc["liabilities"]:
             for k in ("institution", "name", "tag", "balance", "asOf"):
                 self.assertIn(k, l)
@@ -312,10 +316,19 @@ class TestLiabilities(unittest.TestCase):
         self.assertEqual(fetch_mf.real_assets_total(c), 0)
 
     def test_liab_tag_unmatched_is_empty(self):
-        m = self.c["liabilityAccountMap"]
+        m = self.LIAB_MAP
         self.assertEqual(fetch_mf._liab_tag("どこかの銀行", "カーローン", m), "")
         # note キーはタグとして扱わない
-        self.assertNotEqual(fetch_mf._liab_tag("三菱UFJ銀行", "", m), m.get("note"))
+        self.assertNotEqual(fetch_mf._liab_tag("テスト銀行A", "", m), m.get("note"))
+
+    def test_public_config_has_no_pii_mapping(self):
+        # ★#589 Phase1: 公開 config の liabilityAccountMap / realEstate.nameMap は note 以外空・
+        # 負債/不動産スクレイプは無効化（Phase2 の KV 移行まで）
+        cfg = _load_config()
+        self.assertEqual([k for k in cfg["liabilityAccountMap"] if k != "note"], [])
+        self.assertEqual([k for k in cfg["fetch"]["realEstate"]["nameMap"] if k != "note"], [])
+        self.assertFalse(cfg["include"]["liabilities"]["enabled"])
+        self.assertFalse(cfg["fetch"]["realEstate"]["enabled"])
 
 
 class TestUpdateRealAssets(unittest.TestCase):
@@ -325,11 +338,11 @@ class TestUpdateRealAssets(unittest.TestCase):
     """
 
     REC = {
-        "id": "***REMOVED***",
-        "name": "***REMOVED***",
-        "valueHowMa": ***REMOVED***,
+        "id": "property-a",
+        "name": "テスト物件A（合成データ）",
+        "valueHowMa": 80_000_000,
         "haircut": 1.0,
-        "loanBalance": ***REMOVED***,
+        "loanBalance": 12_345_678,
         "notes": "手入力メモ",
     }
 
@@ -340,7 +353,7 @@ class TestUpdateRealAssets(unittest.TestCase):
         self.root = self._td.name
         d = os.path.join(self.root, "data", "real-assets")
         os.makedirs(d)
-        self.path = os.path.join(d, "***REMOVED***.json")
+        self.path = os.path.join(d, "property-a.json")
         with open(self.path, "w", encoding="utf-8") as f:
             json.dump(self.REC, f, ensure_ascii=False)
         self.c = {"realAssets": {"dir": "data/real-assets"}, "fetch": {"realEstate": {"guardPct": 50}}}
@@ -360,7 +373,7 @@ class TestUpdateRealAssets(unittest.TestCase):
             return json.load(f)
 
     def test_updates_value_howma_only(self):
-        n = fetch_mf.update_real_assets(self.c, {"***REMOVED***": 90_000_000})
+        n = fetch_mf.update_real_assets(self.c, {"property-a": 90_000_000})
         self.assertEqual(n, 1)
         rec = self._read()
         self.assertEqual(rec["valueHowMa"], 90_000_000)
@@ -369,20 +382,20 @@ class TestUpdateRealAssets(unittest.TestCase):
             self.assertEqual(rec[k], self.REC[k])
 
     def test_guard_blocks_abnormal_jump(self):
-        # 前回比 +50% 超（88M → 140M）は異常値扱い＝維持＋通知
-        n = fetch_mf.update_real_assets(self.c, {"***REMOVED***": 140_000_000})
+        # 前回比 +50% 超（80M → 140M）は異常値扱い＝維持＋通知
+        n = fetch_mf.update_real_assets(self.c, {"property-a": 140_000_000})
         self.assertEqual(n, 0)
-        self.assertEqual(self._read()["valueHowMa"], ***REMOVED***)
+        self.assertEqual(self._read()["valueHowMa"], 80_000_000)
         self.assertTrue(any("±50%" in m for m in self.notified))
 
     def test_missing_file_notifies_and_keeps_going(self):
-        n = fetch_mf.update_real_assets(self.c, {"no-such-id": 1_000_000, "***REMOVED***": 90_000_000})
+        n = fetch_mf.update_real_assets(self.c, {"no-such-id": 1_000_000, "property-a": 90_000_000})
         self.assertEqual(n, 1)  # 欠落は通知だけで他は更新
         self.assertTrue(any("no-such-id" in m for m in self.notified))
 
     def test_same_value_does_not_rewrite(self):
         before = os.path.getmtime(self.path)
-        n = fetch_mf.update_real_assets(self.c, {"***REMOVED***": ***REMOVED***})
+        n = fetch_mf.update_real_assets(self.c, {"property-a": 80_000_000})
         self.assertEqual(n, 0)
         self.assertEqual(os.path.getmtime(self.path), before)  # ファイル未接触＝無駄 commit なし
 

@@ -15,15 +15,13 @@
     ],
     "note": "allowlist。ここに無い種類は取り込まない。除外: ポイント・マイル / 保険 / 不動産 / 年金(2026/06 ユーザー判断で年金は全除外→カテゴリごと外した。みずほ信託外株が読み取り不可で口座名マッチが効かないためカテゴリ除外が確実)。※不動産の『資産としての取込』は引き続き除外（実物資産レイヤー data/real-assets/ が正・#577）。",
     "liabilities": {
-      "enabled": true,
+      "enabled": false,
       "categories": ["住宅ローン", "ローン", "借入"],
-      "note": "#577 スコープA。負債は holdings とは別の liabilities 配列に取り込む（運用アロケーションの分母に絶対に混ぜない）。categories は負債側 allowlist（部分一致）。rate/rateType は MF 画面に出ない場合が多く balance のみで可＝rate の正本は data/real-assets/ 側の手入力（二重管理回避・handoff 2026-07-19）。"
+      "note": "#577 スコープA。負債は holdings とは別の liabilities 配列に取り込む（運用アロケーションの分母に絶対に混ぜない）。categories は負債側 allowlist（部分一致）。★#589 Phase1: 本リポは PUBLIC＝負債の公開 commit を停止（enabled:false）。Phase2 で Worker /networth(KV) 書き込みに切り替えたら再有効化する。"
     }
   },
   "liabilityAccountMap": {
-    "三菱UFJ銀行": "自宅",
-    "岐阜信用金庫": "■■■",
-    "note": "口座/金融機関名（部分一致）→ 物件/用途タグ。マッチしない負債は tag='' で取り込む（落とさない）。実測 2026-07-19: 自宅=三菱UFJ(■■■) 残***REMOVED***円・1.175%変動 / ■■■=岐阜信金 残***REMOVED***円・1.000%固定選択3年 / ■■=完済0円。"
+    "note": "口座/金融機関名（部分一致）→ 用途タグ（自宅/収益）。マッチしない負債は tag='' で取り込む（落とさない）。★#589 Phase1: 口座と用途の対応（PII）は公開リポに書かない＝マップは空で運用停止中。Phase2 で KV/非公開ストア側に移して再構成する。"
   },
   "exclude": {
     "accounts": [
@@ -170,20 +168,17 @@
         "rule": "Σ(liabilities.balance) ≈ totalRegex の負債総額 ±1%。総額が読めなかった場合は行合計をそのまま採用（照合スキップ・通知のみ）。"
       },
       "onFailure": "★fail-soft（資産と分離・#577）: 負債の取得失敗・0行・チェックサム不一致は notify して liabilities を出力から省くだけ（v4 互換形）。資産スナップショットの commit は止めない。",
-      "note": "参考値（2026-07-19 実測）: 自宅ローン ***REMOVED***円（三菱UFJ）。■■■ ***REMOVED***円（岐阜信金）は MF 登録有無が未確認＝出なくても異常ではない。"
+      "note": "★実残高等の参考値は公開リポに書かない（#589）。DOM は 2026-07-19 実機確認済み。"
     },
     "realEstate": {
-      "enabled": true,
+      "enabled": false,
       "table": {
         "selector": "table.table-bordered.table-re",
         "cols": { "name": 0, "value": 1 },
         "colsNote": "★実機未確認（2026-07-19 設計時点・#580）。/bs/portfolio の不動産テーブルを 0始まり列インデックスで抽出する想定。列ズレ/セレクタ不一致は本 cols/selector を直すだけ（コード変更不要）。scrape() と同一ページ＝追加ナビゲーション無し（負債 /bs/liability への遷移より前に実行）。"
       },
       "nameMap": {
-        "***REMOVED***": "***REMOVED***",
-        "***REMOVED***": "***REMOVED***",
-        "***REMOVED***": "***REMOVED***",
-        "note": "MF不動産の登録名（双方向部分一致）→ data/real-assets/<id>.json のファイルid。MF実登録名は初回実機 run で要確認（#580）。マッチ0件なら通知のみ・既存 valueHowMa 維持。"
+        "note": "★#589 Phase1: 物件名（PII）は公開リポに書かない＝マップは空で無効化。Phase2 で KV/非公開ストア側に移して再構成する（#580 の実装コードは温存）。"
       },
       "guardPct": 50,
       "onFailure": "★fail-soft（#580）: スクレイプ失敗・物件マッチ0件・前回比±guardPct%超の異常値は、既存 valueHowMa（手入力の正本）を上書きせず維持して通知のみ。資産・負債の処理は止めない。更新は valueHowMa フィールドだけ（field-level merge・掛目/ローン等の手入力項目は保持）。"
@@ -191,6 +186,6 @@
   },
   "realAssets": {
     "dir": "data/real-assets",
-    "note": "実物資産レイヤー（handoff 2026-07-19 §B・Mulmo が schema/レコードを投入）。fetch_mf.py は存在すれば各レコードの採用値（valueAdopted、無ければ valueHowMa×haircut、さらに無ければ value）を合算して totals.realAssetsTotal / netWorthComputed に反映する。未着地なら 0 扱い。"
+    "note": "★#589 Phase1: 実物資産レコード（物件PII）は公開リポから撤去済み＝本ディレクトリは README のみ。Phase2 で KV/非公開ストアに移す。fetch_mf.py の real_assets_total はレコード不在時 0 を返す（既存 fail-soft）。"
   }
 }
