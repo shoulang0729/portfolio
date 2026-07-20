@@ -6,6 +6,22 @@
 
 ---
 
+## 2026-07-20（PM盤面モニタ・②／ワークフロー改定＋#589 Phase2）
+
+**🔴 要対応（Toshio・P0 残作業）**
+- **#589 Phase1 履歴パージが未了**：PR#592 で **Phase2（PIN認証 Worker `/networth` KV 配信）＋現HEADの機微データ削除（`data/real-assets/*`・`mf-holdings.json` の `liabilities`）** はマージ済。だが **git 履歴には旧コミットの機微ブロブが残存＝公開履歴から復元可能**＝受入②「履歴から復元不可」未達。**残＝`git filter-repo`/BFG で履歴パージ→force-push（破壊的・Toshio 事前確認・フルクローン実行）**。これが済むまで **#589 はクローズしない**（OPEN 維持中）。
+  - 併せてマージ後運用：親が `npx wrangler deploy`／Mac mini env `MF_WORKER_URL`・`MF_PIN_HASH` 設定（Secrets）。
+
+**✅ ワークフロー改定（設計レーン・Mulmo docs）**
+- **実装ステータス見える化＆クローズ権限**を正式ルール化（正本 `docs/mulmo-vscode-workflow.md` 新節／CLAUDE.md L405 整合済／テンプレ `docs/handoff/_TEMPLATE.md` 新設）。ラベル `S1:dispatched`/`S2:in-progress`/`S3:in-review`、**実装PRは `Closes`→`Refs`・クローズは Mulmo 盤面モニタ**。早速 PR#592 が `Refs #589` を遵守＝#589 は自動クローズされず OPEN 維持で機能確認。
+
+**✅ 完了スタンプ（設計正本に反映）**
+- #589 Phase2（PR#592）→ handoff `2026-07-20-networth-privacy-hardening.md` 実装ログに Phase2 済スタンプ＋Phase1 残を明記。ステータス S2:in-progress（Phase1 履歴パージ残）。
+
+**🟡 監視中**：Wait バックログ6件（#367/#306/#305/#304/#301/#220）変化なし。
+
+---
+
 ## 2026-06-28（PM盤面モニタ）
 
 **🔴 設計差し戻し / CI red**：なし（open PR は #516 auto-fix のみ・CI checks 未設定／green 扱い）。

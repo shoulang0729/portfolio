@@ -6,11 +6,11 @@
 - 関連: #577 系 / `data/mf-holdings.json` / `data/real-assets/` / `worker/`
 
 ## 実装ログ（VS Code が更新 / クローズは Mulmo 盤面モニタ）
-- ステータス: **S1:dispatched**
-- [ ] 着手 YYYY-MM-DD / branch: ______  ← 着手時に #589 へ `S2:in-progress` 付与＋着手コメント
-- [ ] PR #____ open / CI: ______        ← PR open 時に `S3:in-review` 付与
-- [ ] マージ YYYY-MM-DD
-- [ ] （Mulmo）完了スタンプ＋pm-queue 記録＋#589 クローズ
+- ステータス: **S2:in-progress（Phase2 済・Phase1 履歴パージ残）**
+- [x] Phase2 実装＝PR #592 マージ（2026-07-20）＝Worker `GET/PUT /networth`(KV・/positions同方式)＋`networth.js` フォールバック degrade＋パイプライン `push_networth_to_worker()`／公開commitは `sanitize_for_public()` の v4 のみ。品質ゲート green・コミット diff 機微文字列0件。`?v=20260721A`。**現HEADから `data/real-assets/*.json` 削除・`mf-holdings.json` の `liabilities` 除去済**（`Refs #589` で自動クローズ回避）。
+- [ ] **Phase1 履歴パージ（残・P0）**：`git filter-repo`/BFG で過去コミットの機微ブロブをパージ → **force-push（破壊的＝Toshio 事前確認・フルクローンで実行）**。**これが完了するまで git 履歴から旧データが復元可能＝受入②未達＝#589 はクローズしない。**
+- [ ] マージ後運用（Toshio/VS Code）：親が `npx wrangler deploy`／Mac mini env `MF_WORKER_URL`・`MF_PIN_HASH` 設定（Secrets 扱い）。
+- [ ] （Mulmo）Phase1 完了確認→pm-queue 記録→**#589 クローズ**
 
 > 実装 PR は `Closes #589` を**打たない**（`Refs #589`）。force-push は破壊的＝Toshio 事前確認・フルクローンで実行。詳細＝`docs/mulmo-vscode-workflow.md`「実装ステータスの見える化＆クローズ権限」。
 
