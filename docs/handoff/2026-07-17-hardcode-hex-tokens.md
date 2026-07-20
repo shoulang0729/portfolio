@@ -5,6 +5,9 @@
 - **起票**: codex-review（自動）→ Opus triage → 本 handoff で設計確定
 - **分担**: 設計＝Mulmo（本 doc）／実装＝VS Code
 
+> ## ✅ 実装完了（2026-07-19・PM盤面モニタ 2026-07-20 スタンプ）
+> **PR#576（`[Auto] Daily issues fix`）で Issue#574 クローズ（COMPLETED）**。`src/`（`_disabled/` 除く）の hex 直書きを `assets/01-base.css` の CSS 変数へ寄せる純リファクタ。verbatim トークン化で見た目不変・`cssVar()` 描画時評価でテーマ追従の設計どおり。
+
 ---
 
 ## 1. 背景・ゴール
