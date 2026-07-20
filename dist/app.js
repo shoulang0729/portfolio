@@ -3316,14 +3316,34 @@ var MF_URL = "data/mf-holdings.json";
 var EMERGENCY_FUND = 2e7;
 var _mf = null;
 async function loadMfHoldings() {
+  const fromWorker = await _loadFromWorker();
+  if (fromWorker) {
+    _mf = fromWorker;
+    return _mf;
+  }
+  _mf = await _loadFromPublicFile();
+  return _mf;
+}
+async function _loadFromWorker() {
+  try {
+    const r = await fetchWithTimeout(`${WORKER_URL}/networth`, 1e4);
+    if (!r.ok) throw new Error(`networth ${r.status}`);
+    const doc = await r.json();
+    if (!doc || typeof doc !== "object" || !doc.holdings) return null;
+    return doc;
+  } catch (e) {
+    console.warn("[networth] Worker /networth \u53D6\u5F97\u5931\u6557\u3002\u516C\u958B\u30D5\u30A1\u30A4\u30EB\u306B\u30D5\u30A9\u30FC\u30EB\u30D0\u30C3\u30AF:", e);
+    return null;
+  }
+}
+async function _loadFromPublicFile() {
   try {
     const r = await fetch(`${MF_URL}?_=${Date.now()}`);
     if (!r.ok) throw new Error(`mf ${r.status}`);
-    _mf = await r.json();
+    return await r.json();
   } catch {
-    _mf = null;
+    return null;
   }
-  return _mf;
 }
 function _sum(pred) {
   if (!_mf || !_mf.holdings) return 0;
