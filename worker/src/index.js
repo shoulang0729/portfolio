@@ -17,6 +17,8 @@
 //   PUT  /watchlist                     ウォッチリスト保存（KV）
 //   GET  /positions                     保有銘柄取得（KV・非公開）
 //   PUT  /positions                     保有銘柄保存（KV・PIN認証必須）
+//   GET  /networth                      ネットワース機微データ取得（KV・非公開・#589 Phase2）
+//   PUT  /networth                      ネットワース機微データ保存（KV・PIN認証必須・#589 Phase2）
 //   GET  /auth/pin-hash                 PIN 設定状態確認（ハッシュ値は返さない）
 //   PUT  /auth/pin-hash                 PIN ハッシュ更新/端末復旧（KV）
 //   GET  /prices/cache                  Cron キャッシュ価格取得（KV）
@@ -1084,6 +1086,40 @@ async function handlePositions(request, env, origin, ctx) {
   return errRes('GET/PUT のみ許可', 405, origin);
 }
 
+// ── ネットワース機微データ（KV・非公開・#589 Phase2）────────────────────
+// 認証は /positions と完全に同方式:
+//   GET: 許可オリジンからのみ取得可能（PIN不要）
+//   PUT: 許可オリジンかつ X-Pin-Hash ヘッダーによる PIN 認証が必須
+// mf-holdings 完全版（liabilities/realAssetsTotal/netWorthComputed 等の機微
+// フィールドを含みうる）をそのまま JSON で保存・配信する。公開リポには一切
+// 書かない（GitHub ミラーは行わない）＝ここが positions との唯一の差分。
+// スキーマ検証は最小限（object であること）。実体の型は消費側
+// （src/networth.js）が吸収する。
+async function handleNetworth(request, env, origin) {
+  if (!env.KV) return errRes('KV 未設定', 500, origin);
+
+  if (request.method === 'GET') {
+    const val = await env.KV.get('networth');
+    return jsonRes(val ? JSON.parse(val) : null, 200, origin);
+  }
+
+  if (request.method === 'PUT') {
+    const authErr = await verifyPinHash(request, env, origin);
+    if (authErr) return authErr;
+
+    let body;
+    try { body = await request.json(); } catch { return errRes('JSON 不正', 400, origin); }
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return errRes('object が必要です', 400, origin);
+    }
+
+    await env.KV.put('networth', JSON.stringify(body));
+    return jsonRes({ ok: true }, 200, origin);
+  }
+
+  return errRes('GET/PUT のみ許可', 405, origin);
+}
+
 // ══════════════════════════════════════════════════════════════
 // GitHub Contents API ミラー: KV に保存した positions を
 // shoulang0729/portfolio リポジトリの data/positions.json にも書き出す
@@ -1302,6 +1338,7 @@ export default {
     if (path.startsWith('/ai/'))     return handleAI(request, path, env, org);
     if (path === '/watchlist')       return handleWatchlist(request, env, org);
     if (path === '/positions')       return handlePositions(request, env, org, ctx);
+    if (path === '/networth')        return handleNetworth(request, env, org);
     if (path === '/portfolio/snapshot') return handlePortfolioSnapshot(request, env, org, ctx);
     if (path === '/prices/cache')    return handlePricesCache(env, org);
     if (path === '/auth/pin-hash')   return handleAuthPinHash(request, env, org);
