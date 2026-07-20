@@ -35,3 +35,6 @@ output.txt
 data/scheduler/fmp-config.json
 data/scheduler/edinet-config.json
 *secret*
+
+# Python bytecode（ローカルで scripts/tests の unittest 実行時に生成）
+__pycache__/

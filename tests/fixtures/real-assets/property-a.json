@@ -1,0 +1,10 @@
+{
+  "id": "property-a",
+  "name": "テスト物件A（自宅・合成データ）",
+  "type": "自宅",
+  "valueHowMa": 80000000,
+  "haircut": 1.0,
+  "valueAdopted": 80000000,
+  "loanBalance": 12345678,
+  "confidence": "低"
+}

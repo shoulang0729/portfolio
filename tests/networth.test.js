@@ -23,12 +23,12 @@ const V5_DOC = {
   totals: {
     ...V4_DOC.totals,
     liabilitiesTotal: 非公開08,
-    realAssetsTotal: 非公開08,
-    netWorthComputed: 375_000_000 + 非公開08 - 非公開08,
+    realAssetsTotal: 155_000_000,
+    netWorthComputed: 375_000_000 + 155_000_000 - 非公開08,
   },
   liabilities: [
-    { institution: '非公開25', name: '住宅ローン', tag: '自宅', balance: 非公開08, asOf: '2026-07-19' },
-    { institution: '非公開27', name: 'アパートローン', tag: '■■■', balance: 非公開08, asOf: '2026-07-19' },
+    { institution: 'テスト銀行A', name: '住宅ローン', tag: '自宅', balance: 33_000_000, asOf: '2026-07-19' },
+    { institution: 'テスト銀行B', name: 'アパートローン', tag: '収益', balance: 55_000_000, asOf: '2026-07-19' },
   ],
 };
 
@@ -59,8 +59,8 @@ describe('networth v5（#577）', () => {
     await loadDoc(V5_DOC);
     const t = getMfTotals();
     expect(t.liabilitiesTotal).toBe(非公開08);
-    expect(t.realAssetsTotal).toBe(非公開08);
-    expect(t.netWorthComputed).toBe(375_000_000 + 非公開08 - 非公開08);
+    expect(t.realAssetsTotal).toBe(155_000_000);
+    expect(t.netWorthComputed).toBe(375_000_000 + 155_000_000 - 非公開08);
     expect(getMfLiabilities()).toHaveLength(2);
     expect(getMfLiabilities()[0].tag).toBe('自宅');
   });
