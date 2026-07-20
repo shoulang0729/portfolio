@@ -36,6 +36,44 @@ Toshio → Mulmo（設計・指示書）→ VS Code（実装）→ PR → Toshio
 
 ---
 
+## 実装ステータスの見える化＆クローズ権限（2026-07-20 確定）
+
+**課題**: 従来は Issue が「OPEN → PR マージで自動クローズ」の2値しかなく、(a)**着手中が見えない**、(b)**実装 PR の `Closes #` で設計スタンプ前に閉じる／逆に検知漏れでオープン放置**、が起きていた。以下で是正する。
+
+### A. ステータスラベル（Issue に付与＝盤面の単一ソース）
+
+| ラベル | 誰が付ける | いつ |
+|---|---|---|
+| `S1:dispatched` | Toshio / Mulmo | Toshio が VS Code に投下した時（＝着手待ち） |
+| `S2:in-progress` | **VS Code（実装者）** | **着手したら自分で付与**＋ Issue に「着手 <日付> / branch <名>」コメント |
+| `S3:in-review` | VS Code | PR を open した時（CI/レビュー中） |
+
+- **`S4:done` は作らない ＝ Issue のクローズが「完了」の印**。ラベルは着手前の `S1` → 着手 `S2` → レビュー `S3` と前進させ、クローズで役目を終える（クローズ時に古い S ラベルは残っていてよい・盤面は state で読む）。
+
+### B. クローズ権限は Mulmo（設計者）が持つ
+
+- **実装 PR は `Closes #NNN` を打たない → `Refs #NNN` にする**。これで PR マージ＝即自動クローズにならず、Issue は open のまま残る。
+- Mulmo が **PM 盤面モニタ**（日次 `pm-board-monitor` 09:00 CST／手動）でマージを検知したら、**① handoff doc に完了スタンプ ② `docs/pm-queue.md` に記録 ③ Wiki 更新 → そのうえで Issue をクローズ**する。これで「設計記録なしにクローズ」も「完了検知漏れでオープン放置」も同時に防ぐ。
+- **トレードオフ（許容）**: `Refs` 化で GitHub の自動クローズが消える＝クローズは Mulmo の盤面モニタ頻度に依存する。この遅延は「設計者が完了を確認してから閉じる」統制点として意図的。急ぎは Toshio が Mulmo に「盤面回して」と言えば即実行。
+- **例外**: daily-issues.yml 等の**自動 PR** はこの限りでない（従来どおり VS Code owner で取り込み）。Mulmo docs レーンの PR は Mulmo が自分で閉じる（設計レーン内）。
+
+### C. Handoff に「実装ログ」欄（実装者が1行ずつ更新）
+
+各 handoff doc の冒頭に以下を置く（テンプレ＝ `docs/handoff/_TEMPLATE.md`）。VS Code が着手・PR・マージのたびにチェックを埋める。**クローズは Mulmo**。
+
+```markdown
+## 実装ログ（VS Code が更新 / クローズは Mulmo 盤面モニタ）
+- ステータス: S1:dispatched
+- [ ] 着手 YYYY-MM-DD / branch: ______
+- [ ] PR #____ open / CI: ______
+- [ ] マージ YYYY-MM-DD
+- [ ] （Mulmo）完了スタンプ＋pm-queue 記録＋Issue クローズ
+```
+
+> この節は、上の「マージ方針」および CLAUDE.md 並列ルールの「`Closes #` は1 PR のみ」を **実装 PR については上書き**する（実装 PR は `Refs`・クローズは Mulmo）。`Closes` を使うのは Mulmo docs レーン内 PR や自動 PR など、設計スタンプが不要なケースに限る。
+
+---
+
 ## 最初に読むもの（この順番で）
 
 1. **その回の指示書** — `docs/handoff/<YYYY-MM-DD>-<feature-slug>.md`

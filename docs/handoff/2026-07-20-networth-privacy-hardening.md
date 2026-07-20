@@ -5,6 +5,15 @@
 - 優先度: **P0（セキュリティ）**
 - 関連: #577 系 / `data/mf-holdings.json` / `data/real-assets/` / `worker/`
 
+## 実装ログ（VS Code が更新 / クローズは Mulmo 盤面モニタ）
+- ステータス: **S1:dispatched**
+- [ ] 着手 YYYY-MM-DD / branch: ______  ← 着手時に #589 へ `S2:in-progress` 付与＋着手コメント
+- [ ] PR #____ open / CI: ______        ← PR open 時に `S3:in-review` 付与
+- [ ] マージ YYYY-MM-DD
+- [ ] （Mulmo）完了スタンプ＋pm-queue 記録＋#589 クローズ
+
+> 実装 PR は `Closes #589` を**打たない**（`Refs #589`）。force-push は破壊的＝Toshio 事前確認・フルクローンで実行。詳細＝`docs/mulmo-vscode-workflow.md`「実装ステータスの見える化＆クローズ権限」。
+
 ## 問題
 本リポジトリは **PUBLIC**。アプリはブラウザから `data/*.json` を GitHub Pages 経由で直接 fetch する設計のため、これらのファイルは公開配信される。ここに個人の財務・PII（純資産、負債の金融機関名・残高、不動産の物件情報・所在・賃料・在不在状況）が含まれており、公開状態は不適切。
 ※ GitHub Pro で private 化しても Pages サイト自体は公開のままで解決しない（サイト非公開は Enterprise 必要）。アプリが Pages URL を fetch する構造上、データは公開ファイルに置けない。
