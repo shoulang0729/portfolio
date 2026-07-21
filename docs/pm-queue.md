@@ -6,6 +6,17 @@
 
 ---
 
+## 2026-07-21（PM盤面モニタ・#589 完全クローズ）
+
+**✅ #589（P0 セキュリティ）完了・クローズ**。Mac mini 運用ステップを Toshio が iPad→Tailscale→Termius SSH で実施（Mulmo が逐次誘導）：
+- MFバッチ用クローン `/Users/shoulang/github/portfolio` を `reset --hard origin/main` で再同期（force-push 乖離＋汚染ローカルcommit破棄）。検証＝`liabilities`=0／`sanitize_for_public`=3／real-assets *.json 消滅。**今朝のバッチは rebase コンフリクトで push 失敗＝公開側に機微データは戻っていない（安全）だった**。
+- launchd `com.toshio.mf-snapshot.plist` に env 追加＝`MF_WORKER_URL`＋`MF_PIN_HASH`(PIN の SHA-256 hex・silent 入力)→ 再読込。
+- これで #589 の全受入（公開/raw/履歴から機微データ取得不可＋認証Worker配信＋パイプラインKV化）を充足。**残watch＝次回 05:00 CST バッチの `/networth` KV push 初回成功をログ確認**（失敗時のみ再対応）。
+
+**📌 運用メモ**：MulmoClaude(サンドボックス)から Mac mini へは到達不可だが、**Toshio の iPad + Tailscale + Termius で SSH**して Mulmo が手順誘導する運用が有効と確認（今後の Mac mini 運用対応の定石）。
+
+---
+
 ## 2026-07-20（PM盤面モニタ・③／#589 履歴パージ完了・Mac mini 残）
 
 **🟢 #589 リポ/コード側 完了**：PR #590（HEAD 除去）／#591（合成値衝突回避）／#592（Phase2 Worker `/networth` KV）／#593（GET も PIN 認証・AC3）に加え、**Phase1 履歴パージ＋force-push を VS Code が実行完了**。`data/real-assets/*` は origin/main 履歴から消滅（path-log 空）＝**受入①②達成**（公開URL/raw/履歴いずれからも機微データ取得不可）。Mulmo サンドボックス clone は `reset --hard origin/main` で再同期済。
