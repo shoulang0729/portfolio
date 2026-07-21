@@ -277,10 +277,14 @@ class TestLiabilities(unittest.TestCase):
         self.assertEqual(doc["totals"]["liabilitiesTotal"], 87_000_000)
         # fixture: 80,000,000(valueAdopted) + 65,000,000(valueHowMa×0.65) + 10,000,000(value) = 155,000,000
         self.assertEqual(doc["totals"]["realAssetsTotal"], 155_000_000)
+        # spec 2026-07-21: netWorthComputed = mfNetWorth − (realEstateMf − realAssetsTotal) − liabilitiesTotal
+        # summary=None → realEstateMf=None → 不動産補正=0 → mfNetWorth - 0 - liabilitiesTotal
         self.assertEqual(
             doc["totals"]["netWorthComputed"],
-            doc["totals"]["imported"] + 155_000_000 - 87_000_000,
+            NET - 0 - 87_000_000,
         )
+        # realEstateMf は summary が無いため totals に含まれない
+        self.assertNotIn("realEstateMf", doc["totals"])
         # liabilityAccountMap による用途タグ（部分一致）
         by_inst = {l["institution"]: l for l in doc["liabilities"]}
         self.assertEqual(by_inst["テスト銀行A"]["tag"], "自宅")
@@ -288,6 +292,22 @@ class TestLiabilities(unittest.TestCase):
         for l in doc["liabilities"]:
             for k in ("institution", "name", "tag", "balance", "asOf"):
                 self.assertIn(k, l)
+
+    def test_attach_with_real_estate_mf_in_summary(self):
+        """realEstateMf が summary から取れた場合の純資産計算（spec 2026-07-21・#594）。"""
+        c = dict(self.c)
+        c["realAssets"] = {"dir": "tests/fixtures/real-assets"}
+        # summary に不動産 = 50,000,000 を含める（MF 評価）
+        summary_with_re = {fetch_mf._norm("不動産"): 50_000_000}
+        doc = fetch_mf.attach_liabilities(
+            c, json.loads(json.dumps(self.doc)), self.LIAB_ROWS, summary_with_re
+        )
+        self.assertEqual(doc["totals"]["realEstateMf"], 50_000_000)
+        ra = doc["totals"]["realAssetsTotal"]  # 155,000,000
+        lt = doc["totals"]["liabilitiesTotal"]  # 87,000,000
+        # netWorthComputed = mfNetWorth − (realEstateMf − realAssetsTotal) − liabilitiesTotal
+        expected = NET - (50_000_000 - ra) - lt
+        self.assertEqual(doc["totals"]["netWorthComputed"], expected)
 
     def test_attach_does_not_touch_holdings_or_asset_totals(self):
         # ★AC3: 負債付与で運用側（holdings / imported / mfNetWorth）が 1 円も動かない
@@ -351,7 +371,7 @@ class TestSanitizeForPublic(unittest.TestCase):
     def test_removes_liabilities_and_sensitive_totals(self):
         pub = fetch_mf.sanitize_for_public(self.full_doc)
         self.assertNotIn("liabilities", pub)
-        for k in ("liabilitiesTotal", "realAssetsTotal", "netWorthComputed"):
+        for k in ("liabilitiesTotal", "realAssetsTotal", "netWorthComputed", "realEstateMf"):
             self.assertNotIn(k, pub["totals"])
 
     def test_keeps_v4_fields_and_holdings_unchanged(self):
@@ -370,7 +390,7 @@ class TestSanitizeForPublic(unittest.TestCase):
         # 直列化した文字列にも liabilities 関連キーが一切現れないこと（漏洩の最終防衛線）
         pub = fetch_mf.sanitize_for_public(self.full_doc)
         s = json.dumps(pub, ensure_ascii=False)
-        for forbidden in ("liabilities", "liabilitiesTotal", "realAssetsTotal", "netWorthComputed"):
+        for forbidden in ("liabilities", "liabilitiesTotal", "realAssetsTotal", "netWorthComputed", "realEstateMf"):
             self.assertNotIn(forbidden, s)
 
 

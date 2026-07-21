@@ -87,16 +87,17 @@ function _sum(pred) {
 export function getMfTotals() {
   if (!_mf || !_mf.holdings) return null;
   const imported = (_mf.totals && _mf.totals.imported) || _sum(() => true);
-  // 資産総額（純資産全体）＝ Money Forward の総資産。取込対象外口座も含むため imported ≥ ではなく ≤。
-  // 未設定なら imported にフォールバック。
+  // 総資産 = MF総資産（mfNetWorth）そのまま（spec 2026-07-21）。未設定なら imported にフォールバック。
   const netWorth = (_mf.totals && _mf.totals.mfNetWorth) || imported;
   const cash = _sum((x) => x.cat === '現金・預金');
   const crypto = _sum((x) => x.cat === '暗号資産');
   const securities = imported - cash - crypto;
   const dryPowder = Math.max(0, cash - EMERGENCY_FUND);
   const cashRatio = imported > 0 ? (dryPowder / imported) * 100 : 0;
-  // v5（#577）: 負債・実物資産・計算純資産。パイプラインが負債を取得できなかった場合は
+  // v6（#594）: 負債・実物資産・計算純資産。パイプラインが負債を取得できなかった場合は
   // undefined ＝呼び出し側は3層表示を出さない（v4 互換 degrade）。
+  // netWorthComputed = mfNetWorth − (realEstateMf − realAssetsTotal) − liabilitiesTotal（spec 2026-07-21）
+  // realEstateMf 未取得時は不動産補正 0 で計算（degrade）。
   const t = _mf.totals || {};
   return {
     netWorth,
@@ -110,6 +111,7 @@ export function getMfTotals() {
     asOf: _mf.asOf,
     liabilitiesTotal: typeof t.liabilitiesTotal === 'number' ? t.liabilitiesTotal : undefined,
     realAssetsTotal: typeof t.realAssetsTotal === 'number' ? t.realAssetsTotal : undefined,
+    realEstateMf: typeof t.realEstateMf === 'number' ? t.realEstateMf : undefined,
     netWorthComputed: typeof t.netWorthComputed === 'number' ? t.netWorthComputed : undefined,
   };
 }

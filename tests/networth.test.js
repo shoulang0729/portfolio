@@ -1,4 +1,4 @@
-// networth.test.js — v5（#577 負債・実物資産）対応の単体テスト
+// networth.test.js — v5（#577 負債・実物資産）/ v6（#594 ネットワース数値モデル再定義）対応の単体テスト
 // ★AC3 回帰: liabilities / v5 totals が付いても、運用側の集計
 // （imported/cash/crypto/securities/cashRatio/getMfManualAssets）が一切変化しないこと。
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -12,11 +12,18 @@ const HOLDINGS = [
   { institution: 'bitFlyer', cat: '暗号資産', name: 'ビットコイン', value: 5_000_000, cur: 'JPY' },
 ];
 
+const MF_NET_WORTH = 649_045_899;
+
 const V4_DOC = {
   asOf: '2026-07-19',
-  totals: { mfNetWorth: 649_045_899, imported: 375_000_000, excludedAccounts: [] },
+  totals: { mfNetWorth: MF_NET_WORTH, imported: 375_000_000, excludedAccounts: [] },
   holdings: HOLDINGS,
 };
+
+// v6（#594）: netWorthComputed = mfNetWorth − (realEstateMf − realAssetsTotal) − liabilitiesTotal
+// realEstateMf=50_000_000, realAssetsTotal=155_000_000, 不動産補正=50M-155M=-105M
+// netWorthComputed = 649_045_899 − (50_000_000 − 155_000_000) − 87_000_000 = 649_045_899 + 105_000_000 − 87_000_000
+const V6_NET_WORTH_COMPUTED = MF_NET_WORTH - (50_000_000 - 155_000_000) - 87_000_000;
 
 const V5_DOC = {
   ...V4_DOC,
@@ -24,7 +31,8 @@ const V5_DOC = {
     ...V4_DOC.totals,
     liabilitiesTotal: 87_000_000,
     realAssetsTotal: 155_000_000,
-    netWorthComputed: 375_000_000 + 155_000_000 - 87_000_000,
+    realEstateMf: 50_000_000,
+    netWorthComputed: V6_NET_WORTH_COMPUTED,
   },
   liabilities: [
     { institution: 'テスト銀行A', name: '住宅ローン', tag: '自宅', balance: 32_000_000, asOf: '2026-07-19' },
@@ -55,14 +63,33 @@ describe('networth v5（#577）', () => {
     expect(getMfLiabilities()).toBeNull();
   });
 
-  it('v5 形で負債・実物資産・計算純資産を公開する', async () => {
+  it('v5/v6 形で負債・実物資産・計算純資産・realEstateMf を公開する', async () => {
     await loadDoc(V5_DOC);
     const t = getMfTotals();
     expect(t.liabilitiesTotal).toBe(87_000_000);
     expect(t.realAssetsTotal).toBe(155_000_000);
-    expect(t.netWorthComputed).toBe(375_000_000 + 155_000_000 - 87_000_000);
+    expect(t.realEstateMf).toBe(50_000_000);
+    // v6 式: mfNetWorth − (realEstateMf − realAssetsTotal) − liabilitiesTotal
+    expect(t.netWorthComputed).toBe(V6_NET_WORTH_COMPUTED);
     expect(getMfLiabilities()).toHaveLength(2);
     expect(getMfLiabilities()[0].tag).toBe('自宅');
+  });
+
+  it('v6 AC: realEstateMf 未取得時は netWorthComputed = mfNetWorth − liabilitiesTotal（補正0）', async () => {
+    const docNoRe = {
+      ...V4_DOC,
+      totals: {
+        ...V4_DOC.totals,
+        liabilitiesTotal: 87_000_000,
+        realAssetsTotal: 155_000_000,
+        netWorthComputed: MF_NET_WORTH - 0 - 87_000_000,
+      },
+      liabilities: V5_DOC.liabilities,
+    };
+    await loadDoc(docNoRe);
+    const t = getMfTotals();
+    expect(t.realEstateMf).toBeUndefined();
+    expect(t.netWorthComputed).toBe(MF_NET_WORTH - 87_000_000);
   });
 
   it('★AC3 回帰: 負債・実物資産の追加で運用側の集計が 1 円も変化しない', async () => {

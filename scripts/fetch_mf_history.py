@@ -43,6 +43,8 @@ COLMAP = {
     "保険（円）": "insurance",
     "年金（円）": "pension",
     "ポイント（円）": "points",
+    "不動産（円）": "realEstate",
+    "その他（円）": "other",
 }
 NUM_KEYS = [v for k, v in COLMAP.items() if v != "date"]
 

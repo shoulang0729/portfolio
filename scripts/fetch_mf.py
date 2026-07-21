@@ -518,11 +518,13 @@ def _liab_tag(institution, name, account_map):
     return ""
 
 
-def attach_liabilities(c, doc, liab_rows):
+def attach_liabilities(c, doc, liab_rows, summary=None):
     """負債取得成功時のみ v5 フィールドを doc に付与する（失敗時 None＝v4 互換形のまま）。
 
-    netWorthComputed = imported + realAssetsTotal − liabilitiesTotal（handoff 2026-07-19）。
+    netWorthComputed = mfNetWorth − 不動産補正 − liabilitiesTotal（spec 2026-07-21）。
+    不動産補正 = 不動産(MF評価) − 現実不動産(realAssetsTotal)。realEstateMf 未取得時は補正0。
     既存 mfNetWorth（MF 画面の資産グロス生値）は比較用にそのまま残す。
+    summary = _scrape_summary() の結果（正規化カテゴリ名→円）。不動産MF評価の取得に使う。
     """
     if liab_rows is None:
         return doc
@@ -540,16 +542,37 @@ def attach_liabilities(c, doc, liab_rows):
     ]
     lt = sum(r["balance"] for r in liab_rows)
     ra = real_assets_total(c)
+    real_estate_mf = _extract_real_estate_mf(summary)
+    mf_net_worth = doc["totals"]["mfNetWorth"]
+    real_estate_correction = real_estate_mf - ra if real_estate_mf is not None else 0
     doc["totals"]["liabilitiesTotal"] = lt
     doc["totals"]["realAssetsTotal"] = ra
-    doc["totals"]["netWorthComputed"] = doc["totals"]["imported"] + ra - lt
+    if real_estate_mf is not None:
+        doc["totals"]["realEstateMf"] = real_estate_mf
+    doc["totals"]["netWorthComputed"] = mf_net_worth - real_estate_correction - lt
     return doc
+
+
+def _extract_real_estate_mf(summary):
+    """内訳サマリから不動産(MF評価)合計を取得する。未取得・0 は None を返す（degrade）。
+
+    MF の内訳サマリ行ラベル（正規化後）は「不動産」と想定。実機で列名が異なる場合は
+    ここの candidates を追記するだけでよい（コード変更不要）。
+    """
+    if not summary:
+        return None
+    candidates = ["不動産"]
+    for key in candidates:
+        v = summary.get(_norm(key))
+        if isinstance(v, int) and v > 0:
+            return v
+    return None
 
 
 # ── 公開コミット用サニタイズ（#589 Phase2） ─────────────────────────────
 # 完全版（liabilities 込み・Worker /networth KV 送信用）から機微フィールドを
 # 除去したコピーを作る。公開リポ（data/mf-holdings.json）にはこちらだけを書く。
-_SANITIZE_TOTALS_FIELDS = ("liabilitiesTotal", "realAssetsTotal", "netWorthComputed")
+_SANITIZE_TOTALS_FIELDS = ("liabilitiesTotal", "realAssetsTotal", "netWorthComputed", "realEstateMf")
 
 
 def sanitize_for_public(doc):
@@ -750,7 +773,7 @@ def do_run(c):
         doc = build(c, net, rows)
         verify(c, doc, rows, summary)  # 失敗時 exit(>=2)＝コミットしない
         ra_updated = update_real_assets(c, re_vals)  # #580: attach より前＝当日 totals に新値を反映
-        doc = attach_liabilities(c, doc, liab)  # verify 後＝資産チェックサムに影響しない（#577）＝完全版（KV送信用）
+        doc = attach_liabilities(c, doc, liab, summary)  # verify 後＝資産チェックサムに影響しない（#577）＝完全版（KV送信用）
         pushed = push_networth_to_worker(doc)  # #589 Phase2: 完全版を Worker KV へ（fail-soft・失敗しても続行）
         public_doc = sanitize_for_public(doc)  # 公開 commit 用（機微フィールド除去・v4互換）
         with open(OUT, "w", encoding="utf-8") as f:
