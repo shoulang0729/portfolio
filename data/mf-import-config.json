@@ -66,8 +66,9 @@
       "imported": "number — Σ(holdings.value)。取り込んだ評価額の合計",
       "excludedAccounts": "string[] — 除外した口座/金融機関名の配列(額ではなく名前のリスト)",
       "liabilitiesTotal": "(v5・任意) number — Σ(liabilities.balance)。負債取得成功時のみ",
-      "netWorthComputed": "(v5・任意) number — imported + realAssetsTotal(data/real-assets/ の採用値合計・無ければ0) − liabilitiesTotal",
-      "realAssetsTotal": "(v5・任意) number — data/real-assets/ の採用値(valueAdopted=valueHowMa×haircut)合計。コレクション未着地なら 0"
+      "realAssetsTotal": "(v5・任意) number — data/real-assets/ の採用値(valueAdopted=valueHowMa×haircut)合計。コレクション未着地なら 0",
+      "realEstateMf": "(v6・任意) number — MF不動産テーブルの合計評価額（scrape_real_estate_mf_total()）。純資産計算の不動産補正に使用。未取得時は省略（degrade=補正0）",
+      "netWorthComputed": "(v6・任意) number — mfNetWorth − (realEstateMf − realAssetsTotal) − liabilitiesTotal。#594 数値モデル v6。旧式(imported+realAssetsTotal−liabilitiesTotal)は廃止"
     },
     "liability": {
       "institution": "string — 金融機関/口座名",

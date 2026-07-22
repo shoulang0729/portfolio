@@ -397,6 +397,31 @@ def build(c, net, rows):
 
 
 # ── 不動産評価額スクレイピング（#580 スコープA'・fail-soft） ────────────────────
+def scrape_real_estate_mf_total(page, c):
+    """不動産テーブルの全行を合計した MF評価額を返す（#594 realEstateMf 用・fail-soft）。
+
+    nameMap マッチに関係なく全行を合算する（mfNetWorth に含まれる不動産合計を把握するため）。
+    取得失敗・0件・enabled=False は None を返す（degrade: 不動産補正=0 で計算継続）。
+    """
+    rc = c.get("fetch", {}).get("realEstate", {})
+    if not rc.get("enabled"):
+        return None
+    try:
+        cols = rc["table"]["cols"]
+        total = 0
+        tables = page.locator(rc["table"]["selector"])
+        for i in range(tables.count()):
+            trs = tables.nth(i).locator("tbody tr")
+            for j in range(trs.count()):
+                cells = _cells(trs.nth(j))
+                val = parse_amount(_at(cells, cols.get("value")))
+                if val > 0:
+                    total += val
+        return total if total > 0 else None
+    except Exception:
+        return None
+
+
 def scrape_real_estate(page, c):
     """/bs/portfolio の不動産テーブルから物件ごとの評価額（HowMa連携値）を抽出する。
 
@@ -518,10 +543,13 @@ def _liab_tag(institution, name, account_map):
     return ""
 
 
-def attach_liabilities(c, doc, liab_rows):
-    """負債取得成功時のみ v5 フィールドを doc に付与する（失敗時 None＝v4 互換形のまま）。
+def attach_liabilities(c, doc, liab_rows, re_mf_total=None):
+    """負債取得成功時のみ v5/v6 フィールドを doc に付与する（失敗時 None＝v4 互換形のまま）。
 
-    netWorthComputed = imported + realAssetsTotal − liabilitiesTotal（handoff 2026-07-19）。
+    #594 v6 数値モデル（docs/wealth-networth-spec.md 正本）:
+    netWorthComputed = mfNetWorth − (realEstateMf − realAssetsTotal) − liabilitiesTotal
+    realEstateMf（不動産MF評価合計）は scrape_real_estate_mf_total() の結果を受け取る。
+    未取得時（None）は 0 として計算（degrade）。
     既存 mfNetWorth（MF 画面の資産グロス生値）は比較用にそのまま残す。
     """
     if liab_rows is None:
@@ -540,16 +568,21 @@ def attach_liabilities(c, doc, liab_rows):
     ]
     lt = sum(r["balance"] for r in liab_rows)
     ra = real_assets_total(c)
+    mf_net = doc["totals"].get("mfNetWorth", doc["totals"].get("imported", 0))
+    re_mf = int(re_mf_total) if isinstance(re_mf_total, (int, float)) and re_mf_total > 0 else 0
+    real_estate_correction = re_mf - ra
     doc["totals"]["liabilitiesTotal"] = lt
     doc["totals"]["realAssetsTotal"] = ra
-    doc["totals"]["netWorthComputed"] = doc["totals"]["imported"] + ra - lt
+    if re_mf > 0:
+        doc["totals"]["realEstateMf"] = re_mf
+    doc["totals"]["netWorthComputed"] = mf_net - real_estate_correction - lt
     return doc
 
 
 # ── 公開コミット用サニタイズ（#589 Phase2） ─────────────────────────────
 # 完全版（liabilities 込み・Worker /networth KV 送信用）から機微フィールドを
 # 除去したコピーを作る。公開リポ（data/mf-holdings.json）にはこちらだけを書く。
-_SANITIZE_TOTALS_FIELDS = ("liabilitiesTotal", "realAssetsTotal", "netWorthComputed")
+_SANITIZE_TOTALS_FIELDS = ("liabilitiesTotal", "realAssetsTotal", "realEstateMf", "netWorthComputed")
 
 
 def sanitize_for_public(doc):
@@ -735,22 +768,23 @@ def _scrape_all(page, c):
     同一認証コンテキストで取得する。不動産は portfolio ページ表示中に読む必要があるため
     負債（/bs/liability への遷移）より前。"""
     net, rows, summary = scrape(page, c)
+    re_mf_total = scrape_real_estate_mf_total(page, c)  # #594: MF不動産合計（fail-soft・None=補正0）
     re_vals = scrape_real_estate(page, c)  # 失敗時 None（notify 済み・#580）
     liab = scrape_liabilities(page, c)  # 失敗時 None（notify 済み・資産は続行）
-    return net, rows, summary, liab, re_vals
+    return net, rows, summary, liab, re_vals, re_mf_total
 
 
 def do_run(c):
     """無人 run。想定外例外も必ず notify して中止する（無音失敗を作らない・#479 H1）。"""
     try:
-        net, rows, summary, liab, re_vals = with_page(c, headless=c["fetch"]["headless"], fn=lambda pg: _scrape_all(pg, c))
+        net, rows, summary, liab, re_vals, re_mf_total = with_page(c, headless=c["fetch"]["headless"], fn=lambda pg: _scrape_all(pg, c))
         if not rows:
             notify("保有行を1件も抽出できず。fetch.dom（種類別テーブルのセレクタ/列マップ §7.1）を確認。")
             sys.exit(3)
         doc = build(c, net, rows)
         verify(c, doc, rows, summary)  # 失敗時 exit(>=2)＝コミットしない
         ra_updated = update_real_assets(c, re_vals)  # #580: attach より前＝当日 totals に新値を反映
-        doc = attach_liabilities(c, doc, liab)  # verify 後＝資産チェックサムに影響しない（#577）＝完全版（KV送信用）
+        doc = attach_liabilities(c, doc, liab, re_mf_total)  # #594: realEstateMf 付与（verify 後・KV送信用）
         pushed = push_networth_to_worker(doc)  # #589 Phase2: 完全版を Worker KV へ（fail-soft・失敗しても続行）
         public_doc = sanitize_for_public(doc)  # 公開 commit 用（機微フィールド除去・v4互換）
         with open(OUT, "w", encoding="utf-8") as f:
@@ -758,9 +792,10 @@ def do_run(c):
             f.write("\n")
         git_commit_push(("data/real-assets",) if ra_updated else ())
         liab_note = f" liabilities={doc['totals'].get('liabilitiesTotal', 0):,}" if "liabilities" in doc else ""
+        re_note = f" realEstateMf={re_mf_total:,}" if re_mf_total else ""
         ra_note = f" realAssetsUpdated={ra_updated}" if ra_updated else ""
         kv_note = f" kvPushed={pushed}"
-        print(f"OK imported={doc['totals']['imported']:,} holdings={len(doc['holdings'])}{liab_note}{ra_note}{kv_note}")
+        print(f"OK imported={doc['totals']['imported']:,} holdings={len(doc['holdings'])}{liab_note}{re_note}{ra_note}{kv_note}")
         # 保有取得成功後に履歴も非致命的に取得（失敗しても保有処理は成功扱い）
         _run_history_script()
     except SystemExit:
