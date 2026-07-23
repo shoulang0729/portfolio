@@ -519,10 +519,11 @@ def _liab_tag(institution, name, account_map):
 
 
 def attach_liabilities(c, doc, liab_rows):
-    """負債取得成功時のみ v5 フィールドを doc に付与する（失敗時 None＝v4 互換形のまま）。
+    """負債取得成功時のみ v5/v6 フィールドを doc に付与する（失敗時 None＝v4 互換形のまま）。
 
-    netWorthComputed = imported + realAssetsTotal − liabilitiesTotal（handoff 2026-07-19）。
-    既存 mfNetWorth（MF 画面の資産グロス生値）は比較用にそのまま残す。
+    netWorthComputed = mfNetWorth − (realEstateMf − realAssetsTotal) − liabilitiesTotal
+    （#594 spec 2026-07-21 派生式。旧式 imported + realAssetsTotal − liabilitiesTotal は廃止）。
+    realEstateMf が未取得の場合は不動産補正 0 で degrade（エラーにしない）。
     """
     if liab_rows is None:
         return doc
@@ -540,9 +541,15 @@ def attach_liabilities(c, doc, liab_rows):
     ]
     lt = sum(r["balance"] for r in liab_rows)
     ra = real_assets_total(c)
+    mf_net_worth = doc["totals"]["mfNetWorth"]
+    re_mf = doc["totals"].get("realEstateMf")  # P1 で追加される不動産(MF評価)。未取得時 None。
+    if isinstance(re_mf, (int, float)) and re_mf > 0:
+        real_estate_correction = re_mf - ra  # MF の過大評価の戻し
+    else:
+        real_estate_correction = 0  # realEstateMf 未取得時は補正なし（degrade）
     doc["totals"]["liabilitiesTotal"] = lt
     doc["totals"]["realAssetsTotal"] = ra
-    doc["totals"]["netWorthComputed"] = doc["totals"]["imported"] + ra - lt
+    doc["totals"]["netWorthComputed"] = mf_net_worth - real_estate_correction - lt
     return doc
 
 
