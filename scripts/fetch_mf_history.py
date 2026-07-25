@@ -30,6 +30,8 @@ OUT = os.path.join(ROOT, "data", "mf-history.json")
 CSV_URL = "https://moneyforward.com/bs/history/csv"
 
 # CSV 列見出し（cp932）→ JSON キー。MF の列順・表記に一致させる。
+# #594: realEstate（不動産 MF 評価）・other（その他・事業性資産）を追加。
+# CSV に列が存在しない場合は parse() で 0 になる（既存 _to_int が "" → 0 を返すため後方互換）。
 COLMAP = {
     "日付": "date",
     "合計（円）": "total",
@@ -43,6 +45,8 @@ COLMAP = {
     "保険（円）": "insurance",
     "年金（円）": "pension",
     "ポイント（円）": "points",
+    "不動産（円）": "realEstate",
+    "その他（円）": "other",
 }
 NUM_KEYS = [v for k, v in COLMAP.items() if v != "date"]
 

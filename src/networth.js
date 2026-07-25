@@ -25,7 +25,7 @@ const EMERGENCY_FUND = 20_000_000;
 
 /**
  * @typedef {{institution:string, name:string, tag?:string, balance:number, rate?:number, rateType?:string, asOf?:string}} MfLiability
- * @type {{asOf?:string, totals?:{imported?:number, mfNetWorth?:number, liabilitiesTotal?:number, realAssetsTotal?:number, netWorthComputed?:number}, holdings?:Array<{cat:string,cur?:string,value:number}>, liabilities?:MfLiability[]}|null}
+ * @type {{asOf?:string, totals?:{imported?:number, mfNetWorth?:number, liabilitiesTotal?:number, realAssetsTotal?:number, realEstateMf?:number, netWorthComputed?:number}, holdings?:Array<{cat:string,cur?:string,value:number}>, liabilities?:MfLiability[]}|null}
  */
 let _mf = null;
 
@@ -98,6 +98,14 @@ export function getMfTotals() {
   // v5（#577）: 負債・実物資産・計算純資産。パイプラインが負債を取得できなかった場合は
   // undefined ＝呼び出し側は3層表示を出さない（v4 互換 degrade）。
   const t = _mf.totals || {};
+  // #594: 運用資産 = (現金 − 生活資金) + 株 + 投信 + 債券 + FX + 暗号 + その他金融
+  // ★保険・年金は holdings に含まれないため（カテゴリ除外）holdings ベースでは近似値となる。
+  // ★ポイント・不動産は除外。
+  const INVESTABLE_CATS = new Set([
+    '現金・預金', '日本株・ETF', '米国株・ETF', '投資信託', '債券', 'FX・商品先物', '暗号資産',
+  ]);
+  const investableGross = _sum((x) => INVESTABLE_CATS.has(x.cat));
+  const investable = Math.max(0, investableGross - EMERGENCY_FUND);
   return {
     netWorth,
     imported,
@@ -106,10 +114,12 @@ export function getMfTotals() {
     securities,
     dryPowder,
     cashRatio,
+    investable,
     emergencyFund: EMERGENCY_FUND,
     asOf: _mf.asOf,
     liabilitiesTotal: typeof t.liabilitiesTotal === 'number' ? t.liabilitiesTotal : undefined,
     realAssetsTotal: typeof t.realAssetsTotal === 'number' ? t.realAssetsTotal : undefined,
+    realEstateMf: typeof t.realEstateMf === 'number' ? t.realEstateMf : undefined,
     netWorthComputed: typeof t.netWorthComputed === 'number' ? t.netWorthComputed : undefined,
   };
 }
