@@ -24,12 +24,19 @@ const V5_DOC = {
     ...V4_DOC.totals,
     liabilitiesTotal: 87_000_000,
     realAssetsTotal: 155_000_000,
-    netWorthComputed: 375_000_000 + 155_000_000 - 87_000_000,
   },
   liabilities: [
     { institution: 'テスト銀行A', name: '住宅ローン', tag: '自宅', balance: 32_000_000, asOf: '2026-07-19' },
     { institution: 'テスト銀行B', name: 'アパートローン', tag: '収益', balance: 55_000_000, asOf: '2026-07-19' },
   ],
+};
+
+const V5_WITH_RE_DOC = {
+  ...V5_DOC,
+  totals: {
+    ...V5_DOC.totals,
+    realEstateMf: 200_000_000,
+  },
 };
 
 /** fetch を差し替えて指定 doc をロードする */
@@ -60,9 +67,29 @@ describe('networth v5（#577）', () => {
     const t = getMfTotals();
     expect(t.liabilitiesTotal).toBe(87_000_000);
     expect(t.realAssetsTotal).toBe(155_000_000);
-    expect(t.netWorthComputed).toBe(375_000_000 + 155_000_000 - 87_000_000);
+    // 純資産 = mfNetWorth − (realEstateMf − realAssetsTotal) − liabilitiesTotal
+    // realEstateMf 未取得 → 0。補正 = 0 − 155M = −155M → 純資産 = mfNetWorth + 155M − 87M
+    expect(t.netWorthComputed).toBe(649_045_899 + 155_000_000 - 87_000_000);
     expect(getMfLiabilities()).toHaveLength(2);
     expect(getMfLiabilities()[0].tag).toBe('自宅');
+  });
+
+  it('★AC4 #594: realEstateMf あり時の純資産式を検証（合成データ）', async () => {
+    await loadDoc(V5_WITH_RE_DOC);
+    const t = getMfTotals();
+    expect(t.realEstateMf).toBe(200_000_000);
+    // 不動産補正 = 200M − 155M = 45M
+    // 純資産 = 649_045_899 − 45M − 87M = 517_045_899
+    expect(t.netWorthComputed).toBe(649_045_899 - (200_000_000 - 155_000_000) - 87_000_000);
+  });
+
+  it('★AC4 #594: realEstateMf なし（degrade）時の純資産式を検証', async () => {
+    await loadDoc(V5_DOC);
+    const t = getMfTotals();
+    expect(t.realEstateMf).toBeUndefined();
+    // realEstateMf 未取得 → 不動産補正 = 0 − realAssetsTotal = −155M
+    // 純資産 = mfNetWorth + realAssetsTotal − liabilitiesTotal
+    expect(t.netWorthComputed).toBe(649_045_899 + 155_000_000 - 87_000_000);
   });
 
   it('★AC3 回帰: 負債・実物資産の追加で運用側の集計が 1 円も変化しない', async () => {

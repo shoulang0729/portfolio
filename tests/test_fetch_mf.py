@@ -277,9 +277,12 @@ class TestLiabilities(unittest.TestCase):
         self.assertEqual(doc["totals"]["liabilitiesTotal"], 87_000_000)
         # fixture: 80,000,000(valueAdopted) + 65,000,000(valueHowMa×0.65) + 10,000,000(value) = 155,000,000
         self.assertEqual(doc["totals"]["realAssetsTotal"], 155_000_000)
+        # 純資産 = mfNetWorth − (realEstateMf − realAssetsTotal) − liabilitiesTotal
+        # realEstateMf 未スクレイプ → 0。補正 = 0 − 155M = −155M
+        # 純資産 = NET + 155M − 87M（spec 2026-07-21 #594）
         self.assertEqual(
             doc["totals"]["netWorthComputed"],
-            doc["totals"]["imported"] + 155_000_000 - 87_000_000,
+            doc["totals"]["mfNetWorth"] + 155_000_000 - 87_000_000,
         )
         # liabilityAccountMap による用途タグ（部分一致）
         by_inst = {l["institution"]: l for l in doc["liabilities"]}

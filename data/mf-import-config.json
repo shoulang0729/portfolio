@@ -54,7 +54,7 @@
     "note": "株式(現物)は市場で日米を判定する。日本株/ETF(4桁コード or .T) → 日本株・ETF / ySymbol=\"<code>.T\"。米国株/ETF → 米国株・ETF / ySymbol=ティッカー。"
   },
   "schema": {
-    "note": "★data/mf-holdings.json の正規スキーマ(v5・#577 で liabilities 追加)。フロントの src/networth.js は holdings[].cat / holdings[].cur / holdings[].value / totals.imported / asOf の5つ＋(v5) liabilities[].balance / totals.liabilitiesTotal / totals.netWorthComputed を読む(=load-bearing。これらは必須・名前変更不可)。それ以外は人間/将来ツール向けの付加情報。liabilities の取得に失敗した場合は liabilities / liabilitiesTotal / netWorthComputed を出力しない（v4 互換形＝フロントは負債非表示に degrade）。",
+    "note": "★data/mf-holdings.json の正規スキーマ(v5・#577 で liabilities 追加 / v6・#594 で realEstateMf 追加)。フロントの src/networth.js は holdings[].cat / holdings[].cur / holdings[].value / totals.imported / asOf の5つ＋(v5) liabilities[].balance / totals.liabilitiesTotal ＋(v6) totals.realEstateMf / totals.realAssetsTotal を読む(=load-bearing。これらは必須・名前変更不可)。totals.netWorthComputed はフロントが再計算するため JSON は参考値。liabilities の取得に失敗した場合は liabilities / liabilitiesTotal / netWorthComputed を出力しない（v4 互換形＝フロントは負債非表示に degrade）。",
     "top": {
       "asOf": "実行時刻 ISO8601 (例 2026-06-14)",
       "totals": "下記 totals 形",
@@ -66,8 +66,9 @@
       "imported": "number — Σ(holdings.value)。取り込んだ評価額の合計",
       "excludedAccounts": "string[] — 除外した口座/金融機関名の配列(額ではなく名前のリスト)",
       "liabilitiesTotal": "(v5・任意) number — Σ(liabilities.balance)。負債取得成功時のみ",
-      "netWorthComputed": "(v5・任意) number — imported + realAssetsTotal(data/real-assets/ の採用値合計・無ければ0) − liabilitiesTotal",
-      "realAssetsTotal": "(v5・任意) number — data/real-assets/ の採用値(valueAdopted=valueHowMa×haircut)合計。コレクション未着地なら 0"
+      "netWorthComputed": "(v5・任意) number — mfNetWorth − (realEstateMf − realAssetsTotal) − liabilitiesTotal（spec #594。realEstateMf 未取得時は 0 ＝補正なし degrade。フロント getMfTotals() が再計算するため JSON の値は参考値）",
+      "realAssetsTotal": "(v5・任意) number — data/real-assets/ の採用値(valueAdopted=valueHowMa×haircut)合計。コレクション未着地なら 0",
+      "realEstateMf": "(v6・任意) number — MF不動産テーブルのスクレイプ合計（#594 P1・fetch_mf.py が /bs/portfolio の table-re から取得。未スクレイプ時は省略＝純資産式でデグレード動作）"
     },
     "liability": {
       "institution": "string — 金融機関/口座名",

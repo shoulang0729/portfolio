@@ -521,7 +521,8 @@ def _liab_tag(institution, name, account_map):
 def attach_liabilities(c, doc, liab_rows):
     """負債取得成功時のみ v5 フィールドを doc に付与する（失敗時 None＝v4 互換形のまま）。
 
-    netWorthComputed = imported + realAssetsTotal − liabilitiesTotal（handoff 2026-07-19）。
+    純資産 = mfNetWorth − 不動産補正 − liabilitiesTotal（spec 2026-07-21 #594）。
+    不動産補正 = realEstateMf − realAssetsTotal（realEstateMf 未スクレイプ時は 0 ＝補正なし degrade）。
     既存 mfNetWorth（MF 画面の資産グロス生値）は比較用にそのまま残す。
     """
     if liab_rows is None:
@@ -540,9 +541,12 @@ def attach_liabilities(c, doc, liab_rows):
     ]
     lt = sum(r["balance"] for r in liab_rows)
     ra = real_assets_total(c)
+    re_mf = doc["totals"].get("realEstateMf", 0) or 0
+    real_estate_correction = re_mf - ra
+    mf_net = doc["totals"].get("mfNetWorth", doc["totals"].get("imported", 0))
     doc["totals"]["liabilitiesTotal"] = lt
     doc["totals"]["realAssetsTotal"] = ra
-    doc["totals"]["netWorthComputed"] = doc["totals"]["imported"] + ra - lt
+    doc["totals"]["netWorthComputed"] = mf_net - real_estate_correction - lt
     return doc
 
 
