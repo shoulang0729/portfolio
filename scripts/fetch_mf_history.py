@@ -30,6 +30,7 @@ OUT = os.path.join(ROOT, "data", "mf-history.json")
 CSV_URL = "https://moneyforward.com/bs/history/csv"
 
 # CSV 列見出し（cp932）→ JSON キー。MF の列順・表記に一致させる。
+# #594 P1: 不動産（円）/ その他（円）を追加（MF BS CSV に存在するが従来ドロップしていた）
 COLMAP = {
     "日付": "date",
     "合計（円）": "total",
@@ -43,6 +44,8 @@ COLMAP = {
     "保険（円）": "insurance",
     "年金（円）": "pension",
     "ポイント（円）": "points",
+    "不動産（円）": "realEstate",
+    "その他（円）": "other",
 }
 NUM_KEYS = [v for k, v in COLMAP.items() if v != "date"]
 

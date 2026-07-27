@@ -25,7 +25,7 @@ const EMERGENCY_FUND = 20_000_000;
 
 /**
  * @typedef {{institution:string, name:string, tag?:string, balance:number, rate?:number, rateType?:string, asOf?:string}} MfLiability
- * @type {{asOf?:string, totals?:{imported?:number, mfNetWorth?:number, liabilitiesTotal?:number, realAssetsTotal?:number, netWorthComputed?:number}, holdings?:Array<{cat:string,cur?:string,value:number}>, liabilities?:MfLiability[]}|null}
+ * @type {{asOf?:string, totals?:{imported?:number, mfNetWorth?:number, liabilitiesTotal?:number, realAssetsTotal?:number, realEstateMf?:number, netWorthComputed?:number, pensionTotal?:number, insuranceTotal?:number}, holdings?:Array<{cat:string,cur?:string,value:number}>, liabilities?:MfLiability[]}|null}
  */
 let _mf = null;
 
@@ -98,6 +98,32 @@ export function getMfTotals() {
   // v5（#577）: 負債・実物資産・計算純資産。パイプラインが負債を取得できなかった場合は
   // undefined ＝呼び出し側は3層表示を出さない（v4 互換 degrade）。
   const t = _mf.totals || {};
+  const liabilitiesTotal = typeof t.liabilitiesTotal === 'number' ? t.liabilitiesTotal : undefined;
+  const realAssetsTotal = typeof t.realAssetsTotal === 'number' ? t.realAssetsTotal : undefined;
+  const realEstateMf = typeof t.realEstateMf === 'number' ? t.realEstateMf : undefined;
+  // v6（#594）: 新ネットワース定義
+  // 運用資産 = holdings の金融カテゴリ合計（ポイント・その他・不動産を除く）− 生活資金
+  // 年金・保険は holdings に無いため totals.pensionTotal / insuranceTotal で補完
+  const FINANCIAL_CATS = new Set(['現金・預金', '日本株・ETF', '米国株・ETF', '投資信託', '債券', 'FX', '暗号資産']);
+  const financialFromHoldings = _sum((x) => FINANCIAL_CATS.has(x.cat));
+  const pensionTotal = typeof t.pensionTotal === 'number' ? t.pensionTotal : 0;
+  const insuranceTotal = typeof t.insuranceTotal === 'number' ? t.insuranceTotal : 0;
+  const investableAssets =
+    typeof liabilitiesTotal === 'number'
+      ? Math.max(0, financialFromHoldings + pensionTotal + insuranceTotal - EMERGENCY_FUND)
+      : undefined;
+  // 純資産 = mfNetWorth − 不動産補正 − 負債（#594 spec）
+  // 不動産補正 = realEstateMf − realAssetsTotal（realEstateMf 未取得なら補正 0 で degrade）
+  let netWorthComputed;
+  if (typeof liabilitiesTotal === 'number') {
+    const realEstateAdj =
+      typeof realEstateMf === 'number' && typeof realAssetsTotal === 'number'
+        ? realEstateMf - realAssetsTotal
+        : 0;
+    netWorthComputed = netWorth - realEstateAdj - liabilitiesTotal;
+  } else if (typeof t.netWorthComputed === 'number') {
+    netWorthComputed = t.netWorthComputed;
+  }
   return {
     netWorth,
     imported,
@@ -108,9 +134,11 @@ export function getMfTotals() {
     cashRatio,
     emergencyFund: EMERGENCY_FUND,
     asOf: _mf.asOf,
-    liabilitiesTotal: typeof t.liabilitiesTotal === 'number' ? t.liabilitiesTotal : undefined,
-    realAssetsTotal: typeof t.realAssetsTotal === 'number' ? t.realAssetsTotal : undefined,
-    netWorthComputed: typeof t.netWorthComputed === 'number' ? t.netWorthComputed : undefined,
+    liabilitiesTotal,
+    realAssetsTotal,
+    realEstateMf,
+    investableAssets,
+    netWorthComputed,
   };
 }
 

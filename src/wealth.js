@@ -232,12 +232,15 @@ async function netWorthCardHTML() {
     return `<div class="card we-card"><h2 class="we-h2">ネットワース</h2>
       <div class="val-soon">負債データ未取得（次回の MF 取り込み後に3層表示されます・#577）</div></div>`;
   }
+  // v6（#594）: 総資産 = mfNetWorth（MFそのまま）
+  const gross = mf.netWorth;
+  // 純資産 = mfNetWorth − 不動産補正 − 負債（netWorthComputed は networth.js で計算済み）
+  const nw = typeof mf.netWorthComputed === 'number' ? mf.netWorthComputed : gross - mf.liabilitiesTotal;
+  // 運用資産 = 金融合計 − 生活資金（investableAssets が取れていれば使用）
+  const investable = typeof mf.investableAssets === 'number' ? mf.investableAssets : mf.imported;
   const real = mf.realAssetsTotal || 0;
-  const gross = mf.imported + real; // 総資産 ＝ 運用 ＋ 実物
-  const nw =
-    typeof mf.netWorthComputed === 'number' ? mf.netWorthComputed : gross - mf.liabilitiesTotal;
   const oku = (n) => `${(n / 1e8).toFixed(2)}億`;
-  const pctUn = gross > 0 ? (mf.imported / gross) * 100 : 0;
+  const pctUn = gross > 0 ? (investable / gross) * 100 : 0;
   const pctRe = gross > 0 ? (real / gross) * 100 : 0;
   const liabs = getMfLiabilities() || [];
   const liabRows = liabs
@@ -259,15 +262,15 @@ async function netWorthCardHTML() {
     ${bar}
     <div class="we-table-wrap"><table class="t we-table we-nw">
       <tbody>
-        <tr><td><span class="we-op"> </span>運用資産</td><td>${escapeHTML(fmtYen(mf.imported))}</td></tr>
-        <tr><td><span class="we-op">＋</span>実物資産（掛目後）</td><td>${realCell}</td></tr>
-        <tr class="we-nw-subtotal"><td><span class="we-op">＝</span>総資産</td><td>${escapeHTML(fmtYen(gross))}</td></tr>
+        <tr><td><span class="we-op"> </span>総資産（MF）</td><td>${escapeHTML(fmtYen(gross))}</td></tr>
         <tr class="we-nw-liab"><td><span class="we-op">−</span>負債</td><td>−${escapeHTML(fmtYen(mf.liabilitiesTotal))}</td></tr>
         ${liabRows}
         <tr class="we-nw-total"><td><span class="we-op">＝</span>純資産</td><td>${escapeHTML(fmtYen(nw))}</td></tr>
+        <tr class="we-nw-sub"><td colspan="2" class="we-nw-note-row">運用資産（金融−生活資金¥2,000万）: ${escapeHTML(fmtYen(investable))}</td></tr>
+        <tr class="we-nw-sub"><td colspan="2" class="we-nw-note-row">実物資産（掛目後）: ${realCell}</td></tr>
       </tbody>
     </table></div>
-    <div class="we-nw-note">実物資産＝AI査定(HowMa)×掛目（都市部1.0／地方0.65）の採用値。<b>実物資産・負債は運用アロケーション（Risk / リバランス）の分母に含めない。</b>※MF表示の総資産(${escapeHTML(fmtYen(mf.netWorth))})は基準が異なるため非採用。</div>
+    <div class="we-nw-note"><b>実物資産・負債は運用アロケーション（Risk / リバランス）の分母に含めない（#577 §B）。</b>純資産＝MF総資産−不動産補正−負債（#594 spec）。</div>
   </div>`;
 }
 
