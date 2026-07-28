@@ -6,10 +6,14 @@
 - **★見た目（表示レイアウト）は本 handoff の対象外**。数値ロジックとデータ供給のみ。表示は別 handoff で後日。
 
 ## 実装ログ（VS Code が更新 / クローズは Mulmo）
-- ステータス: dispatched
-- [ ] P1 着手 / branch: `feat/mf-realestate-other-capture`
-- [ ] P2 着手 / branch: `feat/networth-model-v6`
-- [ ] Mac で fetch 実機確認（不動産・その他が取れるか）
+- ステータス: implemented (2026-07-28)
+- [x] P1 着手: `scripts/fetch_mf.py` に `realEstateMf` 追加（`attach_liabilities` に `re_vals` 引数・`_SANITIZE_TOTALS_FIELDS` 更新）
+- [x] P1 着手: `scripts/fetch_mf_history.py` に `realEstate`/`other` 列を COLMAP 追加
+- [x] P2 着手: `src/networth.js` で `getMfTotals()` を #594 spec 派生式に再定義（`operatingAssets`/`pureNetWorth`/`realEstateMf` 追加）
+- [x] P2: `src/wealth.js` の `netWorthCardHTML()` をウォーターフォール新式に更新
+- [x] テスト: `tests/networth.test.js` を v6 対応に更新（5ケース）
+- [x] `data/mf-import-config.json` schema note を v6 に更新
+- [ ] Mac で fetch 実機確認（不動産・その他が取れるか）← Mac ローカル実行が必要
 - [ ] （Mulmo）完了確認
 
 ---

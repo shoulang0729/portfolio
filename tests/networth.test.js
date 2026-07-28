@@ -1,5 +1,5 @@
-// networth.test.js — v5（#577 負債・実物資産）対応の単体テスト
-// ★AC3 回帰: liabilities / v5 totals が付いても、運用側の集計
+// networth.test.js — v6（#594 数値モデル再定義）対応の単体テスト
+// ★AC3 回帰: liabilities / v5+ totals が付いても、運用アロケーション側の集計
 // （imported/cash/crypto/securities/cashRatio/getMfManualAssets）が一切変化しないこと。
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
@@ -24,12 +24,19 @@ const V5_DOC = {
     ...V4_DOC.totals,
     liabilitiesTotal: 87_000_000,
     realAssetsTotal: 155_000_000,
-    netWorthComputed: 375_000_000 + 155_000_000 - 87_000_000,
   },
   liabilities: [
     { institution: 'テスト銀行A', name: '住宅ローン', tag: '自宅', balance: 32_000_000, asOf: '2026-07-19' },
     { institution: 'テスト銀行B', name: 'アパートローン', tag: '収益', balance: 55_000_000, asOf: '2026-07-19' },
   ],
+};
+
+const V6_DOC = {
+  ...V5_DOC,
+  totals: {
+    ...V5_DOC.totals,
+    realEstateMf: 200_000_000,
+  },
 };
 
 /** fetch を差し替えて指定 doc をロードする */
@@ -41,44 +48,68 @@ async function loadDoc(doc) {
   await loadMfHoldings();
 }
 
-describe('networth v5（#577）', () => {
+describe('networth v6（#594 数値モデル再定義）', () => {
   beforeEach(() => {
     vi.unstubAllGlobals();
   });
 
-  it('v4 形（負債なし）では v5 フィールドが undefined・getMfLiabilities は null', async () => {
+  it('v4 形（負債なし）では v5+ フィールドが undefined・getMfLiabilities は null', async () => {
     await loadDoc(V4_DOC);
     const t = getMfTotals();
     expect(t.liabilitiesTotal).toBeUndefined();
     expect(t.realAssetsTotal).toBeUndefined();
     expect(t.netWorthComputed).toBeUndefined();
+    expect(t.pureNetWorth).toBeUndefined();
     expect(getMfLiabilities()).toBeNull();
   });
 
-  it('v5 形で負債・実物資産・計算純資産を公開する', async () => {
+  it('v5 形（realEstateMf なし）: 純資産 = mfNetWorth − 負債（不動産補正0）', async () => {
     await loadDoc(V5_DOC);
     const t = getMfTotals();
     expect(t.liabilitiesTotal).toBe(87_000_000);
     expect(t.realAssetsTotal).toBe(155_000_000);
-    expect(t.netWorthComputed).toBe(375_000_000 + 155_000_000 - 87_000_000);
+    expect(t.realEstateMf).toBeUndefined();
+    const expected = 649_045_899 - 0 - 87_000_000;
+    expect(t.netWorthComputed).toBe(expected);
+    expect(t.pureNetWorth).toBe(expected);
     expect(getMfLiabilities()).toHaveLength(2);
     expect(getMfLiabilities()[0].tag).toBe('自宅');
   });
 
-  it('★AC3 回帰: 負債・実物資産の追加で運用側の集計が 1 円も変化しない', async () => {
+  it('v6 形（realEstateMf あり）: 純資産 = mfNetWorth − (realEstateMf − realAssetsTotal) − 負債', async () => {
+    await loadDoc(V6_DOC);
+    const t = getMfTotals();
+    expect(t.realEstateMf).toBe(200_000_000);
+    const reCorrection = 200_000_000 - 155_000_000;
+    const expected = 649_045_899 - reCorrection - 87_000_000;
+    expect(t.netWorthComputed).toBe(expected);
+    expect(t.pureNetWorth).toBe(expected);
+  });
+
+  it('#594 派生式: operatingAssets = (現金 − ¥20M) + 金融投資（不動産・その他除く） + 暗号', async () => {
+    await loadDoc(V4_DOC);
+    const t = getMfTotals();
+    const cash = 60_000_000 + 10_000_000;
+    const crypto = 5_000_000;
+    const financialInvested = 300_000_000;
+    const expected = Math.max(0, cash - 20_000_000 + financialInvested + crypto);
+    expect(t.operatingAssets).toBe(expected);
+  });
+
+  it('★AC3 回帰: 負債・実物資産・不動産MF評価の追加で運用側の集計が 1 円も変化しない', async () => {
     await loadDoc(V4_DOC);
     const t4 = getMfTotals();
     const m4 = getMfManualAssets();
 
-    await loadDoc(V5_DOC);
-    const t5 = getMfTotals();
-    const m5 = getMfManualAssets();
+    await loadDoc(V6_DOC);
+    const t6 = getMfTotals();
+    const m6 = getMfManualAssets();
 
     // 運用アロケーションの入力になる値（Risk Exposure・stats バー・Valuation が読む）
     for (const k of ['netWorth', 'imported', 'cash', 'crypto', 'securities', 'dryPowder', 'cashRatio']) {
-      expect(t5[k]).toBe(t4[k]);
+      expect(t6[k]).toBe(t4[k]);
     }
     // Exposure look-through 用の非証券資産リストも完全一致
-    expect(m5).toEqual(m4);
+    expect(m6).toEqual(m4);
   });
 });
