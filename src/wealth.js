@@ -233,7 +233,8 @@ async function netWorthCardHTML() {
       <div class="val-soon">負債データ未取得（次回の MF 取り込み後に3層表示されます・#577）</div></div>`;
   }
   const real = mf.realAssetsTotal || 0;
-  const gross = mf.imported + real; // 総資産 ＝ 運用 ＋ 実物
+  // #594: 総資産 = mfNetWorth（MFそのまま）。旧: imported + realAssetsTotal
+  const gross = mf.netWorth;
   const nw =
     typeof mf.netWorthComputed === 'number' ? mf.netWorthComputed : gross - mf.liabilitiesTotal;
   const oku = (n) => `${(n / 1e8).toFixed(2)}億`;
@@ -267,7 +268,7 @@ async function netWorthCardHTML() {
         <tr class="we-nw-total"><td><span class="we-op">＝</span>純資産</td><td>${escapeHTML(fmtYen(nw))}</td></tr>
       </tbody>
     </table></div>
-    <div class="we-nw-note">実物資産＝AI査定(HowMa)×掛目（都市部1.0／地方0.65）の採用値。<b>実物資産・負債は運用アロケーション（Risk / リバランス）の分母に含めない。</b>※MF表示の総資産(${escapeHTML(fmtYen(mf.netWorth))})は基準が異なるため非採用。</div>
+    <div class="we-nw-note">実物資産＝AI査定(HowMa)×掛目（都市部1.0／地方0.65）の採用値。<b>実物資産・負債は運用アロケーション（Risk / リバランス）の分母に含めない。</b>総資産はMF表示値（${escapeHTML(fmtYen(mf.netWorth))}）をそのまま採用（#594）。</div>
   </div>`;
 }
 
