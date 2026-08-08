@@ -1,4 +1,4 @@
-// networth.test.js — v5（#577 負債・実物資産）対応の単体テスト
+// networth.test.js — v5（#577 負債・実物資産）+ v6（#594 新ネットワース式）対応の単体テスト
 // ★AC3 回帰: liabilities / v5 totals が付いても、運用側の集計
 // （imported/cash/crypto/securities/cashRatio/getMfManualAssets）が一切変化しないこと。
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -18,17 +18,34 @@ const V4_DOC = {
   holdings: HOLDINGS,
 };
 
+// v5/v6 doc: 新spec formula = mfNetWorth - (realEstateMf - realAssetsTotal) - liabilitiesTotal
+// = 649_045_899 - (180_000_000 - 155_000_000) - 87_000_000 = 537_045_899
 const V5_DOC = {
   ...V4_DOC,
   totals: {
     ...V4_DOC.totals,
     liabilitiesTotal: 87_000_000,
     realAssetsTotal: 155_000_000,
-    netWorthComputed: 375_000_000 + 155_000_000 - 87_000_000,
+    realEstateMf: 180_000_000,
+    netWorthComputed: 649_045_899 - (180_000_000 - 155_000_000) - 87_000_000,
   },
   liabilities: [
     { institution: 'テスト銀行A', name: '住宅ローン', tag: '自宅', balance: 32_000_000, asOf: '2026-07-19' },
     { institution: 'テスト銀行B', name: 'アパートローン', tag: '収益', balance: 55_000_000, asOf: '2026-07-19' },
+  ],
+};
+
+// v6 doc without realEstateMf (degrade: correction=0)
+const V6_DOC_NO_RE_MF = {
+  ...V4_DOC,
+  totals: {
+    ...V4_DOC.totals,
+    liabilitiesTotal: 87_000_000,
+    realAssetsTotal: 155_000_000,
+    netWorthComputed: 649_045_899 - 87_000_000,
+  },
+  liabilities: [
+    { institution: 'テスト銀行A', name: '住宅ローン', tag: '自宅', balance: 32_000_000, asOf: '2026-07-19' },
   ],
 };
 
@@ -55,14 +72,24 @@ describe('networth v5（#577）', () => {
     expect(getMfLiabilities()).toBeNull();
   });
 
-  it('v5 形で負債・実物資産・計算純資産を公開する', async () => {
+  it('v5/v6 形で負債・実物資産・計算純資産を公開する', async () => {
     await loadDoc(V5_DOC);
     const t = getMfTotals();
     expect(t.liabilitiesTotal).toBe(87_000_000);
     expect(t.realAssetsTotal).toBe(155_000_000);
-    expect(t.netWorthComputed).toBe(375_000_000 + 155_000_000 - 87_000_000);
+    expect(t.realEstateMf).toBe(180_000_000);
+    // 純資産 = mfNetWorth - (realEstateMf - realAssetsTotal) - liabilitiesTotal
+    expect(t.netWorthComputed).toBe(649_045_899 - (180_000_000 - 155_000_000) - 87_000_000);
     expect(getMfLiabilities()).toHaveLength(2);
     expect(getMfLiabilities()[0].tag).toBe('自宅');
+  });
+
+  it('#594: realEstateMf 未取得時は不動産補正0でdegrade計算（エラーにしない）', async () => {
+    await loadDoc(V6_DOC_NO_RE_MF);
+    const t = getMfTotals();
+    expect(t.realEstateMf).toBeUndefined();
+    // degrade: realEstateMf=0 なので補正なし = mfNetWorth - 0 - liabilitiesTotal
+    expect(t.netWorthComputed).toBe(649_045_899 - 87_000_000);
   });
 
   it('★AC3 回帰: 負債・実物資産の追加で運用側の集計が 1 円も変化しない', async () => {

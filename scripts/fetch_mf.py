@@ -518,10 +518,11 @@ def _liab_tag(institution, name, account_map):
     return ""
 
 
-def attach_liabilities(c, doc, liab_rows):
+def attach_liabilities(c, doc, liab_rows, re_vals=None):
     """負債取得成功時のみ v5 フィールドを doc に付与する（失敗時 None＝v4 互換形のまま）。
 
-    netWorthComputed = imported + realAssetsTotal − liabilitiesTotal（handoff 2026-07-19）。
+    純資産 = mfNetWorth − (realEstateMf − realAssetsTotal) − liabilitiesTotal（spec 2026-07-21）。
+    realEstateMf 未取得時は不動産補正0で計算継続（degrade・エラーにしない）。
     既存 mfNetWorth（MF 画面の資産グロス生値）は比較用にそのまま残す。
     """
     if liab_rows is None:
@@ -540,16 +541,21 @@ def attach_liabilities(c, doc, liab_rows):
     ]
     lt = sum(r["balance"] for r in liab_rows)
     ra = real_assets_total(c)
+    re_mf = sum(re_vals.values()) if re_vals else 0  # 不動産(MF評価)合計・未取得時0（degrade）
+    real_estate_correction = re_mf - ra  # 不動産補正 = MF評価 − 現実評価(haircut後)
+    net = doc["totals"]["mfNetWorth"]
     doc["totals"]["liabilitiesTotal"] = lt
     doc["totals"]["realAssetsTotal"] = ra
-    doc["totals"]["netWorthComputed"] = doc["totals"]["imported"] + ra - lt
+    if re_mf:
+        doc["totals"]["realEstateMf"] = re_mf
+    doc["totals"]["netWorthComputed"] = net - real_estate_correction - lt
     return doc
 
 
 # ── 公開コミット用サニタイズ（#589 Phase2） ─────────────────────────────
 # 完全版（liabilities 込み・Worker /networth KV 送信用）から機微フィールドを
 # 除去したコピーを作る。公開リポ（data/mf-holdings.json）にはこちらだけを書く。
-_SANITIZE_TOTALS_FIELDS = ("liabilitiesTotal", "realAssetsTotal", "netWorthComputed")
+_SANITIZE_TOTALS_FIELDS = ("liabilitiesTotal", "realAssetsTotal", "realEstateMf", "netWorthComputed")
 
 
 def sanitize_for_public(doc):
@@ -750,7 +756,7 @@ def do_run(c):
         doc = build(c, net, rows)
         verify(c, doc, rows, summary)  # 失敗時 exit(>=2)＝コミットしない
         ra_updated = update_real_assets(c, re_vals)  # #580: attach より前＝当日 totals に新値を反映
-        doc = attach_liabilities(c, doc, liab)  # verify 後＝資産チェックサムに影響しない（#577）＝完全版（KV送信用）
+        doc = attach_liabilities(c, doc, liab, re_vals)  # verify 後＝資産チェックサムに影響しない（#577）＝完全版（KV送信用）
         pushed = push_networth_to_worker(doc)  # #589 Phase2: 完全版を Worker KV へ（fail-soft・失敗しても続行）
         public_doc = sanitize_for_public(doc)  # 公開 commit 用（機微フィールド除去・v4互換）
         with open(OUT, "w", encoding="utf-8") as f:
