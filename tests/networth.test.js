@@ -1,4 +1,4 @@
-// networth.test.js — v5（#577 負債・実物資産）対応の単体テスト
+// networth.test.js — v5/v6（#577 #594 負債・実物資産・ネットワース新式）対応の単体テスト
 // ★AC3 回帰: liabilities / v5 totals が付いても、運用側の集計
 // （imported/cash/crypto/securities/cashRatio/getMfManualAssets）が一切変化しないこと。
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -80,5 +80,66 @@ describe('networth v5（#577）', () => {
     }
     // Exposure look-through 用の非証券資産リストも完全一致
     expect(m5).toEqual(m4);
+  });
+});
+
+describe('networth v6（#594）ネットワース新式', () => {
+  beforeEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('v6: realEstateMf あり → 純資産 = mfNetWorth − (realEstateMf − realAssetsTotal) − 負債', async () => {
+    const mfNetWorth = 649_045_899;
+    const realEstateMf = 200_000_000;
+    const realAssetsTotal = 155_000_000;
+    const liabilitiesTotal = 87_000_000;
+    const reAdj = realEstateMf - realAssetsTotal;
+    const expected = mfNetWorth - reAdj - liabilitiesTotal;
+    const doc = {
+      asOf: '2026-07-21',
+      totals: { mfNetWorth, imported: 375_000_000, liabilitiesTotal, realAssetsTotal, realEstateMf },
+      holdings: HOLDINGS,
+      liabilities: [{ institution: 'テスト銀行', name: '住宅ローン', tag: '自宅', balance: liabilitiesTotal, asOf: '2026-07-21' }],
+    };
+    await loadDoc(doc);
+    const t = getMfTotals();
+    expect(t.realEstateMf).toBe(realEstateMf);
+    expect(t.netWorthComputed).toBe(expected);
+  });
+
+  it('v6: realEstateMf なし（degrade）→ 純資産 = mfNetWorth − 負債（不動産補正0）', async () => {
+    const mfNetWorth = 649_045_899;
+    const liabilitiesTotal = 87_000_000;
+    const realAssetsTotal = 155_000_000;
+    const doc = {
+      asOf: '2026-07-21',
+      totals: { mfNetWorth, imported: 375_000_000, liabilitiesTotal, realAssetsTotal },
+      holdings: HOLDINGS,
+      liabilities: [{ institution: 'テスト銀行', name: '住宅ローン', tag: '自宅', balance: liabilitiesTotal, asOf: '2026-07-21' }],
+    };
+    await loadDoc(doc);
+    const t = getMfTotals();
+    expect(t.realEstateMf).toBeUndefined();
+    expect(t.netWorthComputed).toBe(mfNetWorth - liabilitiesTotal);
+  });
+
+  it('v6: 運用資産（investableAssets）= imported − 生活資金¥20M', async () => {
+    const imported = 375_000_000;
+    const doc = {
+      asOf: '2026-07-21',
+      totals: { mfNetWorth: 649_045_899, imported, liabilitiesTotal: 87_000_000, realAssetsTotal: 155_000_000 },
+      holdings: HOLDINGS,
+      liabilities: [{ institution: 'テスト銀行', name: '住宅ローン', tag: '自宅', balance: 87_000_000, asOf: '2026-07-21' }],
+    };
+    await loadDoc(doc);
+    const t = getMfTotals();
+    expect(t.investableAssets).toBe(imported - 20_000_000);
+  });
+
+  it('v6: 負債なし（v4 形）では investableAssets が undefined', async () => {
+    await loadDoc(V4_DOC);
+    const t = getMfTotals();
+    expect(t.investableAssets).toBeUndefined();
+    expect(t.netWorthComputed).toBeUndefined();
   });
 });
