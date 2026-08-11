@@ -1,8 +1,8 @@
 {
-  "asOf": "2026-08-11",
+  "asOf": "2026-08-12",
   "totals": {
-    "mfNetWorth": 572704616,
-    "imported": 527431021,
+    "mfNetWorth": 572906617,
+    "imported": 527632570,
     "excludedAccounts": [
       "相対契約",
       "ようたのSuica",
@@ -17,7 +17,7 @@
       "name": "NEXT FUNDS TOPIX連動型上場投信",
       "value": 25784280,
       "cur": "JPY",
-      "asOf": "2026-08-11",
+      "asOf": "2026-08-12",
       "ySymbol": "1306.T",
       "avgCost": 416.0,
       "price": 428.0
@@ -28,7 +28,7 @@
       "name": "NEXT FUNDS 東証銀行業株価指数連動型上場投信",
       "value": 27728414,
       "cur": "JPY",
-      "asOf": "2026-08-11",
+      "asOf": "2026-08-12",
       "ySymbol": "1615.T",
       "avgCost": 548.0,
       "price": 732.0
@@ -39,7 +39,7 @@
       "name": "NEXT FUNDS 商社・卸売(TOPIX-17)上場投信",
       "value": 23712500,
       "cur": "JPY",
-      "asOf": "2026-08-11",
+      "asOf": "2026-08-12",
       "ySymbol": "1629.T",
       "avgCost": 245.0,
       "price": 271.0
@@ -50,7 +50,7 @@
       "name": "NEXT FUNDS 日経半導体株指数連動型上場投信",
       "value": 26314920,
       "cur": "JPY",
-      "asOf": "2026-08-11",
+      "asOf": "2026-08-12",
       "ySymbol": "200A",
       "avgCost": 2645.0,
       "price": 4364.0
@@ -61,7 +61,7 @@
       "name": "小松製作所",
       "value": 2233800,
       "cur": "JPY",
-      "asOf": "2026-08-11",
+      "asOf": "2026-08-12",
       "ySymbol": "6301.T",
       "avgCost": 3181.0,
       "price": 7446.0
@@ -72,7 +72,7 @@
       "name": "セイコーグループ",
       "value": 21340000,
       "cur": "JPY",
-      "asOf": "2026-08-11",
+      "asOf": "2026-08-12",
       "ySymbol": "8050.T",
       "avgCost": 3451.0,
       "price": 10670.0
@@ -83,7 +83,7 @@
       "name": "ファーストリテイリング",
       "value": 15744000,
       "cur": "JPY",
-      "asOf": "2026-08-11",
+      "asOf": "2026-08-12",
       "ySymbol": "9983.T",
       "avgCost": 43966.0,
       "price": 78720.0
@@ -92,221 +92,221 @@
       "institution": "マネックス証券",
       "cat": "米国株・ETF",
       "name": "グローバルX 銅ビジネス ETF",
-      "value": 4229246,
+      "value": 4234450,
       "cur": "JPY",
-      "asOf": "2026-08-11",
+      "asOf": "2026-08-12",
       "ySymbol": "COPX",
       "avgCost": 12693.0,
-      "price": 14097.0
+      "price": 14115.0
     },
     {
       "institution": "マネックス証券",
       "cat": "米国株・ETF",
       "name": "グローバルXデータセンターリート&デジタルインフラETF",
-      "value": 6399928,
+      "value": 6390782,
       "cur": "JPY",
-      "asOf": "2026-08-11",
+      "asOf": "2026-08-12",
       "ySymbol": "DTCR",
       "avgCost": 4664.0,
-      "price": 4414.0
+      "price": 4407.0
     },
     {
       "institution": "マネックス証券",
       "cat": "米国株・ETF",
       "name": "SPDR ゴールド・ミニシェアーズ・トラスト",
-      "value": 44318228,
+      "value": 44585298,
       "cur": "JPY",
-      "asOf": "2026-08-11",
+      "asOf": "2026-08-12",
       "ySymbol": "GLDM",
       "avgCost": 13677.0,
-      "price": 13607.0
+      "price": 13689.0
     },
     {
       "institution": "マネックス証券",
       "cat": "米国株・ETF",
       "name": "ファーストトラスト ナスダック クリーンエッジ スマートグリッド インフラ指数ファンド",
-      "value": 1758402,
+      "value": 1751968,
       "cur": "JPY",
-      "asOf": "2026-08-11",
+      "asOf": "2026-08-12",
       "ySymbol": "GRID",
       "avgCost": 28682.0,
-      "price": 29307.0
+      "price": 29199.0
     },
     {
       "institution": "マネックス証券",
       "cat": "米国株・ETF",
       "name": "iシェアーズ ラテンアメリカ 40 ETF",
-      "value": 5445036,
+      "value": 5443459,
       "cur": "JPY",
-      "asOf": "2026-08-11",
+      "asOf": "2026-08-12",
       "ySymbol": "ILF",
       "avgCost": 5023.0,
-      "price": 5445.0
+      "price": 5443.0
     },
     {
       "institution": "マネックス証券",
       "cat": "米国株・ETF",
       "name": "JPモルガン・ウルトラショート・インカムETF",
-      "value": 3023075,
+      "value": 3022476,
       "cur": "JPY",
-      "asOf": "2026-08-11",
+      "asOf": "2026-08-12",
       "ySymbol": "JPST",
       "avgCost": 8002.0,
-      "price": 7955.0
+      "price": 7954.0
     },
     {
       "institution": "マネックス証券",
       "cat": "米国株・ETF",
       "name": "ヴァンエック・ウラニウム・アンド原子力ETF",
-      "value": 6569807,
+      "value": 6549095,
       "cur": "JPY",
-      "asOf": "2026-08-11",
+      "asOf": "2026-08-12",
       "ySymbol": "NLR",
       "avgCost": 19216.0,
-      "price": 18506.0
+      "price": 18448.0
     },
     {
       "institution": "マネックス証券",
       "cat": "米国株・ETF",
       "name": "ヴァンエック・レアアース・アンド戦略的金属ETF",
-      "value": 6190121,
+      "value": 6185391,
       "cur": "JPY",
-      "asOf": "2026-08-11",
+      "asOf": "2026-08-12",
       "ySymbol": "REMX",
       "avgCost": 12681.0,
-      "price": 12380.0
+      "price": 12371.0
     },
     {
       "institution": "マネックス証券",
       "cat": "米国株・ETF",
       "name": "iシェアーズ シルバー・トラスト",
-      "value": 7436661,
+      "value": 7494691,
       "cur": "JPY",
-      "asOf": "2026-08-11",
+      "asOf": "2026-08-12",
       "ySymbol": "SLV",
       "avgCost": 11181.0,
-      "price": 9296.0
+      "price": 9368.0
     },
     {
       "institution": "マネックス証券",
       "cat": "米国株・ETF",
       "name": "ヴァンエック半導体ETF",
-      "value": 36263024,
+      "value": 35916106,
       "cur": "JPY",
-      "asOf": "2026-08-11",
+      "asOf": "2026-08-12",
       "ySymbol": "SMH",
       "avgCost": 51582.0,
-      "price": 90658.0
+      "price": 89790.0
     },
     {
       "institution": "マネックス証券",
       "cat": "米国株・ETF",
       "name": "ステート・ストリート エネルギー・セレクト・セクター SPDR ETF",
-      "value": 8019404,
+      "value": 8066317,
       "cur": "JPY",
-      "asOf": "2026-08-11",
+      "asOf": "2026-08-12",
       "ySymbol": "XLE",
       "avgCost": 9404.0,
-      "price": 9435.0
+      "price": 9490.0
     },
     {
       "institution": "マネックス証券",
       "cat": "米国株・ETF",
       "name": "ステート・ストリート・公益事業・セレクト・セクター SPDR ETF",
-      "value": 1501115,
+      "value": 1496258,
       "cur": "JPY",
-      "asOf": "2026-08-11",
+      "asOf": "2026-08-12",
       "ySymbol": "XLU",
       "avgCost": 7439.0,
-      "price": 6823.0
+      "price": 6801.0
     },
     {
       "institution": "マネックス証券",
       "cat": "米国株・ETF",
       "name": "アップル",
-      "value": 8987403,
+      "value": 9041371,
       "cur": "JPY",
-      "asOf": "2026-08-11",
+      "asOf": "2026-08-12",
       "ySymbol": "AAPL",
       "avgCost": 30699.0,
-      "price": 48319.0
+      "price": 48610.0
     },
     {
       "institution": "マネックス証券",
       "cat": "米国株・ETF",
       "name": "アマゾン・ドットコム",
-      "value": 10943686,
+      "value": 10963004,
       "cur": "JPY",
-      "asOf": "2026-08-11",
+      "asOf": "2026-08-12",
       "ySymbol": "AMZN",
       "avgCost": 34357.0,
-      "price": 43775.0
+      "price": 43852.0
     },
     {
       "institution": "マネックス証券",
       "cat": "米国株・ETF",
       "name": "アルファベット クラスA",
-      "value": 9512035,
+      "value": 9584146,
       "cur": "JPY",
-      "asOf": "2026-08-11",
+      "asOf": "2026-08-12",
       "ySymbol": "GOOGL",
       "avgCost": 29275.0,
-      "price": 55953.0
+      "price": 56377.0
     },
     {
       "institution": "マネックス証券",
       "cat": "米国株・ETF",
       "name": "MPマテリアルズ",
-      "value": 1733644,
+      "value": 1723868,
       "cur": "JPY",
-      "asOf": "2026-08-11",
+      "asOf": "2026-08-12",
       "ySymbol": "MP",
       "avgCost": 9195.0,
-      "price": 8668.0
+      "price": 8619.0
     },
     {
       "institution": "マネックス証券",
       "cat": "米国株・ETF",
       "name": "マイクロソフト",
-      "value": 15789683,
+      "value": 15720719,
       "cur": "JPY",
-      "asOf": "2026-08-11",
+      "asOf": "2026-08-12",
       "ySymbol": "MSFT",
       "avgCost": 64014.0,
-      "price": 80151.0
+      "price": 79801.0
     },
     {
       "institution": "マネックス証券",
       "cat": "米国株・ETF",
       "name": "パランティア・テクノロジーズ",
-      "value": 10565905,
+      "value": 10444904,
       "cur": "JPY",
-      "asOf": "2026-08-11",
+      "asOf": "2026-08-12",
       "ySymbol": "PLTR",
       "avgCost": 21126.0,
-      "price": 27952.0
+      "price": 27632.0
     },
     {
       "institution": "マネックス証券",
       "cat": "米国株・ETF",
       "name": "スペースX(スペース・エクスプロレーション・テクノロジーズ・コーポレーション)",
-      "value": 3979733,
+      "value": 4156804,
       "cur": "JPY",
-      "asOf": "2026-08-11",
+      "asOf": "2026-08-12",
       "ySymbol": "SPCX",
       "avgCost": 26511.0,
-      "price": 20946.0
+      "price": 21878.0
     },
     {
       "institution": "マネックス証券",
       "cat": "米国株・ETF",
       "name": "テスラ",
-      "value": 6475935,
+      "value": 6522059,
       "cur": "JPY",
-      "asOf": "2026-08-11",
+      "asOf": "2026-08-12",
       "ySymbol": "TSLA",
       "avgCost": 49332.0,
-      "price": 51807.0
+      "price": 52176.0
     },
     {
       "institution": "陽太子どもNISA",
@@ -314,7 +314,7 @@
       "name": "ひふみ投信",
       "value": 5971085,
       "cur": "JPY",
-      "asOf": "2026-08-11",
+      "asOf": "2026-08-12",
       "avgCost": 2933304.0,
       "price": 2960945.0
     },
@@ -324,7 +324,7 @@
       "name": "ひふみ投信",
       "value": 5971085,
       "cur": "JPY",
-      "asOf": "2026-08-11",
+      "asOf": "2026-08-12",
       "avgCost": 2933304.0,
       "price": 2960945.0
     },
@@ -332,9 +332,9 @@
       "institution": "SMBC信託銀行プレスティア(旧シティバンク)",
       "cat": "投資信託",
       "name": "合計評価額",
-      "value": 3993400,
+      "value": 4006397,
       "cur": "JPY",
-      "asOf": "2026-08-11",
+      "asOf": "2026-08-12",
       "avgCost": 0.0,
       "price": 0.0
     },
@@ -342,71 +342,71 @@
       "institution": "マネックス証券",
       "cat": "投資信託",
       "name": "eMAXIS Slim 全世界株式(オール・カントリー)",
-      "value": 64053074,
+      "value": 64208599,
       "cur": "JPY",
-      "asOf": "2026-08-11",
+      "asOf": "2026-08-12",
       "avgCost": 27995.0,
-      "price": 38302.0
+      "price": 38395.0
     },
     {
       "institution": "ひふみ投信",
       "cat": "投資信託",
       "name": "ひふみ投信",
-      "value": 25269682,
+      "value": 25223096,
       "cur": "JPY",
-      "asOf": "2026-08-11",
+      "asOf": "2026-08-12",
       "avgCost": 76248.0,
-      "price": 98722.0
+      "price": 98540.0
     },
     {
       "institution": "ひふみ投信",
       "cat": "投資信託",
       "name": "ひふみ投信",
-      "value": 25269682,
+      "value": 25223096,
       "cur": "JPY",
-      "asOf": "2026-08-11",
+      "asOf": "2026-08-12",
       "avgCost": 76248.0,
-      "price": 98722.0
+      "price": 98540.0
     },
     {
       "institution": "ひふみ投信",
       "cat": "投資信託",
       "name": "ひふみマイクロスコープpro",
-      "value": 1021149,
+      "value": 1021547,
       "cur": "JPY",
-      "asOf": "2026-08-11",
+      "asOf": "2026-08-12",
       "avgCost": 10048.0,
-      "price": 12825.0
+      "price": 12830.0
     },
     {
       "institution": "ひふみ投信",
       "cat": "投資信託",
       "name": "ひふみマイクロスコープpro",
-      "value": 1021149,
+      "value": 1021547,
       "cur": "JPY",
-      "asOf": "2026-08-11",
+      "asOf": "2026-08-12",
       "avgCost": 10048.0,
-      "price": 12825.0
+      "price": 12830.0
     },
     {
       "institution": "ひふみ投信",
       "cat": "投資信託",
       "name": "ひふみクロスオーバーpro",
-      "value": 952688,
+      "value": 955989,
       "cur": "JPY",
-      "asOf": "2026-08-11",
+      "asOf": "2026-08-12",
       "avgCost": 10178.0,
-      "price": 13851.0
+      "price": 13899.0
     },
     {
       "institution": "ひふみ投信",
       "cat": "投資信託",
       "name": "ひふみクロスオーバーpro",
-      "value": 952688,
+      "value": 955989,
       "cur": "JPY",
-      "asOf": "2026-08-11",
+      "asOf": "2026-08-12",
       "avgCost": 10178.0,
-      "price": 13851.0
+      "price": 13899.0
     },
     {
       "institution": "SMBC信託銀行プレスティア(旧シティバンク)",
@@ -414,7 +414,7 @@
       "name": "円普通預金 JPY",
       "value": 3537,
       "cur": "JPY",
-      "asOf": "2026-08-11"
+      "asOf": "2026-08-12"
     },
     {
       "institution": "岐阜信用金庫",
@@ -422,7 +422,7 @@
       "name": "各務原駅前支店 普通",
       "value": 484245,
       "cur": "JPY",
-      "asOf": "2026-08-11"
+      "asOf": "2026-08-12"
     },
     {
       "institution": "十六銀行",
@@ -430,7 +430,7 @@
       "name": "普通預金残高",
       "value": 1072373,
       "cur": "JPY",
-      "asOf": "2026-08-11"
+      "asOf": "2026-08-12"
     },
     {
       "institution": "三井住友銀行",
@@ -438,7 +438,7 @@
       "name": "残高別普通(総合)預金残高",
       "value": 919172,
       "cur": "JPY",
-      "asOf": "2026-08-11"
+      "asOf": "2026-08-12"
     },
     {
       "institution": "三井住友銀行",
@@ -446,7 +446,7 @@
       "name": "残高別普通預金残高",
       "value": 50042,
       "cur": "JPY",
-      "asOf": "2026-08-11"
+      "asOf": "2026-08-12"
     },
     {
       "institution": "三井住友銀行",
@@ -454,7 +454,7 @@
       "name": "残高別普通(総合)預金残高",
       "value": 2887939,
       "cur": "JPY",
-      "asOf": "2026-08-11"
+      "asOf": "2026-08-12"
     },
     {
       "institution": "三井住友銀行",
@@ -462,7 +462,7 @@
       "name": "残高別普通(総合)預金残高",
       "value": 4887939,
       "cur": "JPY",
-      "asOf": "2026-08-11"
+      "asOf": "2026-08-12"
     },
     {
       "institution": "三菱UFJ銀行",
@@ -470,31 +470,31 @@
       "name": "普通",
       "value": 57034,
       "cur": "JPY",
-      "asOf": "2026-08-11"
+      "asOf": "2026-08-12"
     },
     {
       "institution": "SMBC信託銀行プレスティア(旧シティバンク)",
       "cat": "現金・預金",
       "name": "プレスティア マルチマネー口座外貨普通預金 USD",
-      "value": 1606660,
+      "value": 1620481,
       "cur": "JPY",
-      "asOf": "2026-08-11"
+      "asOf": "2026-08-12"
     },
     {
       "institution": "SMBC信託銀行プレスティア(旧シティバンク)",
       "cat": "現金・預金",
       "name": "プレスティア マルチマネー口座外貨普通預金 EUR",
-      "value": 993691,
+      "value": 1001081,
       "cur": "JPY",
-      "asOf": "2026-08-11"
+      "asOf": "2026-08-12"
     },
     {
       "institution": "SMBC信託銀行プレスティア(旧シティバンク)",
       "cat": "現金・預金",
       "name": "プレスティア マルチマネー口座外貨普通預金 CNY",
-      "value": 269109,
+      "value": 271565,
       "cur": "JPY",
-      "asOf": "2026-08-11"
+      "asOf": "2026-08-12"
     },
     {
       "institution": "マネックス証券",
@@ -502,7 +502,7 @@
       "name": "お預り金・MRF・保証金",
       "value": 25049482,
       "cur": "JPY",
-      "asOf": "2026-08-11"
+      "asOf": "2026-08-12"
     },
     {
       "institution": "マネックス証券",
@@ -510,7 +510,7 @@
       "name": "米ドル",
       "value": 9620547,
       "cur": "JPY",
-      "asOf": "2026-08-11"
+      "asOf": "2026-08-12"
     },
     {
       "institution": "bitFlyer",
@@ -518,23 +518,23 @@
       "name": "円残高",
       "value": 62,
       "cur": "JPY",
-      "asOf": "2026-08-11"
+      "asOf": "2026-08-12"
     },
     {
       "institution": "bitFlyer",
       "cat": "暗号資産",
       "name": "ビットコイン残高",
-      "value": 1547671,
+      "value": 1525459,
       "cur": "JPY",
-      "asOf": "2026-08-11"
+      "asOf": "2026-08-12"
     },
     {
       "institution": "bitFlyer",
       "cat": "暗号資産",
       "name": "イーサリアム残高",
-      "value": 1505851,
+      "value": 1472102,
       "cur": "JPY",
-      "asOf": "2026-08-11"
+      "asOf": "2026-08-12"
     }
   ]
 }
