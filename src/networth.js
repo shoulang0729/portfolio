@@ -3,7 +3,7 @@
 // ══════════════════════════════════════════════════════════════
 // networth.js  ―  Money Forward 実値（mf-holdings 相当）を供給する
 //
-// 設計（2026/06 確定・2026/07 #589 Phase2 で取得元を変更）:
+// 設計（2026/06 確定・2026/07 #589 Phase2 で取得元を変更・#594 で数値モデル再定義）:
 //   - 値動き（Heatmap/Historical/当日色）= positions.js のライブ価格（無改修）
 //   - 資産総額・現金・暗号資産 = ここ（Money Forward 実値・週次 Chrome 取込）
 //   - キャッシュ比率 = 投資用キャッシュ ÷ 運用資産
@@ -13,6 +13,13 @@
 // （未認証オリジン・ネットワーク断等）は従来の公開 `data/mf-holdings.json`
 // （Phase1でサニタイズ済み・liabilities 等を含まない v4 形）にフォールバック
 // する。これにより未認証時は自動的に「負債非表示」degrade になる（v4 互換）。
+//
+// #594 数値モデル再定義（2026-07-21 ユーザー確定）:
+//   - 総資産   = mfNetWorth（MFそのまま）
+//   - 運用資産 = 金融合計（現金+株+投信+債券+FX+暗号+保険+年金）− 生活資金¥20M
+//             ※年金・保険は mf-history 最新行から取得（setMfHistoryLatest で配線）
+//   - 純資産   = mfNetWorth − 不動産補正 − 負債
+//             （不動産補正 = realEstateMf − realAssetsTotal。realEstateMf 未取得時は 0）
 // ══════════════════════════════════════════════════════════════
 
 import { WORKER_URL } from './config.js';
@@ -25,9 +32,25 @@ const EMERGENCY_FUND = 20_000_000;
 
 /**
  * @typedef {{institution:string, name:string, tag?:string, balance:number, rate?:number, rateType?:string, asOf?:string}} MfLiability
- * @type {{asOf?:string, totals?:{imported?:number, mfNetWorth?:number, liabilitiesTotal?:number, realAssetsTotal?:number, netWorthComputed?:number}, holdings?:Array<{cat:string,cur?:string,value:number}>, liabilities?:MfLiability[]}|null}
+ * @type {{asOf?:string, totals?:{imported?:number, mfNetWorth?:number, liabilitiesTotal?:number, realAssetsTotal?:number, realEstateMf?:number, netWorthComputed?:number}, holdings?:Array<{cat:string,cur?:string,value:number}>, liabilities?:MfLiability[]}|null}
  */
 let _mf = null;
+
+/**
+ * mf-history.json の最新行（pension/insurance 取得用）。
+ * wealth.js が loadHistory() 後に setMfHistoryLatest() で配線する（#594 P2）。
+ * @type {{pension?:number, insurance?:number}|null}
+ */
+let _mfHistoryLatest = null;
+
+/**
+ * mf-history 最新行を設定する（運用資産の年金・保険計算に使用・#594 P2）。
+ * wealth.js が loadHistory() 後に呼び出す。
+ * @param {{pension?:number, insurance?:number}|null} row
+ */
+export function setMfHistoryLatest(row) {
+  _mfHistoryLatest = row || null;
+}
 
 /**
  * ネットワースデータを読み込む。Worker `GET /networth`（KV・#589 Phase2）を
@@ -87,17 +110,35 @@ function _sum(pred) {
 export function getMfTotals() {
   if (!_mf || !_mf.holdings) return null;
   const imported = (_mf.totals && _mf.totals.imported) || _sum(() => true);
-  // 資産総額（純資産全体）＝ Money Forward の総資産。取込対象外口座も含むため imported ≥ ではなく ≤。
-  // 未設定なら imported にフォールバック。
+  // 総資産（グロス）＝ Money Forward 総資産そのまま（#594 spec）
   const netWorth = (_mf.totals && _mf.totals.mfNetWorth) || imported;
   const cash = _sum((x) => x.cat === '現金・預金');
   const crypto = _sum((x) => x.cat === '暗号資産');
   const securities = imported - cash - crypto;
   const dryPowder = Math.max(0, cash - EMERGENCY_FUND);
   const cashRatio = imported > 0 ? (dryPowder / imported) * 100 : 0;
-  // v5（#577）: 負債・実物資産・計算純資産。パイプラインが負債を取得できなかった場合は
+  // v5（#577）: 負債・実物資産。パイプラインが負債を取得できなかった場合は
   // undefined ＝呼び出し側は3層表示を出さない（v4 互換 degrade）。
   const t = _mf.totals || {};
+  const liabilitiesTotal = typeof t.liabilitiesTotal === 'number' ? t.liabilitiesTotal : undefined;
+  const realAssetsTotal = typeof t.realAssetsTotal === 'number' ? t.realAssetsTotal : undefined;
+  // #594 P2: 不動産補正 = realEstateMf − realAssetsTotal（realEstateMf 未取得時は 0 で degrade）
+  const realEstateMf = typeof t.realEstateMf === 'number' ? t.realEstateMf : undefined;
+  const realEstateCorrection =
+    typeof realEstateMf === 'number' && typeof realAssetsTotal === 'number'
+      ? realEstateMf - realAssetsTotal
+      : 0;
+  // #594 P2: 純資産 = mfNetWorth − 不動産補正 − 負債（旧 netWorthComputed 廃止・置換）
+  const netWorthV6 =
+    typeof liabilitiesTotal === 'number' ? netWorth - realEstateCorrection - liabilitiesTotal : undefined;
+  // #594 P2: 運用資産 = 金融合計 − 生活資金。年金・保険は mf-history 最新行（_mfHistoryLatest）から取得。
+  // _mfHistoryLatest が未設定の場合は undefined（呼び出し側は非表示）。
+  let investmentAssets;
+  if (_mfHistoryLatest !== null && typeof liabilitiesTotal === 'number') {
+    const pension = Number(_mfHistoryLatest && _mfHistoryLatest.pension) || 0;
+    const insurance = Number(_mfHistoryLatest && _mfHistoryLatest.insurance) || 0;
+    investmentAssets = Math.max(0, cash - EMERGENCY_FUND) + securities + pension + insurance;
+  }
   return {
     netWorth,
     imported,
@@ -108,9 +149,11 @@ export function getMfTotals() {
     cashRatio,
     emergencyFund: EMERGENCY_FUND,
     asOf: _mf.asOf,
-    liabilitiesTotal: typeof t.liabilitiesTotal === 'number' ? t.liabilitiesTotal : undefined,
-    realAssetsTotal: typeof t.realAssetsTotal === 'number' ? t.realAssetsTotal : undefined,
-    netWorthComputed: typeof t.netWorthComputed === 'number' ? t.netWorthComputed : undefined,
+    liabilitiesTotal,
+    realAssetsTotal,
+    realEstateMf,
+    netWorthV6,
+    investmentAssets,
   };
 }
 
