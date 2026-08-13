@@ -13,7 +13,7 @@
 // ══════════════════════════════════════════════════════════════
 
 import { cssVar, escapeHTML, maskAmount } from './utils.js';
-import { loadMfHoldings, getMfTotals, getMfLiabilities } from './networth.js';
+import { loadMfHoldings, getMfTotals, getMfLiabilities, setMfHistoryLatest } from './networth.js';
 
 /** カテゴリ定義（表示順・色は仕様書の表に従う。テーマ非依存の系列色） */
 const CATS = [
@@ -108,7 +108,9 @@ export async function renderWealthTab() {
 
   let series;
   try {
-    series = (await loadHistory()).series;
+    const hist = await loadHistory();
+    series = hist.series;
+    if (series.length) setMfHistoryLatest(series[series.length - 1]);
   } catch {
     wrap.innerHTML = '<div class="val-soon">資産推移データ（data/mf-history.json）を取得できませんでした。</div>';
     return;
@@ -232,11 +234,12 @@ async function netWorthCardHTML() {
     return `<div class="card we-card"><h2 class="we-h2">ネットワース</h2>
       <div class="val-soon">負債データ未取得（次回の MF 取り込み後に3層表示されます・#577）</div></div>`;
   }
-  const real = mf.realAssetsTotal || 0;
-  const gross = mf.imported + real; // 総資産 ＝ 運用 ＋ 実物
-  const nw =
-    typeof mf.netWorthComputed === 'number' ? mf.netWorthComputed : gross - mf.liabilitiesTotal;
+  // #594: 総資産 = mfNetWorth（MF そのまま）
+  const gross = mf.netWorth;
+  // #594: 純資産 = mfNetWorth − 不動産補正 − 負債（pureNetWorth が新式・degrade 時も定義済み）
+  const nw = typeof mf.pureNetWorth === 'number' ? mf.pureNetWorth : gross - mf.liabilitiesTotal;
   const oku = (n) => `${(n / 1e8).toFixed(2)}億`;
+  const real = mf.realAssetsTotal || 0;
   const pctUn = gross > 0 ? (mf.imported / gross) * 100 : 0;
   const pctRe = gross > 0 ? (real / gross) * 100 : 0;
   const liabs = getMfLiabilities() || [];
@@ -259,15 +262,15 @@ async function netWorthCardHTML() {
     ${bar}
     <div class="we-table-wrap"><table class="t we-table we-nw">
       <tbody>
-        <tr><td><span class="we-op"> </span>運用資産</td><td>${escapeHTML(fmtYen(mf.imported))}</td></tr>
+        <tr><td><span class="we-op"> </span>運用資産</td><td>${typeof mf.investableAssets === 'number' ? escapeHTML(fmtYen(mf.investableAssets)) : escapeHTML(fmtYen(mf.imported))}</td></tr>
         <tr><td><span class="we-op">＋</span>実物資産（掛目後）</td><td>${realCell}</td></tr>
-        <tr class="we-nw-subtotal"><td><span class="we-op">＝</span>総資産</td><td>${escapeHTML(fmtYen(gross))}</td></tr>
+        <tr class="we-nw-subtotal"><td><span class="we-op">＝</span>総資産（MF）</td><td>${escapeHTML(fmtYen(gross))}</td></tr>
         <tr class="we-nw-liab"><td><span class="we-op">−</span>負債</td><td>−${escapeHTML(fmtYen(mf.liabilitiesTotal))}</td></tr>
         ${liabRows}
         <tr class="we-nw-total"><td><span class="we-op">＝</span>純資産</td><td>${escapeHTML(fmtYen(nw))}</td></tr>
       </tbody>
     </table></div>
-    <div class="we-nw-note">実物資産＝AI査定(HowMa)×掛目（都市部1.0／地方0.65）の採用値。<b>実物資産・負債は運用アロケーション（Risk / リバランス）の分母に含めない。</b>※MF表示の総資産(${escapeHTML(fmtYen(mf.netWorth))})は基準が異なるため非採用。</div>
+    <div class="we-nw-note">実物資産＝AI査定(HowMa)×掛目（都市部1.0／地方0.65）の採用値。<b>実物資産・負債は運用アロケーション（Risk / リバランス）の分母に含めない。</b>純資産＝MF総資産−不動産補正−負債（#594）。</div>
   </div>`;
 }
 
