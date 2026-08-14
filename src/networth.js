@@ -3,7 +3,7 @@
 // ══════════════════════════════════════════════════════════════
 // networth.js  ―  Money Forward 実値（mf-holdings 相当）を供給する
 //
-// 設計（2026/06 確定・2026/07 #589 Phase2 で取得元を変更）:
+// 設計（2026/06 確定・2026/07 #589 Phase2 で取得元を変更・#594 数値モデル再定義）:
 //   - 値動き（Heatmap/Historical/当日色）= positions.js のライブ価格（無改修）
 //   - 資産総額・現金・暗号資産 = ここ（Money Forward 実値・週次 Chrome 取込）
 //   - キャッシュ比率 = 投資用キャッシュ ÷ 運用資産
@@ -13,6 +13,12 @@
 // （未認証オリジン・ネットワーク断等）は従来の公開 `data/mf-holdings.json`
 // （Phase1でサニタイズ済み・liabilities 等を含まない v4 形）にフォールバック
 // する。これにより未認証時は自動的に「負債非表示」degrade になる（v4 互換）。
+//
+// 数値モデル（#594・2026-07-21 ユーザー確定）:
+//   - 総資産 = mfNetWorth（MFそのまま）
+//   - 運用資産 = (現金−¥20M) + 株/信用/投信/債券/FX/暗号/保険/年金  ※ポイント・その他・不動産除外
+//   - 不動産補正 = realEstateMf − realAssetsTotal  （realEstateMf 未取得時は 0）
+//   - 純資産 = mfNetWorth − 不動産補正 − liabilitiesTotal
 // ══════════════════════════════════════════════════════════════
 
 import { WORKER_URL } from './config.js';
@@ -25,9 +31,28 @@ const EMERGENCY_FUND = 20_000_000;
 
 /**
  * @typedef {{institution:string, name:string, tag?:string, balance:number, rate?:number, rateType?:string, asOf?:string}} MfLiability
- * @type {{asOf?:string, totals?:{imported?:number, mfNetWorth?:number, liabilitiesTotal?:number, realAssetsTotal?:number, netWorthComputed?:number}, holdings?:Array<{cat:string,cur?:string,value:number}>, liabilities?:MfLiability[]}|null}
+ * @type {{asOf?:string, totals?:{imported?:number, mfNetWorth?:number, liabilitiesTotal?:number, realAssetsTotal?:number, realEstateMf?:number, netWorthComputed?:number}, holdings?:Array<{cat:string,cur?:string,value:number}>, liabilities?:MfLiability[]}|null}
  */
 let _mf = null;
+
+/**
+ * mf-history.json の最新レコードから注入される年金・保険カテゴリ値（#594 P2）。
+ * holdings に年金・保険は含まれないため wealth.js が loadHistory 後に注入する。
+ * @type {{pension: number, insurance: number}|null}
+ */
+let _mfHistoryLatest = null;
+
+/**
+ * mf-history.json の最新レコードの年金・保険カテゴリ値を注入する（#594 P2）。
+ * wealth.js が loadHistory() 後に呼ぶ。
+ * @param {{pension?: number|null, insurance?: number|null}} vals
+ */
+export function setMfHistoryLatest(vals) {
+  _mfHistoryLatest = {
+    pension: typeof vals.pension === 'number' ? vals.pension : 0,
+    insurance: typeof vals.insurance === 'number' ? vals.insurance : 0,
+  };
+}
 
 /**
  * ネットワースデータを読み込む。Worker `GET /networth`（KV・#589 Phase2）を
@@ -83,7 +108,11 @@ function _sum(pred) {
   return _mf.holdings.reduce((a, x) => a + (pred(x) ? Number(x.value) || 0 : 0), 0);
 }
 
-/** 総資産・現金・暗号資産・キャッシュ比率の集計。未ロードなら null */
+/**
+ * 総資産・現金・暗号資産・キャッシュ比率の集計。未ロードなら null。
+ * 数値モデル（#594・2026-07-21 確定）に従い investableAssets・netWorthV6 を追加する。
+ * ★運用アロケーション（Risk Exposure 等）の分母に実物・負債・不動産は含めない（#577 §B）。
+ */
 export function getMfTotals() {
   if (!_mf || !_mf.holdings) return null;
   const imported = (_mf.totals && _mf.totals.imported) || _sum(() => true);
@@ -95,9 +124,33 @@ export function getMfTotals() {
   const securities = imported - cash - crypto;
   const dryPowder = Math.max(0, cash - EMERGENCY_FUND);
   const cashRatio = imported > 0 ? (dryPowder / imported) * 100 : 0;
-  // v5（#577）: 負債・実物資産・計算純資産。パイプラインが負債を取得できなかった場合は
+  // v5（#577）: 負債・実物資産。パイプラインが負債を取得できなかった場合は
   // undefined ＝呼び出し側は3層表示を出さない（v4 互換 degrade）。
   const t = _mf.totals || {};
+  const liabilitiesTotal = typeof t.liabilitiesTotal === 'number' ? t.liabilitiesTotal : undefined;
+  const realAssetsTotal = typeof t.realAssetsTotal === 'number' ? t.realAssetsTotal : undefined;
+  // #594 P2: 不動産(MF評価)。P1 パイプラインが realEstateMf を出力した場合のみ有効。
+  const realEstateMf = typeof t.realEstateMf === 'number' ? t.realEstateMf : undefined;
+
+  // #594 P2: 運用資産（holdings から集計できる分）。
+  // 年金・保険は holdings に含まれないため _mfHistoryLatest から補完（wealth.js が注入）。
+  const pensionFromHistory = _mfHistoryLatest ? _mfHistoryLatest.pension : 0;
+  const insuranceFromHistory = _mfHistoryLatest ? _mfHistoryLatest.insurance : 0;
+  // 運用資産 = (現金 − 生活資金) + 株/信用/投信/債券/FX/暗号 + 年金 + 保険  ★ポイント・その他・不動産は除外
+  const financialFromHoldings = imported - cash + Math.max(0, cash - EMERGENCY_FUND);
+  const investableAssets = financialFromHoldings + pensionFromHistory + insuranceFromHistory;
+
+  // #594 P2: 純資産 = mfNetWorth − 不動産補正 − 負債。
+  // 不動産補正 = realEstateMf − realAssetsTotal（realEstateMf 未取得時は 0 で degrade）。
+  let netWorthV6;
+  if (typeof liabilitiesTotal === 'number') {
+    const realEstateCorrection =
+      typeof realEstateMf === 'number' && typeof realAssetsTotal === 'number'
+        ? realEstateMf - realAssetsTotal
+        : 0;
+    netWorthV6 = netWorth - realEstateCorrection - liabilitiesTotal;
+  }
+
   return {
     netWorth,
     imported,
@@ -108,9 +161,12 @@ export function getMfTotals() {
     cashRatio,
     emergencyFund: EMERGENCY_FUND,
     asOf: _mf.asOf,
-    liabilitiesTotal: typeof t.liabilitiesTotal === 'number' ? t.liabilitiesTotal : undefined,
-    realAssetsTotal: typeof t.realAssetsTotal === 'number' ? t.realAssetsTotal : undefined,
-    netWorthComputed: typeof t.netWorthComputed === 'number' ? t.netWorthComputed : undefined,
+    liabilitiesTotal,
+    realAssetsTotal,
+    realEstateMf,
+    investableAssets,
+    netWorthV6,
+    netWorthComputed: netWorthV6 !== undefined ? netWorthV6 : (typeof t.netWorthComputed === 'number' ? t.netWorthComputed : undefined),
   };
 }
 
