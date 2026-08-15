@@ -1,4 +1,89 @@
 
+/* ── リチウム市況監視カード（#611） ── */
+.lit-monitor-card {
+  margin: 12px 12px 4px;
+  padding: 12px 14px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 12px;
+  color: var(--text);
+}
+.lit-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.lit-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.lit-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  border: 1px solid transparent;
+}
+.lit-badge-ok      { background: rgba(52,199,89,0.15);  border-color: rgba(52,199,89,0.4);  color: var(--success); }
+.lit-badge-neutral { background: rgba(255,159,10,0.12); border-color: rgba(255,159,10,0.35); color: var(--warn); }
+.lit-badge-warn    { background: rgba(255,59,48,0.12);  border-color: rgba(255,59,48,0.35);  color: var(--danger); }
+.lit-rationale {
+  font-size: 11px;
+  color: var(--text2);
+  margin-bottom: 8px;
+}
+.lit-rows { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
+.lit-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.lit-row-sub { opacity: 0.8; }
+.lit-sym  { font-weight: 700; font-size: 12px; width: 28px; flex-shrink: 0; }
+.lit-px   { font-size: 12px; width: 54px; text-align: right; flex-shrink: 0; }
+.lit-pct  { font-size: 11px; width: 38px; text-align: right; flex-shrink: 0; font-weight: 600; }
+.lit-dma  { font-size: 11px; color: var(--text2); margin-left: auto; white-space: nowrap; }
+.lit-na   { color: var(--text3, var(--text2)); }
+.lit-signal {
+  font-size: 11px;
+  color: var(--text2);
+  background: var(--surface2);
+  border-radius: 6px;
+  padding: 5px 8px;
+  margin-bottom: 4px;
+  line-height: 1.5;
+}
+.lit-legend {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+  margin-bottom: 2px;
+}
+.lit-col-label {
+  font-size: 10px;
+  color: var(--text3, var(--text2));
+  width: 38px;
+  text-align: right;
+  display: inline-block;
+}
+.lit-note {
+  font-size: 10px;
+  color: var(--text3, var(--text2));
+  line-height: 1.4;
+  margin-top: 4px;
+}
+.lit-loading {
+  text-align: center;
+  color: var(--text2);
+  padding: 8px 0;
+  font-size: 12px;
+}
+.lit-err { color: var(--danger); }
+
 /* ── 銘柄タイプバッジ ── */
 .wl-type-badge {
   font-size: 10px;
