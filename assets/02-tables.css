@@ -305,6 +305,39 @@ table.t td { font-size: var(--fs-sm); font-weight: 700; border-bottom: 1px solid
 }
 .bf-past-select:hover { border-color: var(--accent); }
 
+/* ── リチウム市況モニタカード（#611）── */
+.li-card {
+  width: 100%; max-width: 600px; margin: 10px auto 4px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-chip); padding: 10px 14px; box-sizing: border-box;
+}
+.li-card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 4px;
+}
+.li-card-title { font-size: var(--fs-sm); font-weight: 700; color: var(--text2); }
+.li-badge {
+  font-size: var(--fs-xs); font-weight: 700; padding: 2px 8px;
+  border-radius: var(--r-pill); border: 1px solid transparent;
+}
+.li-badge-good { background: rgba(79,138,77,0.15); color: var(--tone-good); border-color: rgba(79,138,77,0.25); }
+.li-badge-warn { background: rgba(194,96,63,0.15); color: var(--tone-warn); border-color: rgba(194,96,63,0.25); }
+.li-badge-neu  { background: var(--surface2); color: var(--text2); border-color: var(--border2); }
+.li-card-note {
+  font-size: var(--fs-xs); color: var(--text3); margin-bottom: 8px; line-height: 1.5;
+}
+.li-rows { display: flex; flex-direction: column; gap: 5px; }
+.li-row {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  padding: 4px 0; border-top: 1px solid var(--border2);
+}
+.li-sym  { font-size: var(--fs-sm); font-weight: 700; color: var(--text); flex: 1 1 120px; }
+.li-price { font-size: var(--fs-sm); font-weight: 700; color: var(--text); min-width: 56px; }
+.li-pct  { font-size: var(--fs-xs); font-weight: 700; min-width: 60px; }
+.li-up   { color: var(--tone-good); }
+.li-dn   { color: var(--tone-warn); }
+.li-dma  { font-size: var(--fs-xs); color: var(--text2); margin-left: auto; }
+
 /* ── シミュレーションバー（ヒートマップパネル内）── 横スクロール可能1行 */
 .sim-bar {
   display: flex;
