@@ -305,6 +305,45 @@ table.t td { font-size: var(--fs-sm); font-weight: 700; border-bottom: 1px solid
 }
 .bf-past-select:hover { border-color: var(--accent); }
 
+/* ── #611: Briefing アウターラッパー（リチウムカード + iframe ラップ） ── */
+.bf-outer { display: flex; flex-direction: column; }
+
+/* ── #611: リチウム市況モニタカード ── */
+.lith-card {
+  width: 100%; max-width: 600px; margin-inline: auto; box-sizing: border-box;
+  padding: 12px 14px 10px; border-bottom: 1px solid var(--border);
+  background: var(--surface); flex: 0 0 auto;
+}
+.lith-header {
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 4px;
+}
+.lith-title { font-size: var(--fs-sm); font-weight: 700; color: var(--text); }
+.lith-note { font-size: var(--fs-xs); color: var(--text3); }
+.lith-rationale { font-size: var(--fs-xs); color: var(--text2); margin-bottom: 2px; }
+.lith-trigger { font-size: var(--fs-xs); color: var(--text3); margin-bottom: 8px; }
+.lith-body { display: flex; flex-direction: column; gap: 6px; }
+.lith-body.lith-err { color: var(--danger); font-size: var(--fs-sm); }
+.lith-proxy-row {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 6px;
+  padding: 6px 8px; background: var(--surface2); border-radius: 6px;
+}
+.lith-proxy-name { font-size: var(--fs-xs); color: var(--text2); flex: 0 0 auto; min-width: 180px; }
+.lith-proxy-price { font-size: var(--fs-sm); font-weight: 700; color: var(--text); flex: 0 0 auto; min-width: 58px; }
+.lith-badge {
+  font-size: var(--fs-xs); font-weight: 600; padding: 2px 7px; border-radius: 20px;
+  flex: 0 0 auto; white-space: nowrap;
+}
+.lith-badge-up { background: color-mix(in srgb, var(--success) 15%, transparent); color: var(--success); }
+.lith-badge-down { background: color-mix(in srgb, var(--danger) 15%, transparent); color: var(--danger); }
+.lith-badge-neutral { background: color-mix(in srgb, var(--warn) 15%, transparent); color: var(--warn); }
+.lith-pcts { display: flex; align-items: center; flex-wrap: wrap; gap: 2px; flex: 1 1 auto; }
+.lith-pct-label { font-size: var(--fs-xs); color: var(--text3); }
+.lith-pct { font-size: var(--fs-xs); font-weight: 700; }
+.lith-pct-pos { color: var(--success); }
+.lith-pct-neg { color: var(--danger); }
+.lith-pct-none { color: var(--text3); }
+.lith-ma-note { font-size: var(--fs-xs); color: var(--text3); margin-top: 2px; padding-left: 2px; }
+
 /* ── シミュレーションバー（ヒートマップパネル内）── 横スクロール可能1行 */
 .sim-bar {
   display: flex;
