@@ -280,7 +280,7 @@ table.t td { font-size: var(--fs-sm); font-weight: 700; border-bottom: 1px solid
 
 /* ── 週次 Briefing タブ ── */
 /* A方式: パネルは単一スクロール（iframe を残り高さにフィット、本体HTMLが内部スクロール） */
-#panel-briefing { padding: 0; overflow: hidden; }
+#panel-briefing { padding: 0; overflow-y: auto; }
 .bf-wrap { display: flex; flex-direction: column; }
 .bf-msg { padding: 32px 16px; text-align: center; color: var(--text2); font-size: var(--fs-md); }
 .bf-msg.bf-err { color: var(--danger); }
@@ -304,6 +304,49 @@ table.t td { font-size: var(--fs-sm); font-weight: 700; border-bottom: 1px solid
   -webkit-tap-highlight-color: transparent;
 }
 .bf-past-select:hover { border-color: var(--accent); }
+
+/* ── リチウム市況モニタカード (#611) ── */
+.li-card {
+  width: 100%; max-width: 600px; margin-inline: auto; box-sizing: border-box;
+  padding: 12px 14px 10px; border-bottom: 1px solid var(--border);
+  background: var(--surface); font-size: var(--fs-base);
+}
+.li-card-hdr {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin-bottom: 4px;
+}
+.li-card-title { font-size: var(--fs-sm); font-weight: 700; color: var(--text2); letter-spacing: 0.04em; }
+.li-status-badge {
+  font-size: var(--fs-sm); font-weight: 600; padding: 2px 8px;
+  border-radius: var(--r-pill); border: 1px solid transparent;
+}
+.li-status-badge.li-good { color: var(--tone-good); border-color: var(--tone-good); }
+.li-status-badge.li-ok   { color: var(--tone-ok);   border-color: var(--tone-ok); }
+.li-status-badge.li-warn { color: var(--tone-warn);  border-color: var(--tone-warn); }
+.li-status-badge.li-neu  { color: var(--text2);      border-color: var(--border); }
+.li-card-desc { font-size: var(--fs-sm); color: var(--text2); margin-bottom: 8px; }
+.li-table {
+  width: 100%; border-collapse: collapse; font-size: var(--fs-sm);
+  margin-bottom: 6px;
+}
+.li-table th {
+  text-align: right; font-weight: 600; color: var(--text2);
+  padding: 2px 6px; border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.li-table th:first-child { text-align: left; }
+.li-table td {
+  text-align: right; padding: 4px 6px; border-bottom: 1px solid var(--border2);
+  white-space: nowrap;
+}
+.li-table td:first-child { text-align: left; }
+.li-sym   { font-weight: 500; color: var(--text); font-size: var(--fs-xs); }
+.li-price { color: var(--text); font-variant-numeric: tabular-nums; }
+.li-pos   { color: var(--tone-good); }
+.li-neg   { color: var(--tone-warn); }
+.li-na    { color: var(--text3); }
+.li-loading { text-align: center; color: var(--text2); padding: 6px; }
+.li-card-note { font-size: var(--fs-xs); color: var(--text3); line-height: 1.5; }
 
 /* ── シミュレーションバー（ヒートマップパネル内）── 横スクロール可能1行 */
 .sim-bar {
