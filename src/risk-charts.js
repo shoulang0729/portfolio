@@ -22,7 +22,7 @@ import {
   eventStress,
 } from './risk-calc.js';
 import { getAllHistorical } from './historical-cache.js';
-import { fetchSymbolHistory, batchWithRetry } from './data.js';
+import { fetchSymbolHistory, fetchLivePrice, batchWithRetry } from './data.js';
 import { state } from './state.js';
 import { computeLiquidity, ILLIQUID_DAYS } from './liquidity-calc.js';
 import { cssVar, fmtJPYInt, fmtPctInt, escapeHTML } from './utils.js';
@@ -1078,6 +1078,159 @@ function buildRiskGlossary() {
   return /** @type {HTMLElement} */ (tpl.content.firstElementChild);
 }
 
+// ── リチウム市況モニタ（#611）────────────────────────────────────────────────
+/** LIT / ALB を使ったリチウム市況プロキシシンボル */
+const LITHIUM_PROXIES = [
+  { symbol: 'LIT', name: 'LIT（リチウムETF）', desc: 'Global X Lithium & Battery Tech ETF' },
+  { symbol: 'ALB', name: 'ALB（Albemarle）',  desc: 'Albemarle Corp（リチウム最大手）' },
+];
+
+/**
+ * 1y 履歴データから 200 日移動平均を計算する。
+ * @param {Array<{date: Date, close: number}>} data
+ * @returns {number|null}
+ */
+function _calc200DMA(data) {
+  if (!data || data.length < 10) return null;
+  const last200 = data.slice(-200);
+  return last200.reduce((s, d) => s + d.close, 0) / last200.length;
+}
+
+/**
+ * リチウム市況モニタカードを生成する（#611）。
+ * LIT / ALB の現値・騰落率・200DMA 比較で REMX 保有前提を監視。
+ * @returns {Promise<HTMLElement>}
+ */
+async function buildLithiumCard() {
+  const card = document.createElement('div');
+  card.className = 'risk-card lithium-card';
+  card.insertAdjacentHTML('beforeend', cardTitle('i-pulse', 'リチウム市況モニタ', 'REMX 保有前提'));
+
+  const body = document.createElement('div');
+  body.className = 'lithium-body';
+  card.appendChild(body);
+
+  const rows = await Promise.all(
+    LITHIUM_PROXIES.map(async (proxy) => {
+      await fetchSymbolHistory(proxy.symbol, '1y');
+      const live = await fetchLivePrice(proxy.symbol);
+      const data = state.historicalCache['1y']?.[proxy.symbol] || [];
+      const dma200 = _calc200DMA(data);
+      const price = live && !live._err ? live.price : null;
+      const dayPct = live && !live._err ? live.dayPct : null;
+
+      const w1pct = (() => {
+        if (data.length < 8) return null;
+        const base = data[data.length - 6];
+        const cur = data[data.length - 1];
+        if (!base || !cur) return null;
+        return ((cur.close - base.close) / base.close) * 100;
+      })();
+
+      const m1pct = (() => {
+        if (data.length < 22) return null;
+        const base = data[data.length - 22];
+        const cur = data[data.length - 1];
+        if (!base || !cur) return null;
+        return ((cur.close - base.close) / base.close) * 100;
+      })();
+
+      let status = 'neutral';
+      let statusLabel = '中立🟡';
+      if (dma200 !== null && price !== null) {
+        if (price > dma200 * 1.02) {
+          status = 'up';
+          statusLabel = '回復基調🟢';
+        } else if (price < dma200 * 0.98) {
+          status = 'warn';
+          statusLabel = '崩れ警戒🔴';
+        }
+      }
+
+      return { proxy, price, dayPct, w1pct, m1pct, dma200, status, statusLabel };
+    })
+  );
+
+  const overallWarn = rows.some((r) => r.status === 'warn');
+  const overallUp = rows.every((r) => r.status === 'up');
+  let overallBadge = '中立🟡';
+  if (overallWarn) overallBadge = '崩れ警戒🔴';
+  else if (overallUp) overallBadge = '回復基調🟢';
+
+  const bannerEl = document.createElement('div');
+  bannerEl.className = `lithium-banner lithium-banner--${overallWarn ? 'warn' : overallUp ? 'up' : 'neutral'}`;
+  bannerEl.textContent = `総合: ${overallBadge}　REMX 保有の前提＝リチウム回復。崩れたら REMX 逆風。`;
+  body.appendChild(bannerEl);
+
+  const grid = document.createElement('div');
+  grid.className = 'lithium-grid';
+  for (const row of rows) {
+    const item = document.createElement('div');
+    item.className = `lithium-proxy lithium-proxy--${row.status}`;
+
+    const header = document.createElement('div');
+    header.className = 'lithium-proxy-header';
+    const nameEl = document.createElement('span');
+    nameEl.className = 'lithium-proxy-name';
+    nameEl.textContent = row.proxy.name;
+    const badgeEl = document.createElement('span');
+    badgeEl.className = `lithium-status-badge lithium-status-badge--${row.status}`;
+    badgeEl.textContent = row.statusLabel;
+    header.appendChild(nameEl);
+    header.appendChild(badgeEl);
+    item.appendChild(header);
+
+    const descEl = document.createElement('div');
+    descEl.className = 'lithium-proxy-desc';
+    descEl.textContent = row.proxy.desc;
+    item.appendChild(descEl);
+
+    const statsEl = document.createElement('div');
+    statsEl.className = 'lithium-stats';
+
+    const priceEl = document.createElement('span');
+    priceEl.className = 'lithium-price';
+    priceEl.textContent = row.price !== null ? `$${row.price.toFixed(2)}` : '—';
+    statsEl.appendChild(priceEl);
+
+    const periods = [
+      { label: '1d', val: row.dayPct },
+      { label: '1w', val: row.w1pct },
+      { label: '1m', val: row.m1pct },
+    ];
+    for (const p of periods) {
+      const pEl = document.createElement('span');
+      pEl.className = 'lithium-pct';
+      if (p.val === null || p.val === undefined) {
+        pEl.textContent = `${p.label}: —`;
+        pEl.style.color = 'var(--text2)';
+      } else {
+        const sign = p.val >= 0 ? '+' : '';
+        pEl.textContent = `${p.label}: ${sign}${p.val.toFixed(1)}%`;
+        pEl.style.color = p.val >= 0 ? 'var(--pos)' : 'var(--neg)';
+      }
+      statsEl.appendChild(pEl);
+    }
+
+    const dmaEl = document.createElement('span');
+    dmaEl.className = 'lithium-dma';
+    dmaEl.textContent = row.dma200 !== null ? `200DMA $${row.dma200.toFixed(2)}` : '200DMA —';
+    statsEl.appendChild(dmaEl);
+    item.appendChild(statsEl);
+
+    grid.appendChild(item);
+  }
+  body.appendChild(grid);
+
+  const noteEl = document.createElement('div');
+  noteEl.className = 'lithium-note';
+  noteEl.textContent =
+    '※ 炭酸リチウム現物スポット（~$23/kg 起点）の直接フィードは非対応。LIT/ALB はプロキシ連動。200DMA 上抜け=回復基調、下抜け=崩れ警戒。';
+  card.appendChild(noteEl);
+
+  return card;
+}
+
 // ── once-guard: target-allocation を二重ロードしない ───────────────────────
 let _taLoaded = false;
 
@@ -1115,11 +1268,13 @@ export async function renderRiskCharts() {
   const breakdown = computeRiskBreakdown(assets);
   const sourceSummary = getSourceSummary(assets);
 
-  // 重い await（クオンツ・地域）を先に解決してから一括クリア＆append（交錯による重複を防ぐ）。
+  // 重い await（クオンツ・地域・リチウム）を先に解決してから一括クリア＆append（交錯による重複を防ぐ）。
   const quantCard = await buildQuantCard(positions);
   if (_riskRenderSeq !== myRun) return;
   const manualSymbols = manualAssets.map((a) => a.symbol);
   const { card: regionCard, japanTruePct } = await buildRegionCard(assets, manualSymbols);
+  if (_riskRenderSeq !== myRun) return;
+  const lithiumCard = await buildLithiumCard();
   if (_riskRenderSeq !== myRun) return;
 
   wrap.textContent = '';
@@ -1179,6 +1334,9 @@ export async function renderRiskCharts() {
   const srcLines = mfSrc ? [baseSrc, ...mfSrc, MANUAL_SOURCES[1]] : [baseSrc, ...MANUAL_SOURCES];
   src.textContent = srcLines.filter(Boolean).join(' ／ ');
   wrap.appendChild(src);
+
+  // ── リチウム市況モニタ（#611）────────────────────────────────────────────
+  wrap.appendChild(lithiumCard);
 
   // ── 用語解説（常設・タブ末尾）────────────────────────────────────────────
   wrap.appendChild(buildRiskGlossary());

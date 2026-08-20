@@ -1191,3 +1191,52 @@ table.t td { font-size: var(--fs-sm); font-weight: 700; border-bottom: 1px solid
 /* KPI 期間増減の色（増＝赤／減＝緑・日本市場慣例。2026-07 資産総額カード置換） */
 .we-kpi .we-delta.up { color: var(--pos); }
 .we-kpi .we-delta.down { color: var(--neg); }
+
+/* ── リチウム市況モニタ（#611）─────────────────────────────────────────── */
+.lithium-card { padding: 14px 16px; }
+.lithium-body { margin-top: 10px; display: flex; flex-direction: column; gap: 10px; }
+.lithium-banner {
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+}
+.lithium-banner--up { border-color: color-mix(in srgb, var(--pos) 40%, transparent); background: color-mix(in srgb, var(--pos) 8%, var(--surface2)); }
+.lithium-banner--warn { border-color: color-mix(in srgb, var(--neg) 40%, transparent); background: color-mix(in srgb, var(--neg) 8%, var(--surface2)); }
+.lithium-grid { display: grid; gap: 10px; grid-template-columns: 1fr; }
+@media (min-width: 600px) {
+  .lithium-grid { grid-template-columns: 1fr 1fr; }
+}
+.lithium-proxy {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface2);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.lithium-proxy--up { border-color: color-mix(in srgb, var(--pos) 35%, transparent); }
+.lithium-proxy--warn { border-color: color-mix(in srgb, var(--neg) 35%, transparent); }
+.lithium-proxy-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.lithium-proxy-name { font-size: var(--fs-sm); font-weight: 700; color: var(--text); }
+.lithium-status-badge {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  border: 1px solid var(--border2);
+  background: var(--surface3);
+  white-space: nowrap;
+}
+.lithium-status-badge--up { color: var(--pos); border-color: color-mix(in srgb, var(--pos) 40%, transparent); }
+.lithium-status-badge--warn { color: var(--neg); border-color: color-mix(in srgb, var(--neg) 40%, transparent); }
+.lithium-proxy-desc { font-size: var(--fs-xs); color: var(--text3); }
+.lithium-stats { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 4px; }
+.lithium-price { font-size: var(--fs-md); font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+.lithium-pct { font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
+.lithium-dma { font-size: var(--fs-xs); color: var(--text3); font-variant-numeric: tabular-nums; margin-left: auto; }
+.lithium-note { font-size: var(--fs-xs); color: var(--text3); margin-top: 8px; line-height: 1.6; }
