@@ -217,3 +217,86 @@
   .pin-keypad { gap: 9px; }
 }
 
+/* ── リチウム市況モニタカード（#611） ── */
+.lm-card {
+  margin: 12px 12px 0;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: var(--fs-sm);
+}
+.lm-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.lm-title {
+  font-size: var(--fs-base);
+  font-weight: 700;
+  color: var(--text);
+  flex: 1 1 auto;
+}
+.lm-badge {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.lm-badge-good { background: rgba(79,138,77,0.15); color: var(--tone-good); }
+.lm-badge-ok   { background: rgba(184,138,46,0.15); color: var(--tone-ok); }
+.lm-badge-warn { background: rgba(194,96,63,0.15);  color: var(--tone-warn); }
+.lm-badge-load { background: var(--surface2); color: var(--text2); }
+.lm-proxies {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.lm-proxy {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+.lm-proxy-symbol {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--text2);
+  letter-spacing: 0.04em;
+}
+.lm-proxy-price {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.lm-proxy-pct {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.lm-proxy-pct-pos { color: var(--tone-good); }
+.lm-proxy-pct-neg { color: var(--tone-warn); }
+.lm-proxy-pct-neu { color: var(--text2); }
+.lm-dma-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+  color: var(--text2);
+  font-size: var(--fs-xs);
+}
+.lm-rationale {
+  color: var(--text2);
+  font-size: var(--fs-xs);
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+.lm-note {
+  color: var(--text3);
+  font-size: var(--fs-xs);
+  font-style: italic;
+}
+
