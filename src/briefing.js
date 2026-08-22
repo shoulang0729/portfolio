@@ -8,7 +8,10 @@
 // ヘッダ/セクション見出しを sticky 固定）。過去号は下部のプルダウンで切替。
 // 「今すぐ生成」リンクは本体HTMLの固定ヘッダ内に移動済み（self-contained）。
 // 中身は自己完結のモバイルHTML（MulmoClaude の週次タスクが生成・コミットする）。
+// リチウム市況モニターカード（#611）は iframe の上部に常時表示する。
 // ══════════════════════════════════════════════════════════════
+
+import { fetchLithiumData, lithiumMonitorHTML } from './lithium-monitor.js';
 
 let _loaded = false;
 /** @type {HTMLIFrameElement|null} */
@@ -90,6 +93,8 @@ export function renderBriefing(force = false) {
   if (_loaded && !force) return;
   panel.innerHTML = '<div class="bf-msg">読み込み中…</div>';
 
+  const lmDataPromise = fetchLithiumData().catch(() => {});
+
   fetch(`data/briefings/index.json?_=${Date.now()}`)
     .then((r) => {
       if (!r.ok) throw new Error(`index ${r.status}`);
@@ -98,7 +103,13 @@ export function renderBriefing(force = false) {
     .then((idx) => {
       const issues = (idx.issues || []).slice().sort((a, b) => (a.date < b.date ? 1 : -1));
       if (!issues.length) {
-        panel.innerHTML = '<div class="bf-msg">まだ Briefing がありません。</div>';
+        const lmWrap0 = document.createElement('div');
+        lmWrap0.className = 'bf-lm-wrap';
+        lmWrap0.innerHTML = lithiumMonitorHTML();
+        panel.textContent = '';
+        panel.appendChild(lmWrap0);
+        panel.insertAdjacentHTML('beforeend', '<div class="bf-msg">まだ Briefing がありません。</div>');
+        lmDataPromise.then(() => { lmWrap0.innerHTML = lithiumMonitorHTML(); }).catch(() => {});
         return;
       }
       const latest = issues[0];
@@ -106,6 +117,12 @@ export function renderBriefing(force = false) {
       if (!latestUrl) throw new Error('invalid briefing path');
 
       panel.textContent = '';
+      const lmWrap = document.createElement('div');
+      lmWrap.className = 'bf-lm-wrap';
+      lmWrap.innerHTML = lithiumMonitorHTML();
+      panel.appendChild(lmWrap);
+      lmDataPromise.then(() => { lmWrap.innerHTML = lithiumMonitorHTML(); }).catch(() => {});
+
       const wrap = document.createElement('div');
       wrap.className = 'bf-wrap';
 

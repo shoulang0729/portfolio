@@ -1,12 +1,17 @@
 {
   "processed": [
     {
-      "number": 577,
-      "title": "MF負債スクレイピング＋実物資産レイヤー（ネットワース3層化）",
-      "summary": "mf-history.json の columns に liabilities 列を追加（過去分 null 許容・後方互換）。02-tables.css に未定義の .we-nw-liab スタイルを追加（負債行を赤太字で表示）。バージョンを 20260719E に更新。なお AC1〜3（mf-holdings.json 負債フィールド・networth.js/wealth.js の3層UI・運用アロケーション非汚染）は既実装済み。"
+      "number": 611,
+      "title": "feat: リチウム市況モニタをアプリに追加（REMX保有の前提監視・下振れ5/kgトリガー）",
+      "summary": "Briefing タブに LIT/ALB プロキシ連動のリチウム市況モニターカードを追加（src/lithium-monitor.js 新設、briefing.js 統合、CSS 追加、v=20260822A バンプ）"
     }
   ],
   "skipped": [
+    {
+      "number": 594,
+      "title": "feat: Wealth ネットワース数値モデル再定義（総資産=MF/運用=金融−生活資金/純資産=不動産haircut−負債）",
+      "reason": "P1パイプライン（不動産MF評価・その他捕捉）はMacでの実機テスト必須（MFログイン環境なし）。P2はP1マージ後またはload-bearing消費側との同一PRが必要で、本環境では実施不可。"
+    },
     {
       "number": 367,
       "title": "ソースコードレビュー: 脆弱性・矛盾・高度化の提案",
