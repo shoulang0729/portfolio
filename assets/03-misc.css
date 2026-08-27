@@ -217,3 +217,110 @@
   .pin-keypad { gap: 9px; }
 }
 
+/* ══════════════════════════════════════════════
+   リチウム監視カード (#611)
+   ══════════════════════════════════════════════ */
+
+.bf-outer { display: flex; flex-direction: column; }
+
+.li-card-wrap { padding: 12px 12px 0; }
+
+.li-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-chip);
+  padding: 12px 14px;
+  margin-bottom: 4px;
+}
+
+.li-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.li-title {
+  font-size: var(--fs-base);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.li-badge {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+  flex-shrink: 0;
+}
+.li-badge.li-good { background: rgba(79,138,77,0.15); color: var(--tone-good); }
+.li-badge.li-warn { background: rgba(194,96,63,0.15); color: var(--tone-warn); }
+.li-badge.li-neu  { background: var(--surface2); color: var(--text2); }
+
+.li-desc {
+  font-size: var(--fs-sm);
+  color: var(--text2);
+  margin-bottom: 8px;
+}
+
+.li-warn-banner {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--tone-warn);
+  background: rgba(194,96,63,0.10);
+  border: 1px solid rgba(194,96,63,0.25);
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin-bottom: 8px;
+}
+
+.li-table-wrap { overflow-x: auto; }
+
+.li-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+}
+.li-table th {
+  text-align: right;
+  font-weight: 600;
+  color: var(--text2);
+  padding: 3px 6px;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--border2);
+}
+.li-table th:first-child,
+.li-table th:nth-child(2) { text-align: left; }
+.li-table td {
+  padding: 4px 6px;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--border2);
+  color: var(--text);
+}
+.li-table tbody tr:last-child td { border-bottom: none; }
+
+.li-sym { font-weight: 700; font-size: var(--fs-base); }
+.li-name { color: var(--text2); }
+.li-val { text-align: right; font-variant-numeric: tabular-nums; }
+.li-pos { color: var(--tone-good); font-weight: 600; }
+.li-neg { color: var(--tone-warn); font-weight: 600; }
+
+.li-trigger {
+  font-size: var(--fs-xs);
+  color: var(--text3);
+  margin-top: 8px;
+}
+
+.li-note {
+  font-size: var(--fs-xs);
+  color: var(--text3);
+  margin-top: 3px;
+}
+
+.li-loading {
+  font-size: var(--fs-sm);
+  color: var(--text2);
+  padding: 10px 0;
+}
+
+.li-err { color: var(--tone-warn); }
