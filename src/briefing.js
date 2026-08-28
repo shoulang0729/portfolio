@@ -10,6 +10,10 @@
 // 中身は自己完結のモバイルHTML（MulmoClaude の週次タスクが生成・コミットする）。
 // ══════════════════════════════════════════════════════════════
 
+import { fetchLivePrice, fetchSymbolHistory } from './data.js';
+import { escapeHTML } from './utils.js';
+import { state } from './state.js';
+
 let _loaded = false;
 /** @type {HTMLIFrameElement|null} */
 let _frame = null;
@@ -79,6 +83,96 @@ function _ensureResizeFit() {
   window.addEventListener('resize', _fitFrame);
 }
 
+// ──────────────────────────────────────────────────────
+// #611: リチウム市況モニタ（REMX保有の前提監視）
+// プロキシ: LIT（Global X Lithium & Battery Tech ETF）
+// ──────────────────────────────────────────────────────
+
+/** LIT の 200日移動平均を historicalCache から計算する。未取得なら null */
+function _lit200dma() {
+  const data = state.historicalCache['1y']?.['LIT'];
+  if (!data || data.length < 2) return null;
+  const last200 = data.slice(-200);
+  const sum = last200.reduce((s, d) => s + (d.close || 0), 0);
+  return sum / last200.length;
+}
+
+/**
+ * LIT の価格と 200DMA からリチウム市況の状態を判定する。
+ * @param {number} price  現在価格
+ * @param {number|null} dma200  200日移動平均（null = データ不足）
+ * @returns {{ badge: string, label: string, cls: string }}
+ */
+function _lithiumStatus(price, dma200) {
+  if (dma200 == null) return { badge: '—', label: 'データ取得中', cls: '' };
+  const pctFromDma = ((price - dma200) / dma200) * 100;
+  if (pctFromDma <= -15) {
+    return { badge: '🔴', label: `崩れ警戒（200DMAを${Math.abs(pctFromDma).toFixed(0)}%下回る）`, cls: 'lit-warn' };
+  }
+  if (pctFromDma >= 0) {
+    return { badge: '🟢', label: `回復基調（200DMAを${pctFromDma.toFixed(0)}%上回る）`, cls: 'lit-ok' };
+  }
+  return { badge: '🟡', label: `中立（200DMAを${Math.abs(pctFromDma).toFixed(0)}%下回る）`, cls: 'lit-neutral' };
+}
+
+/**
+ * リチウム市況モニタカードを生成して返す（非同期）。
+ * 価格取得失敗時はエラーカードを返す。
+ * @returns {Promise<HTMLElement>}
+ */
+async function _buildLithiumCard() {
+  const card = document.createElement('div');
+  card.className = 'risk-card bf-lit-card';
+  card.setAttribute('aria-label', 'リチウム市況モニタ');
+
+  const titleEl = document.createElement('div');
+  titleEl.className = 'risk-card-title';
+  titleEl.textContent = 'リチウム市況モニタ（REMX保有前提）';
+  card.appendChild(titleEl);
+
+  const noteEl = document.createElement('p');
+  noteEl.className = 'bf-lit-note';
+  noteEl.textContent = 'プロキシ連動（現物スポットではない）: LIT = Global X Lithium & Battery Tech ETF';
+  card.appendChild(noteEl);
+
+  const bodyEl = document.createElement('div');
+  bodyEl.className = 'bf-lit-body';
+  bodyEl.textContent = '読み込み中…';
+  card.appendChild(bodyEl);
+
+  try {
+    await fetchSymbolHistory('LIT', '1y');
+
+    const live = await fetchLivePrice('LIT');
+    if (!live || live._err) throw new Error(live?._err || 'noData');
+
+    const price = live.price ?? null;
+    const dayPct = live.dayPct ?? null;
+    if (price == null) throw new Error('price null');
+
+    const dma200 = _lit200dma();
+    const status = _lithiumStatus(price, dma200);
+
+    const fmt1d = dayPct != null ? `${dayPct >= 0 ? '+' : ''}${dayPct.toFixed(2)}%` : '—';
+    const dmaStr = dma200 != null ? `$${dma200.toFixed(2)}` : '—';
+
+    bodyEl.innerHTML = `
+      <div class="bf-lit-row">
+        <span class="bf-lit-price">$${escapeHTML(price.toFixed(2))}</span>
+        <span class="bf-lit-day ${dayPct != null && dayPct >= 0 ? 'up' : 'down'}">${escapeHTML(fmt1d)}</span>
+        <span class="bf-lit-badge ${escapeHTML(status.cls)}">${status.badge}</span>
+      </div>
+      <div class="bf-lit-status">${escapeHTML(status.label)}</div>
+      <div class="bf-lit-meta">200DMA: ${escapeHTML(dmaStr)}</div>
+      <div class="bf-lit-context">REMX保有の前提＝リチウム回復基調。🔴崩れ警戒（200DMAを15%超下回る）時はREMXの逆風化を示唆。</div>
+    `;
+  } catch {
+    bodyEl.innerHTML = '<span class="bf-lit-err">LIT 価格取得失敗（後ほど再試行してください）</span>';
+  }
+
+  return card;
+}
+
 /**
  * Briefing タブを描画する（初回のみ自動ロード、force で再読込）
  * @param {boolean} [force]
@@ -95,7 +189,7 @@ export function renderBriefing(force = false) {
       if (!r.ok) throw new Error(`index ${r.status}`);
       return r.json();
     })
-    .then((idx) => {
+    .then(async (idx) => {
       const issues = (idx.issues || []).slice().sort((a, b) => (a.date < b.date ? 1 : -1));
       if (!issues.length) {
         panel.innerHTML = '<div class="bf-msg">まだ Briefing がありません。</div>';
@@ -106,6 +200,10 @@ export function renderBriefing(force = false) {
       if (!latestUrl) throw new Error('invalid briefing path');
 
       panel.textContent = '';
+
+      const litCard = await _buildLithiumCard();
+      panel.appendChild(litCard);
+
       const wrap = document.createElement('div');
       wrap.className = 'bf-wrap';
 

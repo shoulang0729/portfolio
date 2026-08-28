@@ -1,41 +1,14 @@
 {
   "processed": [
-    {
-      "number": 577,
-      "title": "MF負債スクレイピング＋実物資産レイヤー（ネットワース3層化）",
-      "summary": "mf-history.json の columns に liabilities 列を追加（過去分 null 許容・後方互換）。02-tables.css に未定義の .we-nw-liab スタイルを追加（負債行を赤太字で表示）。バージョンを 20260719E に更新。なお AC1〜3（mf-holdings.json 負債フィールド・networth.js/wealth.js の3層UI・運用アロケーション非汚染）は既実装済み。"
-    }
+    {"number": 611, "title": "feat: リチウム市況モニタをアプリに追加（REMX保有の前提監視・下振れ5/kgトリガー）", "summary": "Briefing タブにリチウム市況モニタカードを追加。LIT（プロキシETF）の現値・日次騰落率・200DMA比較による状態バッジ（🟢回復基調/🟡中立/🔴崩れ警戒）を表示。プロキシ注記・REMX文脈説明付き。バージョン20260828Aに更新。"}
   ],
   "skipped": [
-    {
-      "number": 367,
-      "title": "ソースコードレビュー: 脆弱性・矛盾・高度化の提案",
-      "reason": "Wait ラベル"
-    },
-    {
-      "number": 306,
-      "title": "refactor: Cloudflare Worker を route/service/provider 単位に分割する",
-      "reason": "Wait ラベル"
-    },
-    {
-      "number": 305,
-      "title": "feat: ETF/投信の look-through 構成銘柄取得パイプラインを実データ化する",
-      "reason": "Wait ラベル"
-    },
-    {
-      "number": 304,
-      "title": "feat: Target Allocation とリバランス提案を追加する",
-      "reason": "Wait ラベル"
-    },
-    {
-      "number": 301,
-      "title": "feat: Portfolio Timeline でスナップショット履歴と変化分析を扱う",
-      "reason": "Wait ラベル"
-    },
-    {
-      "number": 220,
-      "title": "[Risk Exposure] サマリーバーの「対象N銘柄」を構成銘柄数(look-through)にしたい",
-      "reason": "Wait ラベル"
-    }
+    {"number": 594, "title": "feat: Wealth ネットワース数値モデル再定義（総資産=MF/運用=金融−生活資金/純資産=不動産haircut−負債）", "reason": "P1（Python fetch_mf.py への不動産・その他捕捉追加）がMac実機テスト必須で未完了。P2の運用資産計算で年金・保険を mf-history.json から読む配線が必要で、load-bearing な netWorthComputed の廃止と wealth.js の同時更新を要するため、P1完了確認後に別PRで実施が適切。"},
+    {"number": 367, "title": "ソースコードレビュー: 脆弱性・矛盾・高度化の提案", "reason": "Wait ラベル"},
+    {"number": 306, "title": "refactor: Cloudflare Worker を route/service/provider 単位に分割する", "reason": "Wait ラベル"},
+    {"number": 305, "title": "feat: ETF/投信の look-through 構成銘柄取得パイプラインを実データ化する", "reason": "Wait ラベル"},
+    {"number": 304, "title": "feat: Target Allocation とリバランス提案を追加する", "reason": "Wait ラベル"},
+    {"number": 301, "title": "feat: Portfolio Timeline でスナップショット履歴と変化分析を扱う", "reason": "Wait ラベル"},
+    {"number": 220, "title": "[Risk Exposure] サマリーバーの「対象N銘柄」を構成銘柄数(look-through)にしたい", "reason": "Wait ラベル"}
   ]
 }

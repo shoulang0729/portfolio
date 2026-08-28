@@ -305,6 +305,20 @@ table.t td { font-size: var(--fs-sm); font-weight: 700; border-bottom: 1px solid
 }
 .bf-past-select:hover { border-color: var(--accent); }
 
+/* ── #611: リチウム市況モニタカード ── */
+.bf-lit-card { margin: 12px; }
+.bf-lit-note { font-size: var(--fs-sm); color: var(--text2); margin: 0 0 8px; }
+.bf-lit-body { font-size: var(--fs-base); }
+.bf-lit-row { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; flex-wrap: wrap; }
+.bf-lit-price { font-size: 22px; font-weight: 700; color: var(--text); }
+.bf-lit-day.up { color: var(--pos); font-weight: 600; }
+.bf-lit-day.down { color: var(--neg); font-weight: 600; }
+.bf-lit-badge { font-size: 22px; }
+.bf-lit-status { font-size: var(--fs-base); font-weight: 600; color: var(--text); margin-bottom: 2px; }
+.bf-lit-meta { font-size: var(--fs-sm); color: var(--text2); margin-bottom: 6px; }
+.bf-lit-context { font-size: var(--fs-sm); color: var(--text2); border-top: 1px solid var(--border2); padding-top: 6px; }
+.bf-lit-err { color: var(--danger); font-size: var(--fs-sm); }
+
 /* ── シミュレーションバー（ヒートマップパネル内）── 横スクロール可能1行 */
 .sim-bar {
   display: flex;
