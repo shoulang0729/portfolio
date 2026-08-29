@@ -16,8 +16,8 @@
   "points",
   "liabilities"
  ],
- "updatedAt": "2026-08-29",
- "count": 202,
+ "updatedAt": "2026-08-30",
+ "count": 203,
  "series": [
   {
    "date": "2014-09-30",
@@ -2835,17 +2835,31 @@
   },
   {
    "date": "2026-08-29",
-   "total": 587341283,
-   "cash": 43450868,
-   "equity": 357821994,
+   "total": 584493757,
+   "cash": 43474323,
+   "equity": 354612103,
    "equityMargin": 0,
-   "fund": 138828998,
+   "fund": 139203341,
    "bond": 0,
-   "crypto": 3882951,
+   "crypto": 3804341,
    "fx": 0,
    "insurance": 3585494,
-   "pension": 39608294,
-   "points": 162684
+   "pension": 39651429,
+   "points": 162726
+  },
+  {
+   "date": "2026-08-30",
+   "total": 584493757,
+   "cash": 43474323,
+   "equity": 354612103,
+   "equityMargin": 0,
+   "fund": 139203341,
+   "bond": 0,
+   "crypto": 3804341,
+   "fx": 0,
+   "insurance": 3585494,
+   "pension": 39651429,
+   "points": 162726
   }
  ]
 }
