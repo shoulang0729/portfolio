@@ -305,6 +305,46 @@ table.t td { font-size: var(--fs-sm); font-weight: 700; border-bottom: 1px solid
 }
 .bf-past-select:hover { border-color: var(--accent); }
 
+/* ── リチウム市況モニタカード（Briefing タブ先頭・#611） ── */
+.li-monitor-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  padding: 12px 14px;
+  margin: 10px 0 8px;
+  max-width: 600px;
+  margin-inline: auto;
+}
+.li-loading { color: var(--text2); font-size: var(--fs-sm); text-align: center; padding: 8px 0; }
+.li-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+.li-title { font-size: var(--fs-base); font-weight: 700; color: var(--text); }
+.li-note { font-size: var(--fs-xs); color: var(--text3); }
+.li-rows { display: flex; flex-direction: column; gap: 8px; }
+.li-row { border-top: 1px solid var(--border2); padding-top: 8px; }
+.li-rows .li-row:first-child { border-top: none; padding-top: 0; }
+.li-row-top { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+.li-symbol { font-size: var(--fs-base); font-weight: 700; color: var(--text); }
+.li-badge { font-size: var(--fs-xs); font-weight: 600; padding: 1px 6px; border-radius: var(--r-pill); }
+.li-badge-good { background: rgba(79,138,77,0.15); color: var(--tone-good); }
+.li-badge-ok   { background: rgba(184,138,46,0.15); color: var(--tone-ok); }
+.li-badge-warn { background: rgba(194,96,63,0.15);  color: var(--tone-warn); }
+.li-badge-neu  { background: var(--surface2); color: var(--text3); }
+.li-row-mid { margin-bottom: 4px; }
+.li-label { font-size: var(--fs-sm); color: var(--text2); }
+.li-row-bot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.li-price { font-size: var(--fs-base); font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
+.li-dma   { font-size: var(--fs-sm); color: var(--text2); font-variant-numeric: tabular-nums; }
+.li-chgs  { font-size: var(--fs-sm); color: var(--text2); }
+.li-pct { font-variant-numeric: tabular-nums; font-weight: 600; }
+.li-pct-pos { color: var(--pos); }
+.li-pct-neg { color: var(--neg); }
+.li-pct-neu { color: var(--text3); }
+.li-thesis {
+  margin-top: 10px; padding-top: 8px;
+  border-top: 1px solid var(--border2);
+  font-size: var(--fs-sm); color: var(--text2); line-height: 1.5;
+}
+
 /* ── シミュレーションバー（ヒートマップパネル内）── 横スクロール可能1行 */
 .sim-bar {
   display: flex;

@@ -10,11 +10,139 @@
 // 中身は自己完結のモバイルHTML（MulmoClaude の週次タスクが生成・コミットする）。
 // ══════════════════════════════════════════════════════════════
 
+import { state } from './state.js';
+import { fetchSymbolHistory } from './data.js';
+import { getHistoricalChangePct } from './portfolio-calc.js';
+import { fmtPctInt } from './fmt.js';
+
 let _loaded = false;
 /** @type {HTMLIFrameElement|null} */
 let _frame = null;
 let _themeObserver = null;
 let _resizeFit = false;
+
+/** リチウム監視対象プロキシ銘柄 */
+const LI_PROXIES = [
+  { symbol: 'LIT',  label: 'LIT（リチウム ETF）' },
+  { symbol: 'ALB',  label: 'ALB（Albemarle）' },
+];
+
+/**
+ * 200日移動平均を historicalCache['1y'] から計算する。
+ * @param {string} symbol
+ * @returns {number|null}
+ */
+function _calc200dma(symbol) {
+  const data = state.historicalCache['1y']?.[symbol];
+  if (!data || data.length < 10) return null;
+  const window200 = data.slice(-200);
+  const sum = window200.reduce((s, d) => s + d.close, 0);
+  return sum / window200.length;
+}
+
+/**
+ * 最新終値を historicalCache から取得する。
+ * @param {string} symbol
+ * @returns {number|null}
+ */
+function _latestClose(symbol) {
+  const data = state.historicalCache['1y']?.[symbol];
+  if (!data || data.length === 0) return null;
+  return data[data.length - 1].close;
+}
+
+/**
+ * 状態バッジを決定する。
+ * price > 200DMA → 🟢回復基調
+ * price >= 200DMA * 0.95 → 🟡中立
+ * price < 200DMA * 0.95 → 🔴崩れ警戒
+ * @param {number|null} price
+ * @param {number|null} dma200
+ * @returns {{ icon: string, label: string, cls: string }}
+ */
+function _statusBadge(price, dma200) {
+  if (price == null || dma200 == null) {
+    return { icon: '⚪', label: 'データなし', cls: 'li-badge-neu' };
+  }
+  if (price > dma200) {
+    return { icon: '🟢', label: '回復基調', cls: 'li-badge-good' };
+  }
+  if (price >= dma200 * 0.95) {
+    return { icon: '🟡', label: '中立', cls: 'li-badge-ok' };
+  }
+  return { icon: '🔴', label: '崩れ警戒', cls: 'li-badge-warn' };
+}
+
+/**
+ * リチウム監視カードの HTML を生成して panel 先頭に挿入/更新する。
+ * @param {HTMLElement} panel
+ */
+function _renderLithiumCard(panel) {
+  const existing = panel.querySelector('.li-monitor-card');
+  if (!existing) return;
+
+  let rowsHtml = '';
+  for (const proxy of LI_PROXIES) {
+    const price = _latestClose(proxy.symbol);
+    const dma200 = _calc200dma(proxy.symbol);
+    const badge = _statusBadge(price, dma200);
+    const pct1d  = getHistoricalChangePct(proxy.symbol, '1d');
+    const pct1w  = getHistoricalChangePct(proxy.symbol, '1w');
+    const pct1m  = getHistoricalChangePct(proxy.symbol, '1m');
+
+    const priceStr = price != null ? `$${price.toFixed(2)}` : '–';
+    const dmaStr   = dma200 != null ? `$${dma200.toFixed(2)}` : '–';
+
+    /** @param {number|null} v */
+    const pctSpan = (v) => {
+      if (v == null) return '<span class="li-pct li-pct-neu">–</span>';
+      const cls = v >= 0 ? 'li-pct-pos' : 'li-pct-neg';
+      return `<span class="li-pct ${cls}">${fmtPctInt(v)}</span>`;
+    };
+
+    rowsHtml += `<div class="li-row">
+      <div class="li-row-top">
+        <span class="li-symbol">${proxy.symbol}</span>
+        <span class="li-badge ${badge.cls}">${badge.icon} ${badge.label}</span>
+      </div>
+      <div class="li-row-mid">
+        <span class="li-label">${proxy.label}</span>
+      </div>
+      <div class="li-row-bot">
+        <span class="li-price">${priceStr}</span>
+        <span class="li-dma">200DMA ${dmaStr}</span>
+        <span class="li-chgs">1d ${pctSpan(pct1d)} &nbsp; 1w ${pctSpan(pct1w)} &nbsp; 1m ${pctSpan(pct1m)}</span>
+      </div>
+    </div>`;
+  }
+
+  existing.innerHTML = `<div class="li-header">
+    <span class="li-title">リチウム市況モニタ</span>
+    <span class="li-note">※プロキシ連動（現物スポット価格ではない）</span>
+  </div>
+  <div class="li-rows">${rowsHtml}</div>
+  <div class="li-thesis">REMX保有の前提＝リチウム回復基調。崩れたら REMX 逆風。</div>`;
+}
+
+/**
+ * リチウム監視カードを panel に追加し、データを非同期取得する。
+ * @param {HTMLElement} panel
+ */
+async function _setupLithiumMonitor(panel) {
+  const card = document.createElement('div');
+  card.className = 'li-monitor-card';
+  card.setAttribute('aria-label', 'リチウム市況モニタ');
+  card.innerHTML = '<div class="li-loading">リチウム市況を取得中…</div>';
+  panel.insertBefore(card, panel.firstChild);
+
+  await Promise.allSettled(LI_PROXIES.map(p => fetchSymbolHistory(p.symbol, '1y')));
+
+  _renderLithiumCard(panel);
+
+  document.addEventListener('hm:prices-updated', () => {
+    _renderLithiumCard(panel);
+  }, { passive: true });
+}
 
 /**
  * アプリの現在テーマを iframe 内ドキュメントに伝搬する。
@@ -99,6 +227,7 @@ export function renderBriefing(force = false) {
       const issues = (idx.issues || []).slice().sort((a, b) => (a.date < b.date ? 1 : -1));
       if (!issues.length) {
         panel.innerHTML = '<div class="bf-msg">まだ Briefing がありません。</div>';
+        _setupLithiumMonitor(panel);
         return;
       }
       const latest = issues[0];
@@ -140,6 +269,8 @@ export function renderBriefing(force = false) {
       wrap.appendChild(pastbar);
       panel.appendChild(wrap);
 
+      _setupLithiumMonitor(panel);
+
       // 同一オリジン: iframe を残り高さにフィット（枠内1スクロール）＋テーマ伝搬
       _frame = frame;
       if (_frame) {
@@ -167,6 +298,7 @@ export function renderBriefing(force = false) {
 
 /** 再読み込み（ツールバーの ↻ ボタンから） */
 export function reloadBriefing() {
+  _loaded = false;
   renderBriefing(true);
 }
 
