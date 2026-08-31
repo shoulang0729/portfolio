@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Briefing 2026/09/01 05:09</title>
+<style>
+  :root{
+    --bg:#f7f2ee;--surface:#ffffff;--surface2:#f0e9e3;--surface3:#e8ddd7;
+    --border:#d4c8c0;--border2:#efe7dd;--text:#1c1714;--text2:#78695f;--text3:#a99e92;--accent:#cc785c;
+    --up:#FF3B30;--down:#34C759;--stance:#b9822e;--ok:#5b8a5a;--okbg:#eaf1e8;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{--bg:#1c1917;--surface:#27211e;--surface2:#322b28;--surface3:#2e2722;
+      --border:#48403b;--border2:#332e2a;--text:#f5f0ec;--text2:#b3a79e;--text3:#7c7167;--accent:#e08a6a;
+      --up:#FF453A;--down:#30D158;--stance:#e6b566;--ok:#7aa978;--okbg:#23302a;}
+  }
+  html[data-theme="light"]{
+    --bg:#f7f2ee;--surface:#ffffff;--surface2:#f0e9e3;--surface3:#e8ddd7;
+    --border:#d4c8c0;--border2:#efe7dd;--text:#1c1714;--text2:#78695f;--text3:#a99e92;--accent:#cc785c;
+    --up:#FF3B30;--down:#34C759;--stance:#b9822e;--ok:#5b8a5a;--okbg:#eaf1e8;
+  }
+  html[data-theme="dark"]{
+    --bg:#1c1917;--surface:#27211e;--surface2:#322b28;--surface3:#2e2722;
+    --border:#48403b;--border2:#332e2a;--text:#f5f0ec;--text2:#b3a79e;--text3:#7c7167;--accent:#e08a6a;
+    --up:#FF453A;--down:#30D158;--stance:#e6b566;--ok:#7aa978;--okbg:#23302a;
+  }
+  *{box-sizing:border-box;-webkit-text-size-adjust:100%;}
+  html{scroll-behavior:smooth;}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
+    line-height:1.6;font-size:16px;padding-bottom:30px;}
+  .wrap{max-width:560px;margin:0 auto;padding:0 14px;}
+  header{position:sticky;top:0;z-index:20;background:var(--bg);
+    padding:9px 14px;border-bottom:1px solid var(--border);}
+  .head-row{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:24px;}
+  .date{color:var(--text2);font-size:12.5px;}
+  .ondemand{display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;
+    font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;
+    color:var(--text2);border:1px solid var(--border);border-radius:8px;padding:4px 10px;}
+  .ondemand svg{width:13px;height:13px;}
+  .stance{font-weight:800;color:var(--stance);}
+  .trend-stance{font-size:14.5px;font-weight:800;margin-bottom:10px;padding-bottom:9px;border-bottom:1px solid var(--border);}
+  section{margin-top:16px;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:15px;
+    padding:15px;margin-bottom:9px;box-shadow:0 2px 10px rgba(0,0,0,0.04);}
+  .up{color:var(--up);}.down{color:var(--down);}
+
+  .ic{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;
+    stroke-linecap:round;stroke-linejoin:round;flex:none;}
+
+  .card-ttl{display:flex;align-items:center;gap:9px;font-size:15px;font-weight:800;margin:0 0 13px;
+    padding-bottom:11px;border-bottom:1px solid var(--border);}
+  .card-ttl .tic{width:28px;height:28px;border-radius:8px;background:var(--surface2);
+    display:flex;align-items:center;justify-content:center;flex:none;color:var(--accent);}
+  .card-ttl .eye{margin-left:auto;background:var(--surface2);border:1px solid var(--border);border-radius:999px;
+    cursor:pointer;width:34px;height:30px;display:inline-flex;align-items:center;justify-content:center;color:var(--text2);flex:0 0 auto;line-height:0;}
+
+  .s1-grid{display:flex;align-items:flex-start;padding-bottom:12px;border-bottom:1px solid var(--border2);}
+  .s1-cell{flex:1 1 0;min-width:0;container-type:inline-size;}
+  .s1-cell + .s1-cell{margin-left:13px;padding-left:13px;border-left:1px solid var(--border2);}
+  .s1-lbl{font-size:11px;color:var(--text2);font-weight:600;margin-bottom:3px;letter-spacing:.02em;}
+  .s1-big{font-size:clamp(15px,12.5cqi,23px);font-weight:800;letter-spacing:-.02em;line-height:1.2;white-space:nowrap;font-variant-numeric:tabular-nums;}
+  .s1-mid{font-size:clamp(13px,10.5cqi,18px);font-weight:800;line-height:1.2;white-space:nowrap;font-variant-numeric:tabular-nums;text-align:right;}
+  .s1-cash{display:flex;align-items:center;gap:8px;padding-top:11px;}
+  .s1-cash .sl{font-size:12.5px;color:var(--text2);font-weight:600;}
+  .s1-cash .pill{font-size:10px;font-weight:700;border-radius:20px;padding:2px 8px;background:var(--okbg);color:var(--ok);}
+  .s1-cash .sv{font-size:16px;font-weight:800;margin-left:auto;font-variant-numeric:tabular-nums;}
+  .maskable{display:inline-block;user-select:none;}
+  .s1-cell .maskable{display:block;}
+
+  table.mkt{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed;}
+  table.mkt th{font-size:9.5px;color:var(--text2);font-weight:700;text-align:right;padding:4px 2px 6px 0;border-bottom:1px solid var(--border);white-space:nowrap;}
+  table.mkt th:first-child{text-align:left;width:29%;}
+  table.mkt td{padding:6px 2px;border-bottom:1px solid var(--border);text-align:right;font-weight:700;white-space:nowrap;font-size:11px;}
+  table.mkt td:first-child{text-align:left;font-weight:600;white-space:normal;}
+  table.mkt .lv{display:block;font-size:9px;color:var(--text2);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  table.mkt tr:last-child td{border-bottom:none;}
+  table.perf{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed;}
+  table.perf th{font-size:10px;color:var(--text2);font-weight:700;text-align:right;padding:4px 3px 5px 0;border-bottom:1px solid var(--border);}
+  table.perf th:first-child{text-align:left;width:34%;}
+  table.perf td{padding:7px 3px 0;text-align:right;font-weight:800;font-size:11.5px;white-space:normal;word-break:break-word;}
+  table.perf td:first-child{text-align:left;font-weight:700;color:var(--text2);font-size:12px;}
+  .vfen{display:block;font-size:9.5px;color:var(--text2);font-weight:600;line-height:1.2;}
+  .movers{display:block;margin-top:13px;padding-top:11px;border-top:1px solid var(--border);}
+  .mv-col + .mv-col{margin-top:11px;padding-top:11px;border-top:1px solid var(--border);}
+  .mv-h{font-size:11px;font-weight:800;margin-bottom:5px;letter-spacing:.02em;}
+  .mv-h.up{color:var(--up);} .mv-h.down{color:var(--down);}
+  .mv{display:flex;justify-content:space-between;gap:6px;font-size:12.5px;padding:3px 0;}
+  .mv span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .mv span:last-child{font-weight:800;flex:0 0 auto;}
+  .ment{border-left:3px solid var(--accent);padding:2px 0 2px 11px;margin:11px 0;}
+  .ment .who{font-weight:800;font-size:14px;color:var(--accent);}
+  .ment .claim{font-size:14.5px;}
+  .subh{font-size:11.5px;font-weight:800;color:var(--text2);margin:10px 0 2px;letter-spacing:.03em;}
+  .insight{background:var(--surface2);border-left:3px solid var(--accent);border-radius:0 10px 10px 0;
+    padding:10px 13px;margin-top:9px;font-size:14px;color:var(--text);}
+  .insight .ilabel{font-weight:800;color:var(--accent);}
+  .ev{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);}
+  .ev:last-child{border-bottom:none;}
+  .ev .d{font-weight:800;color:var(--text);font-size:13px;flex:0 0 84px;line-height:1.3;}
+  .ev .d .us{display:block;font-size:10.5px;color:var(--text2);font-weight:700;}
+  .ev > div:last-child{font-size:12.5px;}
+  .tk{color:var(--text2);font-size:11.5px;}
+  .note{font-size:11px;color:var(--text2);margin-top:6px;}
+  .foot{color:var(--text2);font-size:11.5px;text-align:center;margin-top:20px;line-height:1.6;}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M8.5 6.5h10M8.5 12h10M8.5 17.5h10"/><circle cx="4.5" cy="6.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="4.5" cy="12" r="1.1" fill="currentColor" stroke="none"/><circle cx="4.5" cy="17.5" r="1.1" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-pulse" viewBox="0 0 24 24"><path d="M3 13.5h3.2l2.3-7.2 3.3 12.4 2.4-8.2 1.4 3h5"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4"/><path d="M3.6 12h16.8M12 3.6c2.6 2.4 2.6 14.4 0 16.8M12 3.6c-2.6 2.4-2.6 14.4 0 16.8"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.1"/><path d="M3.7 19a5.3 5.3 0 0110.6 0"/><path d="M16.2 5.3a3.1 3.1 0 010 5.6M16.8 19a5.3 5.3 0 00-2.4-4.4"/></symbol>
+</defs></svg>
+
+<header>
+  <div class="head-row">
+    <span class="date">2026/09/01（火）05:09</span>
+    <a class="ondemand" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.5z"/></svg>今すぐ生成</a>
+  </div>
+</header>
+<div class="wrap">
+
+  <!-- §1 サマリ -->
+  <section id="s1">
+    <div class="card">
+      <div class="card-ttl">
+        <span class="tic"><svg class="ic"><use href="#i-list"/></svg></span>サマリ
+        <button class="eye" id="mask-btn" onclick="toggleMask()" title="金額の表示切替" aria-label="金額の表示切替">
+          <svg id="eye-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="2.6"/></svg>
+          <svg id="eye-closed" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+        </button>
+      </div>
+      <div class="s1-grid">
+        <div class="s1-cell">
+          <div class="s1-lbl">資産総額</div>
+          <div class="s1-big maskable">¥***,***,***</div>
+        </div>
+        <div class="s1-cell">
+          <div class="s1-lbl">運用資産</div>
+          <div class="s1-mid maskable">¥***,***,***</div>
+        </div>
+      </div>
+      <div class="s1-cash">
+        <span class="sl">投資用キャッシュ</span><span class="pill">比率 4.3%</span>
+        <span class="sv maskable">¥***,***,***</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- §2 トレンド -->
+  <section id="s2">
+    <div class="card">
+      <div class="card-ttl"><span class="tic"><svg class="ic"><use href="#i-pulse"/></svg></span>トレンド</div>
+      <div class="subh">今週（9/1 火 時点）</div>
+      <div class="trend-stance"><span class="stance">⚠ 中立・守り寄り（分水嶺イベント2週間・キャッシュ復元を最優先）</span></div>
+      <table class="perf">
+        <thead><tr><th>地合い</th><th>直近</th><th>水準</th></tr></thead>
+        <tbody>
+          <tr><td>日経平均<span class="vfen">（+1.2%/1w）</span></td><td class="up">66,312</td><td>史上最高値圏・過熱</td></tr>
+          <tr><td>S&amp;P500<span class="vfen">（+0.49%/1w）</span></td><td class="up">7,712</td><td>最高値圏・楽観過剰</td></tr>
+          <tr><td>Nasdaq総合<span class="vfen">（+0.85%/1w）</span></td><td class="up">26,402</td><td>最高値圏・AI主導</td></tr>
+          <tr><td>ドル円<span class="vfen">（-2.37%/1m）</span></td><td class="down">159.97</td><td>160回帰・円高基調継続</td></tr>
+          <tr><td>VIX<span class="vfen">（-4.63%/1w）</span></td><td class="down">14.43</td><td>14.4低位・恐怖過少</td></tr>
+          <tr><td>米CPI(7月)<span class="vfen">（YoY+3.54%）</span></td><td class="tk">3.54%</td><td>粘着・3%台高止まり</td></tr>
+        </tbody>
+      </table>
+      <div class="movers">
+        <div class="mv-col">
+          <div class="mv-h up">追い風</div>
+          <div class="mv"><span>NVIDIA Q2トリプル超過（売上$96.2B +105.9%・DC+117%・Q3ガイダンス上方）でAIインフラCapEx競争「全速前進」を再確認。半導体/AIの業績ドライバは健在（じっちゃま/藤沢/中島/ゆな共通）</span><span class="up">AI構造強気</span></div>
+          <div class="mv"><span>ソブリンAIでNVIDIAの堀深化（中島）＋Broadcomがハラペーニョ（OpenAI推論ASIC）で全陣営設計者として最大受益（ゆな8/29号）。儲かる順①Broadcom②TSMC③Nvidia・ツルハシ勢が構造的勝者</span><span class="up">ツルハシ勢強気</span></div>
+          <div class="mv"><span>SaaS株再評価（CRWD+21%・Salesforce+22%）＝AI活用高付加価値化テーゼが局所的に噴く（藤沢746号）。Anthropic ARR急伸でGOOGL（TPU地主）テーゼを補強</span><span class="up">AIプラットフォーム</span></div>
+          <div class="mv"><span>VIX14.4・急落なしの平穏な板環境＝SMHトリム（利確売り）を落ち着いて実行できる好機。TOPIX 1m+4.2%で日本株裾野にも恩恵</span><span class="up">板環境良好</span></div>
+        </div>
+        <div class="mv-col">
+          <div class="mv-h down">向かい風</div>
+          <div class="mv"><span>米10年債4.73%＝4.75%レジスタンス（過去4回試された）目前。上抜けならAI/量子/セキュリティ/宇宙/ロボ/ゴールドのテーマ株は避けるべき局面へ（じっちゃま）。「制御力を失う寸前」との警戒</span><span class="down">金利リスク</span></div>
+          <div class="mv"><span>分水嶺イベントが今週から2週間連続点火＝9/4 NFP（利上げ確率57.7%の分岐点）→9/11 CPI（粘着3.54%継続か）→9/16-17 FOMC＋9/17-18 日銀（後藤：9月利上げが基本シナリオ候補）</span><span class="down">FOMC/日銀警戒</span></div>
+          <div class="mv"><span>指数は史上最高値圏・VIX14.4でセンチメント過熱＝調整時のドローダウンが非対称に大きくなりうる。AIデータセンター系IPO「ポンコツのオンパレード」でAnthropicIPOもウィンドウに雲（じっちゃま）</span><span class="down">高値・IPOリスク</span></div>
+          <div class="mv"><span>投資用キャッシュ4.3%（目標12-13%）の防御バッファ不足が最大の構造リスク。日銀利上げ→円高進行で外株の円建て評価にも逆風</span><span class="down">円高・防御不足</span></div>
+        </div>
+      </div>
+      <div class="subh" style="margin-top:14px;padding-top:13px;border-top:1px solid var(--border);">前方イベント（9月集中週）</div>
+      <div class="ev">
+        <div class="d">9/4（木）<span class="us">ET 08:30 / JST 21:30</span></div>
+        <div><b>米雇用統計（8月）NFP</b>（★★★最重要）。ウォーシュJH(8/28)タカ派後の9月FOMC利上げ確率57.7%の最大分岐点。「すべては10年債4.75%を死守できるかにかかっている」（じっちゃま）。</div>
+      </div>
+      <div class="ev">
+        <div class="d">9/9（火）<span class="us">ET 10:00 / JST 23:00</span></div>
+        <div><b>米JOLTS 求人件数（7月）</b>（★★）。労働市場過熱度確認。9月FOMC前の先行指標。</div>
+      </div>
+      <div class="ev">
+        <div class="d">9/11（木）<span class="us">ET 08:30 / JST 21:30</span></div>
+        <div><b>米CPI（8月）</b>（★★★最重要）。インフレ粘着高止まり（7月YoY3.54%）継続か。9月FOMC前の最終確認。</div>
+      </div>
+      <div class="ev">
+        <div class="d">9/16-17<span class="us">JST 9/17 03:00</span></div>
+        <div><b>FOMC 9月会合</b>（★★★最重要）。ウォーシュ議長がJH(8/28)でタカ派→利上げ確率57.7%。10年債4.75%レジスタンス上抜けが最大焦点。</div>
+      </div>
+      <div class="ev">
+        <div class="d">9/17-18<span class="us">JST 9/18 12:00頃</span></div>
+        <div><b>日銀 金融政策決定会合</b>（★★★最重要）。後藤が「基本シナリオ候補」格上げ。株急落・円高なければ追加利上げ25bp観測。植田総裁会見がドル円の分水嶺。</div>
+      </div>
+      <div class="ev">
+        <div class="d">9月上旬<span class="us">未確定</span></div>
+        <div><b>Anthropic IPO</b>（参考）。じっちゃま「無事値決め可能」維持もJHタカ派でIPOウィンドウに雲。時価総額2兆ドル超・調達1000億ドル規模。</div>
+      </div>
+      <div class="note">※日付は日本時間基準。米国時間イベントは現地時間と日本時間を併記。</div>
+    </div>
+  </section>
+
+  <!-- §3 マクロ -->
+  <section id="s3">
+    <div class="card">
+      <div class="card-ttl"><span class="tic"><svg class="ic"><use href="#i-globe"/></svg></span>マクロ</div>
+      <table class="mkt">
+        <thead><tr><th>指標</th><th>1週</th><th>1月</th><th>3月</th><th>6月</th></tr></thead>
+        <tbody>
+          <tr><td>日経平均<span class="lv">66,311.93（2026-08-31）</span></td><td class="up">+1.20%</td><td class="up">+3.03%</td><td class="down">-0.93%</td><td class="up">+14.22%</td></tr>
+          <tr><td>TOPIX<span class="lv">4,270（Yahoo 1308.T・08-28）</span></td><td class="up">+2.06%</td><td class="up">+4.22%</td><td class="up">+5.33%</td><td class="up">+6.54%</td></tr>
+          <tr><td>ダウ<span class="lv">53,559.99（2026-08-28）</span></td><td class="up">+0.53%</td><td class="up">+3.81%</td><td class="up">+4.95%</td><td class="up">+9.36%</td></tr>
+          <tr><td>S&amp;P500<span class="lv">7,711.76（2026-08-28）</span></td><td class="up">+0.49%</td><td class="up">+5.41%</td><td class="up">+1.74%</td><td class="up">+12.11%</td></tr>
+          <tr><td>Nasdaq総合<span class="lv">26,402.42（2026-08-28）</span></td><td class="up">+0.85%</td><td class="up">+8.02%</td><td class="down">-2.11%</td><td class="up">+16.47%</td></tr>
+          <tr><td>ハンセン<span class="lv">25,584.79（2026-08-28・^HSI）</span></td><td class="down">-1.63%</td><td class="down">-0.86%</td><td class="up">+1.60%</td><td class="down">-3.93%</td></tr>
+          <tr><td>米10年債<span class="lv">4.73%（2026-08-28）</span></td><td class="down">-1bp</td><td class="up">+6bp</td><td class="up">+28bp</td><td class="up">+76bp</td></tr>
+          <tr><td>ドル円<span class="lv">現在 159.97</span></td><td class="up">159.97</td><td class="down">159.97</td><td class="up">159.97</td><td class="up">159.97</td></tr>
+          <tr><td>VIX<span class="lv">現在 14.43</span></td><td class="down">14.43</td><td class="down">14.43</td><td class="down">14.43</td><td class="down">14.43</td></tr>
+          <tr><td>米CPI(7月)<span class="lv">YoY 3.54% / MoM +0.07%</span></td><td class="tk">3.54%</td><td class="tk">3.54%</td><td class="tk">—</td><td class="tk">—</td></tr>
+        </tbody>
+      </table>
+      <div class="note">※指数は騰落%（赤=上昇/緑=下落）、ドル円・VIXは実数値（各期間の現在値）、米10年債はbp変化。TOPIXはYahoo（1308.T調整後）で算出。ハンセンはYahoo ^HSI算出。米CPIは最新値のみ。</div>
+    </div>
+  </section>
+
+  <!-- §4 メンター -->
+  <section id="s4">
+    <div class="card">
+      <div class="card-ttl"><span class="tic"><svg class="ic"><use href="#i-users"/></svg></span>メンター</div>
+
+      <div class="ment">
+        <div class="who">じっちゃま（広瀬隆雄）</div>
+        <div class="claim">【★9/1再要約・8/29号最新・中立】相場観=🟡中立（JH・タカ派ウォーシュ・10年債4.75%正念場）。<b>4指標改定</b>：10年債4.85%・FF 4.00%・失業率4.2%・CPI 3.40%。ウォーシュJH(8/28)で9月FOMC利上げ確率57.7%にジャンプ。「4.75%を死守できるかにかかっている」＝政策当局が市場の制御力を失う寸前。<b>NVIDIA Q2★トリプル超過（売上$96.2B +105.9%・DC+117%・Q3ガイダンス上方）→AIインフラCapEx競争「全速前進」確認</b>。AnthropicIPO「無事値決め可能」維持もAIデータセンター系IPOは「ポンコツのオンパレード」。4.75%上抜けならAI/量子/セキュリティ/宇宙/ロボ/ゴールドは避けよ。半導体（ボラ銘柄）鬼門継続。バフェット指標危険域継続。コア：BRAC/V/PM/LVMUY/EPOL。</div>
+      </div>
+
+      <div class="ment">
+        <div class="who">中島聡</div>
+        <div class="claim">【8/27再要約・LiB 8/25号最新】<b>①ソブリンAI</b>＝需要を国→企業→端末へ砕くほどNVIDIA有利（台数増加＋競合排除の二重効果）。各国の低稼働率は「戦略的備え」として政治的に固定→NVIDIAの堀を深める。<b>②バイブコーディング</b>＝「作っては壊す」スタイル解禁。価値は設計思想と知見。Claude CodeがAnthropicのARR 7B（5ヶ月で5倍）の主因。<b>③Stripe×OpenRouter $7B超買収</b>＝決済インフラがAIゲートウェイへ進化。<b>GOOGL（Alphabet）最大のAI受益者テーゼ継続（割安）</b>。</div>
+      </div>
+
+      <div class="ment">
+        <div class="who">ゆな先生</div>
+        <div class="claim">【★9/1再要約・8/29号最新★ OpenAI復権とハラペーニョ】ChatGPT週間ユーザー10億人。ARPU：Claude 2.76ドル &gt; ChatGPT 1.74ドルでAnthropicが単価上回る。<b>ハラペーニョ＝OpenAI×Broadcom推論特化ASIC（TSMC 3nm）</b>。本格稼働2027年後半〜2028年・学習はNvidia継続。儲かる順①Broadcom（全陣営設計者）②TSMC③Nvidia。<b>最大ポジAlphabet（約1.3億円）：TPU地主＋Anthropicランレート受益</b>。アドバンテスト/FormFactor・Lumentum/Coherent・日東紡・キオクシア継続。銀行ETF1615・MSFT・セイコーで金利/インフレ対応。</div>
+      </div>
+
+      <div class="ment">
+        <div class="who">藤沢数希</div>
+        <div class="claim">【★9/1再要約・第746号 2026/8/31最新】AI規制論への反論＝AIウェイト公開後は回収不可・中国オープンウェイト戦略は後発の合理的最適解。WAICO（世界AI協力機構）＝AI版一帯一路。規制は軍拡自体を止めない→世界中が半導体を買い続ける。<b>NVIDIA Q2超好決算（売上$96.2B +106%・DC+117%）</b>。Anthropic 2兆ドルIPO・ARR650億ドル超。SaaS株急騰（CRWD+21%・Salesforce+22%）＝AI活用高付加価値化の再評価。<b>キオクシア強気継続（年末目標21万円）・メモリ御三家PER4倍台＝歴史的ミスプライス</b>。中国株強気・金/BTC/ハンセンロング継続。</div>
+      </div>
+
+      <div class="ment">
+        <div class="who">後藤達也</div>
+        <div class="claim">【8/11再要約・最新】日銀9月（9/17-18）利上げ観測が「<b>基本シナリオ候補</b>」へ格上げ。3要因＝①ベッセント財務長官が植田総裁に間接的利上げ促進②高市総理周辺「急激でなければ口出しせず」に転換③日銀内「利上げ遅れの打撃」を意識するトーン変化。条件分岐＝株急落or円高進行なら急ぐ必要薄れる。ビハインド・ザ・カーブ懸念継続。売買callなし・構造理解の補完レンズ。</div>
+      </div>
+
+      <div class="insight">
+        <span class="ilabel">メンター共通解：</span>5者の一致点は「<b>AIインフラの構造的強気は本物（NVIDIA Q2トリプル超過が象徴）だが、短期は米10年債4.75%とタカ派FRB＋日銀9月利上げが2週間内に集中する最大の分水嶺</b>」。①AIインフラCapEx軍拡は止まらずツルハシ勢（Broadcom/TSMC/日東紡/アドバンテスト）が受益不変（藤沢：スケーリング則で軍拡は止まらない／中島：ソブリンAIでNVIDIA堀深化）。②GOOGL（Alphabet）割安×触媒の共通解＝ゆな最大ポジ（TPU地主・Anthropicランレート）×中島割安テーゼが一致し、本ブリーフの最優先買いと直結。③今週〜2週間の分水嶺＝じっちゃま「10年債4.75%死守できるかが全て（現4.73%目前）」・後藤「日銀9月利上げが基本シナリオ候補」・藤沢「SaaS株急騰は局所的追い風」。統合解＝<b>長期はAIプラットフォーム（GOOGL/MSFT）とツルハシに寄せつつ、SMH等rich保有をトリムしてキャッシュを12-13%へ復元し、9/4 NFP→9/11 CPI→9/16-17 FOMC/9/17-18 日銀の連続イベントに備える「強気を維持しながら余力を作る」が核</b>。
+      </div>
+    </div>
+  </section>
+
+  <div class="foot">
+    ソース：保有＝Money Forward実値 / じっちゃま（広瀬隆雄）/ 中島聡 / ゆな先生 / 藤沢数希（fujisawa-finance）/ 後藤達也 / マクロ＝FRED + Yahoo / カレンダー＝WebSearch。<br>
+    ※保有の診断・売買発議・PER採点は Value タブをご覧ください。生成：MulmoClaude（版ID：2026-09-01-0509 / B2検証済み）。投資助言ではなく壁打ち材料です。
+  </div>
+
+</div>
+
+<script>
+function toggleMask(){
+  var masked=document.body.classList.toggle('masked');
+  document.querySelectorAll('.maskable').forEach(function(el){
+    if(!el.dataset.raw) el.dataset.raw=el.textContent;
+    el.textContent=masked ? el.dataset.raw.replace(/[0-9]/g,'*') : el.dataset.raw;
+  });
+  document.getElementById('eye-open').style.display=masked?'none':'';
+  document.getElementById('eye-closed').style.display=masked?'':'none';
+}
+(function(){
+  var m=document.querySelectorAll('.maskable');
+  if(m[0])m[0].dataset.raw='¥586,705,882';
+  if(m[1])m[1].dataset.raw='¥541,299,395';
+  if(m[2])m[2].dataset.raw='¥23,269,058';
+  document.body.classList.add('masked');
+  document.getElementById('eye-open').style.display='none';
+  document.getElementById('eye-closed').style.display='';
+})();
+</script>
+</body>
+</html>
