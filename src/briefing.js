@@ -10,6 +10,184 @@
 // 中身は自己完結のモバイルHTML（MulmoClaude の週次タスクが生成・コミットする）。
 // ══════════════════════════════════════════════════════════════
 
+import { fetchFinnhubQuote, toFinnhubSymbol } from './data-finnhub.js';
+import { getHistoricalChangePct } from './portfolio-calc.js';
+import { state } from './state.js';
+import { setHistoricalEntry } from './historical-cache.js';
+import { fetchViaProxy, applySplitCorrection } from './data-yahoo.js';
+
+// ── リチウム監視カード ──────────────────────────────────────────
+// REMXの保有前提（リチウム回復基調）を常時監視。
+// プロキシ: LIT（Global X Lithium & Battery Tech ETF）/ ALB（Albemarle）
+const _LIT_PROXIES = [
+  { symbol: 'LIT', name: 'LIT', desc: 'Global X Lithium ETF' },
+  { symbol: 'ALB', name: 'ALB', desc: 'Albemarle（リチウム最大手）' },
+];
+
+/** リチウム監視カードを描画するコンテナ */
+let _litCardEl = null;
+
+/**
+ * 1銘柄の履歴データを historicalCache に読み込む（未キャッシュ時のみ）
+ * @param {string} symbol
+ * @param {string} range
+ */
+async function _ensureHistory(symbol, range) {
+  if (state.historicalCache[range]?.[symbol]) return;
+  if (!state.historicalCache[range]) state.historicalCache[range] = {};
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=${range}`;
+  const data = await fetchViaProxy(url, 7000, false);
+  if (!data) return;
+  const result = data?.chart?.result?.[0];
+  if (!result) return;
+  const timestamps = result.timestamp || [];
+  const adjCloses = result.indicators?.adjclose?.[0]?.adjclose || [];
+  const rawCloses = result.indicators?.quote?.[0]?.close || [];
+  const closes = adjCloses.length ? adjCloses : rawCloses;
+  const entries = timestamps
+    .map((ts, i) => ({ date: new Date(ts * 1000), close: closes[i] }))
+    .filter(p => p.close != null && isFinite(p.close));
+  await setHistoricalEntry(range, symbol, applySplitCorrection(entries));
+}
+
+/**
+ * 200日移動平均比でリチウム市況の状態を判定する
+ * 200DMA比 > +5%: 回復基調🟢 / -5%〜+5%: 中立🟡 / < -5%: 崩れ警戒🔴
+ * @param {string} symbol
+ * @returns {{ status: 'good'|'ok'|'warn', label: string, detail: string }|null}
+ */
+function _calcLitStatus(symbol) {
+  const data = state.historicalCache['1y']?.[symbol];
+  if (!data || data.length < 30) return null;
+  const currentPrice = data[data.length - 1].close;
+  const ma200len = Math.min(200, data.length);
+  const slice = data.slice(-ma200len);
+  const dma200 = slice.reduce((s, d) => s + d.close, 0) / slice.length;
+  const ratio = (currentPrice - dma200) / dma200 * 100;
+  if (ratio > 5) return { status: 'good', label: '回復基調', detail: `200DMA比+${ratio.toFixed(1)}%` };
+  if (ratio >= -5) return { status: 'ok',   label: '中立',     detail: `200DMA比${ratio.toFixed(1)}%` };
+  return { status: 'warn', label: '崩れ警戒', detail: `200DMA比${ratio.toFixed(1)}%` };
+}
+
+/**
+ * フォーマット済み騰落率文字列を返す（null時は "—"）
+ * @param {number|null} pct
+ * @returns {string}
+ */
+function _fmtPct(pct) {
+  if (pct == null || !isFinite(pct)) return '—';
+  return `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`;
+}
+
+/**
+ * リチウム監視カードを Briefing パネル上部に描画する
+ * @param {HTMLElement} panel
+ */
+async function _renderLithiumCard(panel) {
+  if (_litCardEl && panel.contains(_litCardEl)) {
+    _litCardEl.remove();
+  }
+  const card = document.createElement('div');
+  card.className = 'lit-card';
+  _litCardEl = card;
+
+  const header = document.createElement('div');
+  header.className = 'lit-card-header';
+  const titleEl = document.createElement('span');
+  titleEl.className = 'lit-card-title';
+  titleEl.textContent = 'リチウム市況モニタ';
+  const noteEl = document.createElement('span');
+  noteEl.className = 'lit-card-note';
+  noteEl.textContent = 'プロキシ連動（現物スポットではない）';
+  header.append(titleEl, noteEl);
+  card.appendChild(header);
+
+  const contextEl = document.createElement('div');
+  contextEl.className = 'lit-card-context';
+  contextEl.textContent = 'REMX保有の前提＝リチウム回復。崩れたら REMX 逆風（$15/kg割れ相当が警戒水準）';
+  card.appendChild(contextEl);
+
+  const rows = document.createElement('div');
+  rows.className = 'lit-rows';
+  card.appendChild(rows);
+  panel.insertBefore(card, panel.firstChild);
+
+  await Promise.all(_LIT_PROXIES.map(async (proxy) => {
+    const row = document.createElement('div');
+    row.className = 'lit-row';
+
+    const nameEl = document.createElement('span');
+    nameEl.className = 'lit-name';
+    nameEl.textContent = proxy.name;
+
+    const descEl = document.createElement('span');
+    descEl.className = 'lit-desc';
+    descEl.textContent = proxy.desc;
+
+    const priceEl = document.createElement('span');
+    priceEl.className = 'lit-price';
+    priceEl.textContent = '—';
+
+    const dayEl = document.createElement('span');
+    dayEl.className = 'lit-pct';
+    dayEl.textContent = '1d: —';
+
+    const weekEl = document.createElement('span');
+    weekEl.className = 'lit-pct';
+    weekEl.textContent = '1w: —';
+
+    const monthEl = document.createElement('span');
+    monthEl.className = 'lit-pct';
+    monthEl.textContent = '1m: —';
+
+    const badgeEl = document.createElement('span');
+    badgeEl.className = 'lit-badge';
+    badgeEl.textContent = '…';
+
+    row.append(nameEl, descEl, priceEl, dayEl, weekEl, monthEl, badgeEl);
+    rows.appendChild(row);
+
+    try {
+      await _ensureHistory(proxy.symbol, '1y');
+
+      const fSym = toFinnhubSymbol(proxy.symbol);
+      const quote = await fetchFinnhubQuote(fSym);
+      const price = (!quote?._err && quote?.price) ? quote.price : null;
+      const dayPct = (!quote?._err && quote?.dayPct != null) ? quote.dayPct : null;
+
+      if (price != null) {
+        priceEl.textContent = `$${price.toFixed(2)}`;
+      }
+      const dayPctVal = dayPct ?? getHistoricalChangePct(proxy.symbol, '1d');
+      const weekPct = getHistoricalChangePct(proxy.symbol, '1w');
+      const monthPct = getHistoricalChangePct(proxy.symbol, '1m');
+
+      const fmtDayPct = _fmtPct(dayPctVal);
+      dayEl.textContent = `1d: ${fmtDayPct}`;
+      dayEl.className = `lit-pct${dayPctVal != null && dayPctVal >= 0 ? ' lit-pos' : dayPctVal != null ? ' lit-neg' : ''}`;
+
+      const fmtWeekPct = _fmtPct(weekPct);
+      weekEl.textContent = `1w: ${fmtWeekPct}`;
+      weekEl.className = `lit-pct${weekPct != null && weekPct >= 0 ? ' lit-pos' : weekPct != null ? ' lit-neg' : ''}`;
+
+      const fmtMonthPct = _fmtPct(monthPct);
+      monthEl.textContent = `1m: ${fmtMonthPct}`;
+      monthEl.className = `lit-pct${monthPct != null && monthPct >= 0 ? ' lit-pos' : monthPct != null ? ' lit-neg' : ''}`;
+
+      const status = _calcLitStatus(proxy.symbol);
+      if (status) {
+        badgeEl.textContent = status.label;
+        badgeEl.title = status.detail;
+        badgeEl.className = `lit-badge lit-badge-${status.status}`;
+      } else {
+        badgeEl.textContent = '—';
+      }
+    } catch {
+      badgeEl.textContent = 'エラー';
+    }
+  }));
+}
+
 let _loaded = false;
 /** @type {HTMLIFrameElement|null} */
 let _frame = null;
@@ -106,6 +284,8 @@ export function renderBriefing(force = false) {
       if (!latestUrl) throw new Error('invalid briefing path');
 
       panel.textContent = '';
+      _renderLithiumCard(panel);
+
       const wrap = document.createElement('div');
       wrap.className = 'bf-wrap';
 

@@ -305,6 +305,45 @@ table.t td { font-size: var(--fs-sm); font-weight: 700; border-bottom: 1px solid
 }
 .bf-past-select:hover { border-color: var(--accent); }
 
+/* ── リチウム市況モニタカード（#611）── */
+.lit-card {
+  width: 100%; max-width: 600px; margin-inline: auto; box-sizing: border-box;
+  padding: 12px 14px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--r-card);
+  margin-block: 10px;
+}
+.lit-card-header {
+  display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px;
+}
+.lit-card-title {
+  font-size: var(--fs-base); font-weight: 700; color: var(--text);
+}
+.lit-card-note {
+  font-size: var(--fs-xs); color: var(--text3);
+}
+.lit-card-context {
+  font-size: var(--fs-xs); color: var(--text2); margin-bottom: 10px; line-height: 1.5;
+}
+.lit-rows { display: flex; flex-direction: column; gap: 8px; }
+.lit-row {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 6px;
+  padding: 6px 0; border-top: 1px solid var(--border2);
+}
+.lit-name { font-size: var(--fs-base); font-weight: 700; color: var(--text); min-width: 36px; }
+.lit-desc { font-size: var(--fs-xs); color: var(--text2); flex: 1 1 auto; }
+.lit-price { font-size: var(--fs-base); font-weight: 600; color: var(--text); white-space: nowrap; }
+.lit-pct { font-size: var(--fs-sm); color: var(--text2); white-space: nowrap; }
+.lit-pct.lit-pos { color: var(--tone-good); }
+.lit-pct.lit-neg { color: var(--tone-warn); }
+.lit-badge {
+  font-size: var(--fs-xs); font-weight: 700; padding: 2px 7px;
+  border-radius: var(--r-pill); background: var(--surface2); color: var(--text2);
+  white-space: nowrap; margin-left: auto;
+}
+.lit-badge.lit-badge-good { background: color-mix(in srgb, var(--tone-good) 15%, transparent); color: var(--tone-good); }
+.lit-badge.lit-badge-ok   { background: color-mix(in srgb, var(--tone-ok) 15%, transparent);   color: var(--tone-ok); }
+.lit-badge.lit-badge-warn { background: color-mix(in srgb, var(--tone-warn) 15%, transparent); color: var(--tone-warn); }
+
 /* ── シミュレーションバー（ヒートマップパネル内）── 横スクロール可能1行 */
 .sim-bar {
   display: flex;
