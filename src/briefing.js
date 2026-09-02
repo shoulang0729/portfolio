@@ -8,7 +8,14 @@
 // ヘッダ/セクション見出しを sticky 固定）。過去号は下部のプルダウンで切替。
 // 「今すぐ生成」リンクは本体HTMLの固定ヘッダ内に移動済み（self-contained）。
 // 中身は自己完結のモバイルHTML（MulmoClaude の週次タスクが生成・コミットする）。
+//
+// #611: リチウム市況モニタカードを Briefing タブ上部に追加
+//   - プロキシ: LIT（Global X Lithium & Battery Tech ETF）
+//   - 状態バッジ: 現値 vs 200DMA（相対指標）で 🟢/🟡/🔴 判定
+//   - 「現物スポットではなくプロキシ連動」注記を常時表示
 // ══════════════════════════════════════════════════════════════
+
+import { fetchViaProxy } from './data-yahoo.js';
 
 let _loaded = false;
 /** @type {HTMLIFrameElement|null} */
@@ -79,6 +86,135 @@ function _ensureResizeFit() {
   window.addEventListener('resize', _fitFrame);
 }
 
+// ══════════════════════════════════════════════════════════════
+// LITHIUM MONITOR (#611)
+// ══════════════════════════════════════════════════════════════
+
+/** LIT の価格データキャッシュ（タブを閉じるまで再フェッチしない） */
+let _litData = null;
+let _litFetching = false;
+
+/**
+ * LIT（Global X Lithium & Battery Tech ETF）の価格データを Yahoo Finance から取得し
+ * リチウム市況モニタカードを描画する。
+ * 状態バッジは「現値 vs 200DMA」の相対指標で判定（絶対値キャリブレーション不要）:
+ *   🟢 回復基調: 現値 > 200DMA * 1.02
+ *   🟡 中立: 現値が 200DMA ±2% の範囲内
+ *   🔴 崩れ警戒: 現値 < 200DMA * 0.98
+ * @param {HTMLElement} container - カードを挿入する DOM 要素
+ */
+async function _renderLithiumMonitor(container) {
+  const card = document.createElement('div');
+  card.className = 'bf-lithium-card';
+  card.innerHTML = '<div class="bf-lithium-loading">リチウム市況データ取得中…</div>';
+  container.insertBefore(card, container.firstChild);
+
+  if (!_litData && !_litFetching) {
+    _litFetching = true;
+    try {
+      const url = 'https://query1.finance.yahoo.com/v8/finance/chart/LIT?interval=1d&range=1y';
+      _litData = await fetchViaProxy(url, 10000, false);
+    } catch {
+      _litData = null;
+    } finally {
+      _litFetching = false;
+    }
+  }
+
+  const result = _litData?.chart?.result?.[0];
+  if (!result) {
+    card.innerHTML = '<div class="bf-lithium-loading bf-lithium-err">リチウムプロキシデータ取得失敗</div>';
+    return;
+  }
+
+  const closes = (result.indicators?.adjclose?.[0]?.adjclose || result.indicators?.quote?.[0]?.close || []).filter(
+    /** @param {any} v */ (v) => typeof v === 'number' && isFinite(v)
+  );
+  if (closes.length < 5) {
+    card.innerHTML = '<div class="bf-lithium-loading bf-lithium-err">データ不足</div>';
+    return;
+  }
+
+  const current = closes[closes.length - 1];
+  const prev1d = closes[closes.length - 2] || current;
+  const prev1w = closes[Math.max(0, closes.length - 6)] || current;
+  const prev1m = closes[Math.max(0, closes.length - 22)] || current;
+
+  const pct1d = ((current - prev1d) / prev1d) * 100;
+  const pct1w = ((current - prev1w) / prev1w) * 100;
+  const pct1m = ((current - prev1m) / prev1m) * 100;
+
+  const dma200 = closes.length >= 200
+    ? closes.slice(-200).reduce((s, v) => s + v, 0) / 200
+    : closes.reduce((s, v) => s + v, 0) / closes.length;
+
+  const ratio = current / dma200;
+  let badge, badgeClass, statusText;
+  if (ratio >= 1.02) {
+    badge = '🟢';
+    badgeClass = 'bf-li-good';
+    statusText = '回復基調';
+  } else if (ratio < 0.98) {
+    badge = '🔴';
+    badgeClass = 'bf-li-warn';
+    statusText = '崩れ警戒';
+  } else {
+    badge = '🟡';
+    badgeClass = 'bf-li-neu';
+    statusText = '中立';
+  }
+
+  /**
+   * @param {number} pct
+   * @returns {string}
+   */
+  function fmtPct(pct) {
+    const sign = pct >= 0 ? '+' : '';
+    return `${sign}${pct.toFixed(1)}%`;
+  }
+
+  /**
+   * @param {number} pct
+   * @returns {string}
+   */
+  function pctClass(pct) {
+    return pct >= 0 ? 'bf-li-pos' : 'bf-li-neg';
+  }
+
+  card.innerHTML = `
+    <div class="bf-lithium-header">
+      <span class="bf-lithium-title">リチウム市況モニタ</span>
+      <span class="bf-lithium-badge ${badgeClass}">${badge} ${statusText}</span>
+    </div>
+    <div class="bf-lithium-proxy-note">プロキシ連動（現物スポットではない）: LIT（Global X Lithium &amp; Battery Tech ETF）</div>
+    <div class="bf-lithium-body">
+      <div class="bf-lithium-price">
+        <span class="bf-li-label">現値</span>
+        <span class="bf-li-val">$${current.toFixed(2)}</span>
+      </div>
+      <div class="bf-lithium-changes">
+        <span class="bf-li-change-item">
+          <span class="bf-li-label">1d</span>
+          <span class="bf-li-chg ${pctClass(pct1d)}">${fmtPct(pct1d)}</span>
+        </span>
+        <span class="bf-li-change-item">
+          <span class="bf-li-label">1w</span>
+          <span class="bf-li-chg ${pctClass(pct1w)}">${fmtPct(pct1w)}</span>
+        </span>
+        <span class="bf-li-change-item">
+          <span class="bf-li-label">1m</span>
+          <span class="bf-li-chg ${pctClass(pct1m)}">${fmtPct(pct1m)}</span>
+        </span>
+        <span class="bf-li-change-item">
+          <span class="bf-li-label">vs 200DMA</span>
+          <span class="bf-li-chg ${pctClass(ratio - 1)}">${fmtPct((ratio - 1) * 100)}</span>
+        </span>
+      </div>
+    </div>
+    <div class="bf-lithium-context">REMX保有の前提＝リチウム回復。崩れたら REMX 逆風（判断基準: 現値 vs 200DMA）</div>
+  `;
+}
+
 /**
  * Briefing タブを描画する（初回のみ自動ロード、force で再読込）
  * @param {boolean} [force]
@@ -108,6 +244,8 @@ export function renderBriefing(force = false) {
       panel.textContent = '';
       const wrap = document.createElement('div');
       wrap.className = 'bf-wrap';
+
+      _renderLithiumMonitor(wrap);
 
       const frame = document.createElement('iframe');
       frame.className = 'bf-frame';
@@ -167,6 +305,7 @@ export function renderBriefing(force = false) {
 
 /** 再読み込み（ツールバーの ↻ ボタンから） */
 export function reloadBriefing() {
+  _litData = null;
   renderBriefing(true);
 }
 

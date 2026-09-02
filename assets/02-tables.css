@@ -305,6 +305,35 @@ table.t td { font-size: var(--fs-sm); font-weight: 700; border-bottom: 1px solid
 }
 .bf-past-select:hover { border-color: var(--accent); }
 
+/* ── リチウム市況モニタカード (#611) ── */
+.bf-lithium-card {
+  width: 100%; max-width: 600px; margin-inline: auto; box-sizing: border-box;
+  padding: 12px 14px 10px; border-bottom: 1px solid var(--border);
+  background: var(--surface); flex: 0 0 auto;
+}
+.bf-lithium-loading { padding: 8px 0; font-size: var(--fs-sm); color: var(--text2); text-align: center; }
+.bf-lithium-err { color: var(--tone-warn); }
+.bf-lithium-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.bf-lithium-title { font-size: var(--fs-sm); font-weight: 700; color: var(--text); letter-spacing: 0.03em; }
+.bf-lithium-badge {
+  font-size: var(--fs-xs); font-weight: 700; padding: 2px 8px;
+  border-radius: var(--r-pill); border: 1px solid transparent;
+}
+.bf-li-good { color: var(--tone-good); border-color: var(--tone-good); background: color-mix(in srgb, var(--tone-good) 10%, transparent); }
+.bf-li-warn { color: var(--tone-warn); border-color: var(--tone-warn); background: color-mix(in srgb, var(--tone-warn) 10%, transparent); }
+.bf-li-neu  { color: var(--tone-ok);   border-color: var(--tone-ok);   background: color-mix(in srgb, var(--tone-ok)   10%, transparent); }
+.bf-lithium-proxy-note { font-size: var(--fs-xs); color: var(--text3); margin-bottom: 8px; }
+.bf-lithium-body { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+.bf-lithium-price { display: flex; align-items: baseline; gap: 5px; }
+.bf-li-label { font-size: var(--fs-xs); color: var(--text2); }
+.bf-li-val { font-size: var(--fs-md); font-weight: 700; color: var(--text); }
+.bf-lithium-changes { display: flex; gap: 10px; flex-wrap: wrap; }
+.bf-li-change-item { display: flex; align-items: baseline; gap: 3px; }
+.bf-li-chg { font-size: var(--fs-sm); font-weight: 600; }
+.bf-li-pos { color: var(--tone-good); }
+.bf-li-neg { color: var(--tone-warn); }
+.bf-lithium-context { font-size: var(--fs-xs); color: var(--text2); border-left: 2px solid var(--border); padding-left: 8px; }
+
 /* ── シミュレーションバー（ヒートマップパネル内）── 横スクロール可能1行 */
 .sim-bar {
   display: flex;
