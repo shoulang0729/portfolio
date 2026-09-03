@@ -278,6 +278,36 @@ table.t td { font-size: var(--fs-sm); font-weight: 700; border-bottom: 1px solid
 .tab-panel { display: block; }
 .tab-panel[hidden] { display: none; }
 
+/* ── リチウム市況モニターカード（#611） ── */
+.lit-card {
+  width: 100%; max-width: 600px; margin-inline: auto; box-sizing: border-box;
+  padding: 12px 14px; border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.lit-card-loading { font-size: var(--fs-sm); color: var(--text2); padding: 6px 0; }
+.lit-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.lit-card-title { font-size: var(--fs-sm); font-weight: 700; color: var(--text); letter-spacing: 0.02em; }
+.lit-badge {
+  font-size: var(--fs-xs); font-weight: 700; padding: 2px 8px;
+  border-radius: var(--r-pill); background: var(--surface2); color: var(--text2);
+}
+.lit-badge-good { background: rgba(79,138,77,0.15); color: var(--tone-good); }
+.lit-badge-warn { background: rgba(194,96,63,0.15); color: var(--tone-warn); }
+.lit-badge-neu  { background: var(--surface2); color: var(--text2); }
+.lit-card-body { display: flex; flex-direction: column; gap: 6px; }
+.lit-proxy-row { display: flex; align-items: baseline; gap: 8px; }
+.lit-proxy-label { font-size: var(--fs-sm); color: var(--text2); }
+.lit-proxy-price { font-size: var(--fs-md); font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; margin-left: auto; }
+.lit-pct-row { display: flex; gap: 16px; }
+.lit-pct-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.lit-pct-lbl { font-size: var(--fs-xs); color: var(--text3); font-weight: 600; letter-spacing: 0.05em; }
+.lit-pct-val { font-size: var(--fs-sm); font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text2); }
+.lit-pct-val.pos { color: var(--tone-good); }
+.lit-pct-val.neg { color: var(--tone-warn); }
+.lit-card-note { font-size: var(--fs-sm); font-weight: 600; color: var(--text); }
+.lit-card-context { font-size: var(--fs-xs); color: var(--text2); }
+.lit-card-disclaimer { font-size: var(--fs-xs); color: var(--text3); font-style: italic; }
+
 /* ── 週次 Briefing タブ ── */
 /* A方式: パネルは単一スクロール（iframe を残り高さにフィット、本体HTMLが内部スクロール） */
 #panel-briefing { padding: 0; overflow: hidden; }
