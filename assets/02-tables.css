@@ -305,6 +305,44 @@ table.t td { font-size: var(--fs-sm); font-weight: 700; border-bottom: 1px solid
 }
 .bf-past-select:hover { border-color: var(--accent); }
 
+/* ── リチウム市況モニタカード（Briefing タブ）── */
+.lit-card {
+  width: 100%; max-width: 600px; margin-inline: auto; box-sizing: border-box;
+  padding: 12px 14px; border-bottom: 1px solid var(--border); background: var(--surface);
+}
+.lit-loading { font-size: var(--fs-sm); color: var(--text2); padding: 4px 0; }
+.lit-header {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 4px;
+}
+.lit-title { font-size: var(--fs-sm); font-weight: 700; color: var(--text2); letter-spacing: 0.04em; }
+.lit-badge {
+  font-size: var(--fs-sm); font-weight: 700; padding: 2px 8px;
+  border-radius: 20px; white-space: nowrap;
+}
+.lit-badge-good { background: color-mix(in srgb, var(--tone-good) 15%, transparent); color: var(--tone-good); }
+.lit-badge-ok   { background: color-mix(in srgb, var(--tone-ok)   15%, transparent); color: var(--tone-ok); }
+.lit-badge-warn { background: color-mix(in srgb, var(--tone-warn) 15%, transparent); color: var(--tone-warn); }
+.lit-badge-neu  { background: var(--surface2); color: var(--text2); }
+.lit-subtitle { font-size: var(--fs-sm); color: var(--text2); margin-bottom: 8px; }
+.lit-proxies { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
+.lit-proxy {
+  display: flex; align-items: baseline; gap: 8px;
+  font-size: var(--fs-base); font-variant-numeric: tabular-nums;
+}
+.lit-proxy-sub { opacity: 0.75; }
+.lit-sym { font-weight: 700; color: var(--text); min-width: 32px; }
+.lit-price { color: var(--text); font-weight: 600; }
+.lit-pcts { display: flex; gap: 8px; font-size: var(--fs-sm); }
+.lit-pos { color: var(--pos); }
+.lit-neg { color: var(--neg); }
+.lit-dma-row {
+  display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px;
+  font-size: var(--fs-sm); color: var(--text2);
+}
+.lit-dma-label { font-weight: 600; color: var(--text); }
+.lit-dma-val { font-variant-numeric: tabular-nums; color: var(--text); }
+.lit-dma-note { color: var(--text3); font-size: var(--fs-xs); }
+
 /* ── シミュレーションバー（ヒートマップパネル内）── 横スクロール可能1行 */
 .sim-bar {
   display: flex;

@@ -10,6 +10,152 @@
 // 中身は自己完結のモバイルHTML（MulmoClaude の週次タスクが生成・コミットする）。
 // ══════════════════════════════════════════════════════════════
 
+import { fetchLivePrice, fetchSymbolHistory } from './data.js';
+import { state } from './state.js';
+
+const LIT_SYMBOL = 'LIT';
+const ALB_SYMBOL = 'ALB';
+
+/**
+ * LIT の 200 日移動平均を state.historicalCache['1y'] から計算する。
+ * 1y データは最大 252 営業日（約1年）。200日分が揃わない場合は揃う範囲で計算。
+ * @param {string} symbol
+ * @returns {number|null}
+ */
+function _calc200DMA(symbol) {
+  const data = state.historicalCache['1y']?.[symbol];
+  if (!data || data.length < 20) return null;
+  const slice = data.slice(-200);
+  const sum = slice.reduce((acc, d) => acc + d.close, 0);
+  return sum / slice.length;
+}
+
+/**
+ * 期間騰落率を historicalCache から取得する（1d/1w/1m）。
+ * 1d は最後の2点、1w は約5営業日前、1m は約21営業日前。
+ * @param {string} symbol
+ * @param {'1d'|'1w'|'1m'} period
+ * @returns {number|null}
+ */
+function _getPeriodPct(symbol, period) {
+  const data = state.historicalCache['1y']?.[symbol];
+  if (!data || data.length < 2) return null;
+  const last = data[data.length - 1].close;
+  let startIdx;
+  if (period === '1d') startIdx = data.length - 2;
+  else if (period === '1w') startIdx = Math.max(0, data.length - 6);
+  else startIdx = Math.max(0, data.length - 22);
+  const start = data[startIdx].close;
+  if (!start) return null;
+  return ((last - start) / start) * 100;
+}
+
+/**
+ * 現値と200DMAを比較してステータスを返す。
+ * @param {number|null} price
+ * @param {number|null} dma200
+ * @returns {{ badge: string, label: string, color: string }}
+ */
+function _litStatus(price, dma200) {
+  if (price == null || dma200 == null) {
+    return { badge: '—', label: 'データ取得中', color: 'neu' };
+  }
+  const pct = ((price - dma200) / dma200) * 100;
+  if (pct >= -5) {
+    return { badge: '🟢', label: '回復基調', color: 'good' };
+  } else if (pct >= -15) {
+    return { badge: '🟡', label: '中立', color: 'ok' };
+  } else {
+    return { badge: '🔴', label: '崩れ警戒', color: 'warn' };
+  }
+}
+
+/**
+ * 騰落率テキストの色クラスを返す
+ * @param {number|null} pct
+ * @returns {string}
+ */
+function _pctClass(pct) {
+  if (pct == null) return '';
+  return pct >= 0 ? 'lit-pos' : 'lit-neg';
+}
+
+/**
+ * 騰落率を符号付き文字列でフォーマット
+ * @param {number|null} pct
+ * @returns {string}
+ */
+function _fmtPct(pct) {
+  if (pct == null) return '—';
+  return `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`;
+}
+
+/** リチウム監視カードを描画して返す */
+async function _renderLithiumCard() {
+  const card = document.createElement('div');
+  card.className = 'lit-card';
+  card.id = 'lit-monitor-card';
+
+  card.innerHTML =
+    '<div class="lit-loading">リチウム市況データ取得中…</div>';
+
+  const [litLive, albLive] = await Promise.all([
+    fetchLivePrice(LIT_SYMBOL).catch(() => null),
+    fetchLivePrice(ALB_SYMBOL).catch(() => null),
+  ]);
+
+  await Promise.all([
+    fetchSymbolHistory(LIT_SYMBOL, '1y').catch(() => null),
+    fetchSymbolHistory(ALB_SYMBOL, '1y').catch(() => null),
+  ]);
+
+  const litPrice = (litLive && !litLive._err) ? litLive.price : null;
+  const litDayPct = (litLive && !litLive._err) ? litLive.dayPct : null;
+  const albPrice = (albLive && !albLive._err) ? albLive.price : null;
+  const albDayPct = (albLive && !albLive._err) ? albLive.dayPct : null;
+
+  const lit1wPct  = _getPeriodPct(LIT_SYMBOL, '1w');
+  const lit1mPct  = _getPeriodPct(LIT_SYMBOL, '1m');
+  const lit200dma = _calc200DMA(LIT_SYMBOL);
+  const status    = _litStatus(litPrice, lit200dma);
+
+  const litPriceStr = litPrice != null ? `$${litPrice.toFixed(2)}` : '—';
+  const albPriceStr = albPrice != null ? `$${albPrice.toFixed(2)}` : '—';
+  const dmaStr = lit200dma != null ? `$${lit200dma.toFixed(2)}` : '—';
+
+  card.innerHTML = `
+<div class="lit-header">
+  <span class="lit-title">リチウム市況モニタ</span>
+  <span class="lit-badge lit-badge-${status.color}">${status.badge} ${status.label}</span>
+</div>
+<div class="lit-subtitle">REMX保有の前提＝リチウム回復。崩れたら REMX 逆風。</div>
+<div class="lit-proxies">
+  <div class="lit-proxy">
+    <span class="lit-sym">LIT</span>
+    <span class="lit-price">${litPriceStr}</span>
+    <span class="lit-pcts">
+      <span class="${_pctClass(litDayPct)}">1d ${_fmtPct(litDayPct)}</span>
+      <span class="${_pctClass(lit1wPct)}">1w ${_fmtPct(lit1wPct)}</span>
+      <span class="${_pctClass(lit1mPct)}">1m ${_fmtPct(lit1mPct)}</span>
+    </span>
+  </div>
+  <div class="lit-proxy lit-proxy-sub">
+    <span class="lit-sym">ALB</span>
+    <span class="lit-price">${albPriceStr}</span>
+    <span class="lit-pcts">
+      <span class="${_pctClass(albDayPct)}">1d ${_fmtPct(albDayPct)}</span>
+    </span>
+  </div>
+</div>
+<div class="lit-dma-row">
+  <span class="lit-dma-label">LIT 200日移動平均</span>
+  <span class="lit-dma-val">${dmaStr}</span>
+  <span class="lit-dma-note">（LIT/ALB はリチウム現物スポットのプロキシ。現物価格ではありません）</span>
+</div>`;
+
+  return card;
+}
+
 let _loaded = false;
 /** @type {HTMLIFrameElement|null} */
 let _frame = null;
@@ -106,6 +252,14 @@ export function renderBriefing(force = false) {
       if (!latestUrl) throw new Error('invalid briefing path');
 
       panel.textContent = '';
+
+      _renderLithiumCard().then(card => {
+        const existing = panel.querySelector('#lit-monitor-card');
+        if (existing) existing.replaceWith(card);
+        else panel.insertBefore(card, panel.firstChild);
+        _fitFrame();
+      }).catch(() => {});
+
       const wrap = document.createElement('div');
       wrap.className = 'bf-wrap';
 
