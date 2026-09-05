@@ -10,11 +10,217 @@
 // 中身は自己完結のモバイルHTML（MulmoClaude の週次タスクが生成・コミットする）。
 // ══════════════════════════════════════════════════════════════
 
+import { fetchLivePrice, fetchSymbolHistory } from './data.js';
+import { state } from './state.js';
+
 let _loaded = false;
 /** @type {HTMLIFrameElement|null} */
 let _frame = null;
 let _themeObserver = null;
 let _resizeFit = false;
+
+// ══════════════════════════════════════════════
+// LITHIUM MONITOR CARD (#611)
+// ══════════════════════════════════════════════
+
+/** リチウム監視プロキシ銘柄定義 */
+const LITHIUM_PROXIES = [
+  { symbol: 'LIT',  label: 'LIT',  desc: 'Global X Lithium & Battery Tech ETF' },
+  { symbol: 'ALB',  label: 'ALB',  desc: 'Albemarle（リチウム最大手）' },
+];
+
+/**
+ * 1y 履歴データを使って 200 日移動平均を計算する。
+ * @param {string} symbol
+ * @returns {number|null}
+ */
+function _calc200DMA(symbol) {
+  const data = state.historicalCache?.['1y']?.[symbol];
+  if (!data || data.length < 10) return null;
+  const last200 = data.slice(-200);
+  const sum = last200.reduce((s, d) => s + d.close, 0);
+  return sum / last200.length;
+}
+
+/**
+ * プロキシ価格と 200DMA を比較して状態バッジを返す。
+ * - 現値が 200DMA より 5% 超 上: 回復基調🟢
+ * - 現値が 200DMA より 5% 超 下: 崩れ警戒🔴
+ * - それ以外: 中立🟡
+ * @param {number|null} price
+ * @param {number|null} dma200
+ * @returns {{label: string, cls: string}}
+ */
+function _statusBadge(price, dma200) {
+  if (price == null || dma200 == null || dma200 === 0) {
+    return { label: 'データ待ち', cls: 'lm-badge-neu' };
+  }
+  const diff = (price - dma200) / dma200;
+  if (diff > 0.05)  return { label: '回復基調', cls: 'lm-badge-good' };
+  if (diff < -0.05) return { label: '崩れ警戒', cls: 'lm-badge-warn' };
+  return { label: '中立', cls: 'lm-badge-neu' };
+}
+
+/**
+ * 期間騰落率を historicalCache から取得する（1d / 1w / 1m）。
+ * @param {string} symbol
+ * @param {'1d'|'1w'|'1m'} periodId
+ * @returns {number|null}
+ */
+function _getChangePct(symbol, periodId) {
+  const rangeMap = { '1d': '1y', '1w': '1y', '1m': '1y' };
+  const daysMap  = { '1d': 1, '1w': 7, '1m': 30 };
+  const range = rangeMap[periodId];
+  const data = state.historicalCache?.[range]?.[symbol];
+  if (!data || data.length < 2) return null;
+  if (periodId === '1d') {
+    const cur  = data[data.length - 1].close;
+    const prev = data[data.length - 2].close;
+    return ((cur - prev) / prev) * 100;
+  }
+  const last = data[data.length - 1];
+  const lastMs = last.date instanceof Date ? last.date.getTime() : new Date(last.date).getTime();
+  const target = new Date(lastMs - daysMap[periodId] * 86400000);
+  let start = data[0];
+  for (let i = data.length - 2; i >= 0; i--) {
+    if (data[i].date <= target) { start = data[i]; break; }
+  }
+  return ((last.close - start.close) / start.close) * 100;
+}
+
+/**
+ * 騰落率を色付き span にする。
+ * @param {number|null} pct
+ * @returns {HTMLElement}
+ */
+function _pctSpan(pct) {
+  const span = document.createElement('span');
+  if (pct == null) {
+    span.textContent = '–';
+    span.className = 'lm-neu';
+    return span;
+  }
+  const sign = pct >= 0 ? '+' : '';
+  span.textContent = `${sign}${pct.toFixed(1)}%`;
+  span.className = pct >= 0 ? 'lm-pos' : 'lm-neg';
+  return span;
+}
+
+/**
+ * リチウム市況監視カードを構築して返す（非同期）。
+ * @returns {Promise<HTMLElement>}
+ */
+async function _buildLithiumCard() {
+  const card = document.createElement('div');
+  card.className = 'lm-card';
+
+  const header = document.createElement('div');
+  header.className = 'lm-header';
+
+  const title = document.createElement('span');
+  title.className = 'lm-title';
+  title.textContent = 'リチウム市況モニタ';
+  header.appendChild(title);
+
+  const note = document.createElement('span');
+  note.className = 'lm-note';
+  note.textContent = 'プロキシ連動（現物スポットではない）';
+  header.appendChild(note);
+
+  card.appendChild(header);
+
+  const desc = document.createElement('p');
+  desc.className = 'lm-desc';
+  desc.textContent = 'REMX保有の前提＝リチウム回復。崩れたら REMX 逆風。';
+  card.appendChild(desc);
+
+  await Promise.all(LITHIUM_PROXIES.map(p => fetchSymbolHistory(p.symbol, '1y').catch(() => {})));
+
+  const livePrices = await Promise.allSettled(
+    LITHIUM_PROXIES.map(p => fetchLivePrice(p.symbol))
+  );
+
+  const rows = document.createElement('div');
+  rows.className = 'lm-rows';
+
+  for (const [i, proxy] of LITHIUM_PROXIES.entries()) {
+    const live = livePrices[i].status === 'fulfilled' ? livePrices[i].value : null;
+    const price  = live?.price ?? null;
+    const dayPct = live?.dayPct ?? _getChangePct(proxy.symbol, '1d');
+    const wkPct  = _getChangePct(proxy.symbol, '1w');
+    const moPct  = _getChangePct(proxy.symbol, '1m');
+    const dma200 = _calc200DMA(proxy.symbol);
+    const badge  = _statusBadge(price, dma200);
+
+    const row = document.createElement('div');
+    row.className = 'lm-row';
+
+    const left = document.createElement('div');
+    left.className = 'lm-left';
+
+    const sym = document.createElement('span');
+    sym.className = 'lm-sym';
+    sym.textContent = proxy.label;
+    left.appendChild(sym);
+
+    const bdg = document.createElement('span');
+    bdg.className = `lm-badge ${badge.cls}`;
+    bdg.textContent = badge.label;
+    left.appendChild(bdg);
+
+    const priceEl = document.createElement('span');
+    priceEl.className = 'lm-price';
+    priceEl.textContent = price != null ? `$${price.toFixed(2)}` : '–';
+    left.appendChild(priceEl);
+
+    row.appendChild(left);
+
+    const right = document.createElement('div');
+    right.className = 'lm-right';
+
+    const periods = [
+      { id: '1d', label: '1d', val: dayPct },
+      { id: '1w', label: '1w', val: wkPct },
+      { id: '1m', label: '1m', val: moPct },
+    ];
+    for (const period of periods) {
+      const cell = document.createElement('div');
+      cell.className = 'lm-cell';
+      const lbl = document.createElement('span');
+      lbl.className = 'lm-period';
+      lbl.textContent = period.label;
+      cell.appendChild(lbl);
+      cell.appendChild(_pctSpan(period.val));
+      right.appendChild(cell);
+    }
+
+    if (dma200 != null) {
+      const dmaCell = document.createElement('div');
+      dmaCell.className = 'lm-cell';
+      const dmaLbl = document.createElement('span');
+      dmaLbl.className = 'lm-period';
+      dmaLbl.textContent = '200DMA';
+      dmaCell.appendChild(dmaLbl);
+      const dmaVal = document.createElement('span');
+      dmaVal.className = 'lm-neu';
+      dmaVal.textContent = `$${dma200.toFixed(2)}`;
+      dmaCell.appendChild(dmaVal);
+      right.appendChild(dmaCell);
+    }
+
+    row.appendChild(right);
+    rows.appendChild(row);
+  }
+
+  card.appendChild(rows);
+
+  const trigger = document.createElement('p');
+  trigger.className = 'lm-trigger';
+  trigger.textContent = '下振れトリガー: LIT/ALB が 200DMA を 5%超下回る → 🔴崩れ警戒（REMX 逆風化のサイン。$15/kg 相当）';
+  card.appendChild(trigger);
+
+  return card;
+}
 
 /**
  * アプリの現在テーマを iframe 内ドキュメントに伝搬する。
@@ -90,22 +296,34 @@ export function renderBriefing(force = false) {
   if (_loaded && !force) return;
   panel.innerHTML = '<div class="bf-msg">読み込み中…</div>';
 
-  fetch(`data/briefings/index.json?_=${Date.now()}`)
-    .then((r) => {
+  Promise.all([
+    fetch(`data/briefings/index.json?_=${Date.now()}`).then(r => {
       if (!r.ok) throw new Error(`index ${r.status}`);
       return r.json();
-    })
-    .then((idx) => {
+    }),
+    _buildLithiumCard().catch(() => null),
+  ])
+    .then(([idx, lithiumCard]) => {
       const issues = (idx.issues || []).slice().sort((a, b) => (a.date < b.date ? 1 : -1));
+
+      panel.textContent = '';
+
+      if (lithiumCard) {
+        panel.appendChild(lithiumCard);
+      }
+
       if (!issues.length) {
-        panel.innerHTML = '<div class="bf-msg">まだ Briefing がありません。</div>';
+        const msg = document.createElement('div');
+        msg.className = 'bf-msg';
+        msg.textContent = 'まだ Briefing がありません。';
+        panel.appendChild(msg);
         return;
       }
+
       const latest = issues[0];
       const latestUrl = _briefingUrl(latest.path);
       if (!latestUrl) throw new Error('invalid briefing path');
 
-      panel.textContent = '';
       const wrap = document.createElement('div');
       wrap.className = 'bf-wrap';
 
@@ -167,6 +385,7 @@ export function renderBriefing(force = false) {
 
 /** 再読み込み（ツールバーの ↻ ボタンから） */
 export function reloadBriefing() {
+  _loaded = false;
   renderBriefing(true);
 }
 
