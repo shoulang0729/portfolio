@@ -8,7 +8,14 @@
 // ヘッダ/セクション見出しを sticky 固定）。過去号は下部のプルダウンで切替。
 // 「今すぐ生成」リンクは本体HTMLの固定ヘッダ内に移動済み（self-contained）。
 // 中身は自己完結のモバイルHTML（MulmoClaude の週次タスクが生成・コミットする）。
+//
+// リチウム監視カード（#611）: LIT（Global X Lithium & Battery Tech ETF）を
+// プロキシとして REMX 保有の前提（リチウム回復基調）を監視する。
 // ══════════════════════════════════════════════════════════════
+
+import { fetchLivePrice, fetchSymbolHistory } from './data.js';
+import { state } from './state.js';
+import { setHistoricalEntry } from './historical-cache.js';
 
 let _loaded = false;
 /** @type {HTMLIFrameElement|null} */
@@ -78,6 +85,164 @@ function _ensureResizeFit() {
   _resizeFit = true;
   window.addEventListener('resize', _fitFrame);
 }
+
+// ── リチウム監視カード（#611）────────────────────────────────────
+
+/** LIT の 1y 履歴から 200DMA を計算する（足りない場合は全期間平均）。*/
+function _compute200DMA(symbol) {
+  const data = state.historicalCache['1y']?.[symbol];
+  if (!data || data.length < 2) return null;
+  const slice = data.slice(-200);
+  const avg = slice.reduce((s, d) => s + d.close, 0) / slice.length;
+  return avg;
+}
+
+/** 騰落率フォーマット（+1.2% 形式）*/
+function _fmtPct(v) {
+  if (v == null) return '–';
+  return `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`;
+}
+
+/**
+ * symbol の hist 騰落率を historicalCache から取得する。
+ * @param {string} symbol
+ * @param {number} days
+ * @returns {number|null}
+ */
+function _histPct(symbol, days) {
+  const data = state.historicalCache['1y']?.[symbol];
+  if (!data || data.length < 2) return null;
+  const last = data[data.length - 1];
+  const lastMs = last.date instanceof Date ? last.date.getTime() : new Date(last.date).getTime();
+  const target = new Date(lastMs - days * 86400000);
+  let start = data[0];
+  for (let i = data.length - 2; i >= 0; i--) {
+    if (data[i].date <= target) { start = data[i]; break; }
+  }
+  return ((last.close - start.close) / start.close) * 100;
+}
+
+/**
+ * リチウム監視カードを panel の先頭に挿入する。
+ * LIT の現値・騰落率・200DMA との比較で状態バッジを表示する。
+ * @param {HTMLElement} panel
+ * @returns {Promise<void>}
+ */
+async function _renderLithiumCard(panel) {
+  const LIT_SYMBOL = 'LIT';
+
+  const card = document.createElement('div');
+  card.className = 'bf-lit-card';
+  card.setAttribute('role', 'region');
+  card.setAttribute('aria-label', 'リチウム市況モニタ');
+
+  const header = document.createElement('div');
+  header.className = 'bf-lit-header';
+
+  const titleEl = document.createElement('span');
+  titleEl.className = 'bf-lit-title';
+  titleEl.textContent = 'リチウム市況モニタ';
+
+  const badgeEl = document.createElement('span');
+  badgeEl.className = 'bf-lit-badge bf-lit-badge--loading';
+  badgeEl.textContent = '読込中';
+
+  header.append(titleEl, badgeEl);
+  card.appendChild(header);
+
+  const bodyEl = document.createElement('div');
+  bodyEl.className = 'bf-lit-body';
+  bodyEl.textContent = '取得中…';
+  card.appendChild(bodyEl);
+
+  const noteEl = document.createElement('p');
+  noteEl.className = 'bf-lit-note';
+  noteEl.textContent = 'プロキシ連動（現物スポットではない）。REMX保有の前提＝リチウム回復。崩れたら REMX 逆風。';
+  card.appendChild(noteEl);
+
+  panel.insertAdjacentElement('afterbegin', card);
+
+  try {
+    const [live] = await Promise.all([
+      fetchLivePrice(LIT_SYMBOL),
+      (async () => {
+        if (!state.historicalCache['1y']?.[LIT_SYMBOL] || state.historicalCache['1y'][LIT_SYMBOL].length < 10) {
+          const hist = await fetchSymbolHistory(LIT_SYMBOL, '1y');
+          if (hist && hist.length) await setHistoricalEntry('1y', LIT_SYMBOL, hist);
+        }
+      })(),
+    ]);
+
+    const price = live?.price ?? null;
+    const dayPct = live?.dayPct ?? null;
+    const w1Pct = _histPct(LIT_SYMBOL, 7);
+    const mo1Pct = _histPct(LIT_SYMBOL, 30);
+    const dma200 = _compute200DMA(LIT_SYMBOL);
+
+    let badge = '🟡 中立';
+    let badgeCls = 'bf-lit-badge--neutral';
+    let reason = '200DMA との比較ができません（データ不足）。';
+
+    if (dma200 != null && price != null) {
+      const devPct = ((price - dma200) / dma200) * 100;
+      if (devPct >= 0) {
+        badge = '🟢 回復基調';
+        badgeCls = 'bf-lit-badge--ok';
+        reason = `LIT が 200日移動平均線を上回っています（+${devPct.toFixed(1)}%）。リチウム回復基調を維持。`;
+      } else if (devPct >= -10) {
+        badge = '🟡 中立';
+        badgeCls = 'bf-lit-badge--neutral';
+        reason = `LIT が 200DMA をやや下回っています（${devPct.toFixed(1)}%）。注視が必要。`;
+      } else {
+        badge = '🔴 崩れ警戒';
+        badgeCls = 'bf-lit-badge--warn';
+        reason = `LIT が 200DMA を ${Math.abs(devPct).toFixed(1)}% 下回っています。REMX の逆風化に注意。`;
+      }
+    }
+
+    badgeEl.className = `bf-lit-badge ${badgeCls}`;
+    badgeEl.textContent = badge;
+
+    const priceStr = price != null ? `$${price.toFixed(2)}` : '–';
+    bodyEl.innerHTML = '';
+
+    const grid = document.createElement('div');
+    grid.className = 'bf-lit-grid';
+
+    const cells = [
+      { label: 'LIT 現値', value: priceStr },
+      { label: '前日比', value: _fmtPct(dayPct) },
+      { label: '1週間', value: _fmtPct(w1Pct) },
+      { label: '1ヶ月', value: _fmtPct(mo1Pct) },
+    ];
+
+    for (const { label, value } of cells) {
+      const cell = document.createElement('div');
+      cell.className = 'bf-lit-cell';
+      const lbl = document.createElement('span');
+      lbl.className = 'bf-lit-cell-label';
+      lbl.textContent = label;
+      const val = document.createElement('span');
+      val.className = 'bf-lit-cell-value';
+      val.textContent = value;
+      cell.append(lbl, val);
+      grid.appendChild(cell);
+    }
+
+    bodyEl.appendChild(grid);
+
+    const reasonEl = document.createElement('p');
+    reasonEl.className = 'bf-lit-reason';
+    reasonEl.textContent = reason;
+    bodyEl.appendChild(reasonEl);
+  } catch {
+    badgeEl.className = 'bf-lit-badge bf-lit-badge--neutral';
+    badgeEl.textContent = '🟡 取得失敗';
+    bodyEl.textContent = 'データの取得に失敗しました。';
+  }
+}
+
+// ── Briefing メイン描画 ────────────────────────────────────────────────────
 
 /**
  * Briefing タブを描画する（初回のみ自動ロード、force で再読込）
@@ -159,6 +324,8 @@ export function renderBriefing(force = false) {
         });
       }
       _loaded = true;
+
+      _renderLithiumCard(panel);
     })
     .catch(() => {
       panel.innerHTML = '<div class="bf-msg bf-err">Briefing の読み込みに失敗しました。</div>';

@@ -1191,3 +1191,66 @@ table.t td { font-size: var(--fs-sm); font-weight: 700; border-bottom: 1px solid
 /* KPI 期間増減の色（増＝赤／減＝緑・日本市場慣例。2026-07 資産総額カード置換） */
 .we-kpi .we-delta.up { color: var(--pos); }
 .we-kpi .we-delta.down { color: var(--neg); }
+
+/* ── リチウム監視カード（#611） ── */
+.bf-lit-card {
+  margin: 12px 12px 0;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.bf-lit-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.bf-lit-title {
+  font-size: var(--fs-base);
+  font-weight: 700;
+  color: var(--text);
+}
+.bf-lit-badge {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.bf-lit-badge--loading { background: var(--surface3); color: var(--text2); }
+.bf-lit-badge--ok      { background: color-mix(in srgb, var(--success) 18%, transparent); color: var(--success); }
+.bf-lit-badge--neutral { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+.bf-lit-badge--warn    { background: color-mix(in srgb, var(--danger) 18%, transparent); color: var(--danger); }
+.bf-lit-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.bf-lit-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: var(--surface2);
+  border-radius: 6px;
+  padding: 6px 4px;
+}
+.bf-lit-cell-label { font-size: var(--fs-xs); color: var(--text2); }
+.bf-lit-cell-value { font-size: var(--fs-sm); font-weight: 700; color: var(--text); }
+.bf-lit-reason {
+  font-size: var(--fs-sm);
+  color: var(--text2);
+  margin: 0 0 6px;
+}
+.bf-lit-note {
+  font-size: var(--fs-xs);
+  color: var(--text3);
+  margin: 0;
+  line-height: 1.5;
+}
+@media (max-width: 400px) {
+  .bf-lit-grid { grid-template-columns: repeat(2, 1fr); }
+}
