@@ -8,7 +8,10 @@
 // ヘッダ/セクション見出しを sticky 固定）。過去号は下部のプルダウンで切替。
 // 「今すぐ生成」リンクは本体HTMLの固定ヘッダ内に移動済み（self-contained）。
 // 中身は自己完結のモバイルHTML（MulmoClaude の週次タスクが生成・コミットする）。
+// リチウム監視カード（#611）をタブ上部に表示（REMX 保有前提モニタ）。
 // ══════════════════════════════════════════════════════════════
+
+import { buildLithiumCard } from './lithium-monitor.js';
 
 let _loaded = false;
 /** @type {HTMLIFrameElement|null} */
@@ -98,7 +101,15 @@ export function renderBriefing(force = false) {
     .then((idx) => {
       const issues = (idx.issues || []).slice().sort((a, b) => (a.date < b.date ? 1 : -1));
       if (!issues.length) {
-        panel.innerHTML = '<div class="bf-msg">まだ Briefing がありません。</div>';
+        panel.textContent = '';
+        const lc = buildLithiumCard();
+        lc.className = 'risk-card lm-card bf-lithium-card';
+        panel.appendChild(lc);
+        const msg = document.createElement('div');
+        msg.className = 'bf-msg';
+        msg.textContent = 'まだ Briefing がありません。';
+        panel.appendChild(msg);
+        _loaded = true;
         return;
       }
       const latest = issues[0];
@@ -106,6 +117,11 @@ export function renderBriefing(force = false) {
       if (!latestUrl) throw new Error('invalid briefing path');
 
       panel.textContent = '';
+
+      const lithiumCard = buildLithiumCard();
+      lithiumCard.className = 'risk-card lm-card bf-lithium-card';
+      panel.appendChild(lithiumCard);
+
       const wrap = document.createElement('div');
       wrap.className = 'bf-wrap';
 

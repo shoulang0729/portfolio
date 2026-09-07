@@ -279,8 +279,8 @@ table.t td { font-size: var(--fs-sm); font-weight: 700; border-bottom: 1px solid
 .tab-panel[hidden] { display: none; }
 
 /* ── 週次 Briefing タブ ── */
-/* A方式: パネルは単一スクロール（iframe を残り高さにフィット、本体HTMLが内部スクロール） */
-#panel-briefing { padding: 0; overflow: hidden; }
+/* リチウムカード追加に伴い overflow: auto に変更（#611） */
+#panel-briefing { padding: 0; overflow: auto; }
 .bf-wrap { display: flex; flex-direction: column; }
 .bf-msg { padding: 32px 16px; text-align: center; color: var(--text2); font-size: var(--fs-md); }
 .bf-msg.bf-err { color: var(--danger); }
@@ -304,6 +304,49 @@ table.t td { font-size: var(--fs-sm); font-weight: 700; border-bottom: 1px solid
   -webkit-tap-highlight-color: transparent;
 }
 .bf-past-select:hover { border-color: var(--accent); }
+
+/* ── リチウム監視カード（#611） ── */
+.bf-lithium-card {
+  margin: 12px 12px 0;
+  max-width: 600px;
+  margin-inline: auto;
+  margin-top: 12px;
+  width: calc(100% - 24px);
+}
+.lm-purpose {
+  font-size: var(--fs-sm); color: var(--text2); margin: 0 0 10px;
+}
+.lm-table-wrap { overflow-x: auto; margin-bottom: 10px; }
+.lm-table {
+  width: 100%; border-collapse: collapse; font-size: var(--fs-sm);
+}
+.lm-table th, .lm-table td {
+  padding: 5px 8px; text-align: right; white-space: nowrap;
+  border-bottom: 1px solid var(--border2);
+}
+.lm-table th { font-weight: 600; color: var(--text2); text-transform: uppercase; font-size: var(--fs-xs); }
+.lm-table th:first-child, .lm-table td:first-child { text-align: left; }
+.lm-sym { font-weight: 700; color: var(--text); font-size: var(--fs-sm); }
+.lm-price { font-variant-numeric: tabular-nums; color: var(--text); }
+.lm-ma { font-variant-numeric: tabular-nums; color: var(--text2); }
+.lm-pct { font-variant-numeric: tabular-nums; font-weight: 600; }
+.lm-pct.up   { color: var(--pos); }
+.lm-pct.down { color: var(--neg); }
+.lm-pct.neu  { color: var(--text3); }
+.lm-st { text-align: center; }
+.lm-badge { font-size: var(--fs-xs); }
+.lm-warn-note {
+  display: flex; align-items: flex-start; gap: 6px;
+  background: color-mix(in srgb, var(--tone-warn) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tone-warn) 35%, transparent);
+  border-radius: var(--r-chip); padding: 8px 10px; margin-bottom: 10px;
+  font-size: var(--fs-sm); color: var(--tone-warn); line-height: 1.45;
+}
+.lm-warn-note .ric { flex: none; margin-top: 1px; }
+.lm-proxy-note {
+  font-size: var(--fs-xs); color: var(--text3); margin: 0; line-height: 1.4;
+}
+.lm-fetch-err { font-size: var(--fs-sm); color: var(--text2); text-align: center; padding: 8px 0; }
 
 /* ── シミュレーションバー（ヒートマップパネル内）── 横スクロール可能1行 */
 .sim-bar {
