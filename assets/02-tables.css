@@ -305,6 +305,36 @@ table.t td { font-size: var(--fs-sm); font-weight: 700; border-bottom: 1px solid
 }
 .bf-past-select:hover { border-color: var(--accent); }
 
+/* ── リチウム市況モニターカード（#611）── */
+.bf-lit-card {
+  width: 100%; max-width: 600px; margin-inline: auto; box-sizing: border-box;
+  padding: 12px 14px; border-bottom: 1px solid var(--border);
+  background: var(--surface); display: flex; flex-direction: column; gap: 6px;
+}
+.bf-lit-hdr { display: flex; align-items: center; gap: 8px; }
+.bf-lit-title { font-size: var(--fs-sm); font-weight: 700; color: var(--text); }
+.bf-lit-tag {
+  font-size: var(--fs-xs); font-weight: 700; padding: 1px 6px;
+  border-radius: var(--r-pill); background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--accent);
+}
+.bf-lit-body { font-size: var(--fs-sm); color: var(--text2); }
+.bf-lit-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.bf-lit-proxy { display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap; }
+.bf-lit-sym { font-size: var(--fs-base); font-weight: 700; color: var(--text); }
+.bf-lit-price { font-size: var(--fs-base); font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
+.bf-lit-day { font-size: var(--fs-sm); font-weight: 700; font-variant-numeric: tabular-nums; }
+.bf-lit-day.pos { color: var(--tone-good); }
+.bf-lit-day.neg { color: var(--tone-warn); }
+.bf-lit-dma { font-size: var(--fs-xs); color: var(--text2); }
+.bf-lit-badge { font-size: var(--fs-sm); font-weight: 700; white-space: nowrap; padding: 2px 8px; border-radius: var(--r-pill); }
+.bf-lit-badge--good { background: color-mix(in srgb, var(--tone-good) 14%, transparent); color: var(--tone-good); }
+.bf-lit-badge--warn { background: color-mix(in srgb, var(--tone-ok)   14%, transparent); color: var(--tone-ok); }
+.bf-lit-badge--bad  { background: color-mix(in srgb, var(--tone-warn) 14%, transparent); color: var(--tone-warn); }
+.bf-lit-desc { font-size: var(--fs-sm); color: var(--text); }
+.bf-lit-context { font-size: var(--fs-xs); color: var(--text2); }
+.bf-lit-note { font-size: var(--fs-xs); color: var(--text3); border-top: 1px solid var(--border2); padding-top: 4px; }
+
 /* ── シミュレーションバー（ヒートマップパネル内）── 横スクロール可能1行 */
 .sim-bar {
   display: flex;
