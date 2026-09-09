@@ -281,6 +281,34 @@ table.t td { font-size: var(--fs-sm); font-weight: 700; border-bottom: 1px solid
 /* ── 週次 Briefing タブ ── */
 /* A方式: パネルは単一スクロール（iframe を残り高さにフィット、本体HTMLが内部スクロール） */
 #panel-briefing { padding: 0; overflow: hidden; }
+#panel-briefing:not([hidden]) { display: flex; flex-direction: column; }
+
+/* ── リチウム市況モニタカード（#611） ── */
+.lm-wrap { flex: 0 0 auto; max-width: 600px; margin-inline: auto; width: 100%; box-sizing: border-box; padding: 10px 12px 0; }
+.lm-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  padding: 12px 14px; font-size: var(--fs-sm);
+}
+.lm-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.lm-title { font-weight: 700; font-size: var(--fs-base); color: var(--text); }
+.lm-badge { font-size: var(--fs-xs); font-weight: 700; padding: 2px 8px; border-radius: var(--r-pill); white-space: nowrap; }
+.lm-status-ok      { background: color-mix(in srgb, #22c55e 18%, transparent); color: #16a34a; border: 1px solid color-mix(in srgb, #22c55e 30%, transparent); }
+.lm-status-warn    { background: color-mix(in srgb, #ef4444 15%, transparent); color: #dc2626; border: 1px solid color-mix(in srgb, #ef4444 25%, transparent); }
+.lm-status-neutral { background: var(--surface3); color: var(--text2); border: 1px solid var(--border); }
+.lm-purpose { color: var(--text2); font-size: var(--fs-xs); margin-bottom: 8px; line-height: 1.4; }
+.lm-rows { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+.lm-loading { color: var(--text2); font-size: var(--fs-xs); }
+.lm-row { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.lm-sym  { font-weight: 700; font-size: var(--fs-base); color: var(--text); min-width: 36px; }
+.lm-sym-desc { color: var(--text2); font-size: var(--fs-xs); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lm-price { font-weight: 600; font-size: var(--fs-sm); color: var(--text); }
+.lm-pct   { font-weight: 700; font-size: var(--fs-sm); }
+.lm-pos   { color: var(--pos); }
+.lm-neg   { color: var(--neg); }
+.lm-dma   { font-size: var(--fs-xs); color: var(--text2); margin-left: auto; }
+.lm-desc  { color: var(--text); font-size: var(--fs-xs); line-height: 1.5; margin-bottom: 6px; }
+.lm-proxy-note { color: var(--text3); font-size: var(--fs-xs); font-style: italic; }
+.bf-loading-wrap { flex: 1 1 auto; overflow: hidden; display: flex; flex-direction: column; }
 .bf-wrap { display: flex; flex-direction: column; }
 .bf-msg { padding: 32px 16px; text-align: center; color: var(--text2); font-size: var(--fs-md); }
 .bf-msg.bf-err { color: var(--danger); }

@@ -8,7 +8,10 @@
 // ヘッダ/セクション見出しを sticky 固定）。過去号は下部のプルダウンで切替。
 // 「今すぐ生成」リンクは本体HTMLの固定ヘッダ内に移動済み（self-contained）。
 // 中身は自己完結のモバイルHTML（MulmoClaude の週次タスクが生成・コミットする）。
+// リチウム監視カード（#611）はタブ上部に常時表示。
 // ══════════════════════════════════════════════════════════════
+
+import { renderLithiumMonitor } from './lithium-monitor.js';
 
 let _loaded = false;
 /** @type {HTMLIFrameElement|null} */
@@ -88,7 +91,17 @@ export function renderBriefing(force = false) {
   const panel = document.getElementById('panel-briefing');
   if (!panel) return;
   if (_loaded && !force) return;
-  panel.innerHTML = '<div class="bf-msg">読み込み中…</div>';
+  panel.innerHTML = '';
+
+  const monitorWrap = document.createElement('div');
+  monitorWrap.className = 'lm-wrap';
+  panel.appendChild(monitorWrap);
+  renderLithiumMonitor(monitorWrap);
+
+  const briefingWrap = document.createElement('div');
+  briefingWrap.className = 'bf-loading-wrap';
+  briefingWrap.innerHTML = '<div class="bf-msg">読み込み中…</div>';
+  panel.appendChild(briefingWrap);
 
   fetch(`data/briefings/index.json?_=${Date.now()}`)
     .then((r) => {
@@ -98,14 +111,14 @@ export function renderBriefing(force = false) {
     .then((idx) => {
       const issues = (idx.issues || []).slice().sort((a, b) => (a.date < b.date ? 1 : -1));
       if (!issues.length) {
-        panel.innerHTML = '<div class="bf-msg">まだ Briefing がありません。</div>';
+        briefingWrap.innerHTML = '<div class="bf-msg">まだ Briefing がありません。</div>';
         return;
       }
       const latest = issues[0];
       const latestUrl = _briefingUrl(latest.path);
       if (!latestUrl) throw new Error('invalid briefing path');
 
-      panel.textContent = '';
+      briefingWrap.textContent = '';
       const wrap = document.createElement('div');
       wrap.className = 'bf-wrap';
 
@@ -138,7 +151,7 @@ export function renderBriefing(force = false) {
       }
       pastbar.append(label, select);
       wrap.appendChild(pastbar);
-      panel.appendChild(wrap);
+      briefingWrap.appendChild(wrap);
 
       // 同一オリジン: iframe を残り高さにフィット（枠内1スクロール）＋テーマ伝搬
       _frame = frame;
@@ -161,7 +174,7 @@ export function renderBriefing(force = false) {
       _loaded = true;
     })
     .catch(() => {
-      panel.innerHTML = '<div class="bf-msg bf-err">Briefing の読み込みに失敗しました。</div>';
+      briefingWrap.innerHTML = '<div class="bf-msg bf-err">Briefing の読み込みに失敗しました。</div>';
     });
 }
 
