@@ -10,6 +10,165 @@
 // 中身は自己完結のモバイルHTML（MulmoClaude の週次タスクが生成・コミットする）。
 // ══════════════════════════════════════════════════════════════
 
+import { fetchFinnhubQuote } from './data-finnhub.js';
+import { fetchViaProxy } from './data-yahoo.js';
+import { escapeHTML } from './fmt.js';
+
+// ── リチウム監視カード（#611）定数 ──
+const LIT_SYMBOL = 'LIT';
+const LIT_NAME   = 'Global X Lithium ETF (LIT)';
+// 200DMA との乖離で状態判定: +5%超=回復、-5%未満=警戒、その間=中立
+const LIT_DMA_GOOD_THRESHOLD = 0.05;
+const LIT_DMA_WARN_THRESHOLD = -0.05;
+
+/**
+ * @typedef {{price: number, dayPct: number|null, pct1w: number|null, pct1m: number|null, dma200: number|null}} LitData
+ */
+
+/**
+ * LIT の現値・騰落率・200DMA を取得する
+ * @returns {Promise<LitData|null>}
+ */
+async function _fetchLitData() {
+  const quote = await fetchFinnhubQuote(LIT_SYMBOL).catch(() => null);
+  if (!quote || /** @type {any} */ (quote)._err) return null;
+  const price = /** @type {any} */ (quote).price;
+  const dayPct = /** @type {any} */ (quote).dayPct ?? null;
+
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(LIT_SYMBOL)}?range=1y&interval=1d&includePrePost=false`;
+  let pct1w = null, pct1m = null, dma200 = null;
+  try {
+    const data = await fetchViaProxy(url, 10000);
+    const closes = data?.chart?.result?.[0]?.indicators?.quote?.[0]?.close;
+    if (Array.isArray(closes) && closes.length >= 2) {
+      const validCloses = /** @type {number[]} */ (closes.filter((c) => c != null && isFinite(c)));
+      if (validCloses.length >= 2) {
+        const last = validCloses[validCloses.length - 1];
+        const len = validCloses.length;
+
+        const idx1w = Math.max(0, len - 6);
+        const idx1m = Math.max(0, len - 22);
+        pct1w = ((last - validCloses[idx1w]) / validCloses[idx1w]) * 100;
+        pct1m = ((last - validCloses[idx1m]) / validCloses[idx1m]) * 100;
+
+        if (len >= 200) {
+          const dmaSlice = validCloses.slice(len - 200);
+          dma200 = dmaSlice.reduce((s, v) => s + v, 0) / dmaSlice.length;
+        } else if (len >= 20) {
+          dma200 = validCloses.reduce((s, v) => s + v, 0) / validCloses.length;
+        }
+      }
+    }
+  } catch { /* ヒストリカル取得失敗は無視 */ }
+
+  return { price, dayPct, pct1w, pct1m, dma200 };
+}
+
+/**
+ * @param {number|null} pct
+ * @returns {string}
+ */
+function _fmtPct(pct) {
+  if (pct == null || !isFinite(pct)) return '–';
+  return `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`;
+}
+
+/**
+ * LIT の状態バッジを返す
+ * @param {number} price
+ * @param {number|null} dma200
+ * @returns {{icon: string, label: string, cls: string}}
+ */
+function _litStatus(price, dma200) {
+  if (dma200 == null) return { icon: '⚪', label: 'データ不足', cls: 'lm-badge-neu' };
+  const ratio = (price - dma200) / dma200;
+  if (ratio > LIT_DMA_GOOD_THRESHOLD) return { icon: '🟢', label: '回復基調', cls: 'lm-badge-good' };
+  if (ratio < LIT_DMA_WARN_THRESHOLD) return { icon: '🔴', label: '崩れ警戒', cls: 'lm-badge-warn' };
+  return { icon: '🟡', label: '中立', cls: 'lm-badge-neu' };
+}
+
+/**
+ * リチウム監視カードを描画し、DOM 要素を返す
+ * @returns {HTMLElement}
+ */
+function _buildLithiumCard() {
+  const card = document.createElement('div');
+  card.className = 'lm-card';
+  card.setAttribute('aria-label', 'リチウム市況モニタ');
+  card.innerHTML = `<div class="lm-header">
+    <span class="lm-title">リチウム市況モニタ</span>
+    <span class="lm-badge lm-badge-neu" id="lm-badge">読込中…</span>
+  </div>
+  <div class="lm-body">
+    <div class="lm-price-row">
+      <span class="lm-proxy-name">${escapeHTML(LIT_NAME)}</span>
+      <span class="lm-price" id="lm-price">–</span>
+    </div>
+    <div class="lm-pct-row">
+      <span class="lm-pct-item"><span class="lm-pct-label">当日</span><span class="lm-pct-val" id="lm-day">–</span></span>
+      <span class="lm-pct-item"><span class="lm-pct-label">1週</span><span class="lm-pct-val" id="lm-1w">–</span></span>
+      <span class="lm-pct-item"><span class="lm-pct-label">1ヶ月</span><span class="lm-pct-val" id="lm-1m">–</span></span>
+      <span class="lm-pct-item"><span class="lm-pct-label">200DMA</span><span class="lm-pct-val" id="lm-dma">–</span></span>
+    </div>
+    <div class="lm-note">REMX保有の前提＝リチウム回復。崩れたら REMX 逆風（200DMA 下抜け＝🔴警戒）</div>
+    <div class="lm-disclaimer">※プロキシ連動（現物スポット価格ではありません）</div>
+  </div>`;
+  return card;
+}
+
+/**
+ * リチウム監視カードにデータを反映する
+ * @param {HTMLElement} card
+ * @param {LitData|null} d
+ */
+function _populateLithiumCard(card, d) {
+  const badge   = card.querySelector('#lm-badge');
+  const priceEl = card.querySelector('#lm-price');
+  const dayEl   = card.querySelector('#lm-day');
+  const w1El    = card.querySelector('#lm-1w');
+  const m1El    = card.querySelector('#lm-1m');
+  const dmaEl   = card.querySelector('#lm-dma');
+
+  if (!d) {
+    if (badge) badge.textContent = 'データ取得失敗';
+    return;
+  }
+
+  const { price, dayPct, pct1w, pct1m, dma200 } = d;
+  const status = _litStatus(price, dma200);
+  const dmaRatio = dma200 != null ? ((price - dma200) / dma200) * 100 : null;
+
+  if (badge) {
+    badge.textContent = `${status.icon} ${status.label}`;
+    badge.className = `lm-badge ${status.cls}`;
+  }
+  if (priceEl) priceEl.textContent = `$${price.toFixed(2)}`;
+
+  /** @param {HTMLElement|null} el @param {number|null} pct */
+  const fill = (el, pct) => {
+    if (!el) return;
+    el.textContent = _fmtPct(pct);
+    if (pct != null) el.className = `lm-pct-val ${pct >= 0 ? 'lm-pos' : 'lm-neg'}`;
+  };
+  fill(/** @type {HTMLElement|null} */ (dayEl), dayPct);
+  fill(/** @type {HTMLElement|null} */ (w1El),  pct1w);
+  fill(/** @type {HTMLElement|null} */ (m1El),  pct1m);
+  fill(/** @type {HTMLElement|null} */ (dmaEl), dmaRatio);
+}
+
+/**
+ * Briefing パネルにリチウム監視カードを追加してデータを非同期取得する
+ * @param {HTMLElement} panel
+ */
+function _renderLithiumMonitor(panel) {
+  let card = /** @type {HTMLElement|null} */ (panel.querySelector('.lm-card'));
+  if (!card) {
+    card = _buildLithiumCard();
+    panel.prepend(card);
+  }
+  _fetchLitData().then((d) => _populateLithiumCard(/** @type {HTMLElement} */ (card), d));
+}
+
 let _loaded = false;
 /** @type {HTMLIFrameElement|null} */
 let _frame = null;
@@ -88,7 +247,13 @@ export function renderBriefing(force = false) {
   const panel = document.getElementById('panel-briefing');
   if (!panel) return;
   if (_loaded && !force) return;
-  panel.innerHTML = '<div class="bf-msg">読み込み中…</div>';
+
+  panel.textContent = '';
+  _renderLithiumMonitor(panel);
+  const loadingMsg = document.createElement('div');
+  loadingMsg.className = 'bf-msg';
+  loadingMsg.textContent = '読み込み中…';
+  panel.appendChild(loadingMsg);
 
   fetch(`data/briefings/index.json?_=${Date.now()}`)
     .then((r) => {
@@ -97,15 +262,18 @@ export function renderBriefing(force = false) {
     })
     .then((idx) => {
       const issues = (idx.issues || []).slice().sort((a, b) => (a.date < b.date ? 1 : -1));
+      loadingMsg.remove();
       if (!issues.length) {
-        panel.innerHTML = '<div class="bf-msg">まだ Briefing がありません。</div>';
+        const noMsg = document.createElement('div');
+        noMsg.className = 'bf-msg';
+        noMsg.textContent = 'まだ Briefing がありません。';
+        panel.appendChild(noMsg);
         return;
       }
       const latest = issues[0];
       const latestUrl = _briefingUrl(latest.path);
       if (!latestUrl) throw new Error('invalid briefing path');
 
-      panel.textContent = '';
       const wrap = document.createElement('div');
       wrap.className = 'bf-wrap';
 
@@ -161,7 +329,11 @@ export function renderBriefing(force = false) {
       _loaded = true;
     })
     .catch(() => {
-      panel.innerHTML = '<div class="bf-msg bf-err">Briefing の読み込みに失敗しました。</div>';
+      loadingMsg.remove();
+      const errMsg = document.createElement('div');
+      errMsg.className = 'bf-msg bf-err';
+      errMsg.textContent = 'Briefing の読み込みに失敗しました。';
+      panel.appendChild(errMsg);
     });
 }
 
