@@ -1191,3 +1191,17 @@ table.t td { font-size: var(--fs-sm); font-weight: 700; border-bottom: 1px solid
 /* KPI 期間増減の色（増＝赤／減＝緑・日本市場慣例。2026-07 資産総額カード置換） */
 .we-kpi .we-delta.up { color: var(--pos); }
 .we-kpi .we-delta.down { color: var(--neg); }
+
+/* ── リチウム市況モニタカード（#611）── */
+.lith-body { display: flex; flex-direction: column; gap: 10px; }
+.lith-banner { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.lith-banner-note { font-size: var(--fs-sm); color: var(--text2); }
+.lith-table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+.lith-table th { text-align: left; font-weight: 600; color: var(--text2); padding: 4px 6px; border-bottom: 1px solid var(--border); font-size: var(--fs-xs); }
+.lith-table td { padding: 5px 6px; border-bottom: 1px solid var(--border2); }
+.lith-sym { color: var(--text); font-weight: 500; }
+.lith-num { text-align: right; font-variant-numeric: tabular-nums; color: var(--text2); }
+.lith-num.pos { color: var(--pos); }
+.lith-num.neg { color: var(--neg); }
+.lith-note { font-size: var(--fs-xs); color: var(--text3); margin: 2px 0 0; line-height: 1.5; }
+/* ── /リチウム市況モニタカード ── */

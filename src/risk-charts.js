@@ -1085,10 +1085,128 @@ let _taLoaded = false;
 // 追い越されたら旧 run を破棄する。
 let _riskRenderSeq = 0;
 
+// ══════════════════════════════════════════════════════════════
+// リチウム市況モニタカード（#611）
+//
+// LIT（Global X Lithium & Battery Tech ETF）と ALB（Albemarle）を
+// リチウム相場のプロキシとして使い、200日移動平均（200DMA）との相対位置で
+// 回復基調 / 中立 / 崩れ警戒 を判定する。
+// ・200DMA 比較（絶対値キャリブレーション不要・誤警報が少ない・#611 論点 A）
+// ・REMX保有の前提確認。崩れたら REMX 逆風のサイン（能動売買はしない・表示のみ）
+// ══════════════════════════════════════════════════════════════
+
+/** @typedef {{ symbol: string, label: string, cur: number|null, ma200: number|null }} LitProxy */
+
 /**
- * リスク断面タブを描画する。panel が hidden のときは何もしない。
- * @returns {Promise<void>}
+ * 200DMA ベースのリチウム相場ステータスを判定する。
+ * @param {LitProxy[]} proxies
+ * @returns {'good'|'ok'|'warn'|'neu'}
  */
+function _lithiumStatus(proxies) {
+  const valids = proxies.filter((p) => p.cur != null && p.ma200 != null);
+  if (valids.length === 0) return 'neu';
+  const aboves = valids.filter((p) => p.cur > p.ma200).length;
+  if (aboves === valids.length) return 'good';
+  if (aboves === 0) return 'warn';
+  return 'ok';
+}
+
+/**
+ * リチウム市況モニタカード（#611）を生成する。
+ * historicalCache の 1y データから 200DMA を算出し、LIT / ALB のステータスを表示。
+ * @returns {Promise<HTMLElement>}
+ */
+async function buildLithiumCard() {
+  const card = document.createElement('div');
+  card.className = 'risk-card';
+  card.insertAdjacentHTML('beforeend', cardTitle('i-pulse', 'リチウム市況モニタ', 'REMX保有の前提'));
+
+  const PROXIES = [
+    { symbol: 'LIT',  label: 'LIT (Global X Lithium ETF)' },
+    { symbol: 'ALB',  label: 'ALB (Albemarle)' },
+  ];
+
+  // 1y 履歴を取得（キャッシュ済みであればネットワーク不要）
+  await Promise.allSettled(PROXIES.map((p) => fetchSymbolHistory(p.symbol, '1y')));
+
+  /** @type {LitProxy[]} */
+  const results = PROXIES.map(({ symbol, label }) => {
+    const hist = state.historicalCache?.['1y']?.[symbol];
+    if (!Array.isArray(hist) || hist.length < 2) return { symbol, label, cur: null, ma200: null };
+    const closes = hist.map((e) => e.close).filter((c) => c != null && isFinite(c));
+    const cur = closes[closes.length - 1] ?? null;
+    const dmaWindow = 200;
+    const slice = closes.slice(-dmaWindow);
+    const ma200 = slice.length >= 20 ? slice.reduce((s, v) => s + v, 0) / slice.length : null;
+    return { symbol, label, cur, ma200 };
+  });
+
+  const status = _lithiumStatus(results);
+  const statusLabels = { good: '回復基調', ok: '中立', warn: '崩れ警戒', neu: 'データ不足' };
+  const statusLabel = statusLabels[status];
+
+  const body = document.createElement('div');
+  body.className = 'lith-body';
+
+  // ステータスバナー
+  const banner = document.createElement('div');
+  banner.className = 'lith-banner';
+  const badge = document.createElement('span');
+  badge.className = `pill ${status}`;
+  badge.textContent = statusLabel;
+  banner.appendChild(badge);
+  const bannerNote = document.createElement('span');
+  bannerNote.className = 'lith-banner-note';
+  if (status === 'warn') {
+    bannerNote.textContent = 'プロキシが200DMA割れ — REMX逆風の可能性。トリム検討の合図。';
+  } else if (status === 'good') {
+    bannerNote.textContent = 'プロキシが200DMA上 — リチウム回復基調継続。REMX保有の前提を維持。';
+  } else if (status === 'ok') {
+    bannerNote.textContent = 'プロキシ混在 — 要注意。200DMA上下を観察。';
+  } else {
+    bannerNote.textContent = 'Historical タブを一度開くと価格系列が蓄積され判定されます。';
+  }
+  banner.appendChild(bannerNote);
+  body.appendChild(banner);
+
+  // プロキシ行
+  const table = document.createElement('table');
+  table.className = 'lith-table';
+  const thead = document.createElement('thead');
+  thead.innerHTML = '<tr><th>プロキシ</th><th>現値</th><th>200DMA</th><th>乖離</th><th>判定</th></tr>';
+  table.appendChild(thead);
+  const tbody = document.createElement('tbody');
+  for (const p of results) {
+    const tr = document.createElement('tr');
+    const devPct = (p.cur != null && p.ma200 != null && p.ma200 > 0)
+      ? ((p.cur - p.ma200) / p.ma200) * 100 : null;
+    const rowStatus = (p.cur != null && p.ma200 != null)
+      ? (p.cur > p.ma200 ? 'good' : 'warn') : 'neu';
+    const rowLabel = rowStatus === 'good' ? '上' : rowStatus === 'warn' ? '下' : '—';
+    tr.innerHTML = [
+      `<td class="lith-sym">${escapeHTML(p.label)}</td>`,
+      `<td class="lith-num">${p.cur != null ? p.cur.toFixed(2) : '—'}</td>`,
+      `<td class="lith-num">${p.ma200 != null ? p.ma200.toFixed(2) : '—'}</td>`,
+      `<td class="lith-num ${devPct != null ? (devPct >= 0 ? 'pos' : 'neg') : ''}">${devPct != null ? `${devPct >= 0 ? '+' : ''}${devPct.toFixed(1)}%` : '—'}</td>`,
+      `<td><span class="pill ${rowStatus}">${escapeHTML(rowLabel)}</span></td>`,
+    ].join('');
+    tbody.appendChild(tr);
+  }
+  table.appendChild(tbody);
+  body.appendChild(table);
+
+  // 監視の意味と注記
+  const note = document.createElement('p');
+  note.className = 'lith-note';
+  note.textContent =
+    'REMX保有の前提＝リチウム回復基調の持続。プロキシが200DMAを明確に下抜けた場合はREMX逆風化のサイン。' +
+    '【注】現物炭酸リチウムスポットではなく取引可能プロキシ連動（参考情報）。能動売買はしない・表示のみ。';
+  body.appendChild(note);
+
+  card.appendChild(body);
+  return card;
+}
+
 export async function renderRiskCharts() {
   const panel = document.getElementById('panel-risk');
   if (!panel || panel.hidden) return;
@@ -1120,6 +1238,8 @@ export async function renderRiskCharts() {
   if (_riskRenderSeq !== myRun) return;
   const manualSymbols = manualAssets.map((a) => a.symbol);
   const { card: regionCard, japanTruePct } = await buildRegionCard(assets, manualSymbols);
+  if (_riskRenderSeq !== myRun) return;
+  const lithiumCard = await buildLithiumCard();
   if (_riskRenderSeq !== myRun) return;
 
   wrap.textContent = '';
@@ -1168,6 +1288,10 @@ export async function renderRiskCharts() {
   // 真の地域配分（特に日本のホームバイアス）。build は上部で await 済み。全幅特例は撤廃しグリッド子化。
   grid.appendChild(regionCard);
   wrap.appendChild(grid);
+
+  // ── リチウム市況モニタカード（#611）─────────────────────────────────────
+  wrap.appendChild(lithiumCard);
+  // ── /リチウム市況モニタカード ────────────────────────────────────────────
 
   // データソース明記（#214）＋ 手動入力データの引用元（現金・ひふみ等）
   const src = document.createElement('div');
