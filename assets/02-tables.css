@@ -305,6 +305,30 @@ table.t td { font-size: var(--fs-sm); font-weight: 700; border-bottom: 1px solid
 }
 .bf-past-select:hover { border-color: var(--accent); }
 
+/* ── リチウム監視カード（#611） ── */
+.bf-lm-container { width: 100%; max-width: 600px; margin-inline: auto; padding: 10px 12px 0; box-sizing: border-box; }
+.lm-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  padding: 12px 14px; margin-bottom: 8px;
+}
+.lm-card--alert { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 8%, var(--surface)); }
+.lm-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.lm-title { font-size: var(--fs-sm); font-weight: 700; color: var(--text); letter-spacing: 0.03em; }
+.lm-badge { font-size: var(--fs-xs); font-weight: 700; border-radius: 20px; padding: 2px 8px; }
+.lm-badge--green  { background: color-mix(in srgb, var(--success) 18%, transparent); color: var(--success); }
+.lm-badge--yellow { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+.lm-badge--red    { background: color-mix(in srgb, var(--danger) 18%, transparent); color: var(--danger); }
+.lm-badge--neutral { background: var(--surface3); color: var(--text2); }
+.lm-desc { font-size: var(--fs-xs); color: var(--text2); margin-bottom: 10px; }
+.lm-metrics { display: flex; flex-wrap: wrap; gap: 10px 18px; margin-bottom: 8px; }
+.lm-metric { display: flex; flex-direction: column; gap: 2px; }
+.lm-metric-label { font-size: 10px; color: var(--text2); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
+.lm-metric-value { font-size: var(--fs-sm); font-weight: 700; color: var(--text); }
+.lm-pct.pos { color: var(--success); }
+.lm-pct.neg { color: var(--danger); }
+.lm-alert-msg { font-size: var(--fs-xs); font-weight: 600; color: var(--danger); margin-bottom: 6px; }
+.lm-note { font-size: 10px; color: var(--text3); line-height: 1.4; }
+
 /* ── シミュレーションバー（ヒートマップパネル内）── 横スクロール可能1行 */
 .sim-bar {
   display: flex;

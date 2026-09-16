@@ -10,6 +10,8 @@
 // 中身は自己完結のモバイルHTML（MulmoClaude の週次タスクが生成・コミットする）。
 // ══════════════════════════════════════════════════════════════
 
+import { renderLithiumMonitor } from './lithium-monitor.js';
+
 let _loaded = false;
 /** @type {HTMLIFrameElement|null} */
 let _frame = null;
@@ -108,6 +110,11 @@ export function renderBriefing(force = false) {
       panel.textContent = '';
       const wrap = document.createElement('div');
       wrap.className = 'bf-wrap';
+
+      const lmContainer = document.createElement('div');
+      lmContainer.className = 'bf-lm-container';
+      wrap.appendChild(lmContainer);
+      renderLithiumMonitor(lmContainer);
 
       const frame = document.createElement('iframe');
       frame.className = 'bf-frame';
