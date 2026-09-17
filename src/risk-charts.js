@@ -22,7 +22,7 @@ import {
   eventStress,
 } from './risk-calc.js';
 import { getAllHistorical } from './historical-cache.js';
-import { fetchSymbolHistory, batchWithRetry } from './data.js';
+import { fetchSymbolHistory, fetchLivePrice, batchWithRetry } from './data.js';
 import { state } from './state.js';
 import { computeLiquidity, ILLIQUID_DAYS } from './liquidity-calc.js';
 import { cssVar, fmtJPYInt, fmtPctInt, escapeHTML } from './utils.js';
@@ -1081,6 +1081,148 @@ function buildRiskGlossary() {
 // ── once-guard: target-allocation を二重ロードしない ───────────────────────
 let _taLoaded = false;
 
+// ── リチウム市況モニタ（#611）────────────────────────────────────────────────
+
+/** LIT・ALB 1y 履歴の 200 日単純移動平均を算出する */
+function _compute200DMA(entries) {
+  if (!Array.isArray(entries) || entries.length < 20) return null;
+  const window200 = entries.slice(-200);
+  const sum = window200.reduce((s, e) => s + e.close, 0);
+  return sum / window200.length;
+}
+
+/**
+ * 期間騰落率（%）を historicalCache から算出（外部の getHistoricalChangePct と同ロジック）
+ * @param {string} symbol
+ * @param {number} days  遡る日数
+ * @param {string} range  '1y' など
+ * @returns {number|null}
+ */
+function _computePctFromCache(symbol, days, range) {
+  const data = state.historicalCache[range]?.[symbol];
+  if (!Array.isArray(data) || data.length < 2) return null;
+  const last = data[data.length - 1];
+  const lastMs = last.date instanceof Date ? last.date.getTime() : new Date(last.date).getTime();
+  const targetDate = new Date(lastMs - days * 86400000);
+  let start = data[0];
+  for (let i = data.length - 2; i >= 0; i--) {
+    if (data[i].date <= targetDate) { start = data[i]; break; }
+  }
+  if (last.close <= 0) return null;
+  return ((last.close - start.close) / start.close) * 100;
+}
+
+/** リチウム市況モニタカードを非同期で生成する（#611） */
+async function buildLithiumCard() {
+  const PROXIES = [
+    { symbol: 'LIT',  name: 'LIT (Global X Lithium & Battery Tech ETF)' },
+    { symbol: 'ALB',  name: 'ALB (Albemarle)' },
+  ];
+
+  const card = document.createElement('div');
+  card.className = 'risk-card lith-card';
+  card.insertAdjacentHTML('beforeend', cardTitle('i-pulse', 'リチウム市況モニタ', 'REMX保有前提'));
+
+  const context = document.createElement('p');
+  context.className = 'lith-context';
+  context.textContent = 'REMX保有の前提＝リチウム回復。崩れたら REMX 逆風。';
+  card.appendChild(context);
+
+  // 1y 履歴確保（200DMA 計算用）
+  const syms = PROXIES.map((p) => p.symbol);
+  const missing1y = syms.filter(
+    (s) => !Array.isArray(state.historicalCache['1y']?.[s]) || state.historicalCache['1y'][s].length < 50
+  );
+  if (missing1y.length) {
+    try {
+      await batchWithRetry(missing1y, (s) => fetchSymbolHistory(s, '1y'), { batchSize: 2, delayMs: 800 });
+    } catch { /* 失敗時は DMA 計算をスキップ */ }
+  }
+
+  // 各プロキシのライブ価格と指標を取得
+  const rows = await Promise.allSettled(
+    PROXIES.map(async ({ symbol, name }) => {
+      const live = await fetchLivePrice(symbol);
+      const price = live && !live._err ? live.price : null;
+      const dayPct = live && !live._err ? live.dayPct : null;
+      const wkPct = _computePctFromCache(symbol, 7, '1y');
+      const moPct = _computePctFromCache(symbol, 30, '1y');
+      const entries = state.historicalCache['1y']?.[symbol];
+      const dma200 = _compute200DMA(entries ?? []);
+      const lastClose = Array.isArray(entries) && entries.length ? entries[entries.length - 1].close : null;
+      const refPrice = price ?? lastClose;
+      const dmaDevPct = dma200 && refPrice ? ((refPrice - dma200) / dma200) * 100 : null;
+      return { symbol, name, price, dayPct, wkPct, moPct, dma200, dmaDevPct };
+    })
+  );
+
+  // ── バッジ判定（LIT 優先・ALB 補完）──
+  // 🟢 200DMA を上回る or 5%以内の下落: 回復基調
+  // 🟡 200DMA から 5–15% 下: 中立・要注意
+  // 🔴 200DMA から 15% 超の下落: 崩れ警戒
+  const litRow = rows[0].status === 'fulfilled' ? rows[0].value : null;
+  const dmaDevLit = litRow?.dmaDevPct ?? null;
+  let badgeCls, badgeTxt, badgeDesc;
+  if (dmaDevLit === null) {
+    badgeCls = 'neu'; badgeTxt = '—';
+    badgeDesc = 'データ取得中';
+  } else if (dmaDevLit >= -5) {
+    badgeCls = 'good'; badgeTxt = '回復基調';
+    badgeDesc = `LIT 200DMA 比 ${dmaDevLit >= 0 ? '+' : ''}${dmaDevLit.toFixed(1)}%`;
+  } else if (dmaDevLit >= -15) {
+    badgeCls = 'ok'; badgeTxt = '中立';
+    badgeDesc = `LIT 200DMA 比 ${dmaDevLit.toFixed(1)}%`;
+  } else {
+    badgeCls = 'warn'; badgeTxt = '崩れ警戒';
+    badgeDesc = `LIT 200DMA 比 ${dmaDevLit.toFixed(1)}% ─ REMX 再評価の目安`;
+  }
+
+  const badge = document.createElement('div');
+  badge.className = 'lith-badge-row';
+  badge.innerHTML = `<span class="pill ${badgeCls}">${escapeHTML(badgeTxt)}</span><span class="lith-badge-desc">${escapeHTML(badgeDesc)}</span>`;
+  card.appendChild(badge);
+
+  // ── プロキシ行テーブル ──
+  const tbl = document.createElement('table');
+  tbl.className = 'lith-tbl';
+  tbl.innerHTML = '<thead><tr><th>プロキシ</th><th>価格</th><th>1d</th><th>1w</th><th>1mo</th><th>vs 200DMA</th></tr></thead>';
+  const tbody = document.createElement('tbody');
+
+  function _pctCell(v) {
+    if (v === null || !isFinite(v)) return '—';
+    const sign = v >= 0 ? '+' : '';
+    return `${sign}${v.toFixed(1)}%`;
+  }
+  function _pctCls(v) {
+    if (v === null || !isFinite(v)) return '';
+    return v >= 0 ? 'lith-pos' : 'lith-neg';
+  }
+
+  for (const r of rows) {
+    if (r.status !== 'fulfilled') continue;
+    const d = r.value;
+    const tr = document.createElement('tr');
+    const priceStr = d.price != null ? `$${d.price.toFixed(2)}` : '—';
+    tr.innerHTML = `
+      <td class="lith-sym">${escapeHTML(d.symbol)}</td>
+      <td class="lith-price">${escapeHTML(priceStr)}</td>
+      <td class="${_pctCls(d.dayPct)}">${escapeHTML(_pctCell(d.dayPct))}</td>
+      <td class="${_pctCls(d.wkPct)}">${escapeHTML(_pctCell(d.wkPct))}</td>
+      <td class="${_pctCls(d.moPct)}">${escapeHTML(_pctCell(d.moPct))}</td>
+      <td class="${_pctCls(d.dmaDevPct)}">${escapeHTML(_pctCell(d.dmaDevPct))}</td>`;
+    tbody.appendChild(tr);
+  }
+  tbl.appendChild(tbody);
+  card.appendChild(tbl);
+
+  const note = document.createElement('p');
+  note.className = 'lith-note';
+  note.textContent = '※プロキシ連動（現物スポット価格ではない）。トリガー: LIT が 200 日移動平均から 15%超下落 → 崩れ警戒。';
+  card.appendChild(note);
+
+  return card;
+}
+
 // レンダー世代トークン（#502 A・カード重複バグ対策）。renderRiskCharts が後発に
 // 追い越されたら旧 run を破棄する。
 let _riskRenderSeq = 0;
@@ -1115,11 +1257,13 @@ export async function renderRiskCharts() {
   const breakdown = computeRiskBreakdown(assets);
   const sourceSummary = getSourceSummary(assets);
 
-  // 重い await（クオンツ・地域）を先に解決してから一括クリア＆append（交錯による重複を防ぐ）。
+  // 重い await（クオンツ・地域・リチウム）を先に解決してから一括クリア＆append（交錯による重複を防ぐ）。
   const quantCard = await buildQuantCard(positions);
   if (_riskRenderSeq !== myRun) return;
   const manualSymbols = manualAssets.map((a) => a.symbol);
   const { card: regionCard, japanTruePct } = await buildRegionCard(assets, manualSymbols);
+  if (_riskRenderSeq !== myRun) return;
+  const lithiumCard = await buildLithiumCard();
   if (_riskRenderSeq !== myRun) return;
 
   wrap.textContent = '';
@@ -1168,6 +1312,10 @@ export async function renderRiskCharts() {
   // 真の地域配分（特に日本のホームバイアス）。build は上部で await 済み。全幅特例は撤廃しグリッド子化。
   grid.appendChild(regionCard);
   wrap.appendChild(grid);
+
+  // ── リチウム市況モニタ（#611）────────────────────────────────────────────
+  wrap.appendChild(lithiumCard);
+  // ── /リチウム市況モニタ ──────────────────────────────────────────────────
 
   // データソース明記（#214）＋ 手動入力データの引用元（現金・ひふみ等）
   const src = document.createElement('div');

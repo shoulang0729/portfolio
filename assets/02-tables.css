@@ -1129,6 +1129,23 @@ table.t td { font-size: var(--fs-sm); font-weight: 700; border-bottom: 1px solid
 }
 /* ── /Risk quant (Phase 4b) ── */
 
+/* ── リチウム市況モニタ（#611）── */
+.lith-card { margin-bottom: 13px; }
+.lith-context { font-size: var(--fs-sm); color: var(--text2); margin: 0 0 10px; line-height: 1.5; }
+.lith-badge-row { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; }
+.lith-badge-desc { font-size: var(--fs-sm); color: var(--text2); }
+.lith-tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); margin-bottom: 10px; }
+.lith-tbl th { text-align: right; padding: 3px 6px; color: var(--text2); font-weight: 600; font-size: var(--fs-xs); border-bottom: 1px solid var(--border2); }
+.lith-tbl th:first-child { text-align: left; }
+.lith-tbl td { text-align: right; padding: 5px 6px; border-bottom: 1px solid var(--border2); font-variant-numeric: tabular-nums; }
+.lith-tbl td:first-child { text-align: left; }
+.lith-sym { font-weight: 700; color: var(--text); }
+.lith-price { color: var(--text); }
+.lith-pos { color: var(--tone-good); font-weight: 600; }
+.lith-neg { color: var(--tone-warn); font-weight: 600; }
+.lith-note { font-size: var(--fs-xs); color: var(--text3); margin: 4px 0 0; line-height: 1.5; }
+/* ── /リチウム市況モニタ ── */
+
 /* ── Wealth タブ（資産推移・#568・モック 2026-07-09-wealth-tab-mock.html 準拠）── */
 /* KPI 3枚は常に横並び（折り返さない・設計追記 2026-07-09）。9桁¥は container-query＋clamp で自動縮小。
    値は右寄せ＋tabular-nums・補助は下段 sub2（値の行に詰め込まない） */
