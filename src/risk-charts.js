@@ -22,7 +22,7 @@ import {
   eventStress,
 } from './risk-calc.js';
 import { getAllHistorical } from './historical-cache.js';
-import { fetchSymbolHistory, batchWithRetry } from './data.js';
+import { fetchSymbolHistory, batchWithRetry, fetchLivePrice } from './data.js';
 import { state } from './state.js';
 import { computeLiquidity, ILLIQUID_DAYS } from './liquidity-calc.js';
 import { cssVar, fmtJPYInt, fmtPctInt, escapeHTML } from './utils.js';
@@ -1078,6 +1078,130 @@ function buildRiskGlossary() {
   return /** @type {HTMLElement} */ (tpl.content.firstElementChild);
 }
 
+// ── #611: リチウム市況モニタカード ──────────────────────────────────────────
+
+/**
+ * リチウム市況プロキシ（LIT / ALB）の価格を取得し監視カードを生成する。
+ * - 🟢回復基調: LIT ≥ 40 かつ ALB ≥ 80
+ * - 🔴崩れ警戒: LIT < 32 または ALB < 60（$15/kg 相当の下振れトリガー）
+ * - 🟡中立: それ以外
+ *
+ * しきい値根拠（2026-08 投資判断正本値）:
+ *   炭酸リチウム ~$23/kg（回復起点）/ $15/kg（下振れトリガー）に相当する
+ *   LIT/ALB の目安水準。絶対値は相場環境で変わるため、200DMAや52w安値を
+ *   補完指標として将来改善可能（§A オープン論点）。
+ * @returns {Promise<HTMLElement>}
+ */
+async function buildLithiumCard() {
+  const card = document.createElement('div');
+  card.className = 'risk-card lithium-card';
+  card.insertAdjacentHTML('beforeend', cardTitle('i-layers', 'リチウム市況モニタ', 'REMX保有の前提監視'));
+
+  const body = document.createElement('div');
+  body.className = 'risk-card-body lithium-body';
+  card.appendChild(body);
+
+  const note = document.createElement('p');
+  note.className = 'lithium-note';
+  note.textContent = '※ 炭酸リチウム現物スポットの直接フィードは非対応。LIT（Lithium ETF）/ ALB（Albemarle）をプロキシとして使用。';
+  card.appendChild(note);
+
+  body.innerHTML = '<span class="lithium-loading">取得中…</span>';
+
+  const [litRes, albRes] = await Promise.all([
+    fetchLivePrice('LIT').catch(() => null),
+    fetchLivePrice('ALB').catch(() => null),
+  ]);
+
+  body.textContent = '';
+
+  const litPrice = litRes && !litRes._err ? litRes.price : null;
+  const litDayPct = litRes && !litRes._err ? litRes.dayPct : null;
+  const albPrice = albRes && !albRes._err ? albRes.price : null;
+  const albDayPct = albRes && !albRes._err ? albRes.dayPct : null;
+
+  const LIT_RECOVER = 40;
+  const LIT_WARN    = 32;
+  const ALB_RECOVER = 80;
+  const ALB_WARN    = 60;
+
+  const litOk   = litPrice != null && litPrice >= LIT_RECOVER;
+  const litBad  = litPrice != null && litPrice < LIT_WARN;
+  const albOk   = albPrice != null && albPrice >= ALB_RECOVER;
+  const albBad  = albPrice != null && albPrice < ALB_WARN;
+
+  let status, statusCls, badge, summary;
+  if (litBad || albBad) {
+    status    = '崩れ警戒';
+    statusCls = 'lithium-status--warn';
+    badge     = '🔴';
+    summary   = 'リチウム相場が下振れトリガー水準に接近。REMX 保有の前提が崩れる兆候の可能性あり。トリム検討を。';
+  } else if (litOk && albOk) {
+    status    = '回復基調';
+    statusCls = 'lithium-status--ok';
+    badge     = '🟢';
+    summary   = 'LIT・ALB ともに回復基調水準を維持。REMX 保有の前提（リチウム回復）継続中。';
+  } else {
+    status    = '中立';
+    statusCls = 'lithium-status--neutral';
+    badge     = '🟡';
+    summary   = '回復基調の確認には至っていないが、下振れトリガーも未抵触。継続監視。';
+  }
+
+  const statusEl = document.createElement('div');
+  statusEl.className = `lithium-status ${statusCls}`;
+  statusEl.textContent = `${badge} ${status}`;
+  body.appendChild(statusEl);
+
+  const summaryEl = document.createElement('p');
+  summaryEl.className = 'lithium-summary';
+  summaryEl.textContent = summary;
+  body.appendChild(summaryEl);
+
+  const rationale = document.createElement('p');
+  rationale.className = 'lithium-rationale';
+  rationale.textContent = 'REMX保有の前提＝リチウム回復。崩れたら REMX 逆風。下振れトリガー: 炭酸リチウム $15/kg 相当（LIT<$32 または ALB<$60）。';
+  body.appendChild(rationale);
+
+  const table = document.createElement('table');
+  table.className = 'lithium-table';
+
+  function _fmtDayPct(p) {
+    if (p == null || !Number.isFinite(p)) return '—';
+    const sign = p >= 0 ? '+' : '';
+    return `${sign}${p.toFixed(2)}%`;
+  }
+
+  function _fmtPrice(p) {
+    if (p == null) return '取得失敗';
+    return `$${p.toFixed(2)}`;
+  }
+
+  const rows = [
+    { sym: 'LIT', name: 'Global X Lithium ETF', price: litPrice, dayPct: litDayPct, warnThreshold: LIT_WARN, recoverThreshold: LIT_RECOVER },
+    { sym: 'ALB', name: 'Albemarle (ALB)',       price: albPrice, dayPct: albDayPct, warnThreshold: ALB_WARN, recoverThreshold: ALB_RECOVER },
+  ];
+
+  for (const row of rows) {
+    const isBad = row.price != null && row.price < row.warnThreshold;
+    const isOk  = row.price != null && row.price >= row.recoverThreshold;
+    const rowCls = isBad ? 'lithium-row--warn' : isOk ? 'lithium-row--ok' : '';
+    const tr = document.createElement('tr');
+    tr.className = rowCls;
+    tr.innerHTML = `
+      <td class="lithium-sym">${escapeHTML(row.sym)}</td>
+      <td class="lithium-name">${escapeHTML(row.name)}</td>
+      <td class="lithium-price">${escapeHTML(_fmtPrice(row.price))}</td>
+      <td class="lithium-daypct">${escapeHTML(_fmtDayPct(row.dayPct))}</td>
+      <td class="lithium-thresh">回復&gt;$${row.recoverThreshold} / 警戒&lt;$${row.warnThreshold}</td>
+    `;
+    table.appendChild(tr);
+  }
+  body.appendChild(table);
+
+  return card;
+}
+
 // ── once-guard: target-allocation を二重ロードしない ───────────────────────
 let _taLoaded = false;
 
@@ -1120,6 +1244,8 @@ export async function renderRiskCharts() {
   if (_riskRenderSeq !== myRun) return;
   const manualSymbols = manualAssets.map((a) => a.symbol);
   const { card: regionCard, japanTruePct } = await buildRegionCard(assets, manualSymbols);
+  if (_riskRenderSeq !== myRun) return;
+  const lithiumCard = await buildLithiumCard();
   if (_riskRenderSeq !== myRun) return;
 
   wrap.textContent = '';
@@ -1168,6 +1294,10 @@ export async function renderRiskCharts() {
   // 真の地域配分（特に日本のホームバイアス）。build は上部で await 済み。全幅特例は撤廃しグリッド子化。
   grid.appendChild(regionCard);
   wrap.appendChild(grid);
+
+  // ── #611: リチウム市況モニタカード ───────────────────────────────────────
+  wrap.appendChild(lithiumCard);
+  // ── /#611 ────────────────────────────────────────────────────────────────
 
   // データソース明記（#214）＋ 手動入力データの引用元（現金・ひふみ等）
   const src = document.createElement('div');
