@@ -1191,3 +1191,27 @@ table.t td { font-size: var(--fs-sm); font-weight: 700; border-bottom: 1px solid
 /* KPI 期間増減の色（増＝赤／減＝緑・日本市場慣例。2026-07 資産総額カード置換） */
 .we-kpi .we-delta.up { color: var(--pos); }
 .we-kpi .we-delta.down { color: var(--neg); }
+
+/* ── #611: リチウム市況モニタカード ────────────────────────────── */
+.lithium-card { grid-column: 1 / -1; }
+.lithium-body { flex-direction: column; align-items: flex-start; gap: 8px; }
+.lithium-status {
+  font-size: var(--fs-md); font-weight: 700; padding: 4px 12px;
+  border-radius: var(--r-pill); display: inline-block;
+}
+.lithium-status--ok   { background: color-mix(in srgb, var(--tone-good) 15%, transparent); color: var(--tone-good); }
+.lithium-status--warn { background: color-mix(in srgb, var(--tone-warn) 15%, transparent); color: var(--tone-warn); }
+.lithium-status--neutral { background: var(--surface2); color: var(--text2); }
+.lithium-summary  { margin: 0; font-size: var(--fs-sm); font-weight: 600; color: var(--text); }
+.lithium-rationale { margin: 0; font-size: var(--fs-xs); color: var(--text2); }
+.lithium-note     { margin: 0; font-size: var(--fs-xs); color: var(--text3); border-top: 1px solid var(--border2); padding-top: 8px; }
+.lithium-loading  { font-size: var(--fs-sm); color: var(--text3); }
+.lithium-table    { border-collapse: collapse; width: 100%; margin-top: 4px; }
+.lithium-table td { font-size: var(--fs-sm); padding: 4px 8px; border-bottom: 1px solid var(--border2); }
+.lithium-table .lithium-sym   { font-weight: 700; color: var(--text); width: 50px; }
+.lithium-table .lithium-name  { color: var(--text2); }
+.lithium-table .lithium-price { font-weight: 700; color: var(--text); text-align: right; width: 80px; }
+.lithium-table .lithium-daypct { text-align: right; width: 70px; color: var(--text2); }
+.lithium-table .lithium-thresh { font-size: var(--fs-xs); color: var(--text3); text-align: right; }
+.lithium-row--ok td.lithium-price   { color: var(--tone-good); }
+.lithium-row--warn td.lithium-price { color: var(--tone-warn); }
