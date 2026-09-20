@@ -8,7 +8,10 @@
 // ヘッダ/セクション見出しを sticky 固定）。過去号は下部のプルダウンで切替。
 // 「今すぐ生成」リンクは本体HTMLの固定ヘッダ内に移動済み（self-contained）。
 // 中身は自己完結のモバイルHTML（MulmoClaude の週次タスクが生成・コミットする）。
+// リチウム市況モニタカード（#611）を iframe 上部に表示する。
 // ══════════════════════════════════════════════════════════════
+
+import { renderLithiumMonitor } from './lithium-monitor.js';
 
 let _loaded = false;
 /** @type {HTMLIFrameElement|null} */
@@ -106,6 +109,12 @@ export function renderBriefing(force = false) {
       if (!latestUrl) throw new Error('invalid briefing path');
 
       panel.textContent = '';
+
+      const monitorSection = document.createElement('div');
+      monitorSection.className = 'bf-monitor-section';
+      panel.appendChild(monitorSection);
+      renderLithiumMonitor(monitorSection);
+
       const wrap = document.createElement('div');
       wrap.className = 'bf-wrap';
 

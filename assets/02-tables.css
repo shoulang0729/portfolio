@@ -305,6 +305,31 @@ table.t td { font-size: var(--fs-sm); font-weight: 700; border-bottom: 1px solid
 }
 .bf-past-select:hover { border-color: var(--accent); }
 
+/* ── リチウム市況モニタカード（#611） ── */
+.bf-monitor-section { width: 100%; max-width: 600px; margin-inline: auto; padding: 10px 12px 0; }
+.lm-loading { padding: 8px 0; font-size: var(--fs-sm); color: var(--text2); }
+.lm-loading.lm-err { color: var(--tone-warn); }
+.lm-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  padding: 10px 12px; margin-bottom: 10px;
+}
+.lm-header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+.lm-title { font-size: var(--fs-base); font-weight: 700; color: var(--text); }
+.lm-badge { font-size: var(--fs-sm); font-weight: 600; padding: 2px 8px; border-radius: 20px; white-space: nowrap; }
+.lm-badge-good { background: color-mix(in srgb, var(--tone-good) 15%, transparent); color: var(--tone-good); }
+.lm-badge-warn { background: color-mix(in srgb, var(--tone-warn) 15%, transparent); color: var(--tone-warn); }
+.lm-badge-neu  { background: color-mix(in srgb, var(--tone-neu)  15%, transparent); color: var(--tone-neu); }
+.lm-note { font-size: var(--fs-sm); color: var(--text2); margin-bottom: 8px; }
+.lm-table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+.lm-th-name { text-align: left; font-weight: 700; color: var(--text2); padding: 3px 0; border-bottom: 1px solid var(--border); }
+.lm-th-val  { text-align: right; font-weight: 700; color: var(--text2); padding: 3px 4px; border-bottom: 1px solid var(--border); }
+.lm-name { color: var(--text); padding: 4px 0; border-bottom: 1px solid var(--border2); }
+.lm-val  { text-align: right; padding: 4px 4px; border-bottom: 1px solid var(--border2); }
+.lm-pos { color: var(--tone-good); font-weight: 600; }
+.lm-neg { color: var(--tone-warn); font-weight: 600; }
+.lm-na  { color: var(--text3); }
+.lm-proxy-note { font-size: var(--fs-xs); color: var(--text3); margin-top: 6px; }
+
 /* ── シミュレーションバー（ヒートマップパネル内）── 横スクロール可能1行 */
 .sim-bar {
   display: flex;
