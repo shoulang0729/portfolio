@@ -84,3 +84,30 @@ rl:<ip>:<bucket>:<shard>
 
 - 完全な atomic が必要になった場合は案 A（Durable Objects）に移行する。
 - Cloudflare WAF レート制限（Issue #16）を導入すれば、エッジでより低レイテンシな防御が可能。
+
+---
+
+## 【2026-09-21 移行完了】KV 実装を撤去し Cloudflare ダッシュボードルールへ（Issue #16）
+
+### 経緯
+
+- 2026-09-21、Cloudflare から「KV 無料枠の1日上限に 50% 到達」アラート。
+- 上記 shard 実装は **1 リクエストあたり KV 読み取り 5 回（4 shard + legacy）＋書き込み 1 回**を消費し、
+  無料枠の実質ボトルネックは**書き込み 1,000/日**だった（API リクエスト 500 回/日で 50% 到達）。
+- クローズ時の懸念「WAF レート制限は Pro プラン前提」は解消済み — 現在は無料プランでも
+  レート制限ルールが利用できる。
+
+### 現行構成
+
+- Worker 内の `checkRateLimit` / `RATE_LIMIT_*` は削除（本コミット）。
+- レート制限は **Cloudflare ダッシュボード → セキュリティ → WAF → レート制限ルール**で実施:
+  - 対象: ホスト `portfolio-proxy.shoulang.workers.dev`・パス `/yahoo` `/finnhub` `/fmp` `/edgar` `/edinet-db` `/etf/constituents`
+  - しきい値: **120 リクエスト / 60 秒 / IP**（旧実装と同値）
+  - アクション: ブロック（429）
+- KV は positions / watchlist / 価格キャッシュ / crumb / auth 用途のみとなり、
+  書き込みは通常運用で 1 日数十回オーダーに減少。
+
+### ロールバック
+
+ダッシュボードルールが使えなくなった場合は、この節より上に残した案 B（shard 分散）の
+設計をそのまま復元すればよい（git 履歴 = Issue #62 時点の実装）。
