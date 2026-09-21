@@ -10,6 +10,15 @@ NOTION_DB_ID = "357e348f-3cc9-809b-8647-f4a87244d676"
 binding = "KV"
 id = "349321b2ffbf416e922ac94208651736"
 
+# Workers ネイティブのレート制限（#16・KV 不使用・無料）。
+# workers.dev ドメインには WAF レート制限ルールを適用できないため、
+# ランタイムの ratelimit binding を使う（120 req/60s・IP 単位・colo ローカル近似）。
+[[unsafe.bindings]]
+name = "RATE_LIMITER"
+type = "ratelimit"
+namespace_id = "1001"
+simple = { limit = 120, period = 60 }
+
 # JST 10:00(TSE開場中) / JST 17:00(TSE終了直後) / JST 0:00(NYSE開場中) / JST 7:00(NYSE終了直後)
 [triggers]
 crons = ["0 1,8,15,22 * * *"]

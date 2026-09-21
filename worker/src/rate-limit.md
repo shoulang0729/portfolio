@@ -87,7 +87,7 @@ rl:<ip>:<bucket>:<shard>
 
 ---
 
-## 【2026-09-21 移行完了】KV 実装を撤去し Cloudflare ダッシュボードルールへ（Issue #16）
+## 【2026-09-21 移行完了】KV 実装を撤去し Workers ネイティブ ratelimit binding へ（Issue #16）
 
 ### 経緯
 
@@ -100,14 +100,16 @@ rl:<ip>:<bucket>:<shard>
 ### 現行構成
 
 - Worker 内の `checkRateLimit` / `RATE_LIMIT_*` は削除（本コミット）。
-- レート制限は **Cloudflare ダッシュボード → セキュリティ → WAF → レート制限ルール**で実施:
-  - 対象: ホスト `portfolio-proxy.shoulang.workers.dev`・パス `/yahoo` `/finnhub` `/fmp` `/edgar` `/edinet-db` `/etf/constituents`
-  - しきい値: **120 リクエスト / 60 秒 / IP**（旧実装と同値）
-  - アクション: ブロック（429）
+- レート制限は **Workers ネイティブの ratelimit binding** で実施（`wrangler.toml` の `RATE_LIMITER`）:
+  - ⚠️ 当初は WAF レート制限ルール（ダッシュボード）を予定したが、**WAF ルールはゾーン（自己所有ドメイン）単位の機能で、`workers.dev` ドメインには適用できない**ため binding 方式に変更。
+  - 対象パス: `/yahoo` `/finnhub` `/fmp` `/edgar` `/edinet-db` `/etf/constituents`（fetch ルーティング内で判定）
+  - しきい値: **120 リクエスト / 60 秒 / IP**（`simple = { limit = 120, period = 60 }`・旧実装と同値）
+  - 超過時: 429。binding 未設定環境（vitest 等）と判定例外時は **fail-open**（素通し）
+  - 特性: colo ローカルの近似カウント（グローバル厳密ではない）。個人アプリの防御目的には十分
 - KV は positions / watchlist / 価格キャッシュ / crumb / auth 用途のみとなり、
   書き込みは通常運用で 1 日数十回オーダーに減少。
 
 ### ロールバック
 
-ダッシュボードルールが使えなくなった場合は、この節より上に残した案 B（shard 分散）の
+binding が使えなくなった場合は、この節より上に残した案 B（shard 分散）の
 設計をそのまま復元すればよい（git 履歴 = Issue #62 時点の実装）。

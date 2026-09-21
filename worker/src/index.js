@@ -58,9 +58,9 @@ function _workerToFinnhubSymbol(ySymbol) {
 // ── レート制限 ────────────────────────────────────────
 // KV shard 方式（旧 #62）は 1 リクエストあたり KV 読み 5・書き 1 を消費し、
 // 無料枠の書き込み上限 1,000/日が実質ボトルネックになった（2026-09-21 に
-// 50% 到達アラート）。#16 対応で Worker 内実装を撤去し、Cloudflare
-// ダッシュボードのレート制限ルール（無料プラン対応）に移行した。
-// 経緯・ルール設定値は worker/src/rate-limit.md を参照。
+// 50% 到達アラート）。#16 対応で KV 実装を撤去し、Workers ネイティブの
+// ratelimit binding（wrangler.toml の RATE_LIMITER・KV 不使用・無料）に移行。
+// 判定は fetch ルーティング内で実施。経緯は worker/src/rate-limit.md を参照。
 
 // ── CORS ──────────────────────────────────────────────
 function corsHeaders(origin) {
@@ -1287,7 +1287,17 @@ export default {
 
     const path = url.pathname;
     if (path === '/')                return new Response('portfolio-proxy OK', { status: 200 });
-    // レート制限は Cloudflare ダッシュボードのルールで実施（#16・rate-limit.md 参照）
+    // レート制限: Workers ネイティブ ratelimit binding（#16・KV 不使用・rate-limit.md 参照）。
+    // binding 未設定環境（テスト等）では素通し。判定失敗時も fail-open。
+    if (path === '/yahoo' || path === '/finnhub' || path === '/fmp' || path === '/edgar' || path === '/edinet-db' || path === '/etf/constituents') {
+      if (env.RATE_LIMITER) {
+        try {
+          const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+          const { success } = await env.RATE_LIMITER.limit({ key: ip });
+          if (!success) return errRes('Too Many Requests', 429, org);
+        } catch { /* fail-open */ }
+      }
+    }
     if (path === '/yahoo')           return handleYahoo(url, env, org);
     if (path === '/finnhub')         return handleFinnhub(url, env, org);
     if (path === '/fmp')             return handleFmp(url, env, org);
