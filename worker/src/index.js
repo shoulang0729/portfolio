@@ -55,52 +55,12 @@ function _workerToFinnhubSymbol(ySymbol) {
   return ySymbol;
 }
 
-// ── レート制限（/yahoo・/finnhub プロキシ向け、KV 使用） ──────────
-// 同一 CF-Connecting-IP から RATE_LIMIT_WINDOW_MS 内に最大 RATE_LIMIT_MAX リクエストまで。
-//
-// 設計判断は worker/src/rate-limit.md を参照（案 A: Durable Objects /
-// 案 B: shard 分散 / 案 C: Cache API の比較）。本実装は案 B。
-//
-// KV キー: "rl:<ip>:<bucket>:<shard>"
-//   - bucket = floor(now / 60s)  → 1 分単位のタンブリングウィンドウ
-//   - shard  = 0..N-1            → 書き込みをランダムに分散してレース窓を 1/N に縮小
-// 読込時は全 shard を並列 GET → 合算して上限判定。
-// put は await しない（レイテンシ削減・失敗時は次のリクエストで挽回）。
-const RATE_LIMIT_MAX = 120;            // リクエスト / バケット
-const RATE_LIMIT_WINDOW_MS = 60_000;   // バケット幅（60秒）
-const RATE_LIMIT_SHARDS = 4;           // shard 数（増やすほどレース窓が分散）
-const RATE_LIMIT_TTL = 120;            // shard キー TTL（バケット境界跨ぎを許容）
-
-async function checkRateLimit(request, env) {
-  if (!env.KV) return false; // KV 未設定時はスキップ
-  const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
-  const bucket = Math.floor(Date.now() / RATE_LIMIT_WINDOW_MS);
-
-  // 全 shard を並列に読んで合算（書き込みが分散しているので合算は必須）。
-  // 旧キー "rl:<ip>"（TTL 60s）も移行期間中は合算する。
-  const shardKeys = [];
-  for (let i = 0; i < RATE_LIMIT_SHARDS; i++) {
-    shardKeys.push(`rl:${ip}:${bucket}:${i}`);
-  }
-  const legacyKey = `rl:${ip}`;
-  const reads = await Promise.all([
-    ...shardKeys.map(k => env.KV.get(k)),
-    env.KV.get(legacyKey),
-  ]);
-  const total = reads.reduce((sum, v) => sum + parseInt(v || '0', 10), 0);
-
-  if (total >= RATE_LIMIT_MAX) return true;
-
-  // 書き込み shard をランダム選択 → GET→PUT のレース窓は同一 shard を選んだ場合のみ
-  // 発生する（衝突確率 1/N）。put は await しない。
-  const writeShard = Math.floor(Math.random() * RATE_LIMIT_SHARDS);
-  const writeKey = `rl:${ip}:${bucket}:${writeShard}`;
-  const shardCurrent = parseInt(reads[writeShard] || '0', 10);
-  env.KV.put(writeKey, String(shardCurrent + 1), { expirationTtl: RATE_LIMIT_TTL })
-    .catch(() => {});
-
-  return false;
-}
+// ── レート制限 ────────────────────────────────────────
+// KV shard 方式（旧 #62）は 1 リクエストあたり KV 読み 5・書き 1 を消費し、
+// 無料枠の書き込み上限 1,000/日が実質ボトルネックになった（2026-09-21 に
+// 50% 到達アラート）。#16 対応で Worker 内実装を撤去し、Cloudflare
+// ダッシュボードのレート制限ルール（無料プラン対応）に移行した。
+// 経緯・ルール設定値は worker/src/rate-limit.md を参照。
 
 // ── CORS ──────────────────────────────────────────────
 function corsHeaders(origin) {
@@ -1327,9 +1287,7 @@ export default {
 
     const path = url.pathname;
     if (path === '/')                return new Response('portfolio-proxy OK', { status: 200 });
-    if (path === '/yahoo' || path === '/finnhub' || path === '/fmp' || path === '/edgar' || path === '/edinet-db' || path === '/etf/constituents') {
-      if (await checkRateLimit(request, env)) return errRes('Too Many Requests', 429, org);
-    }
+    // レート制限は Cloudflare ダッシュボードのルールで実施（#16・rate-limit.md 参照）
     if (path === '/yahoo')           return handleYahoo(url, env, org);
     if (path === '/finnhub')         return handleFinnhub(url, env, org);
     if (path === '/fmp')             return handleFmp(url, env, org);
