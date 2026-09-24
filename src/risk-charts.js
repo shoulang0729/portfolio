@@ -1078,6 +1078,146 @@ function buildRiskGlossary() {
   return /** @type {HTMLElement} */ (tpl.content.firstElementChild);
 }
 
+// ── リチウム市況モニタ（#611）────────────────────────────────────────────────
+// LIT（Global X Lithium & Battery Tech ETF）を現物スポットのプロキシとして使用。
+// 200日移動平均との比較で局面判定（絶対値キャリブレーション不要・誤警報が少ない相対指標）。
+const LIT_SYMBOL = 'LIT';
+const LIT_RANGE  = '1y';
+
+/**
+ * historicalCache の配列から N 日単純移動平均を計算する。
+ * データが N 未満の場合は null を返す。
+ * @param {Array<{date: Date, close: number}>} entries
+ * @param {number} n
+ * @returns {number|null}
+ */
+function _sma(entries, n) {
+  if (!entries || entries.length < n) return null;
+  const tail = entries.slice(-n);
+  return tail.reduce((s, e) => s + e.close, 0) / n;
+}
+
+/**
+ * 騰落率（%）を符号付き文字列にフォーマットする。null は '—' を返す。
+ * @param {number|null} pct
+ * @returns {string}
+ */
+function _fmtSignedPct(pct) {
+  if (pct == null) return '—';
+  return `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`;
+}
+
+/**
+ * リチウム市況モニタカードを非同期で生成する（#611）。
+ * LIT を現物スポット炭酸リチウムのプロキシとして使用し、200DMA との比較で局面判定。
+ * @returns {Promise<HTMLElement>}
+ */
+async function buildLithiumCard() {
+  const card = document.createElement('div');
+  card.className = 'risk-lithium';
+  card.insertAdjacentHTML('beforeend', cardTitle('i-layers', 'リチウム市況', 'REMX保有前提監視'));
+
+  await fetchSymbolHistory(LIT_SYMBOL, LIT_RANGE);
+
+  const entries = state.historicalCache[LIT_RANGE]?.[LIT_SYMBOL];
+
+  if (!entries || entries.length < 2) {
+    const note = document.createElement('p');
+    note.className = 'q-lead';
+    note.textContent = 'リチウム市況データを取得中です。しばらくしてから再表示してください。';
+    card.appendChild(note);
+    return card;
+  }
+
+  const latest = entries[entries.length - 1];
+  const latestPrice = latest.close;
+
+  const pct1d  = (() => {
+    if (entries.length < 2) return null;
+    const prev = entries[entries.length - 2];
+    return ((latestPrice - prev.close) / prev.close) * 100;
+  })();
+  const pct1w  = (() => {
+    const ref = entries.slice().reverse().find(e => {
+      const ms = e.date instanceof Date ? e.date.getTime() : new Date(e.date).getTime();
+      return ms <= Date.now() - 7 * 86400000;
+    });
+    return ref ? ((latestPrice - ref.close) / ref.close) * 100 : null;
+  })();
+  const pct1m  = (() => {
+    const ref = entries.slice().reverse().find(e => {
+      const ms = e.date instanceof Date ? e.date.getTime() : new Date(e.date).getTime();
+      return ms <= Date.now() - 30 * 86400000;
+    });
+    return ref ? ((latestPrice - ref.close) / ref.close) * 100 : null;
+  })();
+
+  const sma200 = _sma(entries, 200);
+
+  let statusClass = 'warn';
+  let statusLabel = '🟡 中立';
+  let statusDesc  = 'データ不足または横ばい局面。LIT の動向を引き続き注視してください。';
+
+  if (sma200 != null) {
+    const devPct = ((latestPrice - sma200) / sma200) * 100;
+    if (devPct >= -2) {
+      statusClass = 'ok';
+      statusLabel = '🟢 回復基調';
+      statusDesc  = 'LIT が 200 日移動平均を上回り（または小幅下方）、リチウム回復基調を示唆。REMX 保有の前提を維持中。';
+    } else if (devPct >= -10) {
+      statusClass = 'warn';
+      statusLabel = '🟡 中立';
+      statusDesc  = `LIT が 200 日移動平均を ${Math.abs(devPct).toFixed(1)}% 下回っています。局面に注目してください。`;
+    } else {
+      statusClass = 'bad';
+      statusLabel = '🔴 崩れ警戒';
+      statusDesc  = `LIT が 200 日移動平均を ${Math.abs(devPct).toFixed(1)}% 大幅に下回っています。リチウム需給の崩れサイン＝REMX への逆風の可能性。トリム検討を。`;
+    }
+  }
+
+  const body = document.createElement('div');
+  body.className = 'lith-body';
+
+  const banner = document.createElement('div');
+  banner.className = `lith-banner ${statusClass}`;
+  banner.innerHTML = `
+    <span class="lith-badge">${escapeHTML(statusLabel)}</span>
+    <span class="lith-desc">${escapeHTML(statusDesc)}</span>`;
+  body.appendChild(banner);
+
+  const stats = document.createElement('div');
+  stats.className = 'lith-stats';
+
+  const pct1dStr  = _fmtSignedPct(pct1d);
+  const pct1wStr  = _fmtSignedPct(pct1w);
+  const pct1mStr  = _fmtSignedPct(pct1m);
+  const smaStr    = sma200 != null ? `$${sma200.toFixed(2)}` : '—';
+  const devPctVal = sma200 != null ? (latestPrice - sma200) / sma200 * 100 : null;
+  const devStr    = devPctVal != null ? `${devPctVal >= 0 ? '+' : ''}${devPctVal.toFixed(1)}%` : '—';
+
+  const cls1d  = pct1d  != null ? (pct1d  >= 0 ? 'pos' : 'neg') : '';
+  const cls1w  = pct1w  != null ? (pct1w  >= 0 ? 'pos' : 'neg') : '';
+  const cls1m  = pct1m  != null ? (pct1m  >= 0 ? 'pos' : 'neg') : '';
+  const clsDev = devPctVal != null ? (devPctVal >= 0 ? 'pos' : 'neg') : '';
+
+  stats.innerHTML = `
+    <div class="lith-stat"><span class="lith-sl">現値 (LIT)</span><span class="lith-sv">$${escapeHTML(latestPrice.toFixed(2))}</span></div>
+    <div class="lith-stat"><span class="lith-sl">1日</span><span class="lith-sv ${cls1d}">${escapeHTML(pct1dStr)}</span></div>
+    <div class="lith-stat"><span class="lith-sl">1週</span><span class="lith-sv ${cls1w}">${escapeHTML(pct1wStr)}</span></div>
+    <div class="lith-stat"><span class="lith-sl">1ヶ月</span><span class="lith-sv ${cls1m}">${escapeHTML(pct1mStr)}</span></div>
+    <div class="lith-stat"><span class="lith-sl">200日MA</span><span class="lith-sv">${escapeHTML(smaStr)}</span></div>
+    <div class="lith-stat"><span class="lith-sl">vs 200MA</span><span class="lith-sv ${clsDev}">${escapeHTML(devStr)}</span></div>`;
+  body.appendChild(stats);
+
+  const note = document.createElement('p');
+  note.className = 'lith-note';
+  note.textContent = '※ LIT（Global X Lithium & Battery Tech ETF）は炭酸リチウム現物スポットのプロキシです。現物スポット価格とは連動しますが一致しません。局面判定は 200 日移動平均との乖離で行っています。';
+  body.appendChild(note);
+
+  card.appendChild(body);
+  return card;
+}
+
 // ── once-guard: target-allocation を二重ロードしない ───────────────────────
 let _taLoaded = false;
 
@@ -1115,11 +1255,13 @@ export async function renderRiskCharts() {
   const breakdown = computeRiskBreakdown(assets);
   const sourceSummary = getSourceSummary(assets);
 
-  // 重い await（クオンツ・地域）を先に解決してから一括クリア＆append（交錯による重複を防ぐ）。
+  // 重い await（クオンツ・地域・リチウム）を先に解決してから一括クリア＆append（交錯による重複を防ぐ）。
   const quantCard = await buildQuantCard(positions);
   if (_riskRenderSeq !== myRun) return;
   const manualSymbols = manualAssets.map((a) => a.symbol);
   const { card: regionCard, japanTruePct } = await buildRegionCard(assets, manualSymbols);
+  if (_riskRenderSeq !== myRun) return;
+  const lithiumCard = await buildLithiumCard();
   if (_riskRenderSeq !== myRun) return;
 
   wrap.textContent = '';
@@ -1179,6 +1321,10 @@ export async function renderRiskCharts() {
   const srcLines = mfSrc ? [baseSrc, ...mfSrc, MANUAL_SOURCES[1]] : [baseSrc, ...MANUAL_SOURCES];
   src.textContent = srcLines.filter(Boolean).join(' ／ ');
   wrap.appendChild(src);
+
+  // ── リチウム市況モニタ（#611）────────────────────────────────────────────
+  wrap.appendChild(lithiumCard);
+  // ── /リチウム市況モニタ ──────────────────────────────────────────────────
 
   // ── 用語解説（常設・タブ末尾）────────────────────────────────────────────
   wrap.appendChild(buildRiskGlossary());
