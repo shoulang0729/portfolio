@@ -280,7 +280,36 @@ table.t td { font-size: var(--fs-sm); font-weight: 700; border-bottom: 1px solid
 
 /* ── 週次 Briefing タブ ── */
 /* A方式: パネルは単一スクロール（iframe を残り高さにフィット、本体HTMLが内部スクロール） */
-#panel-briefing { padding: 0; overflow: hidden; }
+#panel-briefing { padding: 0; overflow: hidden; display: flex; flex-direction: column; }
+.bf-container { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; overflow: hidden; }
+
+/* ── #611 リチウム市況モニタカード ── */
+.lit-card {
+  flex: 0 0 auto; padding: 12px 16px; border-bottom: 1px solid var(--border);
+  background: var(--surface); max-width: 600px; margin-inline: auto; width: 100%; box-sizing: border-box;
+}
+.lit-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.lit-title { font-size: var(--fs-base); font-weight: 700; color: var(--text); }
+.lit-status-badge {
+  font-size: var(--fs-sm); font-weight: 600; padding: 3px 10px;
+  border-radius: var(--r-pill); white-space: nowrap;
+}
+.lit-status-good { background: color-mix(in srgb, var(--tone-good) 15%, transparent); color: var(--tone-good); }
+.lit-status-warn { background: color-mix(in srgb, var(--tone-warn) 15%, transparent); color: var(--tone-warn); }
+.lit-status-neu  { background: var(--surface2); color: var(--text2); }
+.lit-desc { font-size: var(--fs-sm); color: var(--text2); margin-bottom: 8px; }
+.lit-proxies { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
+.lit-proxy-row { display: flex; align-items: center; gap: 8px; font-size: var(--fs-sm); }
+.lit-proxy-sym  { font-weight: 700; color: var(--text); min-width: 32px; }
+.lit-proxy-name { flex: 1 1 auto; color: var(--text2); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lit-proxy-price { font-weight: 600; color: var(--text); white-space: nowrap; }
+.lit-proxy-pct  { font-size: var(--fs-sm); white-space: nowrap; min-width: 40px; text-align: right; }
+.lit-pos { color: var(--tone-good); }
+.lit-neg { color: var(--tone-warn); }
+.lit-trigger { font-size: var(--fs-xs); color: var(--text2); margin-bottom: 4px; }
+.lit-trigger.lit-status-warn { color: var(--tone-warn); font-weight: 600; }
+.lit-trigger.lit-status-good { color: var(--tone-good); }
+.lit-note { font-size: var(--fs-xs); color: var(--text3); }
 .bf-wrap { display: flex; flex-direction: column; }
 .bf-msg { padding: 32px 16px; text-align: center; color: var(--text2); font-size: var(--fs-md); }
 .bf-msg.bf-err { color: var(--danger); }
