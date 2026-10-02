@@ -10,6 +10,13 @@
 // 中身は自己完結のモバイルHTML（MulmoClaude の週次タスクが生成・コミットする）。
 // ══════════════════════════════════════════════════════════════
 
+import { fetchLivePrice, fetchSymbolHistory } from './data.js';
+import { getHistoricalChangePct } from './utils.js';
+
+// ── リチウム市況モニタ設定（#611）──
+const LITHIUM_PROXY = 'LIT'; // Global X Lithium & Battery Tech ETF
+const LITHIUM_WARN_1M = -15; // 1ヶ月騰落率がこれを下回ると🔴警戒
+
 let _loaded = false;
 /** @type {HTMLIFrameElement|null} */
 let _frame = null;
@@ -80,6 +87,80 @@ function _ensureResizeFit() {
 }
 
 /**
+ * 騰落率を「+1.2%」形式にフォーマット
+ * @param {number|null} pct
+ * @returns {string}
+ */
+function _fmtPct(pct) {
+  if (pct == null) return '–';
+  return `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`;
+}
+
+/**
+ * リチウム市況ステータスを判定する
+ * @param {number|null} pct1m 1ヶ月騰落率（%）
+ * @param {number|null} pct1w 1週間騰落率（%）
+ * @returns {{ badge: string, label: string, cls: string }}
+ */
+function _lithiumStatus(pct1m, pct1w) {
+  if (pct1m !== null && pct1m <= LITHIUM_WARN_1M) {
+    return { badge: '🔴', label: '崩れ警戒', cls: 'lm-warn' };
+  }
+  if (pct1m !== null && pct1m > 0 && (pct1w === null || pct1w >= -5)) {
+    return { badge: '🟢', label: '回復基調', cls: 'lm-good' };
+  }
+  return { badge: '🟡', label: '中立', cls: 'lm-neu' };
+}
+
+/**
+ * リチウム市況モニタカードを描画して返す（#611）
+ * @returns {HTMLElement}
+ */
+function _buildLithiumCard() {
+  const card = document.createElement('div');
+  card.className = 'lm-card';
+  card.innerHTML = `<div class="lm-loading">リチウム市況を取得中…</div>`;
+
+  Promise.all([
+    fetchLivePrice(LITHIUM_PROXY),
+    fetchSymbolHistory(LITHIUM_PROXY, '1y'),
+  ]).then(([live]) => {
+    const price = !('_err' in live) ? /** @type {any} */ (live).price : null;
+    const pct1d = !('_err' in live) ? /** @type {any} */ (live).dayPct : null;
+    const pct1w = getHistoricalChangePct(LITHIUM_PROXY, '1w');
+    const pct1m = getHistoricalChangePct(LITHIUM_PROXY, '1m');
+
+    const { badge, label, cls } = _lithiumStatus(pct1m, pct1w);
+
+    const priceStr = price != null ? `$${price.toFixed(2)}` : '–';
+    const row1d = `<span class="lm-period">1d</span><span class="lm-pct ${pct1d != null && pct1d >= 0 ? 'lm-pos' : 'lm-neg'}">${_fmtPct(pct1d)}</span>`;
+    const row1w = `<span class="lm-period">1w</span><span class="lm-pct ${pct1w != null && pct1w >= 0 ? 'lm-pos' : 'lm-neg'}">${_fmtPct(pct1w)}</span>`;
+    const row1m = `<span class="lm-period">1m</span><span class="lm-pct ${pct1m != null && pct1m >= 0 ? 'lm-pos' : 'lm-neg'}">${_fmtPct(pct1m)}</span>`;
+
+    card.innerHTML = `
+      <div class="lm-header">
+        <span class="lm-title">リチウム市況モニタ</span>
+        <span class="lm-badge ${cls}">${badge} ${label}</span>
+      </div>
+      <div class="lm-body">
+        <div class="lm-proxy">
+          <span class="lm-sym">${LITHIUM_PROXY}</span>
+          <span class="lm-price">${priceStr}</span>
+          <span class="lm-rates">${row1d}${row1w}${row1m}</span>
+        </div>
+        <div class="lm-desc">REMX 保有の前提＝リチウム回復。崩れたら REMX 逆風。</div>
+        ${cls === 'lm-warn' ? `<div class="lm-alert">⚠️ 1ヶ月で${_fmtPct(pct1m)}—下振れトリガー抵触。REMX の trim 検討を。</div>` : ''}
+      </div>
+      <div class="lm-note">※プロキシ連動（現物スポットではない）</div>
+    `;
+  }).catch(() => {
+    card.innerHTML = `<div class="lm-loading lm-err">リチウム市況の取得に失敗しました</div>`;
+  });
+
+  return card;
+}
+
+/**
  * Briefing タブを描画する（初回のみ自動ロード、force で再読込）
  * @param {boolean} [force]
  * @returns {void}
@@ -98,7 +179,13 @@ export function renderBriefing(force = false) {
     .then((idx) => {
       const issues = (idx.issues || []).slice().sort((a, b) => (a.date < b.date ? 1 : -1));
       if (!issues.length) {
-        panel.innerHTML = '<div class="bf-msg">まだ Briefing がありません。</div>';
+        panel.textContent = '';
+        panel.appendChild(_buildLithiumCard());
+        const msg = document.createElement('div');
+        msg.className = 'bf-msg';
+        msg.textContent = 'まだ Briefing がありません。';
+        panel.appendChild(msg);
+        _loaded = true;
         return;
       }
       const latest = issues[0];
@@ -106,6 +193,9 @@ export function renderBriefing(force = false) {
       if (!latestUrl) throw new Error('invalid briefing path');
 
       panel.textContent = '';
+
+      panel.appendChild(_buildLithiumCard());
+
       const wrap = document.createElement('div');
       wrap.className = 'bf-wrap';
 
@@ -161,7 +251,12 @@ export function renderBriefing(force = false) {
       _loaded = true;
     })
     .catch(() => {
-      panel.innerHTML = '<div class="bf-msg bf-err">Briefing の読み込みに失敗しました。</div>';
+      panel.textContent = '';
+      panel.appendChild(_buildLithiumCard());
+      const errMsg = document.createElement('div');
+      errMsg.className = 'bf-msg bf-err';
+      errMsg.textContent = 'Briefing の読み込みに失敗しました。';
+      panel.appendChild(errMsg);
     });
 }
 
