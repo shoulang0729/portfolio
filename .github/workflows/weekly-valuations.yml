@@ -1,15 +1,17 @@
 name: Weekly Valuations
 
-# 週次バッチ（quality / ETF PER / 目標株価乖離 / 同業中央値 / 的中率）を Actions で実行する（#652 PR5）。
+# 週次バッチ（quality / ETF PER / 目標株価乖離 / 同業中央値 / 的中率）を Actions で実行する（#652 PR5・PR6）。
 # - Worker 中継口（/fmp /edinet-db /edgar /finnhub /yahoo）経由。API キー・Secrets は使わない
 #   （GITHUB_TOKEN は write モードの push と Issue 管理のみ）。
-# - report モード（schedule の既定）: 各スクリプトを作業ツリーで実行 → 差分レポートを出して終了（commit しない）。
-# - write モード（PR5 では workflow_dispatch のみ）: 上記＋ commit → push → 同じジョブで kv-resync。
+# - report モード（workflow_dispatch の既定）: 各スクリプトを作業ツリーで実行 → 差分レポートを出して終了（commit しない）。
+# - write モード（PR6 から schedule は常に write）: 上記＋ commit → push → 同じジョブで kv-resync。
+# - quality / value / sectorMedian の書き戻しは null ガード（lib/null-guard.mjs）を通る：
+#   新しい値が null・既存値が非 null のフィールドは既存値を保持し staleFields に印を付ける（§8.4）。
 # - 公開リポのログ・サマリ・artifact・Issue に出すのは銘柄シンボル・指標値・件数まで（HTTP 本文や KV 本文は出さない）。
 
 on:
   schedule:
-    - cron: '0 2 * * 0'   # 毎週日曜 02:00 UTC（PR5 は report モード）
+    - cron: '0 2 * * 0'   # 毎週日曜 02:00 UTC（PR6 から write モード）
   workflow_dispatch:
     inputs:
       mode:
@@ -34,6 +36,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: main   # 起動コミットではなく最新の main に対して実行・比較する
+          fetch-depth: 0   # write モードの git pull --rebase origin main を shallow clone で行わない
 
       - uses: actions/setup-node@v4
         with:
@@ -45,8 +48,10 @@ jobs:
           EVENT: ${{ github.event_name }}
           INPUT_MODE: ${{ inputs.mode }}
         run: |
-          # PR5: schedule は常に report。write は workflow_dispatch で明示したときだけ。
-          if [ "$EVENT" = "workflow_dispatch" ] && [ "$INPUT_MODE" = "write" ]; then
+          # PR6: schedule は常に write。workflow_dispatch は input に従う（既定 report）。
+          if [ "$EVENT" = "schedule" ]; then
+            MODE=write
+          elif [ "$EVENT" = "workflow_dispatch" ] && [ "$INPUT_MODE" = "write" ]; then
             MODE=write
           else
             MODE=report

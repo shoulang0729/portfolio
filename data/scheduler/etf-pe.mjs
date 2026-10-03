@@ -1,7 +1,7 @@
 // @ts-check
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
-import { writeBlocks } from './writeback.mjs';
+import { writeGuardedBlocks } from './lib/null-guard.mjs';
 import { workerJson } from './lib/worker-client.mjs';
 
 // ══════════════════════════════════════════════════════════════
@@ -92,7 +92,7 @@ async function main() {
     return;
   }
 
-  const written = writeBlocks(VALS_PATH, results, 'value');
+  const written = writeGuardedBlocks(VALS_PATH, results, 'value');
   console.log(`\nWrote ${VALS_PATH} (${written} ETFs)`);
 }
 
