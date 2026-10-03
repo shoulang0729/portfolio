@@ -24,7 +24,8 @@
 | ファイル | 書き手 |
 |---|---|
 | `data/mf-holdings.json`・`data/mf-history.json` | Mac mini の MF 取得バッチ（毎日） |
-| `data/valuations.json`・`data/briefings/**` | Mulmo の日次バッチ（毎朝 05:00 CST） |
+| `data/valuations.json`（判断の書き戻し）・`data/briefings/**` | Mulmo の日次バッチ（毎朝 05:00 CST） |
+| `data/valuations.json` の `perCurrent`/`percentile`/`status`/`asOf` とファンドの加重 PER | GitHub Actions `per-daily.yml`（毎日 20:15 UTC・コミット `data: daily PER <UTC日付>`） |
 | `data/positions.json`・`data/portfolio-snapshot.json` | Worker（KV 同期・スナップショット） |
 | `data/valuations.json` の `quality`/`value`/`sectorMedian`/`staleFields`・`data/verdict-outcomes.json` | GitHub Actions `weekly-valuations.yml`（毎週日曜 02:00 UTC） |
 | `data/scheduler/fund-holdings.json` | GitHub Actions `fund-holdings-monthly.yml`（月次・毎月 1〜20 日 03:00 UTC） |

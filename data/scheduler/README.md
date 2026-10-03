@@ -88,19 +88,51 @@ node data/scheduler/diff-report.mjs
   バッチ側にキーを読むコード（環境変数・設定ファイル）は無い。
 - ひふみ上位10の月次更新（`fund-holdings-update.mjs`・#656）は毎回 2026-05 の月次レポート PDF で自己検証する。この PDF が公開終了（404）になったら、取得できる月の PDF で `lib/hifumi-known.mjs` の `KNOWN_MONTH`/`KNOWN_TOP10` を更新する（それまで更新は止まる）。
 
-## 毎日の PER（GitHub Actions・並行運転中・#652 PR2）
+## 毎日の PER（GitHub Actions・`per-daily.yml`・#652 PR3）
 
-`.github/workflows/per-daily.yml` が毎日 **計算のみ**（`--write` なし）で PER を算出し、Mulmo の確定値と自動で突き合わせる。
-この段階では `data/valuations.json` を書き換えない（書き込みへの切り替えは 3 日連続一致の後・PR3）。
+`.github/workflows/per-daily.yml` が毎日 **20:15 UTC** に PER を計算して `data/valuations.json` に書き込み、push する
+（PR2 の並行運転と突き合わせ＝compare ジョブ・01:30 UTC は廃止。同時刻の全銘柄一致を確認して切り替え・設計書 §6）。
 
 | ファイル | 内容 |
 |---|---|
-| `watchlist-per.mjs` | `valuations` の全銘柄の実績PER を Worker `/yahoo` から取得し、バンド内%タイルと status を計算（原本＝Mulmo ワークスペース版の移植・計算は不変）。`--out <file>` / `--write` / 銘柄指定 |
-| `fund-per.mjs` | `fund-holdings.json`（ひふみ上位10・公開開示）の加重実績PER と coverage。`--out <file>` / `--write` |
+| `watchlist-per.mjs` | `valuations` の全銘柄の実績PER を Worker `/yahoo` から取得し、バンド内%タイルと status を計算（原本＝Mulmo ワークスペース版の移植・計算は不変）。`--write` で銘柄の `perCurrent`/`percentile`/`status`/`asOf` とトップの `updated`/`asOf` を更新。`--out <file>` / 銘柄指定 |
+| `fund-per.mjs` | `fund-holdings.json`（ひふみ上位10・公開開示）の加重実績PER と coverage。`--write` でファンドエントリの `perCurrent`/`coverage`/`source`/`asOf`/`components` を追加マージ。`--out <file>` |
 | `fund-holdings.json` | ファンドの上位10銘柄（月次レポートの公開情報） |
-| `per-compare.mjs` | shadow の結果と Mulmo の確定コミットの `valuations.json` を突き合わせ（`match` / `band-changed` / `mismatch-input` / `mismatch-logic` / `one-side-skip`） |
-| `lib/per-calc.mjs` / `lib/json-format.mjs` / `lib/per-compare.mjs` | 純関数（`tests/per-calc.test.js` ほか） |
+| `per-daily-gate.mjs` | ワークフローの判定 CLI：`mode`（開始 20:55〜22:30 UTC は計算のみ）／`push-ok`（21:00〜22:30 UTC は push しない）／`message <日付>`（コミットメッセージ）／`updated <file>`（ウォッチの更新件数・0 件で exit 4）／`check-diff`（許可フィールド以外の変更・書式の変化を検出） |
+| `per-compare.mjs` | PR2 の突き合わせ CLI（ワークフローからは呼ばない・参考に残置） |
+| `lib/per-calc.mjs` / `lib/json-format.mjs` / `lib/per-daily.mjs` / `lib/per-compare.mjs` | 純関数（`tests/per-calc.test.js`・`tests/per-daily.test.js` ほか） |
 
-- 20:15 UTC `shadow`：計算 → artifact `per-shadow-<UTC日付>`（保持 7 日）。
-- 01:30 UTC `compare`：前日 UTC 日付の artifact と突き合わせ → トラッキング Issue（ラベル `per-shadow`）に連続一致日数を記録、不一致日は差分表をコメント。
+ジョブの流れ（`write` ジョブ・schedule／workflow_dispatch とも同じ）：
+
+1. 開始時刻が 20:55〜22:30 UTC なら**計算のみ**（書き込み・コミットしない。ジョブサマリと `::warning` で通知）。
+2. `watchlist-per.mjs --write` → `fund-per.mjs --write`（書式＝インデント・末尾改行は読み込んだファイルのまま）。
+3. `per-daily-gate.mjs check-diff`：`valuations.json` 以外のファイルの変更、許可フィールド以外の変更、書式の変化があれば失敗。
+4. commit：メッセージは**固定形式 `data: daily PER <YYYY-MM-DD>`**（日付＝書き込んだ `asOf`＝実行時の UTC 日付）、
+   author は `github-actions[bot]`。差分が無い日も `--allow-empty` で作る。
+   Mulmo はこのコミットが main にあるかで「Actions が当日分を書いたか」を判定する（`valuations.json` 最上位の `asOf`/`updated` は Briefing の書き戻しでも変わるため判定に使わない）。
+5. push：`git fetch` → `git rebase --empty=keep --reapply-cherry-picks origin/main`（`git pull --rebase` 相当。
+   判定用コミットが空・main と同内容でも落とさない）→ `git push`。最大 3 回リトライ（10 秒間隔）。
+   rebase が衝突したら force せずジョブを失敗させる（main 側を残す）。21:00〜22:30 UTC に入ったら push しない。
+6. push 後、同じジョブで `kv-resync.mjs --json`（GITHUB_TOKEN の push では `kv-resync.yml` の `on: push` が起動しないため）。
+
+- 計算のみに落ちた日・失敗した日はコミットしない（Mulmo は前日値で続行）。
+- **ウォッチの PER を 1 件も更新できなかった日**（全銘柄 skipped・fund-per だけ成功した日を含む）は失敗扱いでコミット・push しない（`per-daily-gate.mjs updated` が exit 4。Mulmo の「当日分あり」誤判定を防ぐ）。skipped の割合の閾値は設けない。
+- 失敗時はラベル `per-daily-failed` の Issue を起票/更新し、書き込み成功で自動クローズ。kv-resync の失敗は `kv-resync-failed` の Issue。
+- concurrency グループは `portfolio-data-batch`（週次・ひふみ月次と共通・`cancel-in-progress: false`）。待機できる実行は 1 つだけで、
+  後から来た実行が待機中の実行を取り消す（cancelled になり失敗 Issue は立たない）。**手動実行を重ねるときは前の実行の終了を待つ**。
 - 手元での確認（キー不要・書き込まない）：`node data/scheduler/watchlist-per.mjs --out /tmp/w.json AAPL`
+
+## KV 同期（GitHub Actions・`kv-resync.yml`・#652 PR1）
+
+アプリ KV のウォッチリストの `valuation` を正本 `data/valuations.json` に合わせる（`kv-resync.mjs`・純関数は `lib/kv-sync.mjs`）。
+
+| 起動 | 動作 |
+|---|---|
+| `data/valuations.json` の push（main） | 即同期（Mulmo の push で起動する） |
+| schedule（毎日 23:30 UTC） | 自己修復（冪等・drift が無ければ noop） |
+| workflow_dispatch | `mode=sync`（既定）／`mode=check`（ドリフト検知のみ・PUT しない・ドリフトありで exit 3） |
+| `per-daily.yml`・`weekly-valuations.yml` の push 後 | 同じジョブ内で明示実行（GITHUB_TOKEN の push は `on: push` を起動しないため） |
+
+- 比較キーは `perCurrent`/`status`/`asOf`。正本に無い銘柄・`valuation` 以外のフィールドは触らない。PUT 後に read-back で再検証。
+- 失敗時はラベル `kv-resync-failed` の Issue を起票/更新し、成功で自動クローズ。
+- 公開リポのため、ログ・サマリには KV の本文を出さない（stage・drift 件数・銘柄シンボルのみ）。
