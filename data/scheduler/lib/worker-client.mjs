@@ -125,3 +125,22 @@ export const edgar = (path) => workerJson(relayPath('/edgar', path));
  * @param {Record<string, string|number>} [params]
  */
 export const finnhub = (path, params = {}) => workerJson(relayPath('/finnhub', path, params));
+
+/**
+ * Yahoo Finance quoteSummary を Worker /yahoo 経由で取得し、パース済み JSON を返す（#652 PR2 で追加）。
+ * 原本（watchlist-per / fund-per）の curl と同じ URL を組み立てる。HTTP ステータスに関わらず本文を JSON として読む
+ * （原本の `curl -s` と同じ）。JSON でなければ throw（メッセージに本文は含めない＝公開ログ対策）。
+ * @param {string} sym Yahoo シンボル（例: 'AAPL' / '8001.T'）
+ * @param {string} modules 例: 'summaryDetail,defaultKeyStatistics'
+ * @returns {Promise<any>}
+ */
+export async function yahooQuoteSummary(sym, modules) {
+  const y = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(sym)}?modules=${modules}`;
+  const res = await workerFetch(`/yahoo?url=${encodeURIComponent(y)}`);
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(`parse(http=${res.status})`);
+  }
+}
