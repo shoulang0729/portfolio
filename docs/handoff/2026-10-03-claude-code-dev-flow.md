@@ -3,7 +3,7 @@
 ## 実装ログ（実装者が更新）
 - ステータス: 実装済み・Toshio 確認待ち
 - [x] 着手 2026-10-03 / branch: chore/649-claude-code-dev-flow
-- [ ] PR #____ open / CI: ______
+- [x] PR #650 open / CI: 実行中
 - [ ] Toshio 確認・マージ YYYY-MM-DD
 
 ---
