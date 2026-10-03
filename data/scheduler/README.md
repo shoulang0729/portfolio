@@ -1,7 +1,7 @@
 # 自動供給バッチ（A3 quality / A4 ETF PER）
 
 `valuations.json` の `quality` / `value` / `sectorMedian` ブロックと `verdict-outcomes.json` を週次で自動更新するバッチ群。
-**GitHub Actions（`.github/workflows/weekly-valuations.yml`・毎週日曜 02:00 UTC）で実行する**（#652 PR5）。
+**GitHub Actions（`.github/workflows/weekly-valuations.yml`・毎週日曜 02:00 UTC）で実行する**（#652 PR5・PR6 から書き込み）。
 外部 API はすべて Worker 中継口（`/fmp` `/edinet-db` `/edgar` `/finnhub` `/yahoo`）経由で、**API キーは不要**
 （キーは Worker Secrets 側。GitHub Secrets にも置かない）。手元で実行する場合も同じコマンドでキー不要。
 
@@ -36,12 +36,30 @@ Worker 中継口の呼び出しは `lib/worker-client.mjs` 経由（`Origin` ヘ
 
 | モード | 起動 | 動作 |
 |---|---|---|
-| `report`（既定） | schedule（毎週日曜 02:00 UTC）／workflow_dispatch | 7 本を順に実行（`quality-us` → `quality-jp` → `etf-pe` → `target-gap` → `sector-median` → `jp-sector-median` → `hit-rate`）→ `diff-report.mjs` の差分をジョブサマリと artifact（`weekly-diff-<日付>`・30 日）に出して終了。**commit しない** |
-| `write` | workflow_dispatch で `mode=write` を選んだときだけ（PR5 時点） | `report` と同じ＋ `data/valuations.json` / `data/verdict-outcomes.json` を 1 回で commit → push（`pull --rebase`＋最大 3 回リトライ・21:00〜22:30 UTC は push しない）→ 同じジョブで `kv-resync.mjs --json` |
+| `report` | workflow_dispatch（既定） | 7 本を順に実行（`quality-us` → `quality-jp` → `etf-pe` → `target-gap` → `sector-median` → `jp-sector-median` → `hit-rate`）→ `diff-report.mjs` の差分をジョブサマリと artifact（`weekly-diff-<日付>`・30 日）に出して終了。**commit しない** |
+| `write` | schedule（毎週日曜 02:00 UTC・PR6 から）／workflow_dispatch で `mode=write` | `report` と同じ＋ `data/valuations.json` / `data/verdict-outcomes.json` を 1 回で commit → push（`pull --rebase`＋最大 3 回リトライ・21:00〜22:30 UTC は push しない）→ 同じジョブで `kv-resync.mjs --json` |
 
 - 1 本が失敗しても残りは続け、最後にジョブを失敗にする。失敗時はラベル `weekly-batch-failed` の Issue を起票/更新し、成功で自動クローズ。
 - concurrency グループは `portfolio-data-batch`（毎日の PER などと共通・`cancel-in-progress: false`）。
 - 公開リポのため、ログ・サマリ・artifact に出すのは銘柄シンボル・指標値・件数まで（HTTP 本文は出さない）。
+
+## null ガードと `staleFields`（#652 PR6）
+
+`quality` / `value` / `sectorMedian` の書き戻しは `lib/null-guard.mjs` の `writeGuardedBlocks()` を通る
+（`writeback.mjs` の `writeBlocks()` はそのまま使う）。データ提供元の欠損で値が null になっても、既存値を消さないため。
+
+- **新しい値が null・既存値が非 null** のフィールドは、既存値を保持し、エントリ直下の `staleFields` に印を付ける。
+  キー＝`"<ブロック>.<フィールド>"`（例 `"quality.roic"`）、値＝null を最初に観測した日（UTC・`YYYY-MM-DD`）。
+- 引き続き null なら値は保持のまま・日付は最初の観測日を維持。**非 null が取れたら新値を書き、印を外す**（回復）。
+  印が全部外れたら `staleFields: {}` を残す（キーは削除しない）。印が変わらない銘柄では `staleFields` に触れない。
+- ガードしないもの：新ブロックに**キーが無い**フィールド（`etf-pe.mjs` の丸ごと置換）・既存も null（または既存ブロック無し）・
+  銘柄ごとスキップ（取得失敗）・`verdict-outcomes.json`（`hit-rate.mjs`）・毎日の PER。
+- 新ブロック自体が null（`computeQuality` が null 等）で既存ブロックがあれば、既存ブロックを丸ごと保持し、非 null だった各フィールドに印。
+- 派生値は再計算しない（`roic` を保持しても `qScore` は新しく算出された値）。
+- ログは `  [null-guard] <銘柄> <ブロック>.<フィールド>: null → 既存値を保持（stale since <日付>）`（値は出さない）。
+- 差分レポート（`diff-report.mjs`）は `staleFields` の変化を「null 化（保持）」「保持継続」「回復（old→new）」の節で出し、
+  サマリに列「うち null 化（保持）」を足す。既存の「うち null 化」は**保持されずに null になった件数**。
+- Mulmo（Briefing 生成・書き戻し）は `staleFields` を消さない・書き換えないこと。
 
 ## CLI フラグ
 

@@ -2,7 +2,7 @@
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
-import { writeBlocks } from './writeback.mjs';
+import { writeGuardedBlocks } from './lib/null-guard.mjs';
 import { workerJson } from './lib/worker-client.mjs';
 
 // ══════════════════════════════════════════════════════════════
@@ -46,11 +46,15 @@ async function fetchYahoo(yahooUrl) {
 async function fetchTargetGap(sym) {
   const yurl = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${sym}?modules=financialData`;
   const j = await fetchYahoo(yurl);
-  const fd = j && j.quoteSummary && j.quoteSummary.result && j.quoteSummary.result[0] && j.quoteSummary.result[0].financialData;
+  const fd =
+    j && j.quoteSummary && j.quoteSummary.result && j.quoteSummary.result[0] && j.quoteSummary.result[0].financialData;
   if (!fd) return null; // ETF 等 financialData 不在
   const tm = fd.targetMeanPrice && typeof fd.targetMeanPrice.raw === 'number' ? fd.targetMeanPrice.raw : null;
   const cp = fd.currentPrice && typeof fd.currentPrice.raw === 'number' ? fd.currentPrice.raw : null;
-  const n = fd.numberOfAnalystOpinions && typeof fd.numberOfAnalystOpinions.raw === 'number' ? fd.numberOfAnalystOpinions.raw : null;
+  const n =
+    fd.numberOfAnalystOpinions && typeof fd.numberOfAnalystOpinions.raw === 'number'
+      ? fd.numberOfAnalystOpinions.raw
+      : null;
   if (tm == null || cp == null || cp === 0) return null; // 未カバー
   return { gap: Math.round((tm / cp - 1) * 100), n };
 }
@@ -106,11 +110,13 @@ async function main() {
 
   if (DRY_RUN) {
     console.log('\n--- DRY RUN results (targetGapPct only) ---');
-    console.log(JSON.stringify(Object.fromEntries(Object.entries(merged).map(([k, v]) => [k, v.targetGapPct])), null, 2));
+    console.log(
+      JSON.stringify(Object.fromEntries(Object.entries(merged).map(([k, v]) => [k, v.targetGapPct])), null, 2)
+    );
     return;
   }
 
-  const written = writeBlocks(VALS_PATH, merged, 'value');
+  const written = writeGuardedBlocks(VALS_PATH, merged, 'value');
   console.log(`\nWrote ${VALS_PATH} (${written} stocks)`);
 }
 

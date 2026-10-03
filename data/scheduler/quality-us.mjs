@@ -2,7 +2,7 @@
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
-import { writeQualityBlocks } from './writeback.mjs';
+import { writeGuardedBlocks } from './lib/null-guard.mjs';
 import { fmp, edgar } from './lib/worker-client.mjs';
 
 // FMP / SEC EDGAR companyfacts は Worker 中継口（/fmp・/edgar）経由（キーは Worker Secrets・#652 PR5）。
@@ -14,8 +14,21 @@ const ROOT = resolve(__dir, '../..');
 const VALS_PATH = resolve(ROOT, 'data/valuations.json');
 
 const ETF_SKIP = new Set([
-  'ACWI', 'VT', 'VEA', 'VGK', 'XLE', 'XLF', 'XLV', 'XLP',
-  'SMH', 'ASHR', 'REMX', 'COPX', 'DTCR', 'SHLD', 'ILF',
+  'ACWI',
+  'VT',
+  'VEA',
+  'VGK',
+  'XLE',
+  'XLF',
+  'XLV',
+  'XLP',
+  'SMH',
+  'ASHR',
+  'REMX',
+  'COPX',
+  'DTCR',
+  'SHLD',
+  'ILF',
 ]);
 
 // --- CLI args ---
@@ -34,7 +47,7 @@ async function fetchWithRetry(url, options = {}, retries = 1, delayMs = 3000) {
     } catch (err) {
       if (attempt < retries) {
         console.warn(`  Retry in ${delayMs}ms after error: ${err.message}`);
-        await new Promise(r => setTimeout(r, delayMs));
+        await new Promise((r) => setTimeout(r, delayMs));
       } else {
         throw err;
       }
@@ -57,7 +70,9 @@ function fmpToFundamentals(profile, incomes, balances, cashflows, keyMetrics) {
 
   function periodFrom(i, b, cf) {
     if (!i && !b && !cf) return null;
-    i = i || {}; b = b || {}; cf = cf || {};
+    i = i || {};
+    b = b || {};
+    cf = cf || {};
     return {
       netIncome: i.netIncome ?? null,
       operatingCashFlow: cf.netCashProvidedByOperatingActivities ?? null,
@@ -87,13 +102,9 @@ function fmpToFundamentals(profile, incomes, balances, cashflows, keyMetrics) {
   // 無料枠外の銘柄では key-metrics が取れず null → quality-calc が NOPAT で代替計算する。
   const km = Array.isArray(keyMetrics) ? keyMetrics[0] : null;
   f.roicDirect =
-    km && typeof km.returnOnInvestedCapital === 'number'
-      ? +(km.returnOnInvestedCapital * 100).toFixed(1)
-      : null;
+    km && typeof km.returnOnInvestedCapital === 'number' ? +(km.returnOnInvestedCapital * 100).toFixed(1) : null;
   f.taxRate =
-    cur.incomeTaxExpense != null &&
-    cur.incomeBeforeTax != null &&
-    cur.incomeBeforeTax !== 0
+    cur.incomeTaxExpense != null && cur.incomeBeforeTax != null && cur.incomeBeforeTax !== 0
       ? cur.incomeTaxExpense / cur.incomeBeforeTax
       : null;
   return f;
@@ -104,11 +115,15 @@ function fmpAllKeyFieldsNull(incomes, balances, cashflows) {
   const bal = balances[0] || {};
   const cf = cashflows[0] || {};
   const checks = [
-    inc.revenue, inc.grossProfit, inc.ebit,
-    bal.totalAssets, bal.totalEquity,
-    cf.netCashProvidedByOperatingActivities, cf.freeCashFlow,
+    inc.revenue,
+    inc.grossProfit,
+    inc.ebit,
+    bal.totalAssets,
+    bal.totalEquity,
+    cf.netCashProvidedByOperatingActivities,
+    cf.freeCashFlow,
   ];
-  return checks.every(v => v == null);
+  return checks.every((v) => v == null);
 }
 
 // --- SEC EDGAR fallback ---
@@ -117,12 +132,11 @@ let edgarTickersCache = null;
 async function getEdgarCik(sym) {
   if (!edgarTickersCache) {
     console.log('  Fetching SEC tickers.json...');
-    edgarTickersCache = await fetchWithRetry(
-      'https://www.sec.gov/files/company_tickers.json',
-      { headers: { 'User-Agent': 'portfolio-quality (github-actions)' } }
-    );
+    edgarTickersCache = await fetchWithRetry('https://www.sec.gov/files/company_tickers.json', {
+      headers: { 'User-Agent': 'portfolio-quality (github-actions)' },
+    });
   }
-  const entry = Object.values(edgarTickersCache).find(v => v.ticker === sym);
+  const entry = Object.values(edgarTickersCache).find((v) => v.ticker === sym);
   return entry ? entry.cik_str : null;
 }
 
@@ -173,7 +187,7 @@ async function main() {
   const valuations = doc.valuations || {};
 
   // Derive US individual stock symbols dynamically
-  let targets = Object.keys(valuations).filter(sym => {
+  let targets = Object.keys(valuations).filter((sym) => {
     if (/\.(T|HK)$/i.test(sym)) return false; // not US
     if (ETF_SKIP.has(sym)) return false;
     return true;
@@ -213,11 +227,11 @@ async function main() {
   }
 
   // Write back: 元フォーマットを保ったまま quality ブロックだけ差し替え
-  const written = writeQualityBlocks(VALS_PATH, results);
+  const written = writeGuardedBlocks(VALS_PATH, results, 'quality');
   console.log(`\nWrote ${VALS_PATH} (${written} symbols)`);
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error('Fatal:', err);
   process.exit(1);
 });

@@ -5,7 +5,7 @@ import { dirname, resolve } from 'path';
 
 import { normalizeEdinetFinancials, resolveEdinetCode } from '../../src/edinet-normalize.js';
 import { computeQuality } from '../../src/quality-calc.js';
-import { writeQualityBlocks } from './writeback.mjs';
+import { writeGuardedBlocks } from './lib/null-guard.mjs';
 import { edinetDb } from './lib/worker-client.mjs';
 
 // EDINET DB は Worker 中継口（/edinet-db）経由（X-API-Key は Worker Secrets・#652 PR5）。
@@ -15,9 +15,7 @@ const __dir = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dir, '../..');
 const VALS_PATH = resolve(ROOT, 'data/valuations.json');
 
-const JP_ETF_SKIP = new Set([
-  '1306.T', '1615.T', '1629.T', '1477.T', '2516.T', '200A.T',
-]);
+const JP_ETF_SKIP = new Set(['1306.T', '1615.T', '1629.T', '1477.T', '2516.T', '200A.T']);
 
 // --- CLI flags ---
 const args = process.argv.slice(2);
@@ -30,7 +28,7 @@ const symbolFlag = (() => {
 // --- Target symbol resolution ---
 // valuations は { "SYM": {entry} } 構造（シンボルキー付きオブジェクト）
 function resolveTargets(valuations) {
-  return Object.keys(valuations).filter(sym => {
+  return Object.keys(valuations).filter((sym) => {
     if (!sym.endsWith('.T')) return false;
     if (JP_ETF_SKIP.has(sym)) return false;
     return true;
@@ -118,11 +116,11 @@ async function main() {
   }
 
   // Write back: 元フォーマットを保ったまま quality ブロックだけ差し替え
-  const updated = writeQualityBlocks(VALS_PATH, results);
+  const updated = writeGuardedBlocks(VALS_PATH, results, 'quality');
   console.log(`\nvaluations.json 更新完了 (${updated}銘柄)`);
 }
 
-main().catch(e => {
+main().catch((e) => {
   console.error('Fatal:', e);
   process.exit(1);
 });

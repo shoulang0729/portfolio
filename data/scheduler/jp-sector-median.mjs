@@ -2,7 +2,7 @@
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
-import { writeBlocks } from './writeback.mjs';
+import { writeGuardedBlocks } from './lib/null-guard.mjs';
 import { workerJson } from './lib/worker-client.mjs';
 
 // ══════════════════════════════════════════════════════════════
@@ -148,8 +148,8 @@ async function main() {
   }
 
   let written = 0;
-  if (Object.keys(valueResults).length) written += writeBlocks(VALS_PATH, valueResults, 'value');
-  if (Object.keys(smResults).length) written += writeBlocks(VALS_PATH, smResults, 'sectorMedian');
+  if (Object.keys(valueResults).length) written += writeGuardedBlocks(VALS_PATH, valueResults, 'value');
+  if (Object.keys(smResults).length) written += writeGuardedBlocks(VALS_PATH, smResults, 'sectorMedian');
   if (written === 0) {
     console.log('投入対象なし。');
     return;

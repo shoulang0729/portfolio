@@ -2,7 +2,7 @@
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
-import { writeBlocks } from './writeback.mjs';
+import { writeGuardedBlocks } from './lib/null-guard.mjs';
 import { finnhub as finnhubRelay } from './lib/worker-client.mjs';
 
 // ══════════════════════════════════════════════════════════════
@@ -127,7 +127,9 @@ async function main() {
       const sm = await computeSectorMedian(sym);
       if (sm) {
         results[sym] = sm;
-        console.log(`  sectorMedian: per=${sm.per} evEbitda=${sm.evEbitda} grossMargin=${sm.grossMargin} pb=${sm.pb} (n=${sm.n})`);
+        console.log(
+          `  sectorMedian: per=${sm.per} evEbitda=${sm.evEbitda} grossMargin=${sm.grossMargin} pb=${sm.pb} (n=${sm.n})`
+        );
       }
     } catch (e) {
       console.warn(`  ${sym}: ${e.message}（スキップ）`);
@@ -144,7 +146,7 @@ async function main() {
     return;
   }
 
-  const written = writeBlocks(VALS_PATH, results, 'sectorMedian');
+  const written = writeGuardedBlocks(VALS_PATH, results, 'sectorMedian');
   console.log(`\nWrote ${VALS_PATH} (${written} symbols)`);
 }
 

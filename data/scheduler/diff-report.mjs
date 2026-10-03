@@ -5,6 +5,7 @@
 // `git show HEAD:<file>`（バッチ実行前）と作業ツリー（バッチ実行後）を比べ、Markdown を標準出力に出す。
 //   - data/valuations.json      : 銘柄 × ブロック（quality / value / sectorMedian）のフィールド単位 old→new
 //   - data/verdict-outcomes.json: proposedOutcome / resolvedAt の変化
+//   - data/valuations.json の staleFields（#652 PR6・null ガード）: null 化（保持）／保持継続／回復
 // ファイルは読むだけで書き換えない。出す値はいずれも公開済みの JSON 由来（保有額・資産実額は扱わない）。
 //
 // 使い方:
@@ -21,6 +22,7 @@ export const OUTCOME_FIELDS = ['proposedOutcome', 'resolvedAt'];
 /**
  * @typedef {{symbol: string, block: string, field: string, old: unknown, new: unknown}} ValuationChange
  * @typedef {{index: number, symbol: string, date: string, kind: string, field: string, old: unknown, new: unknown}} OutcomeChange
+ * @typedef {{symbol: string, key: string, kind: 'kept-new' | 'kept-cont' | 'recovered', since: string, old: unknown, new: unknown}} StaleChange
  */
 
 /** @param {unknown} a @param {unknown} b */
@@ -100,6 +102,51 @@ export function diffOutcomes(oldDoc, newDoc) {
 }
 
 /**
+ * "<ブロック>.<フィールド>" のフィールド値を取り出す（無ければ undefined）。
+ * @param {Record<string, any>} entry
+ * @param {string} key
+ */
+function fieldOf(entry, key) {
+  const i = key.indexOf('.');
+  if (i === -1) return undefined;
+  return asObj(entry[key.slice(0, i)])[key.slice(i + 1)];
+}
+
+/**
+ * valuations.json の各銘柄の `staleFields`（null ガードの印）の変化（§8.4.5）。
+ *   - kept-new  : null 化（保持）＝HEAD に無いキーが作業ツリーにある
+ *   - kept-cont : 保持継続＝両方にある
+ *   - recovered : 回復＝HEAD にあり作業ツリーに無い
+ * `old` / `new` は HEAD / 作業ツリーの該当フィールド値（kept-* の `new` は保持している値）。
+ * @param {any} oldDoc
+ * @param {any} newDoc
+ * @returns {StaleChange[]}
+ */
+export function diffStale(oldDoc, newDoc) {
+  const oldV = asObj(oldDoc && oldDoc.valuations);
+  const newV = asObj(newDoc && newDoc.valuations);
+  const symbols = [...new Set([...Object.keys(oldV), ...Object.keys(newV)])].sort();
+  /** @type {StaleChange[]} */
+  const out = [];
+  for (const symbol of symbols) {
+    const oe = asObj(oldV[symbol]);
+    const ne = asObj(newV[symbol]);
+    const os = asObj(oe.staleFields);
+    const ns = asObj(ne.staleFields);
+    const keys = [...new Set([...Object.keys(os), ...Object.keys(ns)])];
+    for (const key of keys) {
+      const inOld = Object.prototype.hasOwnProperty.call(os, key);
+      const inNew = Object.prototype.hasOwnProperty.call(ns, key);
+      /** @type {StaleChange['kind']} */
+      const kind = inOld && inNew ? 'kept-cont' : inNew ? 'kept-new' : 'recovered';
+      const since = String(inNew ? ns[key] : os[key]);
+      out.push({ symbol, key, kind, since, old: fieldOf(oe, key), new: fieldOf(ne, key) });
+    }
+  }
+  return out;
+}
+
+/**
  * Markdown のセル用に値を整形する（undefined は「—」、`|` と改行はエスケープ）。
  * @param {unknown} v
  */
@@ -114,10 +161,10 @@ const isNullish = (v) => v === null || v === undefined;
 
 /**
  * 差分レポートの Markdown を組み立てる。
- * @param {{valuations: ValuationChange[], outcomes: OutcomeChange[], date?: string, notes?: string[]}} input
+ * @param {{valuations: ValuationChange[], outcomes: OutcomeChange[], stale?: StaleChange[], date?: string, notes?: string[]}} input
  * @returns {string}
  */
-export function renderMarkdown({ valuations, outcomes, date, notes = [] }) {
+export function renderMarkdown({ valuations, outcomes, stale = [], date, notes = [] }) {
   const lines = [];
   lines.push(`# 週次バッチ 差分レポート${date ? `（${date}）` : ''}`);
   lines.push('');
@@ -129,18 +176,23 @@ export function renderMarkdown({ valuations, outcomes, date, notes = [] }) {
   // ── サマリ ──
   lines.push('## サマリ');
   lines.push('');
-  lines.push('| 対象 | 変化した銘柄（outcomes は entry 数） | 変化したフィールド | うち null 化 |');
-  lines.push('|---|---|---|---|');
+  lines.push(
+    '| 対象 | 変化した銘柄（outcomes は entry 数） | 変化したフィールド | うち null 化 | うち null 化（保持） |'
+  );
+  lines.push('|---|---|---|---|---|');
   for (const block of VALUATION_BLOCKS) {
     const rows = valuations.filter((c) => c.block === block);
     const syms = new Set(rows.map((c) => c.symbol)).size;
+    // 「うち null 化」＝保持されずに null になった件数（ガード対象外の経路・想定外の null を見落とさない）
     const nulled = rows.filter((c) => !isNullish(c.old) && isNullish(c.new)).length;
-    lines.push(`| valuations.${block} | ${syms} | ${rows.length} | ${nulled} |`);
+    // 「うち null 化（保持）」＝null ガードで既存値を保持した件数（staleFields の新しい印）
+    const kept = stale.filter((c) => c.kind === 'kept-new' && c.key.startsWith(`${block}.`)).length;
+    lines.push(`| valuations.${block} | ${syms} | ${rows.length} | ${nulled} | ${kept} |`);
   }
   {
     const entries = new Set(outcomes.map((c) => c.index)).size;
     const nulled = outcomes.filter((c) => !isNullish(c.old) && isNullish(c.new)).length;
-    lines.push(`| verdict-outcomes | ${entries} | ${outcomes.length} | ${nulled} |`);
+    lines.push(`| verdict-outcomes | ${entries} | ${outcomes.length} | ${nulled} | — |`);
   }
   lines.push('');
 
@@ -163,6 +215,43 @@ export function renderMarkdown({ valuations, outcomes, date, notes = [] }) {
       }
       lines.push('');
     }
+  }
+
+  // ── staleFields（null ガード）── 0 件の節は省略
+  const keptNew = stale.filter((c) => c.kind === 'kept-new');
+  const keptCont = stale.filter((c) => c.kind === 'kept-cont');
+  const recovered = stale.filter((c) => c.kind === 'recovered');
+  if (keptNew.length) {
+    lines.push('### null 化（保持）');
+    lines.push('');
+    lines.push('| 銘柄 | フィールド | stale since | 保持している値 |');
+    lines.push('|---|---|---|---|');
+    for (const c of keptNew) {
+      lines.push(`| ${fmtCell(c.symbol)} | ${fmtCell(c.key)} | ${fmtCell(c.since)} | ${fmtCell(c.new)} |`);
+    }
+    lines.push('');
+  }
+  if (keptCont.length) {
+    lines.push('### 保持継続');
+    lines.push('');
+    lines.push('| 銘柄 | フィールド | stale since | 保持している値 |');
+    lines.push('|---|---|---|---|');
+    for (const c of keptCont) {
+      lines.push(`| ${fmtCell(c.symbol)} | ${fmtCell(c.key)} | ${fmtCell(c.since)} | ${fmtCell(c.new)} |`);
+    }
+    lines.push('');
+  }
+  if (recovered.length) {
+    lines.push('### 回復（old→new）');
+    lines.push('');
+    lines.push('| 銘柄 | フィールド | stale since | old | new |');
+    lines.push('|---|---|---|---|---|');
+    for (const c of recovered) {
+      lines.push(
+        `| ${fmtCell(c.symbol)} | ${fmtCell(c.key)} | ${fmtCell(c.since)} | ${fmtCell(c.old)} | ${fmtCell(c.new)} |`
+      );
+    }
+    lines.push('');
   }
 
   // ── verdict-outcomes.json ──
@@ -234,6 +323,7 @@ function main() {
   const md = renderMarkdown({
     valuations: diffValuations(oldVals, newVals),
     outcomes: diffOutcomes(oldOuts, newOuts),
+    stale: diffStale(oldVals, newVals),
     date,
     notes,
   });
