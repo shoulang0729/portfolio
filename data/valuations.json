@@ -5,7 +5,7 @@
   "valuations": {
     "VEA": {
       "value": {
-        "perTrail": 18.64,
+        "perTrail": 16.56,
         "perSource": "fund-trailing"
       },
       "perCurrent": 16.56,
@@ -23,7 +23,7 @@
     },
     "VGK": {
       "value": {
-        "perTrail": 17.77,
+        "perTrail": 16.82,
         "perSource": "fund-trailing"
       },
       "perCurrent": 16.82,
@@ -41,12 +41,15 @@
       "buyProposal": "見送り（条件未達・rich）。監視のみを継続。"
     },
     "6016.T": {
+      "staleFields": {
+        "quality.grossProf": "2026-10-03"
+      },
       "sectorMedian": {
-        "per": 27.2,
+        "per": 24.2,
         "n": null,
         "source": "etf-proxy",
         "etf": "1624.T",
-        "asOf": "2026-06-25"
+        "asOf": "2026-10-03"
       },
       "value": {
         "perTrail": 14.7,
@@ -64,13 +67,13 @@
       "bandConfidence": "low",
       "bandNote": "実体はジャパンエンジンコーポレーション(J-ENG/舶用エンジン小型株)。プロンプトの『ヤンマー?』は誤り。irbank 2010年以降のPERレンジは赤字〜約50倍と極端に広く、業績変動が大きい市況株。アンカー15.69はバンド下〜中位。低流動・利益ボラ大でconfidence=low、バンドは広めに設定。",
       "quality": {
-        "roic": 23.5,
+        "roic": 27,
         "wacc": 6,
         "grossProf": 0.25,
-        "fcfConv": 0.35,
+        "fcfConv": 0.4,
         "fScore": 6,
         "altmanZ": null,
-        "intCoverage": 217.4,
+        "intCoverage": 161.9,
         "qScore": 6
       },
       "buyProposal": "¥8,500以下の小口指値のみ＝弱。現金の復元を優先し、急がない。"
@@ -88,18 +91,22 @@
       "bandConfidence": "low",
       "bandNote": "Semiconductor基準=Yahoo trailingPE。半導体は強いシクリカル+成長でP/Eレンジが極めて広い。サイクル谷(2018末/2022下期)は18-22、平時25-30、AIブーム拡大局面(2024-26)は40-45超。アンカー44.23はバンド最上端(~90%タイル)=台帳🔴rich/90%と整合し現在のAI需要バリュエーション拡大を反映。⚠Yahoo TTM≈42 vs Investing.com≈29.34と算定差大。EPS急変でTTMが大きくブレるためconfidence=low。",
       "value": {
-        "perTrail": 44.5,
+        "perTrail": 43.07,
         "perSource": "fund-trailing"
       },
       "sellProposal": "1.5割トリム（≈¥3.82M）＝高（前号の最優先から格下げ、上限2割は撤回）。トリム後の半導体比率は9.45%。"
     },
     "6301.T": {
+      "staleFields": {
+        "quality.roic": "2026-10-03",
+        "quality.intCoverage": "2026-10-03"
+      },
       "sectorMedian": {
-        "per": 27.2,
+        "per": 24.2,
         "n": null,
         "source": "etf-proxy",
         "etf": "1624.T",
-        "asOf": "2026-06-25"
+        "asOf": "2026-10-03"
       },
       "perCurrent": 18.12,
       "bandLow": 9,
@@ -119,7 +126,7 @@
         "cyclical": true,
         "fcfYield": 4.3,
         "shareholderYield": 4.9,
-        "targetGapPct": -2,
+        "targetGapPct": -3,
         "perTrail": 15.6,
         "evEbitda": 9.6
       },
@@ -165,7 +172,7 @@
     },
     "VT": {
       "value": {
-        "perTrail": 22.51,
+        "perTrail": 20.56,
         "perSource": "fund-trailing"
       },
       "perCurrent": 20.56,
@@ -184,7 +191,7 @@
     },
     "XLF": {
       "value": {
-        "perTrail": 16.9,
+        "perTrail": 15.17,
         "perSource": "fund-trailing"
       },
       "perCurrent": 15.17,
@@ -202,7 +209,7 @@
     },
     "XLV": {
       "value": {
-        "perTrail": 24.1,
+        "perTrail": 29.69,
         "perSource": "fund-trailing"
       },
       "perCurrent": 29.69,
@@ -220,7 +227,7 @@
     },
     "XLP": {
       "value": {
-        "perTrail": 25.07,
+        "perTrail": 23.82,
         "perSource": "fund-trailing"
       },
       "perCurrent": 23.82,
@@ -238,7 +245,7 @@
     },
     "DTCR": {
       "value": {
-        "perTrail": 22.13,
+        "perTrail": 18.89,
         "perSource": "fund-trailing"
       },
       "perCurrent": 18.89,
@@ -256,16 +263,16 @@
     },
     "LITE": {
       "sectorMedian": {
-        "per": 47.2,
-        "evEbitda": 47.5,
-        "grossMargin": 51.4,
-        "pb": 11.4,
-        "n": 8,
+        "per": 35.6,
+        "evEbitda": 48.1,
+        "grossMargin": 46.2,
+        "pb": 9,
+        "n": 7,
         "source": "finnhub-peers",
-        "asOf": "2026-06-25"
+        "asOf": "2026-10-03"
       },
       "value": {
-        "targetGapPct": 31
+        "targetGapPct": 7
       },
       "perCurrent": 164.75,
       "bandLow": 20,
@@ -293,16 +300,16 @@
     },
     "CRWD": {
       "sectorMedian": {
-        "per": 55.6,
-        "evEbitda": 40.6,
-        "grossMargin": 76.7,
-        "pb": 9,
+        "per": 63,
+        "evEbitda": 50.4,
+        "grossMargin": 76,
+        "pb": 8.2,
         "n": 7,
         "source": "finnhub-peers",
-        "asOf": "2026-06-25"
+        "asOf": "2026-10-03"
       },
       "value": {
-        "targetGapPct": 4
+        "targetGapPct": -13
       },
       "perCurrent": 9001.33,
       "bandLow": 70,
@@ -329,16 +336,16 @@
     },
     "PANW": {
       "sectorMedian": {
-        "per": 55.6,
-        "evEbitda": 40.6,
-        "grossMargin": 76.7,
-        "pb": 9,
+        "per": 63,
+        "evEbitda": 50.4,
+        "grossMargin": 76,
+        "pb": 8.2,
         "n": 7,
         "source": "finnhub-peers",
-        "asOf": "2026-06-25"
+        "asOf": "2026-10-03"
       },
       "value": {
-        "targetGapPct": 8
+        "targetGapPct": -2
       },
       "perCurrent": 1008.1,
       "bandLow": 40,
@@ -409,13 +416,13 @@
     },
     "AAPL": {
       "sectorMedian": {
-        "per": 35.6,
-        "evEbitda": 25.3,
-        "grossMargin": 40.8,
-        "pb": 7.5,
-        "n": 10,
+        "per": 31.1,
+        "evEbitda": 22.6,
+        "grossMargin": 42.7,
+        "pb": 7.2,
+        "n": 9,
         "source": "finnhub-peers",
-        "asOf": "2026-06-25"
+        "asOf": "2026-10-03"
       },
       "perCurrent": 37.88,
       "bandLow": 24,
@@ -434,7 +441,7 @@
         "peg": 2.85,
         "evEbitda": 27,
         "debtHeavy": false,
-        "targetGapPct": 6,
+        "targetGapPct": -2,
         "fcfYield": 2.9,
         "shareholderYield": 2.7
       },
@@ -451,7 +458,7 @@
         "grossProf": 0.54,
         "fcfConv": 0.88,
         "fScore": 8,
-        "altmanZ": 11.46,
+        "altmanZ": 12.56,
         "intCoverage": null,
         "qScore": 8
       },
@@ -465,13 +472,13 @@
     },
     "AMZN": {
       "sectorMedian": {
-        "per": 24.2,
-        "evEbitda": 14.4,
-        "grossMargin": 43.7,
-        "pb": 4.2,
+        "per": 20.1,
+        "evEbitda": 16.5,
+        "grossMargin": 43.9,
+        "pb": 4.6,
         "n": 9,
         "source": "finnhub-peers",
-        "asOf": "2026-06-25"
+        "asOf": "2026-10-03"
       },
       "perCurrent": 19.96,
       "bandLow": 24,
@@ -492,7 +499,7 @@
         "debtHeavy": true,
         "fcfYield": null,
         "shareholderYield": -0.9,
-        "targetGapPct": 28
+        "targetGapPct": 31
       },
       "verdict": {
         "class": "cheap_fake",
@@ -508,7 +515,7 @@
         "grossProf": 0.44,
         "fcfConv": 0.1,
         "fScore": 6,
-        "altmanZ": 5.6,
+        "altmanZ": 5.71,
         "intCoverage": 43.8,
         "qScore": 6
       },
@@ -522,13 +529,13 @@
     },
     "GOOGL": {
       "sectorMedian": {
-        "per": 25.6,
-        "evEbitda": 23.6,
-        "grossMargin": 73.8,
-        "pb": 6.4,
+        "per": 20.8,
+        "evEbitda": 22.3,
+        "grossMargin": 74.8,
+        "pb": 4.8,
         "n": 8,
         "source": "finnhub-peers",
-        "asOf": "2026-06-25"
+        "asOf": "2026-10-03"
       },
       "perCurrent": 16.98,
       "bandLow": 18,
@@ -549,7 +556,7 @@
         "debtHeavy": false,
         "fcfYield": 1.4,
         "shareholderYield": 1.6,
-        "targetGapPct": 18
+        "targetGapPct": 25
       },
       "verdict": {
         "class": "fair",
@@ -562,8 +569,8 @@
         "grossProf": 0.4,
         "fcfConv": 0.55,
         "fScore": 6,
-        "altmanZ": 17.36,
-        "intCoverage": 1110.7,
+        "altmanZ": 16.39,
+        "intCoverage": 216.8,
         "qScore": 6
       },
       "momentum": {
@@ -576,13 +583,13 @@
     },
     "MSFT": {
       "sectorMedian": {
-        "per": 55.6,
-        "evEbitda": 40.6,
-        "grossMargin": 76.7,
-        "pb": 9,
+        "per": 63,
+        "evEbitda": 50.4,
+        "grossMargin": 76,
+        "pb": 8.2,
         "n": 7,
         "source": "finnhub-peers",
-        "asOf": "2026-06-25"
+        "asOf": "2026-10-03"
       },
       "perCurrent": 28.58,
       "bandLow": 24,
@@ -601,7 +608,7 @@
         "peg": 1.27,
         "evEbitda": 15.5,
         "debtHeavy": false,
-        "targetGapPct": 48,
+        "targetGapPct": 12,
         "fcfYield": 2.6,
         "shareholderYield": 1.1
       },
@@ -614,13 +621,13 @@
         ]
       },
       "quality": {
-        "roic": 21.6,
+        "roic": 20.6,
         "wacc": 8,
-        "grossProf": 0.31,
-        "fcfConv": 0.7,
+        "grossProf": 0.3,
+        "fcfConv": 0.5,
         "fScore": 6,
-        "altmanZ": 7.9,
-        "intCoverage": 52.8,
+        "altmanZ": 9.14,
+        "intCoverage": 55.4,
         "qScore": 6
       },
       "momentum": {
@@ -633,13 +640,13 @@
     },
     "TSLA": {
       "sectorMedian": {
-        "per": 23.6,
-        "evEbitda": 12.3,
-        "grossMargin": 5.9,
-        "pb": 1.4,
+        "per": 27.9,
+        "evEbitda": 12.6,
+        "grossMargin": 7.1,
+        "pb": 1.5,
         "n": 4,
         "source": "finnhub-peers",
-        "asOf": "2026-06-25"
+        "asOf": "2026-10-03"
       },
       "perCurrent": 333.86,
       "bandLow": 40,
@@ -660,7 +667,7 @@
         "debtHeavy": false,
         "fcfYield": 0.5,
         "shareholderYield": -0.7,
-        "targetGapPct": 5
+        "targetGapPct": 7
       },
       "verdict": {
         "class": "rich_real",
@@ -675,7 +682,7 @@
         "grossProf": 0.12,
         "fcfConv": 1.64,
         "fScore": 5,
-        "altmanZ": 17.97,
+        "altmanZ": 17.52,
         "intCoverage": 16.6,
         "qScore": 5
       },
@@ -737,7 +744,7 @@
     },
     "SHLD": {
       "value": {
-        "perTrail": 29.34,
+        "perTrail": 26.65,
         "perSource": "fund-trailing"
       },
       "perCurrent": 26.65,
@@ -772,13 +779,13 @@
     },
     "PLTR": {
       "sectorMedian": {
-        "per": 33.3,
-        "evEbitda": 20.5,
-        "grossMargin": 80,
-        "pb": 9.1,
+        "per": 31.2,
+        "evEbitda": 24,
+        "grossMargin": 80.2,
+        "pb": 9.9,
         "n": 10,
         "source": "finnhub-peers",
-        "asOf": "2026-06-25"
+        "asOf": "2026-10-03"
       },
       "perCurrent": 161.32,
       "bandLow": 130,
@@ -799,7 +806,7 @@
         "debtHeavy": false,
         "fcfYield": 0.8,
         "shareholderYield": -3.2,
-        "targetGapPct": 42
+        "targetGapPct": 4
       },
       "verdict": {
         "class": "rich_fake",
@@ -815,7 +822,7 @@
         "grossProf": 0.41,
         "fcfConv": 1.29,
         "fScore": 7,
-        "altmanZ": 126.84,
+        "altmanZ": 185.63,
         "intCoverage": null,
         "qScore": 7
       },
@@ -858,11 +865,11 @@
     },
     "8050.T": {
       "sectorMedian": {
-        "per": 30,
+        "per": 31.8,
         "n": null,
         "source": "etf-proxy",
         "etf": "1625.T",
-        "asOf": "2026-06-25"
+        "asOf": "2026-10-03"
       },
       "perCurrent": 38.91,
       "bandLow": 12,
@@ -881,7 +888,7 @@
         "debtHeavy": false,
         "fcfYield": 10.5,
         "shareholderYield": 1.1,
-        "targetGapPct": 8,
+        "targetGapPct": 29,
         "evEbitda": 15.2
       },
       "verdict": {
@@ -892,13 +899,13 @@
         ]
       },
       "quality": {
-        "roic": 7.1,
+        "roic": 10.8,
         "wacc": 6,
-        "grossProf": 0.37,
-        "fcfConv": 2.45,
+        "grossProf": 0.4,
+        "fcfConv": 1.67,
         "fScore": 8,
         "altmanZ": null,
-        "intCoverage": 13.6,
+        "intCoverage": 22.2,
         "qScore": 8
       },
       "momentum": {
@@ -911,11 +918,11 @@
     },
     "9983.T": {
       "sectorMedian": {
-        "per": 24.8,
+        "per": 24,
         "n": null,
         "source": "etf-proxy",
         "etf": "1630.T",
-        "asOf": "2026-06-25"
+        "asOf": "2026-10-03"
       },
       "perCurrent": 46.08,
       "bandLow": 25,
@@ -935,7 +942,7 @@
         "debtHeavy": false,
         "fcfYield": 2.7,
         "shareholderYield": 0.8,
-        "targetGapPct": -5,
+        "targetGapPct": 21,
         "evEbitda": 33.5
       },
       "verdict": {
@@ -965,7 +972,7 @@
     },
     "ACWI": {
       "value": {
-        "perTrail": 23.28,
+        "perTrail": 21.27,
         "perSource": "fund-trailing"
       },
       "perCurrent": 21.27,
