@@ -500,3 +500,116 @@ describe('detectFills（§5.2 の例・合成値）', () => {
     expect(detectFills(p, networth('2026-10-04', { AAA: 181 })).logs).toEqual([]);
   });
 });
+
+describe('プロトタイプ汚染の防止（レビュー指摘）', () => {
+  const PROTO_KEYS = ['__proto__', 'constructor', 'toString', 'hasOwnProperty'];
+
+  it.each(PROTO_KEYS)('applyEvent: symbol=%s は OrderEventError で、Object.prototype に書き込まない', (sym) => {
+    for (const ev of [
+      { type: 'rebase', symbol: sym, basePrice: 123, event: 'x' },
+      { type: 'placed', symbol: sym, stageId: 's1' },
+      { type: 'filled', symbol: sym, stageId: 's1' },
+      { type: 'cancelled', symbol: sym, stageId: 's1' },
+      { type: 'unplace', symbol: sym, stageId: 's1' },
+    ]) {
+      expect(() => applyEvent(makePlan(), ev, { now: NOW })).toThrow(OrderEventError);
+    }
+    expect({}.basePrice).toBeUndefined();
+    expect({}.baseEvent).toBeUndefined();
+    expect({}.baseAt).toBeUndefined();
+    expect(typeof {}.toString).toBe('function');
+  });
+
+  it('JSON 由来の own "__proto__" キーを持つ plan: validatePlan が拒否・applyEvent / detectFills も触らない', () => {
+    const raw = JSON.stringify(makePlan()).replace(
+      '"symbols":{',
+      '"symbols":{"__proto__":{"tier":"thick","stages":[]},'
+    );
+    const p = JSON.parse(raw);
+    expect(Object.hasOwn(p.symbols, '__proto__')).toBe(true);
+    const r = validatePlan(p);
+    expect(r.ok).toBe(false);
+    expect(r.errors.join()).toMatch(/シンボル名の形が不正/);
+    expect(() =>
+      applyEvent(p, { type: 'rebase', symbol: '__proto__', basePrice: 1, event: 'x' }, { now: NOW })
+    ).toThrow(OrderEventError);
+    detectFills(p, networth('2026-10-04', { AAA: 1 }));
+    expect({}.basePrice).toBeUndefined();
+    expect({}.tier).toBeUndefined();
+  });
+
+  it('validatePlan: シンボル名の形（BRK-B・200A.T 型は形として通る／小文字・記号は不可）', () => {
+    const p = makePlan();
+    p.symbols['BRK-B'] = p.symbols.AAA;
+    expect(validatePlan(p).ok).toBe(true);
+    p.symbols['200A.T'] = p.symbols.AAA; // 形は通るが USD 建てでない
+    expect(validatePlan(p).errors.join()).toMatch(/USD 建て/);
+    expect(validatePlan(p).errors.join()).not.toMatch(/シンボル名の形/);
+    const q = makePlan();
+    q.symbols.constructor = q.symbols.AAA;
+    q.symbols['a$b'] = q.symbols.AAA;
+    expect(validatePlan(q).errors.filter((e) => /シンボル名の形/.test(e))).toHaveLength(2);
+    const f = makePlan();
+    f.funding.sweepSymbol = '__proto__';
+    expect(validatePlan(f).errors.join()).toMatch(/sweepSymbol の形/);
+  });
+});
+
+describe('数量比較の許容誤差（レビュー指摘）', () => {
+  it('detectFills: 小数の mf qty が誤差で僅かに足りなくても filled', () => {
+    const p = makePlan();
+    Object.assign(p.symbols.AAA.stages[0], {
+      placedAt: '2026-10-03T14:00:00Z',
+      orderedQty: 0.8,
+      orderedLimit: 368,
+      qtyAtPlace: 0.7,
+    });
+    // 0.7 + 0.8 = 1.5 に対し、mf 側の値が浮動小数の誤差で 1.4999999999
+    const r = detectFills(p, networth('2026-10-04', { AAA: 1.4999999999 }));
+    expect(r.plan.symbols.AAA.stages[0].state).toBe('filled');
+  });
+
+  it('detectFills: sell "all" は 0 に極めて近い残りでも filled', () => {
+    const p = makePlan();
+    Object.assign(p.symbols.XXX.stages[0], { placedAt: '2026-10-03T14:00:00Z', orderedQty: 3.3, qtyAtPlace: 3.3 });
+    const r = detectFills(p, networth('2026-10-04', { XXX: 1e-9 }));
+    expect(r.plan.symbols.XXX.stages[0].state).toBe('filled');
+  });
+
+  it('applyEvent filled: 累計が誤差で orderedQty を僅かに下回っても filled（0.7 + 0.1 < 0.8）', () => {
+    const placed = applyEvent(
+      makePlan(),
+      { type: 'placed', symbol: 'AAA', stageId: 's1', orderedQty: 0.8, orderedLimit: 368 },
+      { now: NOW }
+    ).plan;
+    const r1 = applyEvent(placed, { type: 'filled', symbol: 'AAA', stageId: 's1', filledQty: 0.7 }, { now: NOW });
+    expect(r1.plan.symbols.AAA.stages[0].state).toBe('working');
+    const r2 = applyEvent(r1.plan, { type: 'filled', symbol: 'AAA', stageId: 's1', filledQty: 0.1 }, { now: NOW });
+    expect(r2.plan.symbols.AAA.stages[0].state).toBe('filled');
+  });
+});
+
+describe('不正状態の plan への applyEvent（レビュー指摘）', () => {
+  it('working が 2 つの plan: 未発注の余分な working は waiting に戻して 1 段に揃える', () => {
+    const p = makePlan();
+    p.symbols.AAA.stages[1].state = 'working';
+    const { plan } = applyEvent(p, { type: 'placed', symbol: 'AAA', stageId: 's1' }, { now: NOW });
+    expect(plan.symbols.AAA.stages.map((s) => s.state)).toEqual(['working', 'waiting', 'waiting']);
+    expect(validatePlan(plan).ok).toBe(true);
+  });
+
+  it('余分な working が発注済みなら情報を消さずにエラー（不正な plan を書き戻さない）', () => {
+    const p = makePlan();
+    Object.assign(p.symbols.AAA.stages[1], { state: 'working', placedAt: '2026-01-01T00:00:00Z', orderedQty: 10 });
+    expect(() => applyEvent(p, { type: 'placed', symbol: 'AAA', stageId: 's1' }, { now: NOW })).toThrow(
+      /適用後の plan が不正/
+    );
+  });
+
+  it('detectFills: working が 2 つの銘柄は自動確定しない', () => {
+    const p = makePlan();
+    Object.assign(p.symbols.AAA.stages[0], { placedAt: '2026-10-03T14:00:00Z', orderedQty: 81, qtyAtPlace: 100 });
+    p.symbols.AAA.stages[1].state = 'working';
+    expect(detectFills(p, networth('2026-10-04', { AAA: 181 })).logs).toEqual([]);
+  });
+});

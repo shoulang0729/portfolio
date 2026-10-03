@@ -15,8 +15,11 @@ import {
   hasQty,
   isOpenStage,
   isUsdSymbol,
+  isValidSymbolKey,
   makeQtyLookup,
   normalizeYSymbol,
+  ownGet,
+  QTY_EPS,
   stageLimit,
   toIso,
 } from './order-plan.js';
@@ -79,7 +82,7 @@ function fmtUsd(x) {
 
 /** @param {Record<string, any>|null|undefined} prices */
 function priceOf(prices, sym) {
-  const v = prices ? prices[sym] : null;
+  const v = ownGet(prices, sym);
   if (isNum(v)) return v;
   if (v && isNum(v.price)) return v.price;
   return null;
@@ -192,6 +195,13 @@ export function buildOrderSheet(input) {
   // §5.2: mf の株数による約定検知をメモリ上で適用（KV は書かない）
   const detected = detectFills(planIn, networth, nowIso);
   const plan = detected.plan;
+  // シンボル名の形が不正なキー（`__proto__` 等）・オブジェクトでない設定は使わない
+  /** @type {Array<[string, any]>} */
+  const planEntries = [];
+  for (const [sym, sc] of Object.entries(plan.symbols)) {
+    if (isValidSymbolKey(sym) && sc && typeof sc === 'object' && !Array.isArray(sc)) planEntries.push([sym, sc]);
+    else warnings.push(`${String(sym).slice(0, 20)}: シンボル名または設定の形が不正のため除外`);
+  }
   const autoDetected = detected.logs.map((l) => ({ symbol: l.symbol, stageId: l.stageId, partial: !!l.partial }));
   const autoSyms = new Set(autoDetected.map((a) => a.symbol));
 
@@ -235,12 +245,19 @@ export function buildOrderSheet(input) {
   /** @type {Map<string, string[]>} */
   const themesOf = new Map();
   for (const [theme, tc] of Object.entries(cfg.themeCaps)) {
-    for (const m of tc?.members || []) {
+    for (const m of Array.isArray(tc?.members) ? tc.members : []) {
       const k = normalizeYSymbol(m);
       themesOf.set(k, [...(themesOf.get(k) || []), theme]);
     }
   }
-  const themeMembers = (theme) => (cfg.themeCaps[theme]?.members || []).map(normalizeYSymbol);
+  const themeCapOf = (theme) => {
+    const tc = typeof theme === 'string' ? ownGet(cfg.themeCaps, theme) : undefined;
+    return tc && typeof tc === 'object' ? tc : null;
+  };
+  const themeMembers = (theme) => {
+    const m = themeCapOf(theme)?.members;
+    return Array.isArray(m) ? m.map(normalizeYSymbol) : [];
+  };
   const aiSet = new Set(cfg.aiTech.themes.flatMap(themeMembers));
   const nonEquitySet = new Set(cfg.stress.nonEquity.map(normalizeYSymbol));
 
@@ -248,7 +265,7 @@ export function buildOrderSheet(input) {
   /** @type {Map<string, number>} */
   const nowUsd = new Map();
   for (const key of groups.keys()) nowUsd.set(key, curUsdOf(key));
-  for (const sym of Object.keys(plan.symbols)) {
+  for (const [sym] of planEntries) {
     const k = normalizeYSymbol(sym);
     if (!nowUsd.has(k)) nowUsd.set(k, curUsdOf(k));
   }
@@ -272,7 +289,7 @@ export function buildOrderSheet(input) {
   let buyTotal = 0;
   let sellTotal = 0;
 
-  for (const [sym, sc] of Object.entries(plan.symbols)) {
+  for (const [sym, sc] of planEntries) {
     const key = normalizeYSymbol(sym);
     if (!isUsdSymbol(sym)) {
       warnings.push(`${sym}: v1 は USD 建てのみのため注文表から除外`);
@@ -313,7 +330,7 @@ export function buildOrderSheet(input) {
         if (st.side === 'buy') {
           qty = buyQty(st.amountUsd, limit, sc.lot);
         } else if (st.qty === 'all') {
-          qty = isNum(mfQty) && mfQty > 0 ? mfQty : null;
+          qty = isNum(mfQty) && mfQty > QTY_EPS ? mfQty : null;
           qtyUnknown = qty == null;
         } else {
           qty = isNum(st.qty) ? st.qty : null;
@@ -333,7 +350,7 @@ export function buildOrderSheet(input) {
       hold = 'targetReached';
     } else {
       for (const theme of themesOf.get(key) || []) {
-        const cap = cfg.themeCaps[theme]?.cap;
+        const cap = themeCapOf(theme)?.cap;
         const tp = themeNowPct(theme);
         if (isNum(cap) && isNum(tp) && tp >= cap) {
           hold = 'themeCapReached';
@@ -379,7 +396,7 @@ export function buildOrderSheet(input) {
 
     // §6.9 ETF の中身の偏り（キャッシュがあるときだけ）
     let etfNote = null;
-    const top = sc.tier === 'theme' && etfTop ? etfTop[sym] : null;
+    const top = sc.tier === 'theme' ? ownGet(etfTop, sym) : null;
     if (top && top.ticker && isNum(top.weight)) {
       const w = top.weight <= 1 ? top.weight * 100 : top.weight;
       etfNote = `上位: ${top.ticker} ${Math.round(w)}%`;
@@ -515,7 +532,7 @@ export function buildOrderSheet(input) {
 
   // §6.5 資金繰り（USD）
   const funding = plan.funding || {};
-  const sweepSym = typeof funding.sweepSymbol === 'string' ? funding.sweepSymbol : 'JPST';
+  const sweepSym = isValidSymbolKey(funding.sweepSymbol) ? funding.sweepSymbol : 'JPST';
   const sweepKey = normalizeYSymbol(sweepSym);
   const rules = Array.isArray(funding.usdCashRows) ? funding.usdCashRows : [];
   const usdCash =
@@ -547,7 +564,11 @@ export function buildOrderSheet(input) {
         sweepCapped = true;
       }
       sweepUsd = sweepQty * sweepPrice;
-      if (sweepCapped) sweepShortUsd = need - sweepUsd;
+      if (sweepCapped) {
+        sweepShortUsd = need - sweepUsd;
+        // 保有 0 株で行が出ない場合も含め、充当しきれない額を必ず警告に出す
+        warnings.push(`資金繰り: ${sweepSym} の保有が足りず今出す注文に ${fmtUsd(sweepShortUsd)} 不足`);
+      }
       if (sweepQty > 0) {
         orders.push({
           symbol: sweepSym,
@@ -590,7 +611,7 @@ export function buildOrderSheet(input) {
     const mem = new Set(themeMembers(theme));
     return {
       theme,
-      cap: isNum(cfg.themeCaps[theme]?.cap) ? cfg.themeCaps[theme].cap : null,
+      cap: isNum(themeCapOf(theme)?.cap) ? themeCapOf(theme).cap : null,
       now: round1(pct(sumOf(points.now, mem))),
       afterWorking: round1(pct(sumOf(points.afterWorking, mem))),
       final: round1(pct(sumOf(points.final, mem))),
@@ -609,7 +630,7 @@ export function buildOrderSheet(input) {
   };
 
   // §6.9 ストレス
-  const planKeys = new Set(Object.keys(plan.symbols).map(normalizeYSymbol));
+  const planKeys = new Set(planEntries.map(([sym]) => normalizeYSymbol(sym)));
   const isEquity = (key) => {
     if (nonEquitySet.has(key)) return false;
     const g = groups.get(key);

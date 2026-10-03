@@ -90,6 +90,32 @@ export function isUsdSymbol(sym) {
   return n.length > 0 && !n.includes('.');
 }
 
+/**
+ * plan のシンボル名の形（§3.1）。英大文字・数字で始まり、英大文字・数字・`.`・`-` の 12 文字以内。
+ * `__proto__`・`constructor`・`toString` 等のプロトタイプ名はこの形に合わないので通らない。
+ * 例: `AAA`・`BRK-B`・`200A.T`・`9983.T`
+ */
+export const SYMBOL_RE = /^[A-Z0-9][A-Z0-9.-]{0,11}$/;
+
+/** @param {unknown} sym */
+export function isValidSymbolKey(sym) {
+  return typeof sym === 'string' && SYMBOL_RE.test(sym);
+}
+
+/** 数量比較の許容誤差（mf の qty が小数になり得るため） */
+export const QTY_EPS = 1e-6;
+
+/**
+ * 自前のプロパティだけを引く（プロトタイプ連鎖を辿らない）。動的キーの参照は必ずこれを通す。
+ * @param {unknown} obj
+ * @param {string} key
+ * @returns {any}
+ */
+export function ownGet(obj, key) {
+  if (obj == null || typeof obj !== 'object') return undefined;
+  return Object.hasOwn(obj, key) ? obj[key] : undefined;
+}
+
 /** 未完了（filled / cancelled 以外）の段か */
 export function isOpenStage(st) {
   return !!st && st.state !== 'filled' && st.state !== 'cancelled';
@@ -186,6 +212,8 @@ export function validatePlan(plan) {
     const f = p.funding;
     if (typeof f.sweepSymbol !== 'string' || !f.sweepSymbol.trim()) {
       errors.push('funding.sweepSymbol は空でない文字列であること');
+    } else if (!isValidSymbolKey(f.sweepSymbol)) {
+      errors.push('funding.sweepSymbol の形が不正（英大文字・数字・. - の 12 文字以内）');
     } else if (!isUsdSymbol(f.sweepSymbol)) {
       errors.push('funding.sweepSymbol は USD 建ての銘柄であること');
     }
@@ -216,6 +244,10 @@ export function validatePlan(plan) {
   }
   for (const [sym, cfg] of Object.entries(p.symbols)) {
     const at = `symbols.${sym}`;
+    if (!isValidSymbolKey(sym)) {
+      errors.push(`${at}: シンボル名の形が不正（英大文字・数字・. - の 12 文字以内）`);
+      continue;
+    }
     if (!isUsdSymbol(sym)) errors.push(`${at}: v1 は USD 建ての銘柄のみ（取引所サフィックス付き・4 桁コードは不可）`);
     if (!isObj(cfg)) {
       errors.push(`${at} はオブジェクトであること`);
@@ -320,7 +352,20 @@ function promoteNext(stages) {
     resetPlacement(first);
     if (!isNum(first.filledQty)) first.filledQty = 0;
   }
+  demoteOtherWorking(stages, first);
   return first;
+}
+
+/**
+ * 1 銘柄 1 段を保つため、最初の未完了段以外の working を waiting に戻す（§3.1・§6.3）。
+ * 発注済み（placedAt あり）の段は情報を消さずに残す＝validatePlan で弾かれる（呼び出し側がエラーにする）。
+ * @param {Array<any>} stages
+ * @param {any} keep
+ */
+function demoteOtherWorking(stages, keep) {
+  for (const st of stages) {
+    if (st !== keep && st.state === 'working') st.state = 'waiting';
+  }
 }
 
 /**
@@ -333,7 +378,7 @@ function promoteNext(stages) {
 export function displayedOrder(symCfg, st, mfQty) {
   const limit = stageLimit(symCfg, st);
   if (st.side === 'buy') return { limit, qty: buyQty(st.amountUsd, limit, symCfg.lot) };
-  if (st.qty === 'all') return { limit, qty: isNum(mfQty) && mfQty > 0 ? mfQty : null };
+  if (st.qty === 'all') return { limit, qty: isNum(mfQty) && mfQty > QTY_EPS ? mfQty : null };
   return { limit, qty: isPosInt(st.qty) ? st.qty : null };
 }
 
@@ -361,8 +406,8 @@ export function applyEvent(plan, event, ctx) {
 
   const needSymbol = () => {
     const sym = typeof event.symbol === 'string' ? event.symbol : '';
-    const cfg = next.symbols[sym];
-    if (!cfg) throw new OrderEventError(`symbol が plan に無い: ${sym || '(空)'}`);
+    const cfg = isValidSymbolKey(sym) ? ownGet(next.symbols, sym) : undefined;
+    if (!isObj(cfg)) throw new OrderEventError(`symbol が plan に無い: ${sym || '(空)'}`);
     log.symbol = sym;
     return { sym, cfg };
   };
@@ -375,8 +420,9 @@ export function applyEvent(plan, event, ctx) {
   const needWorking = (cfg, st) => {
     const first = cfg.stages.find(isOpenStage);
     if (first !== st) throw new OrderEventError('working 段（最初の未完了段）ではない');
-    // 保存値が壊れていても最初の未完了段を working とみなす（§6.3）
+    // 保存値が壊れていても最初の未完了段を working とみなす（§6.3）。ほかの working は waiting に戻す
     st.state = 'working';
+    demoteOtherWorking(cfg.stages, st);
   };
 
   switch (event.type) {
@@ -410,7 +456,7 @@ export function applyEvent(plan, event, ctx) {
       if (event.filledQty != null) {
         if (!isPosNum(event.filledQty)) throw new OrderEventError('filledQty は正の数');
         const cum = prev + event.filledQty;
-        if (isPosNum(st.orderedQty) && cum < st.orderedQty) {
+        if (isPosNum(st.orderedQty) && cum < st.orderedQty - QTY_EPS) {
           // 一部約定: working のまま累計を加算
           st.filledQty = cum;
           Object.assign(log, { partial: true, filledQty: cum, orderedQty: st.orderedQty });
@@ -480,6 +526,9 @@ export function applyEvent(plan, event, ctx) {
   next.rev = (Number.isInteger(next.rev) ? next.rev : 0) + 1;
   next.updatedAt = now;
   log.rev = next.rev;
+  // 不正な plan を書き戻さない（入力が壊れていた場合など）。Worker は 400 に写す
+  const v = validatePlan(next);
+  if (!v.ok) throw new OrderEventError(`適用後の plan が不正: ${v.errors.join(' / ')}`);
   return { plan: next, log };
 }
 
@@ -525,9 +574,12 @@ export function detectFills(plan, holdings, now) {
   const logs = [];
 
   for (const [sym, cfg] of Object.entries(next.symbols)) {
-    const stages = Array.isArray(cfg?.stages) ? cfg.stages : [];
-    const st = stages.find(isOpenStage);
+    if (!isValidSymbolKey(sym) || !isObj(cfg)) continue;
+    const stages = Array.isArray(cfg.stages) ? cfg.stages : [];
+    const open = stages.filter(isOpenStage);
+    const st = open[0];
     if (!st || st.state !== 'working') continue;
+    if (open.filter((x) => x.state === 'working').length !== 1) continue; // 不整合な銘柄は自動確定しない
     if (!st.placedAt || !isNum(st.qtyAtPlace) || !isPosNum(st.orderedQty)) continue;
     const placedDate = utcDate(st.placedAt);
     if (!placedDate || !(asOfDate > placedDate)) continue; // 同日の同期は寄付前で約定を含まない
@@ -536,15 +588,16 @@ export function detectFills(plan, holdings, now) {
 
     let filled = false;
     let partialQty = null;
+    const E = QTY_EPS;
     if (st.side === 'buy') {
-      if (mfQty >= st.qtyAtPlace + st.orderedQty) filled = true;
-      else if (mfQty > st.qtyAtPlace) partialQty = mfQty - st.qtyAtPlace;
+      if (mfQty >= st.qtyAtPlace + st.orderedQty - E) filled = true;
+      else if (mfQty > st.qtyAtPlace + E) partialQty = mfQty - st.qtyAtPlace;
     } else if (st.qty === 'all') {
-      if (mfQty === 0) filled = true;
-      else if (mfQty < st.qtyAtPlace) partialQty = st.qtyAtPlace - mfQty;
+      if (mfQty <= E) filled = true;
+      else if (mfQty < st.qtyAtPlace - E) partialQty = st.qtyAtPlace - mfQty;
     } else {
-      if (mfQty <= st.qtyAtPlace - st.orderedQty) filled = true;
-      else if (mfQty < st.qtyAtPlace) partialQty = st.qtyAtPlace - mfQty;
+      if (mfQty <= st.qtyAtPlace - st.orderedQty + E) filled = true;
+      else if (mfQty < st.qtyAtPlace - E) partialQty = st.qtyAtPlace - mfQty;
     }
 
     if (filled) {
@@ -556,7 +609,7 @@ export function detectFills(plan, holdings, now) {
       const log = { at, type: 'filled', symbol: sym, stageId: st.id, source: 'mf-qty', rev, filledQty: st.orderedQty };
       if (w) log.nextStageId = w.id;
       logs.push(log);
-    } else if (partialQty != null && partialQty !== st.filledQty) {
+    } else if (partialQty != null && !(isNum(st.filledQty) && Math.abs(partialQty - st.filledQty) <= E)) {
       st.filledQty = partialQty;
       st.fillSource = 'mf-qty';
       logs.push({

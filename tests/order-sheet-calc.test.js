@@ -583,3 +583,48 @@ describe('フラグ・その他', () => {
     expect(s.meta.warnings.join()).toMatch(/1234\.T/);
   });
 });
+
+describe('プロトタイプ汚染の防止・入力の動的キー（レビュー指摘）', () => {
+  it('own "__proto__" / constructor キーの plan は除外して警告・Object.prototype を汚さない', () => {
+    const raw = JSON.stringify(basePlan({ AAA: aaa() })).replace(
+      '"symbols":{',
+      '"symbols":{"__proto__":{"tier":"thick","targetUsd":1,"stages":[]},"constructor":{"tier":"thick","stages":[]},'
+    );
+    const s = build({ plan: JSON.parse(raw) });
+    expect(s.ladders.map((l) => l.symbol)).toEqual(['AAA']);
+    expect(s.meta.warnings.join()).toMatch(/シンボル名または設定の形が不正/);
+    expect({}.tier).toBeUndefined();
+    expect({}.targetUsd).toBeUndefined();
+  });
+
+  it('prices / etfTop はプロトタイプ連鎖の値を使わない', () => {
+    const nw = baseNetworth();
+    nw.holdings.find((h) => h.ySymbol === 'AAA').price = usd(395);
+    const prices = Object.create({ AAA: 999 });
+    prices.CSH = 50;
+    const etfTop = Object.create({ AAA: { ticker: 'ZZZ', weight: 0.5 } });
+    const s = build({ plan: basePlan({ AAA: aaa({ tier: 'theme' }) }), nw, prices, etfTop });
+    expect(orderOf(s, 'AAA').currentPrice).toBe(395); // mf 概算に落ちる（999 を使わない）
+    expect(orderOf(s, 'AAA').flags).not.toContain('etfConcentration');
+  });
+
+  it('aiTech.themes にプロトタイプ名があっても落ちない（メンバー 0 扱い）', () => {
+    const s = build({
+      plan: basePlan({ AAA: aaa() }),
+      strat: strategy({ aiTech: { themes: ['constructor', '__proto__', 'toString'], capPct: 29 } }),
+    });
+    expect(s.aiTech.now).toBe(0);
+    expect(s.aiTech.themes.map((t) => t.cap)).toEqual([null, null, null]);
+  });
+});
+
+describe('資金繰り: スイープ銘柄の保有 0（レビュー指摘）', () => {
+  it('保有 0 株で行が出なくても不足を警告に出す', () => {
+    const nw = baseNetworth();
+    nw.holdings.find((h) => h.ySymbol === 'CSH').qty = 0;
+    const s = build({ plan: basePlan({ AAA: aaa() }), nw });
+    expect(s.funding.usd).toMatchObject({ sweepQty: 0, sweepCapped: true, sweepShortUsd: 29808 });
+    expect(fundingRow(s)).toBeUndefined();
+    expect(s.meta.warnings.join()).toMatch(/CSH の保有が足りず今出す注文に \$29,808 不足/);
+  });
+});
