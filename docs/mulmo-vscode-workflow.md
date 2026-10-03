@@ -1,5 +1,7 @@
 # Mulmo ▶ VS Code 開発フロー（このリポジトリの作り方）
 
+> **⚠ 2026-10-03 で廃止（移行中）**：開発体制は Claude Code on the web（architect / implementer / reviewer のサブエージェント）に一本化した。移行手順＝[`docs/handoff/2026-10-03-claude-code-dev-flow.md`](handoff/2026-10-03-claude-code-dev-flow.md)。移行完了後の正本は `CLAUDE.md`「開発フロー（Claude Code・2026-10-03〜）」節。本文書は経緯の記録として残す（本文の「Mulmo が設計・クローズ」「VS Code が実装・マージ」「`Refs` 運用」は無効）。
+
 このドキュメントは **VS Code 上の AI コーディングエージェント（Claude Code 等）が最初に読む** ためのものです。
 このリポジトリ（portfolio アプリ）が「誰の指示で・どういう流れで」開発されているかを説明します。
 
