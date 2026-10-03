@@ -1,0 +1,187 @@
+name: Fund Holdings Monthly
+
+# ひふみ上位10（data/scheduler/fund-holdings.json）を月次レポート PDF から自動更新する（#656・#652 PR4）。
+# - 対象：ひふみ投信（toushin）・ひふみマイクロスコープpro（microscope）。クロスオーバーpro は対象外。
+# - 対象月＝実行日（UTC）の前月。PDF 取得 → pdftotext -layout → パース → 検証 → 既知月（2026-05）の自己検証 → top/asOf だけ差し替え。
+# - 対象月が未公開（404）：1〜19 日は成功で終えて翌日再試行／20 日以降は失敗＋fund-holdings-stale Issue（ファンドごとに独立）。
+# - 検証 NG・自己検証 NG・404 以外の取得エラーは即失敗＋Issue。valuations.json は触らない（加重 PER は翌日の per-daily が再計算）。
+# - Secrets は使わない（GITHUB_TOKEN は push と Issue 管理のみ）。ログに出すのはファンド・月・銘柄コード・件数まで。
+# - 設計書: docs/handoff/2026-10-03-phase15-data-migration.md §7
+
+on:
+  schedule:
+    - cron: '0 3 1-20 * *'   # 毎月 1〜20 日 03:00 UTC（20 日がその月の最終定時実行）
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'write = 更新して commit・push（既定） / dry-run = 書き込まず差分をサマリに出す'
+        type: choice
+        options: [write, dry-run]
+        default: write
+      month:
+        description: '対象月 YYYYMM（空なら実行日 UTC の前月）。現在の asOf 以前なら書き込まない'
+        type: string
+        required: false
+        default: ''
+
+concurrency:
+  group: portfolio-data-batch
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0   # git pull --rebase origin main を shallow clone で行わない
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pdftotext
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y poppler-utils
+
+      - name: Resolve mode
+        id: mode
+        env:
+          EVENT: ${{ github.event_name }}
+          INPUT_MODE: ${{ inputs.mode }}
+          INPUT_MONTH: ${{ inputs.month }}
+        run: |
+          if [ "$EVENT" = "workflow_dispatch" ] && [ "$INPUT_MODE" = "dry-run" ]; then
+            MODE=dry-run
+          else
+            MODE=write
+          fi
+          MONTH=""
+          if [ "$EVENT" = "workflow_dispatch" ] && [ -n "$INPUT_MONTH" ]; then
+            if ! printf '%s' "$INPUT_MONTH" | grep -Eq '^[0-9]{4}(0[1-9]|1[0-2])$'; then
+              echo "::error::month は YYYYMM で指定してください"
+              exit 1
+            fi
+            MONTH="$INPUT_MONTH"
+          fi
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          echo "month=$MONTH" >> "$GITHUB_OUTPUT"
+          echo "mode=$MODE month=${MONTH:-（前月）}"
+
+      - name: Update fund-holdings.json
+        id: run
+        env:
+          MODE: ${{ steps.mode.outputs.mode }}
+          MONTH: ${{ steps.mode.outputs.month }}
+        run: |
+          set +e
+          ARGS=(--out "$RUNNER_TEMP/hifumi-result.json" --issue-body "$RUNNER_TEMP/hifumi-issue.md")
+          if [ "$MODE" = "dry-run" ]; then ARGS+=(--dry-run); fi
+          if [ -n "$MONTH" ]; then ARGS+=(--month "$MONTH"); fi
+          node data/scheduler/fund-holdings-update.mjs "${ARGS[@]}"
+          CODE=$?
+          set -e
+          echo "exit=$CODE" >> "$GITHUB_OUTPUT"
+          if [ ! -f "$RUNNER_TEMP/hifumi-result.json" ]; then
+            echo "::error::fund-holdings-update.mjs が結果を出力しませんでした（exit ${CODE}）"
+            echo "failed=true" >> "$GITHUB_OUTPUT"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "all_current=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          R="$RUNNER_TEMP/hifumi-result.json"
+          echo "failed=$(jq -r '.failed' "$R")" >> "$GITHUB_OUTPUT"
+          echo "changed=$(jq -r '.changed' "$R")" >> "$GITHUB_OUTPUT"
+          echo "all_current=$(jq -r '.allCurrent' "$R")" >> "$GITHUB_OUTPUT"
+          echo "asof=$(jq -r '.asOf' "$R")" >> "$GITHUB_OUTPUT"
+
+      - name: Guard — only fund-holdings.json may change
+        run: |
+          OTHER=$(git status --porcelain | grep -v ' data/scheduler/fund-holdings.json$' || true)
+          if [ -n "$OTHER" ]; then
+            echo "::error::fund-holdings.json 以外のファイルが変更されました"
+            echo "$OTHER"
+            exit 1
+          fi
+
+      - name: Commit and push (write mode only)
+        id: push
+        if: steps.mode.outputs.mode == 'write' && steps.run.outputs.changed == 'true'
+        env:
+          ASOF: ${{ steps.run.outputs.asof }}
+        run: |
+          # 21:00〜22:30 UTC は Mulmo が valuations.json を書く時間帯なので push しない（§2.3）。
+          HM=$(date -u +%H%M)
+          if [ "$HM" -ge 2100 ] && [ "$HM" -le 2230 ]; then
+            echo "::warning::21:00〜22:30 UTC（push 禁止時間帯）のため commit/push しません"
+            echo "skipped=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit data/scheduler/fund-holdings.json -m "data: hifumi top10 ${ASOF}"
+          for i in 1 2 3; do
+            # rebase が衝突したら force せずジョブを失敗させる（main 側を残す）
+            if ! git pull --rebase origin main; then
+              git rebase --abort || true
+              echo "::error::git pull --rebase が衝突しました（main 側を残して終了）"
+              exit 1
+            fi
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            echo "push 失敗（${i}/3）。10 秒後に再試行します。"
+            sleep 10
+          done
+          echo "::error::push に 3 回失敗しました"
+          exit 1
+
+      - name: Open / update / close fund-holdings-stale issue (write mode only)
+        if: always() && steps.mode.outputs.mode == 'write' && steps.run.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FAILED: ${{ steps.run.outputs.failed }}
+          ALL_CURRENT: ${{ steps.run.outputs.all_current }}
+          PUSH_OUTCOME: ${{ steps.push.outcome }}
+          PUSH_SKIPPED: ${{ steps.push.outputs.skipped }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh label create fund-holdings-stale \
+            --color D93F0B \
+            --description "ひふみ上位10の月次更新が失敗・未公開（自動管理・#656）" 2>/dev/null || true
+          EXISTING=$(gh issue list --state open --label fund-holdings-stale --json number --jq '.[0].number // ""')
+          BODY_FILE="$RUNNER_TEMP/hifumi-issue.md"
+          if [ "$FAILED" = "true" ]; then
+            if [ ! -f "$BODY_FILE" ]; then
+              printf 'ひふみ上位10の月次更新が失敗しました（結果を出力できず）。\n\n- 実行: %s\n' "$RUN_URL" > "$BODY_FILE"
+            else
+              printf -- '- 実行: %s\n' "$RUN_URL" >> "$BODY_FILE"
+            fi
+            TITLE="⚠ ひふみ上位10の月次更新が失敗・未公開（fund-holdings.json）"
+            if [ -n "$EXISTING" ]; then
+              gh issue edit "$EXISTING" --title "$TITLE" --body-file "$BODY_FILE"
+              echo "Updated stale issue #$EXISTING"
+            else
+              gh issue create --title "$TITLE" --body-file "$BODY_FILE" --label fund-holdings-stale
+              echo "Created stale issue"
+            fi
+          elif [ "$ALL_CURRENT" = "true" ] && [ "$PUSH_OUTCOME" != "failure" ] && [ "$PUSH_SKIPPED" != "true" ] && [ -n "$EXISTING" ]; then
+            gh issue close "$EXISTING" --comment "✅ ひふみ上位10が全ファンドで更新済みになりました（${RUN_URL}）。自動クローズします。"
+            echo "Closed stale issue #$EXISTING"
+          else
+            # push 禁止時間帯で push を見送った場合は、更新が main に入っていないので Issue を閉じない
+            echo "Issue 操作なし${PUSH_SKIPPED:+（push 見送り）}"
+          fi
+
+      - name: Fail job on update failure
+        if: steps.run.outputs.failed == 'true'
+        run: |
+          echo "::error::検証 NG・自己検証 NG・取得エラー、または 20 日以降の未公開があります（ジョブサマリ参照）"
+          exit 1
