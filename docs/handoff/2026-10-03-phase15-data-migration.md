@@ -14,7 +14,7 @@
 | PR3 書き込みへ切り替え | #____ | | | 未着手（PR2＋3日連続一致待ち） |
 | PR4 ひふみ上位10 月次自動更新 | #____ | | | 未着手 |
 | PR5 週次バッチ再開（差分レポート） | #657 | `feat/657-weekly-report` | | 実装済み（PR 作成待ち） |
-| PR6 週次バッチ書き込み開始 | #____ | | | 未着手（PR5 初回レポート確認待ち） |
+| PR6 週次バッチ書き込み開始 | #658 | | | 未着手（初回レポート確認済み・null ガード仕様を §8.4 に追記 2026-10-03） |
 
 - 並行運転の連続一致日数：____（トラッキング Issue #____ が自動更新）
 - Mulmo 側作業（§9）完了：PR3 後 [ ] ／ PR4 後 [ ] ／ PR6 後 [ ]
@@ -280,9 +280,138 @@ PR1 KV 自動同期 ──┬─> PR2 PER 並行運転 ──(3日連続一致�
 - [ ] マージ後の確認：`workflow_dispatch mode=report` を 1 回実行し、差分レポート（artifact）を #652 に貼る。
 
 ### 8.4 PR6：書き込み開始（初回レポート確認後）
-- 着手条件：PR5 の初回差分レポートを Toshio が確認（3 か月分の更新でブロックが大きく変わる想定。不自然な値＝null 化の多発・桁違いが無いこと）。
-- 変更：`weekly-valuations.yml` の schedule を `write` に。`CLAUDE.md`「データの書き手」表に `data/valuations.json` の `quality`/`value`/`sectorMedian` と `data/verdict-outcomes.json` ＝ GitHub Actions `weekly-valuations.yml`（毎週日曜 02:00 UTC）を追加。
-- 受け入れ条件：schedule が write・push 後に kv-resync・品質ゲート PASS。
+- **子 Issue**: #658。**Toshio 確認：要**（workflows・CLAUDE.md に加え、**`valuations.json` の各銘柄エントリにキー `staleFields` を足す＝データ構造の変更**）。
+- 着手条件：PR5 の初回差分レポートを Toshio が確認（3 か月分の更新でブロックが大きく変わる想定。不自然な値＝null 化の多発・桁違いが無いこと）。→ 2026-10-03 確認済み（下記 8.4.1）。
+- 変更：`weekly-valuations.yml` の schedule を `write` に。`CLAUDE.md`「データの書き手」表に `data/valuations.json` の `quality`/`value`/`sectorMedian`/`staleFields` と `data/verdict-outcomes.json` ＝ GitHub Actions `weekly-valuations.yml`（毎週日曜 02:00 UTC）を追加。**加えて 8.4.2〜8.4.6 の null ガード**。
+
+#### 8.4.1 初回差分レポートの所見（2026-10-03・run 37107968851・artifact `weekly-diff-2026-10-03`）
+- null 化は 3 件：`6301.T` の `quality.roic`・`quality.intCoverage`、`6016.T` の `quality.grossProf`。
+- 原因は取得経路の移行ではなく**データ提供元（EDINET DB）側**。最新の決算行（6301 は USGAAP の 2026/3 期）で `operating_income` と `ordinary_income` が空 → `src/edinet-normalize.js` の EBIT フォールバック（73〜77 行）が null → `roic`・`intCoverage` が null。6016 は `gross_profit` が空。
+- `GOOGL` の `quality.intCoverage` 1110.7→216.8 は**未確定**（実態の借入増の可能性が高いが、FMP 失敗 → EDGAR フォールバックで算出元が変わった可能性も残る）。8.4.7 の手順で取得元を確認する。
+- **Toshio 決定（2026-10-03）**：週次の書き込みで「新しい値が null・既存の値が非 null」のフィールドは、**既存値を保持し、古い値（stale）である印を付ける**（null で上書きしない）。
+
+#### 8.4.2 null ガードの適用範囲
+| 対象 | 適用 | 理由 |
+|---|---|---|
+| `valuations.json` の `quality`（`quality-us.mjs`・`quality-jp.mjs`） | **する** | 今回の null 化の発生源 |
+| `valuations.json` の `value`（`etf-pe.mjs`・`target-gap.mjs`・`jp-sector-median.mjs`） | **する** | 書き戻し経路が同じ（現状の書き方では null を出さないが、同じ入口で守る） |
+| `valuations.json` の `sectorMedian`（`sector-median.mjs`・`jp-sector-median.mjs`） | **する** | `per`/`evEbitda`/`grossMargin`/`pb` が個別に null になりうる |
+| `verdict-outcomes.json`（`hit-rate.mjs`） | **しない** | 遷移は null→値（判定確定）が正。値→null は想定外で、ガードで隠さず差分レポートの「null 化」にそのまま出す |
+| `valuations.json` の毎日の PER（`perCurrent`/`percentile`/`status`/`asOf`。PR2/PR3） | **しない** | 週次バッチの範囲外（判定ルールは §11 の正本値） |
+
+判定のしかた（フィールド単位・ブロック内の 1 階層のみ）：
+- 新ブロックに**キーが存在し値が `null`**、かつ既存ブロックの同キーが**非 null** → 既存値を書く＋印を付ける。
+- 新ブロックに**キーが無い**（`undefined`）→ ガード対象外。`etf-pe.mjs` の「ブロック丸ごと置換で seed を撤去する」既存挙動を変えないため。
+- 新ブロック自体が `null`（例：`quality-us.mjs` で `computeQuality` が null を返した）で既存ブロックがオブジェクト → **全フィールドが null とみなす**（既存ブロックを丸ごと保持し、非 null だった各フィールドに印）。
+- 既存も null（または既存ブロック無し）→ そのまま null を書く（保持する値が無い。印は付けない）。
+- 銘柄ごとスキップ（取得失敗で `results` に入らない）→ 従来どおり書かない（既存ブロックが残る）。**印は付けない**（今回の決定の範囲外・現行挙動のまま）。
+- 派生値の再計算はしない。例：`roic` を保持しても `qScore` は新しく算出された値をそのまま書く（`qScore = fScore` で `roic`/`intCoverage`/`grossProf` に依存しない）。`quality-calc.js`・`edinet-normalize.js` の計算は変えない。
+
+判定の場所：**新設 `data/scheduler/lib/null-guard.mjs`** に集約し、各スクリプトの `writeQualityBlocks(...)` / `writeBlocks(...)` 呼び出しを `writeGuardedBlocks(...)` に置き換える。`writeback.mjs`（`writeBlocks`/`writeQualityBlocks`）は**変えない**（§11・`tests/writeback.test.js` が守る既存挙動）。
+
+| 関数 | 形 | 内容 |
+|---|---|---|
+| `guardBlock(oldBlock, newBlock, oldStale, blockKey, today)` | 純関数 | → `{ block, stale, kept: string[], recovered: string[] }`。`stale` はこの銘柄の `staleFields` 全体（他ブロックの印はそのまま） |
+| `writeGuardedBlocks(path, results, blockKey, { today })` | I/O | ファイルを読む → 銘柄ごとに `guardBlock` → `writeBlocks(path, guarded, blockKey)` → 印が変わった銘柄だけ `writeBlocks(path, staleUpdates, 'staleFields')`。戻り値は `writeBlocks` と同じ件数。`today` 省略時は UTC の当日（`new Date().toISOString().slice(0, 10)`） |
+
+- 置換箇所：`quality-us.mjs`・`quality-jp.mjs`（`writeQualityBlocks` → `writeGuardedBlocks(..., 'quality')`）、`etf-pe.mjs`・`target-gap.mjs`（`'value'`）、`sector-median.mjs`（`'sectorMedian'`）、`jp-sector-median.mjs`（`'value'` と `'sectorMedian'` の 2 箇所）。
+- `--dry-run` の出力は従来どおり（ガード前の計算結果）。`report` モードも作業ツリーへの書き込みは同じ処理を通る（＝レポートはガード後の結果を示す）。
+- ログ：保持したフィールドは `  [null-guard] 6301.T quality.roic: null → 既存値を保持（stale since 2026-10-04）` の形で出す（シンボル・フィールド名・日付のみ。値は出さなくてよい）。
+
+#### 8.4.3 stale の印の形（データ構造の追加）
+各銘柄エントリに**フラットなオブジェクト `staleFields`** を足す。キー＝`"<ブロック>.<フィールド>"`、値＝**null を最初に観測した週次実行の日付（UTC・YYYY-MM-DD）**。
+
+前後比較の例（合成値）：
+```jsonc
+// 実行前（HEAD）
+"XXXX.T": { "quality": { "roic": 6.0, "intCoverage": 80.2, "qScore": 4 }, ... }
+// 新しい計算結果：{ "roic": null, "intCoverage": null, "qScore": 5 }
+// 実行後（ガードあり）
+"XXXX.T": {
+  "staleFields": { "quality.roic": "2026-10-04", "quality.intCoverage": "2026-10-04" },
+  "quality": { "roic": 6.0, "intCoverage": 80.2, "qScore": 5 }, ...
+}
+// （ガードなしなら "roic": null, "intCoverage": null になっていた）
+```
+
+この形にした理由：
+- **既存キーの型を変えない**：`quality.roic` 等は数値か null のまま。アプリの読み手（`src/valuation-tab.js`・`src/valuations.js`・`src/value-detail-meta.js`）は `val.quality.<key>` を直接読むだけで、エントリのキーを列挙しない → 影響なし。
+- **ブロックの中に入れない**：`quality` 内に `_stale` 等を足すと読み手が見るブロックのキー集合が変わり、入れ子にすると `writeBlocks` の「単層ブロック（最初の `}` が終端）」前提が壊れる。エントリ直下の単層オブジェクトなら `writeBlocks(path, x, 'staleFields')` でそのまま書ける。
+- **ブロックごとに別キー（`qualityStale` 等）にしない**：1 キーで 3 ブロックを扱え、`"quality.roic"` のようなキー名は `writeBlocks` の `"quality":` 検索に一致しない（誤ヒットしない）。
+- **日付＝null を最初に観測した日**：`quality`/`value` ブロックには取得日が無く、保持値の取得日は分からない。「この日以降、提供元から値が取れていない」が確実に言える情報。
+- 他の読み手への影響：
+  - `kv-resync`（`lib/kv-sync.mjs` の `mergeValuations`）はエントリ全体を KV の `valuation` に入れるため `staleFields` も KV に載る。比較キー（`perCurrent/status/asOf`）は不変なので drift 判定に影響しない。サイズ増は数十バイト／銘柄。
+  - `watchlist-per.mjs`（`{ ...v, ... }`）は未知キーを保持する。
+  - Mulmo（Briefing 生成・段C書き戻し）は `valuations.json` を読み書きする。**`staleFields` を消さない・書き換えないこと**を PM が #652 で申し送る（§9 に追記する代わりにここに記す）。Briefing 側で stale を使うかは Mulmo の判断（生成仕様の変更が要るなら Issue で提案）。
+- **§11 の例外**：§11「`valuations.json` に新しいキーを足さない」に対し、`staleFields` だけは Toshio 決定（2026-10-03）により追加する。それ以外のキー追加は引き続き禁止。
+- 読み手側の表示（Value タブで stale の値を薄く・注記する等）は**今回の範囲外**。**別 Issue 推奨**（`src/**` を触るので PR6 には入れない）。
+
+#### 8.4.4 stale からの回復
+- 次回以降の実行で同じフィールドに**非 null 値が取れたら**、その値を書き、`staleFields` から該当キーを外す。
+- 引き続き null なら値は保持のまま、**日付は最初の観測日を維持**（上書きしない）。
+- `staleFields` が空になったら `{}` を残す（`writeBlocks` はキーを削除できないため。読み手は空オブジェクトを無視する）。キーを消す処理は作らない。
+- 書くのは**印が変わった銘柄だけ**（変化が無ければ `staleFields` に触れず、無関係な diff を出さない）。
+
+例（合成値）：
+| 回 | 新しい計算値 `roic` | 書く `quality.roic` | `staleFields["quality.roic"]` |
+|---|---|---|---|
+| 前回までの状態 | — | 6.0 | （無し） |
+| 1 回目（2026-10-04） | null | 6.0（保持） | `"2026-10-04"` |
+| 2 回目（2026-10-11） | null | 6.0（保持） | `"2026-10-04"`（維持） |
+| 3 回目（2026-10-18） | 7.2 | 7.2 | 外す（他に無ければ `staleFields: {}`） |
+
+#### 8.4.5 差分レポート（`diff-report.mjs`）
+ガードで保持したフィールドは作業ツリー上では値が変わらないため、既存の `diffValuations` には出ない。`staleFields` の変化から別に拾う。
+- 新関数 `diffStale(oldDoc, newDoc)` → `{ symbol, key, kind, since }[]`。`kind`：
+  - `kept-new`＝**null 化（保持）**：HEAD に無いキーが作業ツリーにある。
+  - `kept-cont`＝保持継続：両方にある。
+  - `recovered`＝回復：HEAD にあり作業ツリーに無い。
+- サマリ表：`valuations.quality`/`value`/`sectorMedian` の各行に列「**うち null 化（保持）**」（`kept-new` の件数・ブロックはキーの接頭辞で振り分け）を足す。既存の「うち null 化」列は**保持されずに null になった件数**のまま（ガード対象外の経路や想定外の null を見落とさないため）。
+- 本文：`## data/valuations.json` の後に `### null 化（保持）`（銘柄・フィールド・stale since・保持している値＝作業ツリーの値）、`### 保持継続`、`### 回復（old→new）` を出す。いずれも 0 件なら節ごと省略。
+- `VALUATION_BLOCKS` は変えない（`staleFields` 自体はブロック差分に出さない）。既存のテストは変更なしで PASS すること。
+
+#### 8.4.6 PR6 の対象ファイル（追加分）
+| ファイル | 状態 | 内容 |
+|---|---|---|
+| `data/scheduler/lib/null-guard.mjs` | 新規 | 8.4.2 の `guardBlock` / `writeGuardedBlocks` |
+| `data/scheduler/{quality-us,quality-jp,etf-pe,target-gap,sector-median,jp-sector-median}.mjs` | 変更 | 書き戻し呼び出しを `writeGuardedBlocks` に置換（計算・対象銘柄は変えない） |
+| `data/scheduler/diff-report.mjs` | 変更 | 8.4.5 |
+| `tests/null-guard.test.js` | 新規 | 合成データ（下記） |
+| `tests/diff-report.test.js` | 変更 | `diffStale` とサマリ列のテストを追加（既存ケースは変えない） |
+| `data/scheduler/README.md` | 変更 | null ガードと `staleFields` の説明を 1 節 |
+| `.github/workflows/weekly-valuations.yml`・`CLAUDE.md` | 変更 | 上記「変更」のとおり |
+
+変えない：`data/scheduler/writeback.mjs`・`src/**`（`quality-calc.js`・`edinet-normalize.js` の EBIT フォールバック含む）・`hit-rate.mjs`・`data/valuations.json` 本体（手で編集しない。印は初回 write 実行で入る）。
+
+#### 8.4.7 初回 write 実行の確認手順（マージ後・PM）
+1. `workflow_dispatch mode=write` を 1 回実行する。
+2. ジョブサマリの差分レポートで、`null 化（保持）` に 6301.T `quality.roic`・`quality.intCoverage`、6016.T `quality.grossProf` が出て、「うち null 化」（保持されない null）が 0 件であることを確認する（提供元の状況が変わっていれば件数は変わってよい）。
+3. **GOOGL の取得元**：`quality-us` ステップのログで `[GOOGL]` の直後に `[FMP] Failed for GOOGL: ... — trying EDGAR fallback` があるか確認する。無ければ FMP（実態の借入増と判断してよい）、あれば EDGAR フォールバック（`intCoverage` の算出元が変わった）。結果を #652 にコメントし、EDGAR だった場合は Toshio に報告する（値の扱いは Toshio 判断・本 PR では変えない）。
+4. push 後に kv-resync が成功していること（KV の `valuation` に `staleFields` が載ってもアプリが正常表示）。
+
+#### 8.4.8 受け入れ条件
+- [ ] schedule が `write`・push 後に kv-resync・品質ゲート PASS。
+- [ ] `writeback.mjs` に差分なし。`tests/writeback.test.js` ほか既存テスト（`quality-calc`/`edinet-normalize`/`edgar-normalize`/`verdict-outcomes`/`diff-report` の既存ケース）が変更なしで PASS。
+- [ ] `tests/null-guard.test.js`（合成データ・一時ファイル）PASS。最低限の観点：
+  1. 新 null・既存非 null → 既存値保持＋`staleFields["quality.roic"] = today`。
+  2. 新 null・既存 null／既存ブロック無し → null を書く・印なし。
+  3. 新非 null → 新値を書く。既に印があれば外す（回復）。他フィールド・他ブロックの印は残る。
+  4. 連続 null → 日付は最初の観測日のまま。
+  5. 新ブロックにキーが無い（etf-pe 型の丸ごと置換）→ ガードしない（キーは消える）。
+  6. 新ブロック自体が null・既存がオブジェクト → 既存ブロック丸ごと保持＋非 null だった全フィールドに印。
+  7. 派生値（`qScore`）は新値のまま書かれる。
+  8. 印が変わらない銘柄では `staleFields` を書かない（ファイルの該当箇所がバイト一致）。全回復で `staleFields: {}`。
+  9. 書き戻し後のファイルが JSON として妥当で、対象外のフィールド（`bandLow`/`note` 等）とインデント・インライン配列が保たれる。
+  10. `staleFields` がある状態で `writeBlocks(..., 'quality')` が `"quality.roic"` キーに誤ヒットしない。
+- [ ] `tests/diff-report.test.js` 追加分 PASS：`kept-new`/`kept-cont`/`recovered` の判定、サマリの「うち null 化（保持）」列、保持されない null が従来どおり「うち null 化」に数えられること。
+- [ ] `verdict-outcomes.json` の書き方は変わらない（ガードを通さない）。
+- [ ] ログ・レポートに出すのはシンボル・フィールド名・日付・公開済みの指標値まで（§12）。
+- [ ] マージ後：8.4.7 を実施し結果を #652 に記録。
+
+#### 8.4.9 申し送り・別 Issue 候補
+- **別 Issue 推奨**：Value タブ等で `staleFields` の値を「古い値」と分かるように表示する（`src/**`・表示の方向性は Toshio 確認）。
+- **別 Issue 候補（要 Toshio 判断）**：USGAAP 企業で `operating_income`・`ordinary_income` が共に空のとき、税引前利益を EBIT に使う案（`src/edinet-normalize.js` の EBIT フォールバック変更＝計算の正本に関わるため PR6 では扱わない）。
+- Mulmo へ（PM が #652 にコメント）：`valuations.json` の `staleFields` を消さない・書き換えない。
 
 ---
 
