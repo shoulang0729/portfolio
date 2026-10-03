@@ -1,6 +1,47 @@
 # Portfolio Heatmap — Claude Code 引き継ぎ情報
 
-> **開発フロー（必読）**: このリポは「設計=Mulmo / 実装=あなた」の一方通行で開発しています。着手前に [`docs/mulmo-vscode-workflow.md`](docs/mulmo-vscode-workflow.md) を読み、設計は自己判断で変えず・矛盾があれば止めて報告してください。
+> **開発フロー（必読）**: このリポは Claude Code が 設計（architect）→ 実装（implementer）→ レビュー（reviewer）で開発します。着手前に本ファイル「開発フロー（Claude Code・2026-10-03〜）」節を読んでください。
+
+## 開発フロー（Claude Code・2026-10-03〜）
+
+このリポは **Claude Code が 設計 → 実装 → レビュー を役割の違うサブエージェントで回す**（`.claude/agents/`）。`/feature "<お題>"` で一括実行できる（`.claude/commands/feature.md`）。設計と実装の分離は役割で保つ（2026-07 の公開リポ露出の再発防止策の継続）。
+
+1. **設計（architect）**: 要件を `docs/handoff/YYYY-MM-DD-<slug>.md` に書き、Issue を起票する。アプリのコードは書かない。
+2. **実装（implementer）**: Issue と設計書のとおりに 1タスク=1ブランチ=1PR で実装する。設計書は変えない。PR に `Closes #<Issue>`。
+3. **レビュー（reviewer）**: 品質ゲート＋差分精査＋公開リポ検査。問題なければ squash マージ。下記「マージ前の確認」の対象はマージせず `needs-toshio` を付けて止める。
+
+### サイズ判定
+着手前に PM（親セッション）が判定する。**S**＝見た目のみの小変更で、次のどれにも触れないもの：計算・状態（`state`）・data-action・ソート・データファイル（`data/**`）・KV・Worker・認証・`getColor`/期間スケール・D3 のサイズ計算・タブ/モジュール構成。S は architect を省略し、PM が受け入れ条件つきの簡潔な Issue を書いて implementer に渡す。**迷ったら M/L**（フルパイプライン）。
+
+### マージ前の確認（Toshio）
+次に触れる PR は reviewer がマージせず、`needs-toshio` を付けて Toshio の確認を待つ。それ以外は CI green ＋ reviewer 承認で自動マージしてよい。
+- **セキュリティ**: `src/auth-*.js`、`worker/**` の認証・レート制限・CORS、PIN/パスキー、Secrets
+- **資産データ**: `scripts/fetch_mf*.py`、`src/networth.js`・`src/wealth.js`、`data/real-assets/**`、KV の networth/positions、公開/非公開の境界
+- **データ構造**: `data/*.json` のキー・形状、`data/mf-import-config.json` の schema、KV のデータ形状
+- **開発体制**: `CLAUDE.md`、`.claude/**`、`.github/workflows/**`
+
+### データの書き手（手で編集しない）
+| ファイル | 書き手 |
+|---|---|
+| `data/mf-holdings.json`・`data/mf-history.json` | Mac mini の MF 取得バッチ（毎日） |
+| `data/valuations.json`・`data/briefings/**` | Mulmo の日次バッチ（毎朝 05:00 CST） |
+| `data/positions.json`・`data/portfolio-snapshot.json` | Worker（KV 同期・スナップショット） |
+
+- これらは自動で main に直接コミットされる。形状を変える場合は「データ構造」扱い（Toshio 確認）とし、書き手側の対応を設計書に明記する。
+- push 前の `git pull --rebase origin main` でこれらと衝突したら、**main 側を採用**する。
+- **Briefing**：生成（`data/briefings/**` と `docs/briefing-generation-spec.md`）は Mulmo の担当。アプリの Briefing タブ（表示側）は Claude Code の担当。生成仕様の変更は Issue で提案する。
+
+### クラウドから実行できないもの
+- **Worker のデプロイ**：`worker/**` を含む PR がマージされたら、Toshio が Mac で `cd worker && npx wrangler deploy` ＋ curl 検証を行う（reviewer が報告する）。
+- **Mac 実機の確認**：`scripts/fetch_mf*.py` など MF へのログインが要る処理は Claude Code では動作確認できない。PR に「Mac 実機確認要」と書き、Mac mini での確認後にマージする。
+
+### 公開リポの原則
+このリポは PUBLIC。個人の資産データ（物件・評価額・負債・ネットワース実額・口座情報）と秘密（APIキー・トークン・PIN/ハッシュ値）をコミットしない。テストデータは合成値にする。reviewer は差分ごとに検査する。
+
+### git / gh
+- ベースは必ず `main`。push 前に `git pull --rebase origin main`。マージは squash＋ブランチ削除。
+- **gh CLI が無い環境（クラウドセッション等）**：Issue/PR/マージは PM（親）が GitHub MCP で代行する。サブエージェントは本文をドラフトファイルで渡し、git は commit まで（push は親）。
+- main 直コミットは docs と設計書の「実装ログ」更新のみ。アプリ実装は必ず PR。
 
 ## プロジェクト概要
 Finnhub API（優先）+ Yahoo Finance API（フォールバック）を使ったポートフォリオ可視化 Web アプリ。
@@ -309,7 +350,6 @@ npm run test:coverage  # カバレッジレポート生成
 ```
 - テストファイルは `tests/` 以下
 - GitHub Actions `.github/workflows/test.yml` が push/PR 時に自動実行
-- GitHub Actions `.github/workflows/daily-issues.yml` が毎日 0:00 UTC（9:00 JST）に open issues を自動修正して PR 作成
 - `tests/fmt.test.js`: `fmtJPYInt`, `fmtPctInt`, `fmtShares`, `escapeHTML`, `getColor` の純関数テスト（vitest）
 
 ### リント・フォーマット
@@ -369,13 +409,12 @@ npm run build:watch  # ウォッチモード
 |------|------|
 | レビュー対応 | CodeRabbit 等のレビューコメントは **PR をブロックしない（非同期）**。有用な指摘は GitHub Issue を新規作成してストックし、PR 自体はそのままマージする。自明な誤検知・スタイル指摘はスキップ。 |
 | テスト対応 | テスト失敗を修正し、対応内容を Issue にコメントする |
-| PR 操作 | PR を作成・マージし、マージ済みブランチを削除する |
-| 自動 PR | `daily-issues.yml` が自動生成した PR をマージする |
+| PR 操作 | PR を作成する。マージは reviewer が『マージ前の確認』に従って行う |
 | 依存追加 | `npm install <pkg> --save-dev` で devDependency を追加する |
 | バージョン更新 | `?v=YYYYMMDDX` のバージョン文字列を更新する |
 | Issue 管理 | Issue を作成・クローズする |
 | CI 軽微修正 | GitHub Actions のタイムアウト・トリガー条件など軽微な修正 |
-| Worker デプロイ | `worker/` の変更がマージされたら `cd worker && npx wrangler deploy` まで自分で実行し、curl でライブのルートを検証して結果を報告する。wrangler はユーザーの Cloudflare アカウントでローカル認証済み。Secrets は変更しない（コード差し替えのみ） |
+| Worker デプロイ | クラウド環境からは実行しない。マージ後に Toshio が Mac で deploy する（reviewer が報告） |
 
 **以下は確認してから実行（変更しない）**:
 - `git push --force` / `git reset --hard` / main ブランチ削除
@@ -402,7 +441,7 @@ npm run build:watch  # ウォッチモード
 ### 並列起動時の必須ルール
 
 1. **ベースブランチは必ず `main`**。他 Agent のブランチをベースにしない（過去事故: Agent E が test/e2e-expansion を D3 ブランチベースで作り、D3 PR が宙に浮いた）
-2. **1 Task = 1 ブランチ = 1 PR = 1 Issue**。**実装 PR は `Closes #XX` を打たず `Refs #XX`**（クローズ権限は Mulmo 盤面モニタ＝完了スタンプ後に閉じる。詳細＝`docs/mulmo-vscode-workflow.md`「実装ステータスの見える化＆クローズ権限」）。`Closes` を使うのは Mulmo docs レーン内 PR・自動 PR 等、設計スタンプ不要なケースのみ（その場合も 1 Issue 1 `Closes`）
+2. **1 Task = 1 ブランチ = 1 PR = 1 Issue**。実装 PR は `Closes #XX`（同じ Issue を複数 PR で分割する場合は最後の PR のみ `Closes`、他は `Refs`）
 3. **push 前に必ず `git pull --rebase origin main`**（コンフリクト解消責任は各 Agent）
 4. **動作変更がある Task は CI を待ってからマージ**。`npm run check:types` `npm run check:circular` `npm run test:e2e` のうち、CI 側でしか実行できないもの（E2E）は admin 権限の親（Opus）が監視
 
