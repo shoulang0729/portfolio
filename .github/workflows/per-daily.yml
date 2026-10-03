@@ -1,63 +1,74 @@
 name: PER Daily
 
-# 毎日の PER を Actions で計算のみ実行し（shadow）、Mulmo の確定値と自動で突き合わせる（compare）（#652 PR2）。
-# - PR2 の範囲では data/** に書き込まない・push しない（permissions: contents: read）。
-# - Worker 中継口 /yahoo を叩くだけ。API キー・Secrets は使わない（GITHUB_TOKEN は artifact 取得と Issue 管理のみ）。
-# - 公開リポのログ・サマリ・Issue に出すのは銘柄シンボル・PER・%タイル・status・件数のみ（HTTP 本文は出さない）。
-# - 設計書: docs/handoff/2026-10-03-phase15-data-migration.md §5
+# 毎日の PER を Actions で計算し data/valuations.json に書き込む（#652 PR3・#655）。
+# - watchlist-per --write → fund-per --write → commit「data: daily PER <UTC日付>」→ push → 同じジョブで kv-resync。
+# - コミットメッセージは固定形式（Mulmo が main 上の文字列一致で当日分の有無を判定する・設計書 §6.2 / §9）。
+#   差分が無い日も --allow-empty で作る。計算のみに落ちた日・失敗した日はコミットしない。
+# - 開始が 20:55〜22:30 UTC なら計算のみ（§2.6）。21:00〜22:30 UTC は push しない（Mulmo の書き込み時間帯・§2.3）。
+# - Worker 中継口 /yahoo /watchlist を叩くだけ。API キー・Secrets は使わない（GITHUB_TOKEN は push と Issue 管理のみ）。
+# - 公開リポのログ・サマリ・Issue に出すのは銘柄シンボル・PER・%タイル・status・件数のみ（HTTP 本文・KV 本文は出さない）。
+# - PR2 の突き合わせ（compare ジョブ・01:30 UTC）は PR3 で廃止。
+# - 設計書: docs/handoff/2026-10-03-phase15-data-migration.md §2.3・§2.6・§6
 
 on:
   schedule:
-    - cron: '15 20 * * *'   # shadow: 毎日 20:15 UTC（計算のみ → artifact）
-    - cron: '30 1 * * *'    # compare: 毎日 01:30 UTC（前日 UTC 日付の shadow と Mulmo の確定値を突き合わせ）
+    - cron: '15 20 * * *'   # 毎日 20:15 UTC（書き込み＋kv-resync）
   workflow_dispatch:
-    inputs:
-      job:
-        description: 'shadow = 計算のみ（artifact） / compare = 前日 UTC 日付の shadow と突き合わせ'
-        type: choice
-        options: [shadow, compare]
-        default: shadow
 
 concurrency:
   group: portfolio-data-batch
   cancel-in-progress: false
 
 permissions:
-  contents: read
+  contents: write
   issues: write
-  actions: read
 
 jobs:
-  shadow:
-    if: github.event.schedule == '15 20 * * *' || (github.event_name == 'workflow_dispatch' && inputs.job == 'shadow')
+  write:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: main
+          ref: main   # 起動コミットではなく最新の main に対して計算・書き込みする
+          fetch-depth: 0   # push 前の rebase を shallow clone で行わない
 
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Compute PER (no --write)
-        id: run
+      - name: Resolve mode (start time)
+        id: mode
         run: |
-          OUT="$RUNNER_TEMP/per-shadow"
-          mkdir -p "$OUT"
-          node data/scheduler/watchlist-per.mjs --out "$OUT/watchlist-per.json"
-          node data/scheduler/fund-per.mjs --out "$OUT/fund-per.json"
+          START=$(date -u +%FT%TZ)
+          MODE=$(node data/scheduler/per-daily-gate.mjs mode --now "$START")
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          echo "start=${START} mode=${MODE}"
+          if [ "$MODE" = "compute-only" ]; then
+            echo "::warning::開始 ${START} が 20:55〜22:30 UTC のため計算のみ（書き込み・コミットしない）。当日の PER は前日値のままです"
+          fi
 
+      - name: Compute PER
+        id: run
+        env:
+          MODE: ${{ steps.mode.outputs.mode }}
+        run: |
+          OUT="$RUNNER_TEMP/per-daily"
+          mkdir -p "$OUT"
+          WRITE=""
+          if [ "$MODE" = "write" ]; then WRITE="--write"; fi
+          node data/scheduler/watchlist-per.mjs $WRITE --out "$OUT/watchlist-per.json"
+          node data/scheduler/fund-per.mjs $WRITE --out "$OUT/fund-per.json"
+
+          # コミットの日付＝書き込んだ asOf（実行時の UTC 日付・§2.5）
           D=$(jq -r '.asOf' "$OUT/watchlist-per.json")
           TOTAL=$(jq '.results | length' "$OUT/watchlist-per.json")
           SKIPPED=$(jq '.skipped | length' "$OUT/watchlist-per.json")
           SKIPPED_SYMS=$(jq -r '[.skipped[].sym] | join(", ")' "$OUT/watchlist-per.json")
           echo "date=$D" >> "$GITHUB_OUTPUT"
-          echo "dir=$OUT" >> "$GITHUB_OUTPUT"
 
           {
-            echo "## PER shadow（計算のみ・${D}）"
+            echo "## PER Daily（mode=${MODE}・${D}）"
             echo ""
             echo "| 項目 | 値 |"
             echo "|---|---|"
@@ -72,117 +83,284 @@ jobs:
             jq -r '.funds | to_entries[] | "| \(.key) | \(.value.perCurrent // "—") | \(.value.coverage) |"' "$OUT/fund-per.json"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Guard — no writes to data/**
-        run: |
-          if [ -n "$(git status --porcelain -- data/)" ]; then
-            echo "::error::shadow ジョブが data/** を変更しました（PR2 は計算のみ）"
-            git status --porcelain -- data/
+          # ウォッチの更新が 1 件も無い日は失敗扱い（コミット・push しない。Mulmo の「当日分あり」誤判定を防ぐ・Toshio 決定）。
+          # fund-per だけ成功した日も同じ。skipped の割合の閾値は設けない。
+          set +e
+          UPDATED=$(node data/scheduler/per-daily-gate.mjs updated "$OUT/watchlist-per.json")
+          UCODE=$?
+          set -e
+          echo "updated=${UPDATED}" >> "$GITHUB_OUTPUT"
+          if [ "$UCODE" -eq 4 ]; then
+            echo "no_updates=true" >> "$GITHUB_OUTPUT"
+            echo "::error::ウォッチの PER を 1 件も更新できませんでした（全 ${TOTAL} 件 skipped）。コミット・push しません"
+            exit 1
+          elif [ "$UCODE" -ne 0 ]; then
+            echo "::error::更新件数の判定に失敗しました（per-daily-gate updated exit ${UCODE}）"
             exit 1
           fi
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: per-shadow-${{ steps.run.outputs.date }}
-          path: ${{ steps.run.outputs.dir }}/
-          retention-days: 7
-          if-no-files-found: error
-
-  compare:
-    if: github.event.schedule == '30 1 * * *' || (github.event_name == 'workflow_dispatch' && inputs.job == 'compare')
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: main
-          fetch-depth: 0   # Mulmo の確定コミットを git log / git show で読む
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Locate shadow artifact (previous UTC day)
-        id: locate
+      - name: Guard — only allowed fields of data/valuations.json changed
+        id: guard
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MODE: ${{ steps.mode.outputs.mode }}
         run: |
-          D=$(date -u -d 'yesterday' +%F)
-          NAME="per-shadow-$D"
-          RUN_ID=""
-          for id in $(gh run list --repo "$GITHUB_REPOSITORY" --workflow per-daily.yml --limit 50 \
-                        --json databaseId --jq '.[].databaseId'); do
-            HIT=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$id/artifacts" \
-                    --jq ".artifacts[] | select(.name == \"$NAME\" and (.expired | not)) | .id" 2>/dev/null || true)
-            if [ -n "$HIT" ]; then RUN_ID=$id; break; fi
-          done
-          echo "date=$D" >> "$GITHUB_OUTPUT"
-          echo "name=$NAME" >> "$GITHUB_OUTPUT"
-          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
-          echo "shadow artifact ${NAME}: run_id=${RUN_ID:-not found}"
-
-      - uses: actions/download-artifact@v4
-        if: steps.locate.outputs.run_id != ''
-        continue-on-error: true
-        with:
-          name: ${{ steps.locate.outputs.name }}
-          path: ${{ runner.temp }}/per-shadow
-          run-id: ${{ steps.locate.outputs.run_id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Read tracking issue
-        id: issue
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh label create per-shadow \
-            --color 1D76DB \
-            --description "PER 並行運転の突き合わせ（自動管理・#652）" 2>/dev/null || true
-          NUM=$(gh issue list --state open --label per-shadow --json number --jq '.[0].number // ""')
-          if [ -n "$NUM" ]; then
-            gh issue view "$NUM" --json body --jq '.body' > "$RUNNER_TEMP/streak-body.md"
-          else
-            : > "$RUNNER_TEMP/streak-body.md"
+          if [ "$MODE" != "write" ]; then
+            if [ -n "$(git status --porcelain -- data/)" ]; then
+              echo "::error::計算のみモードで data/** が変更されました"
+              git status --porcelain -- data/
+              exit 1
+            fi
+            exit 0
           fi
-          echo "number=$NUM" >> "$GITHUB_OUTPUT"
+          OTHER=$(git status --porcelain | grep -v ' data/valuations\.json$' || true)
+          if [ -n "$OTHER" ]; then
+            echo "::error::data/valuations.json 以外のファイルが変更されました"
+            echo "$OTHER"
+            exit 1
+          fi
+          # §6.3：銘柄 perCurrent/percentile/status/asOf・トップ updated/asOf・
+          #       ファンド perCurrent/coverage/source/asOf/components 以外の変更や書式の変化があれば失敗（値は出さない）
+          node data/scheduler/per-daily-gate.mjs check-diff
 
-      - name: Compare
-        id: cmp
+      - name: Commit and push
+        id: push
+        if: steps.mode.outputs.mode == 'write'
         env:
+          DATE: ${{ steps.run.outputs.date }}
+        run: |
+          # 21:00〜22:30 UTC は Mulmo が valuations.json を書く時間帯なので push しない（§2.3）。
+          # push-ok の exit 3 だけが「禁止時間帯」。それ以外の非 0 は判定の異常＝失敗にする。
+          push_window() {
+            set +e
+            node data/scheduler/per-daily-gate.mjs push-ok
+            local code=$?
+            set -e
+            if [ "$code" -eq 0 ]; then return 0; fi
+            if [ "$code" -eq 3 ]; then
+              echo "::warning::21:00〜22:30 UTC（push 禁止時間帯）のため push しません。当日の PER は前日値のままです"
+              echo "pushed=false" >> "$GITHUB_OUTPUT"
+              echo "skipped=push-window" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "::error::push 可否の判定に失敗しました（per-daily-gate push-ok exit ${code}）"
+            exit 1
+          }
+          push_window
+          MSG=$(node data/scheduler/per-daily-gate.mjs message "$DATE")
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/valuations.json
+          # 差分が無い日も同じメッセージのコミットを作る（Mulmo の当日分判定用・§6.2）
+          git commit --allow-empty -m "$MSG"
+          for i in 1 2 3; do
+            push_window
+            # git pull --rebase origin main 相当。空コミット・main と同内容になったコミットも残す
+            # （既定の rebase はこれらを落とし、判定用コミットが消えるため）。
+            # rebase が衝突したら force せずジョブを失敗させる（main 側を残す）。
+            git fetch origin main
+            if ! git rebase --empty=keep --reapply-cherry-picks origin/main; then
+              git rebase --abort || true
+              echo "::error::rebase が衝突しました（main 側を残して終了）"
+              exit 1
+            fi
+            if [ "$(git log -1 --format=%s)" != "$MSG" ]; then
+              echo "::error::rebase 後の HEAD が「${MSG}」ではありません"
+              exit 1
+            fi
+            if git push origin HEAD:main; then
+              echo "pushed=true" >> "$GITHUB_OUTPUT"
+              echo "Pushed: ${MSG}"
+              exit 0
+            fi
+            echo "push 失敗（${i}/3）。10 秒後に再試行します。"
+            sleep 10
+          done
+          echo "::error::push に 3 回失敗しました"
+          exit 1
+
+      - name: KV resync (after push)
+        id: kv
+        if: steps.push.outputs.pushed == 'true'
+        run: |
+          # GITHUB_TOKEN の push は kv-resync.yml の on: push を起動しないため、ここで明示実行する（§2.3）。
+          set +e
+          OUT=$(node data/scheduler/kv-resync.mjs --json)
+          CODE=$?
+          set -e
+          LINE=$(printf '%s\n' "$OUT" | tail -n 1)
+          if ! printf '%s' "$LINE" | jq -e . >/dev/null 2>&1; then
+            LINE='{"ok":false,"stage":"no-output","msg":"kv-resync が結果 JSON を出力しませんでした"}'
+          fi
+          STAGE=$(printf '%s' "$LINE" | jq -r '.stage // "unknown"')
+          DRIFT=$(printf '%s' "$LINE" | jq -r '.drift // 0')
+          SYMS=$(printf '%s' "$LINE"  | jq -r '(.symbols // []) | join(", ")')
+          {
+            echo "stage=$STAGE"
+            echo "drift=$DRIFT"
+            echo "symbols=$SYMS"
+          } >> "$GITHUB_OUTPUT"
+          {
+            echo ""
+            echo "### KV Resync（push 後）"
+            echo ""
+            echo "| 項目 | 値 |"
+            echo "|---|---|"
+            echo "| exit | ${CODE} |"
+            echo "| stage | ${STAGE} |"
+            echo "| drift | ${DRIFT} |"
+            echo "| symbols | ${SYMS:-—} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "kv-resync exit=${CODE} stage=${STAGE} drift=${DRIFT}"
+          if [ "$CODE" -ne 0 ]; then
+            echo "::error::kv-resync 失敗 stage=${STAGE} exit=${CODE}"
+            exit 1
+          fi
+
+      - name: Open / update / close kv-resync failure issue (idempotent)
+        if: always() && (steps.kv.outcome == 'success' || steps.kv.outcome == 'failure')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          KV_OUTCOME: ${{ steps.kv.outcome }}
+          STAGE: ${{ steps.kv.outputs.stage }}
+          DRIFT: ${{ steps.kv.outputs.drift }}
+          SYMS: ${{ steps.kv.outputs.symbols }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          OUT="$RUNNER_TEMP/per-compare"
-          node data/scheduler/per-compare.mjs \
-            --shadow-dir "$RUNNER_TEMP/per-shadow" \
-            --out-dir "$OUT" \
-            --streak-body "$RUNNER_TEMP/streak-body.md" \
-            --run-url "$RUN_URL"
-          cat "$OUT/summary.md" >> "$GITHUB_STEP_SUMMARY"
-          DAY=$(jq -r '.day' "$OUT/result.json")
-          echo "dir=$OUT" >> "$GITHUB_OUTPUT"
-          echo "day=$DAY" >> "$GITHUB_OUTPUT"
-          echo "reached=$(jq -r '.reached' "$OUT/result.json")" >> "$GITHUB_OUTPUT"
-          echo "streak=$(jq -r '.streak' "$OUT/result.json")" >> "$GITHUB_OUTPUT"
-          if [ "$DAY" = "undetermined" ]; then
-            echo "::warning::判定不能日: $(jq -r '.reason' "$OUT/result.json")"
+          gh label create kv-resync-failed \
+            --color D93F0B \
+            --description "KV ウォッチリスト同期の失敗（自動管理）" 2>/dev/null || true
+          EXISTING=$(gh issue list --state open --label kv-resync-failed --json number --jq '.[0].number // ""')
+          if [ "$KV_OUTCOME" = "failure" ]; then
+            TITLE="⚠ KV ウォッチリスト同期（kv-resync）が失敗しました（stage=${STAGE:-unknown}）"
+            BODY=$(cat <<EOF
+          アプリ KV のウォッチリスト valuation を正本 \`data/valuations.json\` に同期できませんでした（PER Daily の push 後）。
+
+          - **stage**: ${STAGE:-unknown}
+          - **drift 件数**: ${DRIFT:-不明}
+          - **銘柄**: ${SYMS:-—}
+          - **Run**: ${RUN_URL}
+
+          > このIssueは \`KV Resync\` / \`PER Daily\` ワークフローが自動管理しています（同期が成功すると自動クローズ）。
+          EOF
+          )
+            if [ -n "$EXISTING" ]; then
+              gh issue edit "$EXISTING" --title "$TITLE" --body "$BODY"
+              echo "Updated failure issue #$EXISTING"
+            else
+              gh issue create --title "$TITLE" --body "$BODY" --label kv-resync-failed
+              echo "Created failure issue"
+            fi
+          elif [ -n "$EXISTING" ]; then
+            gh issue close "$EXISTING" \
+              --comment "✅ kv-resync が成功しました（PER Daily の push 後・stage ${STAGE}・${RUN_URL}）。自動クローズします。"
+            echo "Closed failure issue #$EXISTING"
+          else
+            echo "同期OK・対応不要"
           fi
 
-      - name: Update tracking issue
+      - name: Summarize result
+        id: result
+        if: always()
+        env:
+          MODE: ${{ steps.mode.outputs.mode }}
+          DATE: ${{ steps.run.outputs.date }}
+          MODE_OUTCOME: ${{ steps.mode.outcome }}
+          RUN_OUTCOME: ${{ steps.run.outcome }}
+          NO_UPDATES: ${{ steps.run.outputs.no_updates }}
+          GUARD_OUTCOME: ${{ steps.guard.outcome }}
+          PUSH_OUTCOME: ${{ steps.push.outcome }}
+          PUSHED: ${{ steps.push.outputs.pushed }}
+          PUSH_SKIPPED: ${{ steps.push.outputs.skipped }}
+          KV_OUTCOME: ${{ steps.kv.outcome }}
+        run: |
+          # result: write = 書き込みが main に入った / skipped = 計算のみ・push 禁止時間帯 /
+          #         failure = 計算・検査・push の失敗（kv-resync の失敗は kv-resync-failed Issue で別管理）
+          REASONS=""
+          if [ "$MODE_OUTCOME" != "success" ]; then REASONS="${REASONS} mode=${MODE_OUTCOME}"; fi
+          if [ "$NO_UPDATES" = "true" ]; then
+            REASONS="${REASONS} watch-updated=0"
+          elif [ "$RUN_OUTCOME" != "success" ]; then
+            REASONS="${REASONS} compute=${RUN_OUTCOME}"
+          fi
+          if [ "$GUARD_OUTCOME" = "failure" ]; then REASONS="${REASONS} guard=failure"; fi
+          if [ "$PUSH_OUTCOME" = "failure" ]; then REASONS="${REASONS} push=failure"; fi
+          REASONS=$(echo "$REASONS" | xargs)
+          if [ -n "$REASONS" ]; then
+            RESULT=failure
+          elif [ "$PUSHED" = "true" ]; then
+            RESULT=write
+          elif [ "$MODE" = "compute-only" ] || [ "$PUSH_SKIPPED" = "push-window" ]; then
+            RESULT=skipped
+          else
+            RESULT=failure
+            REASONS="unknown"
+          fi
+          KV="${KV_OUTCOME:-skipped}"
+          COMMIT="—"
+          if [ "$PUSHED" = "true" ]; then COMMIT="data: daily PER ${DATE}"; fi
+          echo "result=${RESULT}" >> "$GITHUB_OUTPUT"
+          echo "reasons=${REASONS}" >> "$GITHUB_OUTPUT"
+          {
+            echo ""
+            echo "## PER Daily 結果"
+            echo ""
+            echo "| 項目 | 値 |"
+            echo "|---|---|"
+            echo "| result | ${RESULT} |"
+            echo "| mode | ${MODE:-unknown} |"
+            echo "| pushed | ${PUSHED:-false} |"
+            echo "| commit | ${COMMIT} |"
+            echo "| kv-resync | ${KV} |"
+            echo "| reasons | ${REASONS:-—} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "result=${RESULT} kv-resync=${KV} reasons=${REASONS:-none}"
+
+      - name: Open / update / close per-daily failure issue (idempotent)
+        if: always()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NUM: ${{ steps.issue.outputs.number }}
-          OUT: ${{ steps.cmp.outputs.dir }}
-          REACHED: ${{ steps.cmp.outputs.reached }}
-          STREAK: ${{ steps.cmp.outputs.streak }}
+          RESULT: ${{ steps.result.outputs.result }}
+          REASONS: ${{ steps.result.outputs.reasons }}
+          MODE: ${{ steps.mode.outputs.mode }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          TITLE="PER 並行運転の突き合わせ（#652）"
-          if [ -n "$NUM" ]; then
-            gh issue edit "$NUM" --body-file "$OUT/body.md"
+          gh label create per-daily-failed \
+            --color D93F0B \
+            --description "毎日の PER 書き込み（per-daily）の失敗（自動管理）" 2>/dev/null || true
+          EXISTING=$(gh issue list --state open --label per-daily-failed --json number --jq '.[0].number // ""')
+          RESULT=${RESULT:-failure}
+
+          if [ "$RESULT" = "failure" ]; then
+            TITLE="⚠ 毎日の PER 書き込み（per-daily）が失敗しました"
+            BODY=$(cat <<EOF
+          毎日の PER 書き込み（\`per-daily.yml\`）が失敗しました。\`data: daily PER\` コミットは main に入っていません（Mulmo は前日値で続行）。
+
+          - **mode**: ${MODE:-unknown}
+          - **理由**: ${REASONS:-不明}
+          - **Run**: ${RUN_URL}
+
+          > このIssueは \`PER Daily\` ワークフローが自動管理しています（書き込みが成功すると自動クローズ）。
+          EOF
+          )
+            if [ -n "$EXISTING" ]; then
+              gh issue edit "$EXISTING" --title "$TITLE" --body "$BODY"
+              echo "Updated failure issue #$EXISTING"
+            else
+              gh issue create --title "$TITLE" --body "$BODY" --label per-daily-failed
+              echo "Created failure issue"
+            fi
+          elif [ "$RESULT" = "write" ]; then
+            if [ -n "$EXISTING" ]; then
+              gh issue close "$EXISTING" \
+                --comment "✅ 毎日の PER 書き込みが成功しました（${RUN_URL}）。自動クローズします。"
+              echo "Closed failure issue #$EXISTING"
+            else
+              echo "書き込みOK・対応不要"
+            fi
           else
-            URL=$(gh issue create --title "$TITLE" --body-file "$OUT/body.md" --label per-shadow)
-            NUM="${URL##*/}"
-            echo "Created tracking issue #$NUM"
+            echo "計算のみ／push 禁止時間帯（Issue は変更しない）"
           fi
-          gh issue comment "$NUM" --body-file "$OUT/comment.md"
-          if [ "$REACHED" = "true" ]; then
-            gh issue comment "$NUM" --body "🎯 切替条件達成（${STREAK} 日連続一致）。PR3 着手可。"
-          fi
+
+      - name: Fail job on failure
+        if: always() && (steps.result.outputs.result != 'write' && steps.result.outputs.result != 'skipped' || steps.kv.outcome == 'failure')
+        run: exit 1
