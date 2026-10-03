@@ -1,8 +1,8 @@
 // @ts-check
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
-import { execSync } from 'child_process';
 import { writeBlocks } from './writeback.mjs';
+import { workerJson } from './lib/worker-client.mjs';
 
 // ══════════════════════════════════════════════════════════════
 // etf-pe.mjs ―― ETF の実績PER（trailing P/E）を valuations.json に投入する週次バッチ（A4）
@@ -22,8 +22,6 @@ const __dir = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dir, '../..');
 const VALS_PATH = resolve(ROOT, 'data/valuations.json');
 
-const WORKER = 'https://portfolio-proxy.shoulang.workers.dev';
-
 // §7.2 上2区分（広域株式 + セクター/テーマ株式）= proxy 対象 ETF
 const TARGET_ETFS = ['VT', 'VEA', 'VGK', 'ACWI', 'SMH', 'XLF', 'XLV', 'XLP', 'DTCR', 'SHLD'];
 
@@ -34,25 +32,13 @@ const symbolIdx = args.indexOf('--symbol');
 const ONLY_SYMBOL = symbolIdx !== -1 ? args[symbolIdx + 1] : null;
 
 /**
- * Worker /yahoo 経由で JSON を取得（1回リトライ）。
+ * Worker /yahoo 経由で JSON を取得（Origin・リトライ・スロットルは worker-client.mjs 共通）。
+ * コミットはしない（ワークフロー weekly-valuations.yml が 1 回でコミットする・#652 PR5）。
  * @param {string} yahooUrl
  * @returns {Promise<any>}
  */
 async function fetchYahoo(yahooUrl) {
-  const url = `${WORKER}/yahoo?url=${encodeURIComponent(yahooUrl)}`;
-  for (let attempt = 0; attempt <= 1; attempt++) {
-    try {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return await res.json();
-    } catch (e) {
-      if (attempt === 0) {
-        await new Promise((r) => setTimeout(r, 3000));
-      } else {
-        throw e;
-      }
-    }
-  }
+  return workerJson(`/yahoo?url=${encodeURIComponent(yahooUrl)}`);
 }
 
 /**
@@ -80,7 +66,7 @@ async function main() {
   }
 
   console.log(`Processing ${targets.length} ETFs: ${targets.join(', ')}`);
-  if (DRY_RUN) console.log('DRY RUN — will not write or commit');
+  if (DRY_RUN) console.log('DRY RUN — will not write');
 
   /** @type {Record<string, {perTrail:number, perSource:string}>} */
   const results = {};
@@ -108,14 +94,6 @@ async function main() {
 
   const written = writeBlocks(VALS_PATH, results, 'value');
   console.log(`\nWrote ${VALS_PATH} (${written} ETFs)`);
-
-  // パス限定コミット（共有ワークツリーで他にステージ済みでも valuations.json だけ）
-  execSync(`git commit data/valuations.json -m "chore: ETF trailingPE auto-update $(date +%F)"`, {
-    cwd: ROOT,
-    shell: true,
-  });
-  execSync('git push', { cwd: ROOT });
-  console.log('Committed and pushed.');
 }
 
 main().catch((err) => {

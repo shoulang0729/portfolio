@@ -1,0 +1,238 @@
+name: Weekly Valuations
+
+# 週次バッチ（quality / ETF PER / 目標株価乖離 / 同業中央値 / 的中率）を Actions で実行する（#652 PR5）。
+# - Worker 中継口（/fmp /edinet-db /edgar /finnhub /yahoo）経由。API キー・Secrets は使わない
+#   （GITHUB_TOKEN は write モードの push と Issue 管理のみ）。
+# - report モード（schedule の既定）: 各スクリプトを作業ツリーで実行 → 差分レポートを出して終了（commit しない）。
+# - write モード（PR5 では workflow_dispatch のみ）: 上記＋ commit → push → 同じジョブで kv-resync。
+# - 公開リポのログ・サマリ・artifact・Issue に出すのは銘柄シンボル・指標値・件数まで（HTTP 本文や KV 本文は出さない）。
+
+on:
+  schedule:
+    - cron: '0 2 * * 0'   # 毎週日曜 02:00 UTC（PR5 は report モード）
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'report = 差分レポートのみ（既定・書き込まない） / write = commit・push・kv-resync まで'
+        type: choice
+        options: [report, write]
+        default: report
+
+concurrency:
+  group: portfolio-data-batch
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  weekly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main   # 起動コミットではなく最新の main に対して実行・比較する
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Resolve mode
+        id: mode
+        env:
+          EVENT: ${{ github.event_name }}
+          INPUT_MODE: ${{ inputs.mode }}
+        run: |
+          # PR5: schedule は常に report。write は workflow_dispatch で明示したときだけ。
+          if [ "$EVENT" = "workflow_dispatch" ] && [ "$INPUT_MODE" = "write" ]; then
+            MODE=write
+          else
+            MODE=report
+          fi
+          DATE=$(date -u +%F)
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          echo "date=$DATE" >> "$GITHUB_OUTPUT"
+          echo "mode=$MODE date=$DATE"
+
+      - name: Run weekly scripts
+        id: run
+        run: |
+          # 1 本が失敗しても残りは続け、最後にジョブを失敗にする（§8.2）。
+          set +e
+          FAILED=""
+          for s in quality-us quality-jp etf-pe target-gap sector-median jp-sector-median hit-rate; do
+            echo "::group::${s}"
+            node "data/scheduler/${s}.mjs"
+            CODE=$?
+            echo "::endgroup::"
+            if [ "$CODE" -ne 0 ]; then
+              FAILED="${FAILED} ${s}"
+              echo "::error::${s} が失敗しました（exit ${CODE}）"
+            fi
+          done
+          FAILED=$(echo "$FAILED" | xargs)
+          echo "failed=${FAILED}" >> "$GITHUB_OUTPUT"
+          echo "failed scripts: ${FAILED:-none}"
+
+      - name: Diff report
+        id: diff
+        env:
+          DATE: ${{ steps.mode.outputs.date }}
+        run: |
+          mkdir -p weekly-diff
+          node data/scheduler/diff-report.mjs --date "$DATE" > "weekly-diff/weekly-diff-${DATE}.md"
+          cat "weekly-diff/weekly-diff-${DATE}.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload diff report
+        if: always() && steps.diff.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: weekly-diff-${{ steps.mode.outputs.date }}
+          path: weekly-diff/
+          retention-days: 30
+
+      - name: Commit and push (write mode only)
+        id: push
+        if: steps.mode.outputs.mode == 'write'
+        env:
+          DATE: ${{ steps.mode.outputs.date }}
+        run: |
+          # 21:00〜22:30 UTC は Mulmo が valuations.json を書く時間帯なので push しない（§2.3）。
+          HM=$(date -u +%H%M)
+          if [ "$HM" -ge 2100 ] && [ "$HM" -le 2230 ]; then
+            echo "::warning::21:00〜22:30 UTC（push 禁止時間帯）のため commit/push しません"
+            echo "pushed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if git diff --quiet -- data/valuations.json data/verdict-outcomes.json; then
+            echo "変更なし。commit しません。"
+            echo "pushed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit data/valuations.json data/verdict-outcomes.json -m "data: weekly valuations batch ${DATE}"
+          for i in 1 2 3; do
+            # rebase が衝突したら force せずジョブを失敗させる（main 側を残す）
+            if ! git pull --rebase origin main; then
+              git rebase --abort || true
+              echo "::error::git pull --rebase が衝突しました（main 側を残して終了）"
+              exit 1
+            fi
+            if git push origin HEAD:main; then
+              echo "pushed=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "push 失敗（${i}/3）。10 秒後に再試行します。"
+            sleep 10
+          done
+          echo "::error::push に 3 回失敗しました"
+          exit 1
+
+      - name: KV resync (write mode, after push)
+        id: kv
+        if: steps.push.outputs.pushed == 'true'
+        run: |
+          # GITHUB_TOKEN の push は kv-resync.yml の on: push を起動しないため、ここで明示実行する（§2.3）。
+          set +e
+          OUT=$(node data/scheduler/kv-resync.mjs --json)
+          CODE=$?
+          set -e
+          LINE=$(printf '%s\n' "$OUT" | tail -n 1)
+          STAGE=$(printf '%s' "$LINE" | jq -r '.stage // "unknown"' 2>/dev/null || echo unknown)
+          echo "kv-resync exit=${CODE} stage=${STAGE}"
+          if [ "$CODE" -ne 0 ]; then
+            echo "::error::kv-resync 失敗 stage=${STAGE} exit=${CODE}"
+            exit 1
+          fi
+
+      - name: Summarize result
+        id: result
+        if: always()
+        env:
+          MODE: ${{ steps.mode.outputs.mode }}
+          FAILED: ${{ steps.run.outputs.failed }}
+          RUN_OUTCOME: ${{ steps.run.outcome }}
+          DIFF_OUTCOME: ${{ steps.diff.outcome }}
+          PUSH_OUTCOME: ${{ steps.push.outcome }}
+          PUSHED: ${{ steps.push.outputs.pushed }}
+          KV_OUTCOME: ${{ steps.kv.outcome }}
+        run: |
+          RESULT=success
+          REASONS=""
+          if [ "$RUN_OUTCOME" != "success" ]; then RESULT=failure; REASONS="${REASONS} run=${RUN_OUTCOME}"; fi
+          if [ -n "$FAILED" ]; then RESULT=failure; REASONS="${REASONS} scripts=[${FAILED}]"; fi
+          if [ "$DIFF_OUTCOME" != "success" ]; then RESULT=failure; REASONS="${REASONS} diff=${DIFF_OUTCOME}"; fi
+          if [ "$PUSH_OUTCOME" = "failure" ]; then RESULT=failure; REASONS="${REASONS} push=failure"; fi
+          if [ "$KV_OUTCOME" = "failure" ]; then RESULT=failure; REASONS="${REASONS} kv-resync=failure"; fi
+          REASONS=$(echo "$REASONS" | xargs)
+          echo "result=${RESULT}" >> "$GITHUB_OUTPUT"
+          echo "reasons=${REASONS}" >> "$GITHUB_OUTPUT"
+          {
+            echo ""
+            echo "## Weekly Valuations（mode=${MODE:-unknown}）"
+            echo ""
+            echo "| 項目 | 値 |"
+            echo "|---|---|"
+            echo "| result | ${RESULT} |"
+            echo "| failed scripts | ${FAILED:-—} |"
+            echo "| pushed | ${PUSHED:-false} |"
+            echo "| reasons | ${REASONS:-—} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "result=${RESULT} reasons=${REASONS:-none}"
+
+      - name: Ensure weekly-batch-failed label exists
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create weekly-batch-failed \
+            --color D93F0B \
+            --description "週次バッチ（weekly-valuations）の失敗（自動管理）" 2>/dev/null || true
+
+      - name: Open / update / close failure issue (idempotent)
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RESULT: ${{ steps.result.outputs.result }}
+          REASONS: ${{ steps.result.outputs.reasons }}
+          MODE: ${{ steps.mode.outputs.mode }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          EXISTING=$(gh issue list --state open --label weekly-batch-failed --json number --jq '.[0].number // ""')
+          RESULT=${RESULT:-failure}
+
+          if [ "$RESULT" = "failure" ]; then
+            TITLE="⚠ 週次バッチ（weekly-valuations）が失敗しました"
+            BODY=$(cat <<EOF
+          週次バッチ（\`weekly-valuations.yml\`）が失敗しました。
+
+          - **mode**: ${MODE:-unknown}
+          - **理由**: ${REASONS:-不明}
+          - **Run**: ${RUN_URL}
+
+          > このIssueは \`Weekly Valuations\` ワークフローが自動管理しています（成功すると自動クローズ）。
+          EOF
+          )
+            if [ -n "$EXISTING" ]; then
+              gh issue edit "$EXISTING" --title "$TITLE" --body "$BODY"
+              echo "Updated failure issue #$EXISTING"
+            else
+              gh issue create --title "$TITLE" --body "$BODY" --label weekly-batch-failed
+              echo "Created failure issue"
+            fi
+          else
+            if [ -n "$EXISTING" ]; then
+              gh issue close "$EXISTING" \
+                --comment "✅ 週次バッチが成功しました（mode ${MODE}・${RUN_URL}）。自動クローズします。"
+              echo "Closed failure issue #$EXISTING"
+            else
+              echo "成功・対応不要"
+            fi
+          fi
+
+      - name: Fail job on batch failure
+        if: always() && steps.result.outputs.result != 'success'
+        run: exit 1

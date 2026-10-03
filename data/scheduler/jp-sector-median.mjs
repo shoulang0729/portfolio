@@ -2,8 +2,8 @@
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
-import { execSync } from 'child_process';
 import { writeBlocks } from './writeback.mjs';
+import { workerJson } from './lib/worker-client.mjs';
 
 // ══════════════════════════════════════════════════════════════
 // jp-sector-median.mjs ―― 日本株のファンダ＋セクター中央値（PER）を valuations.json に投入する週次バッチ（#497）
@@ -20,7 +20,6 @@ import { writeBlocks } from './writeback.mjs';
 const __dir = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dir, '../..');
 const VALS_PATH = resolve(ROOT, 'data/valuations.json');
-const WORKER = 'https://portfolio-proxy.shoulang.workers.dev';
 
 // sym → TOPIX-17 セクターETF（NEXT FUNDS）。銘柄追加時はここに1行足す。
 const JP_SECTOR_ETF = {
@@ -35,21 +34,14 @@ const DRY_RUN = args.includes('--dry-run');
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/** Worker /yahoo 経由で quoteSummary を取得（1回リトライ）。 */
+/**
+ * Worker /yahoo 経由で quoteSummary を取得（Origin・リトライ・スロットルは worker-client.mjs 共通）。
+ * コミットはしない（ワークフロー weekly-valuations.yml が 1 回でコミットする・#652 PR5）。
+ */
 async function quoteSummary(sym, modules) {
   const yurl = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${sym}?modules=${modules}`;
-  const url = `${WORKER}/yahoo?url=${encodeURIComponent(yurl)}`;
-  for (let attempt = 0; attempt <= 1; attempt++) {
-    try {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const j = await res.json();
-      return (j && j.quoteSummary && j.quoteSummary.result && j.quoteSummary.result[0]) || null;
-    } catch (e) {
-      if (attempt === 0) await sleep(3000);
-      else throw e;
-    }
-  }
+  const j = await workerJson(`/yahoo?url=${encodeURIComponent(yurl)}`);
+  return (j && j.quoteSummary && j.quoteSummary.result && j.quoteSummary.result[0]) || null;
 }
 
 /** raw 数値を安全に取り出す（{raw} or 素の数値）。 */
@@ -83,7 +75,7 @@ async function main() {
   });
 
   console.log(`Processing ${targets.length} JP stocks: ${targets.join(', ')}`);
-  if (DRY_RUN) console.log('DRY RUN — will not write or commit');
+  if (DRY_RUN) console.log('DRY RUN — will not write');
 
   // セクターETF の PER をキャッシュ（複数銘柄で共有）
   /** @type {Record<string, number|null>} */
@@ -163,13 +155,6 @@ async function main() {
     return;
   }
   console.log(`\nWrote ${VALS_PATH}`);
-
-  execSync(`git commit data/valuations.json -m "chore: JP sector median + fundamentals auto-update $(date +%F)"`, {
-    cwd: ROOT,
-    shell: true,
-  });
-  execSync('git push', { cwd: ROOT });
-  console.log('Committed and pushed.');
 }
 
 main().catch((err) => {
