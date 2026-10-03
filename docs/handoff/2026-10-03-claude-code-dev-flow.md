@@ -1,9 +1,9 @@
 # Claude Code 開発体制への移行（第一次）
 
 ## 実装ログ（実装者が更新）
-- ステータス: 未着手
-- [ ] 着手 YYYY-MM-DD / branch: ______
-- [ ] PR #____ open / CI: ______
+- ステータス: 実装済み・Toshio 確認待ち
+- [x] 着手 2026-10-03 / branch: chore/649-claude-code-dev-flow
+- [x] PR #650 open / CI: 実行中
 - [ ] Toshio 確認・マージ YYYY-MM-DD
 
 ---
