@@ -4,6 +4,26 @@
 > CI red で滞留中のPR・長期オープンの設計依存Issue・設計差し戻し（VS Code が Issue/PR コメントで設計矛盾を報告）を surfacing する場所。
 > **判断が要るものは Toshio に委ねる**（Mulmo は勝手に設計変更しない）。コードPRのマージ・コード編集はしない。
 
+> **⚠ 2026-10-03 で終了**：開発体制を Claude Code on the web に一本化したため、Mulmo の PM 盤面モニタと本キューは終了。以後の完了確認・マージは Claude Code の reviewer、Toshio 確認待ちは `needs-toshio` ラベルで管理する。本ファイルは経緯の記録として残す。
+
+---
+
+## 2026-10-03（体制移行・最終エントリ）
+
+**決定（Toshio）**：設計 Mulmo／実装 VS Code → **Claude Code on the web に一本化**（76-Club と同じ型）。移行手順＝`docs/handoff/2026-10-03-claude-code-dev-flow.md`（Claude Code での最初の一本＝試運転）。
+
+**クローズ済み**：#611 リチウム市況モニタ（前提消滅）／bot PR #645（#611 の未決論点を bot が独断実装・マージせず）。
+
+**訂正**：同日朝のエントリで #645 を「auto-fix・CI red ではない」としたが、中身は #611 の独断実装だった（PR の差分を見ていなかった）。
+
+**Claude Code に引き継ぐ未完了**
+- #594 Wealth ネットワース数値モデル：設計済み（`docs/wealth-networth-spec.md`・`docs/handoff/2026-07-21-wealth-networth-datamodel.md`）・未着手。P1 は Mac 実機確認要。
+- #367 セキュリティ残り（PIN ハッシュがソルトなし SHA-256・パスキー署名検証・チャレンジ分離）：`/networth` も同じ PIN ハッシュの一致比較で守っており、サーバー側の失敗回数ロックがない（IP あたり毎分120回の制限のみ）→ 優先度を上げる候補。設計から。
+- 整理候補：#16（PR #640/#641 で実装・2026-09-21 デプロイ済み→クローズ可）／#301（資産推移は Wealth タブで実現済み）／#220 は #305 に統合可。
+- Wait バックログ：#304 / #305 / #306。
+
+**Mulmo に残るもの**：Briefing 生成（`data/briefings/**`・`docs/briefing-generation-spec.md`）と日次データ更新（`data/valuations.json`）。データ更新スクリプトの本リポ（GitHub Actions）への移管は「第1.5次」として別途。
+
 ---
 
 ## 2026-10-03（PM盤面モニタ）
