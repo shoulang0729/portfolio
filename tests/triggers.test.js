@@ -1,17 +1,35 @@
 // Tests for src/triggers.js
 
 import { describe, it, expect, beforeEach } from 'vitest';
+import { readFileSync } from 'fs';
 import { __setTriggers, getTriggers, evaluateTriggers } from '../src/triggers.js';
 
 /** Sample trigger definitions matching data/triggers.json */
 const SAMPLE_TRIGGERS = {
-  SMH: { sell: [{ type: 'concentration', theme: 'semiconductor', capPct: 13, action: '1.5〜2割トリム→AI電力へ' }] },
+  SMH: {
+    sell: [
+      {
+        type: 'concentration',
+        theme: 'semiconductor',
+        capPct: 17,
+        action: '上限+2ptを超えた分だけトリム（通常は押し目で段階的に積み増す）',
+      },
+    ],
+  },
   '200A.T': {
-    sell: [{ type: 'concentration', theme: 'semiconductor', capPct: 13, action: '半導体13%超なら二段目5〜10%トリム' }],
+    sell: [{ type: 'concentration', theme: 'semiconductor', capPct: 17, action: '半導体13%超なら二段目5〜10%トリム' }],
   },
   '9983.T': { sell: [{ type: 'valuation', pctGte: 95, action: '1/4トリム利確' }] },
   '8050.T': { sell: [{ type: 'thesis', note: '一過性益の剥落', action: 'winner利確' }] },
-  TSLA: { sell: [{ type: 'valuation', pegGte: 3, action: '新規禁止・過大なら縮小' }] },
+  TSLA: {
+    sell: [
+      {
+        type: 'valuation',
+        pegGte: 3,
+        action: '追いかけ買いはしない（押し目の段階買いのみ）・目標$100Kを超えた分は縮小',
+      },
+    ],
+  },
   MSFT: { buy: [{ type: 'valuation', pctLte: 5, action: '$15K打診→$50K' }] },
   AMZN: { buy: [{ type: 'limit', price: 237.5, dir: 'below', action: '$15K第1弾' }] },
   NLR: { buy: [{ type: 'thesis', note: 'AI電力本丸・マネックス確認後', action: '$50K' }] },
@@ -43,22 +61,22 @@ describe('getTriggers', () => {
 
 // ── concentration ─────────────────────────────────────────────
 describe('evaluateTriggers – concentration', () => {
-  it('SMH: themeUsagePct 14.3 > cap 13 → active sell', () => {
-    const result = evaluateTriggers('SMH', { themeUsagePct: 14.3 });
+  it('SMH: themeUsagePct 17.3 > cap 17 → active sell', () => {
+    const result = evaluateTriggers('SMH', { themeUsagePct: 17.3 });
     expect(result.active).toHaveLength(1);
     expect(result.active[0].side).toBe('sell');
     expect(result.active[0].type).toBe('concentration');
-    expect(result.active[0].reason).toContain('14.3');
-    expect(result.active[0].reason).toContain('13');
+    expect(result.active[0].reason).toContain('17.3');
+    expect(result.active[0].reason).toContain('17');
   });
 
-  it('SMH: themeUsagePct 12 <= cap 13 → no active', () => {
-    const result = evaluateTriggers('SMH', { themeUsagePct: 12 });
+  it('SMH: themeUsagePct 16 <= cap 17 → no active', () => {
+    const result = evaluateTriggers('SMH', { themeUsagePct: 16 });
     expect(result.active).toHaveLength(0);
   });
 
-  it('SMH: themeUsagePct exactly 13 (not > cap) → no active', () => {
-    const result = evaluateTriggers('SMH', { themeUsagePct: 13 });
+  it('SMH: themeUsagePct exactly 17 (not > cap) → no active', () => {
+    const result = evaluateTriggers('SMH', { themeUsagePct: 17 });
     expect(result.active).toHaveLength(0);
   });
 
@@ -147,7 +165,7 @@ describe('evaluateTriggers – ETF proxy demotion', () => {
   });
 
   it('SMH concentration: isEtf=true でも active のまま（降格しない）', () => {
-    const result = evaluateTriggers('SMH', { themeUsagePct: 14.3, isEtf: true });
+    const result = evaluateTriggers('SMH', { themeUsagePct: 17.3, isEtf: true });
     expect(result.active).toHaveLength(1);
     expect(result.active[0].type).toBe('concentration');
     expect(result.active[0].side).toBe('sell');
@@ -240,5 +258,42 @@ describe('evaluateTriggers – unknown symbol', () => {
     const result = evaluateTriggers('UNKNOWN', { percentile: 99, peg: 99, themeUsagePct: 50 });
     expect(result.active).toHaveLength(0);
     expect(result.watching).toHaveLength(0);
+  });
+});
+
+// ── 実データ data/triggers.json（#668・2026-10-03 本人決定） ───────────
+describe('data/triggers.json の設定値（#668）', () => {
+  const real = JSON.parse(readFileSync(new URL('../data/triggers.json', import.meta.url), 'utf8'));
+
+  beforeEach(() => {
+    __setTriggers(real.triggers);
+  });
+
+  it('updated は 2026-10-03', () => {
+    expect(real.updated).toBe('2026-10-03');
+  });
+
+  it('SMH / 200A.T の concentration capPct は 17', () => {
+    for (const sym of ['SMH', '200A.T']) {
+      const conc = getTriggers(sym).sell.find((t) => t.type === 'concentration');
+      expect(conc.capPct).toBe(17);
+    }
+  });
+
+  it('半導体 16.9%（17%未満）では SMH の売り発議が出ない', () => {
+    expect(evaluateTriggers('SMH', { themeUsagePct: 16.9 }).active).toHaveLength(0);
+  });
+
+  it('半導体 17.1%（17%超）では SMH の売り発議が出る', () => {
+    const result = evaluateTriggers('SMH', { themeUsagePct: 17.1 });
+    expect(result.active).toHaveLength(1);
+    expect(result.active[0].action).toBe('上限+2ptを超えた分だけトリム（通常は押し目で段階的に積み増す）');
+  });
+
+  it('TSLA: PEG フラグは残るが、action から新規買い禁止が消えている', () => {
+    const result = evaluateTriggers('TSLA', { peg: 4 });
+    expect(result.active).toHaveLength(1);
+    expect(result.active[0].action).toBe('追いかけ買いはしない（押し目の段階買いのみ）・目標$100Kを超えた分は縮小');
+    expect(result.active[0].action).not.toContain('禁止');
   });
 });

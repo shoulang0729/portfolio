@@ -1,6 +1,7 @@
 // Tests for src/target-allocation.js
 
 import { describe, it, expect, beforeEach } from 'vitest';
+import { readFileSync } from 'fs';
 import {
   __setConfig,
   getThemeOf,
@@ -28,9 +29,9 @@ const TEST_CONFIG = {
     },
   },
   themeCaps: {
-    semiconductor: { cap: 13, members: ['SMH', '200A.T'] },
+    semiconductor: { cap: 15, members: ['SMH', '200A.T'] },
     ai_power: { cap: 10, members: ['NLR', 'DTCR', 'URA'] },
-    megatech: { cap: 15, members: ['MSFT', 'AMZN', 'AAPL', 'GOOGL', 'TSLA', 'PLTR'] },
+    megatech: { cap: 17, members: ['MSFT', 'AMZN', 'AAPL', 'GOOGL', 'TSLA', 'PLTR'] },
     japan_theme: { cap: 10, members: ['1615.T', '1629.T', '9983.T', '8050.T', '6301.T'] },
     commodity_miner: { cap: 5, members: ['COPX', 'REMX'] },
     silver: { cap: 1.5, members: ['SLV'] },
@@ -75,8 +76,8 @@ describe('getTargetPct', () => {
   });
 
   // テーマ代表ETF: target = テーマ上限 ÷ そのテーマのETF数
-  it('theme ETF SMH → semiconductor cap 13 ÷ 2 ETFs = 6.5', () => {
-    expect(getTargetPct('SMH')).toBe(6.5);
+  it('theme ETF SMH → semiconductor cap 15 ÷ 2 ETFs = 7.5', () => {
+    expect(getTargetPct('SMH')).toBe(7.5);
   });
 
   it('sole-ETF theme XLE → energy cap 5 ÷ 1 = 5', () => {
@@ -137,18 +138,18 @@ describe('computeGap', () => {
 
 // ── computeThemeUsage ────────────────────────────────────────
 describe('computeThemeUsage', () => {
-  it('semiconductor: used = SMH(7.4) + 200A.T(6.8) = 14.2, cap 13, headroom -1.2', () => {
-    const result = computeThemeUsage('semiconductor', { SMH: 7.4, '200A.T': 6.8 });
+  it('semiconductor: used = SMH(8.4) + 200A.T(7.8) = 16.2, cap 15, headroom -1.2', () => {
+    const result = computeThemeUsage('semiconductor', { SMH: 8.4, '200A.T': 7.8 });
     expect(result.theme).toBe('semiconductor');
-    expect(result.cap).toBe(13);
-    expect(result.used).toBeCloseTo(14.2, 10);
+    expect(result.cap).toBe(15);
+    expect(result.used).toBeCloseTo(16.2, 10);
     expect(result.headroom).toBeCloseTo(-1.2, 10);
   });
 
   it('missing member defaults to 0 in used sum', () => {
     const result = computeThemeUsage('semiconductor', { SMH: 7.4 });
     expect(result.used).toBeCloseTo(7.4, 10);
-    expect(result.headroom).toBeCloseTo(5.6, 10);
+    expect(result.headroom).toBeCloseTo(7.6, 10);
   });
 
   it('unknown theme → cap null, used 0, headroom null', () => {
@@ -162,11 +163,22 @@ describe('computeThemeUsage', () => {
 // ── getThemeCap ──────────────────────────────────────────────
 describe('getThemeCap', () => {
   it('returns cap for known theme', () => {
-    expect(getThemeCap('megatech')).toBe(15);
+    expect(getThemeCap('megatech')).toBe(17);
     expect(getThemeCap('silver')).toBe(1.5);
   });
 
   it('returns null for unknown theme', () => {
     expect(getThemeCap('nonexistent')).toBeNull();
+  });
+});
+
+// ── 実データ data/target-allocation.json（#668・2026-10-03 本人決定） ─────
+describe('data/target-allocation.json の設定値（#668）', () => {
+  const real = JSON.parse(readFileSync(new URL('../data/target-allocation.json', import.meta.url), 'utf8'));
+
+  it('半導体テーマ上限は 15%・megatech は 17%', () => {
+    __setConfig(real);
+    expect(getThemeCap('semiconductor')).toBe(15);
+    expect(getThemeCap('megatech')).toBe(17);
   });
 });
