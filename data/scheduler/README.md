@@ -69,3 +69,20 @@ EDINET_DB_API_KEY=xxxx node data/scheduler/quality-jp.mjs
 - FMP の新キーは `/stable/` エンドポイントのみ有効（v3 legacy は 401）。
 - フロントからの取得は Worker 経由（`/fmp` `/edgar` `/edinet-db`）でキーを隠蔽するが、
   本バッチは手元実行のため直接 API を叩く（キーは環境変数 / gitignore 設定から読む）。
+
+## 毎日の PER（GitHub Actions・並行運転中・#652 PR2）
+
+`.github/workflows/per-daily.yml` が毎日 **計算のみ**（`--write` なし）で PER を算出し、Mulmo の確定値と自動で突き合わせる。
+この段階では `data/valuations.json` を書き換えない（書き込みへの切り替えは 3 日連続一致の後・PR3）。
+
+| ファイル | 内容 |
+|---|---|
+| `watchlist-per.mjs` | `valuations` の全銘柄の実績PER を Worker `/yahoo` から取得し、バンド内%タイルと status を計算（原本＝Mulmo ワークスペース版の移植・計算は不変）。`--out <file>` / `--write` / 銘柄指定 |
+| `fund-per.mjs` | `fund-holdings.json`（ひふみ上位10・公開開示）の加重実績PER と coverage。`--out <file>` / `--write` |
+| `fund-holdings.json` | ファンドの上位10銘柄（月次レポートの公開情報） |
+| `per-compare.mjs` | shadow の結果と Mulmo の確定コミットの `valuations.json` を突き合わせ（`match` / `band-changed` / `mismatch-input` / `mismatch-logic` / `one-side-skip`） |
+| `lib/per-calc.mjs` / `lib/json-format.mjs` / `lib/per-compare.mjs` | 純関数（`tests/per-calc.test.js` ほか） |
+
+- 20:15 UTC `shadow`：計算 → artifact `per-shadow-<UTC日付>`（保持 7 日）。
+- 01:30 UTC `compare`：前日 UTC 日付の artifact と突き合わせ → トラッキング Issue（ラベル `per-shadow`）に連続一致日数を記録、不一致日は差分表をコメント。
+- 手元での確認（キー不要・書き込まない）：`node data/scheduler/watchlist-per.mjs --out /tmp/w.json AAPL`
