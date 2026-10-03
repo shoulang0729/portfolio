@@ -27,6 +27,7 @@
 | `data/valuations.json`・`data/briefings/**` | Mulmo の日次バッチ（毎朝 05:00 CST） |
 | `data/positions.json`・`data/portfolio-snapshot.json` | Worker（KV 同期・スナップショット） |
 | `data/valuations.json` の `quality`/`value`/`sectorMedian`/`staleFields`・`data/verdict-outcomes.json` | GitHub Actions `weekly-valuations.yml`（毎週日曜 02:00 UTC） |
+| `data/scheduler/fund-holdings.json` | GitHub Actions `fund-holdings-monthly.yml`（月次・毎月 1〜20 日 03:00 UTC） |
 
 - これらは自動で main に直接コミットされる。形状を変える場合は「データ構造」扱い（Toshio 確認）とし、書き手側の対応を設計書に明記する。
 - push 前の `git pull --rebase origin main` でこれらと衝突したら、**main 側を採用**する。
