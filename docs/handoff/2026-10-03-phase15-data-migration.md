@@ -11,12 +11,12 @@
 |---|---|---|---|---|
 | PR1 KV 自動同期 | #653 | `feat/653-kv-resync` | | 実装済み（PR 作成待ち） |
 | PR2 毎日 PER 並行運転 | #654 | `feat/654-per-shadow` | | 実装済み（PR 作成待ち） |
-| PR3 書き込みへ切り替え | #____ | | | 未着手（PR2＋3日連続一致待ち） |
+| PR3 書き込みへ切り替え | #655 | | | 着手可（2026-10-03 Toshio 決定：着手条件を「同時刻の全銘柄一致1回」に変更・§6.0）。マージ順は #655 → #656 |
 | PR4 ひふみ上位10 月次自動更新 | #656 | | | 実装停止→§7 改訂済み（2026-10-03・microscope の正解値を PDF 由来に変更）。再着手可。マージは PR3 の後 |
 | PR5 週次バッチ再開（差分レポート） | #657 | `feat/657-weekly-report` | | 実装済み（PR 作成待ち） |
 | PR6 週次バッチ書き込み開始 | #658 | `feat/658-weekly-write` | | 実装済み（PR 作成待ち） |
 
-- 並行運転の連続一致日数：____（トラッキング Issue #____ が自動更新）
+- 切替条件：**達成**（2026-10-03・同時刻の全銘柄一致1回・run 37109843815。§6.0）。トラッキング Issue の連続一致日数は参考扱い
 - Mulmo 側作業（§9）完了：PR3 後 [ ] ／ PR4 後 [ ] ／ PR6 後 [ ]
 
 ---
@@ -189,11 +189,14 @@ PR1 KV 自動同期 ──┬─> PR2 PER 並行運転 ──(3日連続一致�
 
 ---
 
-## 6. PR3：書き込みへ切り替え（3 日連続一致の後）
+## 6. PR3：書き込みへ切り替え（同時刻の全銘柄一致の後）
+
+> **2026-10-03 改訂（Toshio 決定・#655）**：着手条件を「トラッキング Issue で 3 日連続一致」から「**同時刻の全銘柄一致 1 回**」に変更。書き込みコミットのメッセージを固定形式にし、Mulmo の当日分判定に使う（§6.2・§9）。本節の着手条件は §1・§3・§5.4・§10 の「3 日連続一致」の記述より優先する。
 
 ### 6.0 着手条件
-- トラッキング Issue の連続一致日数が 3 以上（`mismatch-input` だけで止まり続ける場合は §10 確認推奨 2 で Toshio 判断）。
+- **同時刻の全銘柄一致 1 回**（達成済み・2026-10-03）。根拠：Actions の `per-daily.yml`（`workflow_dispatch job=shadow`・run 37109843815・開始 08:29:15 UTC）と Mulmo ワークスペース版 `watchlist-per.mjs`/`fund-per.mjs` の書き込みなし実行（08:28 UTC 台）を同じ origin/main の入力で実行し、ウォッチ 39 銘柄すべてで status・%タイル一致・PER 差 0、ひふみ 2 本の加重 PER・カバー率も同値（#655 の Mulmo コメント・Toshio 決定コメント）。
 - Toshio の切り替え了承（PR は needs-toshio で止まる）。
+- 突き合わせジョブ（compare）と 01:30 UTC の schedule は §6.1 のとおり PR3 で削除する。トラッキング Issue（`per-shadow`）の連続一致日数は判定に使わない。
 
 ### 6.1 対象ファイル
 | ファイル | 状態 | 内容 |
@@ -204,7 +207,11 @@ PR1 KV 自動同期 ──┬─> PR2 PER 並行運転 ──(3日連続一致�
 
 ### 6.2 手順
 1. write ジョブ：`permissions: { contents: write, issues: write }`。開始時刻が 20:55〜22:30 UTC なら計算のみに落とす（§2.6）。
-2. `watchlist-per.mjs --write` → `fund-per.mjs --write` → 差分が無ければ終了 → `git commit data/valuations.json -m "data: daily PER auto-update <UTC日付>"` → push（§2.3 のリトライ）。
+2. `watchlist-per.mjs --write` → `fund-per.mjs --write` → `git commit data/valuations.json -m "data: daily PER <YYYY-MM-DD>"` → push（§2.3 のリトライ）。
+   - **コミットメッセージは固定形式 `data: daily PER <YYYY-MM-DD>`**。日付は書き込んだ `asOf` と同じ**実行時の UTC 日付**（§2.5）。例：2026-10-03 20:15 UTC の実行 → `data: daily PER 2026-10-03`。接頭辞・空白・日付書式を変えない（Mulmo が文字列一致で判定する）。author/committer は §2.3 の `github-actions[bot]`。
+   - 理由：Mulmo は毎朝「このコミットが main にあるか」で Actions が当日分を書いたかを判定する。`valuations.json` 最上位の `asOf`/`updated` は Mulmo の Briefing 書き戻し（段C）でも書き換わるため判定に使えない。
+   - 差分が無い場合も `git commit --allow-empty` で同じメッセージのコミットを作る（判定用。通常は銘柄の `asOf` が毎日変わるので差分は出る）。
+   - 計算のみに落ちた日（開始が 20:55 UTC 以降・§2.6）と、失敗した日はコミットしない＝Mulmo は前日値で続行する。
 3. push 成功後、同じジョブで `node data/scheduler/kv-resync.mjs --json`（GITHUB_TOKEN の push では kv-resync.yml が起動しないため）。失敗時は kv-resync と同じ `kv-resync-failed` Issue。
 4. write ジョブ失敗時：ラベル `per-daily-failed` の Issue を起票/更新、成功で自動クローズ。
 5. トラッキング Issue（`per-shadow`）は PR 本文で `Closes` しない。マージ後に PM が「切替済み」とコメントしてクローズ。
@@ -213,8 +220,14 @@ PR1 KV 自動同期 ──┬─> PR2 PER 並行運転 ──(3日連続一致�
 ### 6.3 受け入れ条件
 - [ ] `valuations.json` の変更は `perCurrent`/`percentile`/`status`/`asOf`（銘柄）と `updated`/`asOf`（トップ）、ファンドエントリの `perCurrent`/`coverage`/`source`/`asOf`/`components` だけ（`git diff` で確認できる合成テスト、または dry-run の差分を PR に添付）。書式（インデント・末尾改行）が変わらない。
 - [ ] 21:00〜22:30 UTC に push しないガードがある。
+- [ ] 書き込みコミットのメッセージが `data: daily PER <UTC日付 YYYY-MM-DD>` に完全一致（差分なしの日も `--allow-empty` で作る。計算のみ・失敗の日は作らない）。
+- [ ] compare ジョブと 01:30 UTC の schedule が削除されている。
 - [ ] push 後に kv-resync が同じジョブで走る。
 - [ ] 品質ゲート PASS。
+
+### 6.4 運用メモ（concurrency）
+- `per-daily.yml`・`weekly-valuations.yml`・`fund-holdings-monthly.yml`（PR4）は同じ concurrency group `portfolio-data-batch`（`cancel-in-progress: false`）。GitHub の仕様で、**実行中 1 つの後ろに待機できるのは 1 つだけ**で、後から来た実行が待機中の実行を取り消す（2026-10-03、手動の shadow が週次の手動実行に押し出された実績あり・#655）。
+- 定時（20:15 毎日／02:00 日曜／03:00 毎月 1〜20 日）は通常重ならない。**手動実行（workflow_dispatch）を重ねるときは、前の実行の終了を待ってから起動する**。取り消された実行は「cancelled」になり、失敗通知 Issue は立たないので見落としに注意。
 
 ---
 
@@ -253,7 +266,17 @@ PR1 KV 自動同期 ──┬─> PR2 PER 並行運転 ──(3日連続一致�
 ### 7.2 手順・決定
 - 対象＝`toushin`（ひふみ投信）と `microscope`（ひふみマイクロスコープpro）。**クロスオーバーpro は対象外**（上位5のみ・未上場中心・as-is §3.2）。
 - `fund-holdings.json` の要素との対応は `fund` の値で引く：`toushin` ↔ `"ひふみ投信"`、`microscope` ↔ `"ひふみマイクロスコープpro"`。どちらかが見つからなければ書き込まずに失敗。
-- 取得 URL：`https://hifumi.rheos.jp/fund/<f>/pdf/report<YYYYMM>.pdf`。対象月＝実行日の**前月**。`fund-holdings.json` の該当ファンドの `asOf`（`YYYY-MM`）が既に対象月なら何もしない。404 は「未公開」で正常終了。
+- 取得 URL：`https://hifumi.rheos.jp/fund/<f>/pdf/report<YYYYMM>.pdf`。対象月＝実行日（UTC）の**前月**。`fund-holdings.json` の該当ファンドの `asOf`（`YYYY-MM`）が既に対象月なら何もしない。
+- **公開状況（Mulmo 確認・2026-10-03）**：202606〜202608 は 200、**202609 は 404（未公開）**。月初はまだ前月分が出ていないのが普通。
+- **未公開（404）の扱い**（ファンドごとに独立に判定。片方だけ公開ならその片方だけ更新する）：
+  | 実行日（UTC） | 対象月が 404 のとき |
+  |---|---|
+  | 1〜19 日 | 失敗扱いにしない。ジョブは成功（緑）で終え、ジョブサマリに「<f> <YYYYMM> 未公開・翌日再試行」と出す。翌日 03:00 UTC の定時実行が再試行する |
+  | 20 日（その月の最終定時実行）、および 20 日以降の手動実行 | ジョブを失敗（赤）にし、ラベル `fund-holdings-stale` の Issue を起票/更新（本文：ファンド・対象月・最終確認日時）。その月はこれ以上自動で再試行しない |
+  - 翌月 1 日からは対象月が 1 つ進む。未公開のまま過ぎた月は**遡って取りに行かない**（`asOf` は古いまま次の月の公開で一気に進む）。`fund-holdings-stale` Issue は、いずれかの月で更新に成功したファンドが全部そろった時点で自動クローズ。
+  - 404 以外の取得エラー（5xx・タイムアウト・ネットワーク）は §2.2 と同じ 3 回リトライの後、日付にかかわらず即失敗（赤）＋同ラベルの Issue。
+  - 自己検証用の 2026-05 PDF は公開済みのはずなので、404 を含め取得できなければ即失敗（書き込まない）。
+- **`month` 入力（workflow_dispatch）の扱い**：指定月が該当ファンドの現在の `asOf` より古い、または同じなら書き込まない（後戻り防止）。
 
 #### 7.2.1 パース仕様（`parseTop10`）
 両ファンド共通：
@@ -268,7 +291,11 @@ PR1 KV 自動同期 ──┬─> PR2 PER 並行運転 ──(3日連続一致�
    - `name`：前後の空白を除き、**連続する空白（半角・全角 U+3000 を問わない）を半角スペース 1 つにまとめる**。それ以外（全角英字・中黒など）は PDF 表記のまま。例：`Ｔｅｒｒａ   Ｄｒｏｎｅ` → `Ｔｅｒｒａ Ｄｒｏｎｅ`、`ＭＴＧ` → `ＭＴＧ`。
    - `weight`：% → 小数 4 桁（`Math.round(pct * 100) / 10000`。例 5.28% → 0.0528、3.80% → 0.038）。
 4. toushin は行頭の順位が 1〜10 の昇順で欠番なしであることも確認する（違えば検証 NG 扱い）。
-5. 上記 1〜3 は architect が §7.0 の 4 ファイルで試算し、4 本とも 10 行が取れ、2026-05 の 2 本は §7.2.3 の表と完全一致することを確認済み（2026-10-03）。
+5. **似た表の取り違え防止**（Mulmo 確認・#656）：
+   - toushin には同じ列構成の表が 2 つある（2026-05 版：224 行目付近の見出し「組入比率1～10位」の表が正、290 行目付近の見出し「組入比率11～30位」の表は別物）。見出しの正規表現は `組入比率1[~～]10位` で、`組入比率` の直後が `1` 1 文字＋波線であることを要求するため「11～30位」には一致しない。さらに範囲を**最初の見出しから最初の `※「組入比率」は` まで**に限ることで、11〜30 位の行は読まない。見出し `組入比率1[~～]10位` が 2 回以上現れたら検証 NG（レイアウト変更の疑い）。
+   - microscope は上位10銘柄の表（2026-05 版：151 行目付近）より上に「組み入れ上位10業種 比率」の別表（112 行目付近。`1 サービス業 15.23% …` の形）がある。業種表の見出しは `組入比率1~10位` を含まないので範囲の開始にならず、行もコード列（英数字 4 桁）を持たないので銘柄行の正規表現に一致しない。`上位10業種` を手掛かりに範囲を決めない。
+   - テスト：2026-05 fixture で、toushin の 11〜30 位の銘柄（例：11 位以降のコード）と microscope の業種名が結果に含まれないこと。合成テキストで「見出しが 2 回」→ NG。
+6. 上記 1〜3 は architect が §7.0 の 4 ファイルで試算し、4 本とも 10 行が取れ、2026-05 の 2 本は §7.2.3 の表と完全一致することを確認済み（2026-10-03）。
 
 #### 7.2.2 検証（`validateTop10`・すべて満たさなければ書き込まない）
 ①ちょうど 10 行 ②code が `^[0-9][0-9A-Z]{3}\.T$` ③0 < weight < 0.2 ④weight 合計 ≤ 1 ⑤name が空でない ⑥code 重複なし ⑦weight が出現順に非増加（同値は可。例：microscope 2026-08 の 6492 と 2782 はともに 2.43%）。
@@ -314,7 +341,7 @@ PR1 KV 自動同期 ──┬─> PR2 PER 並行運転 ──(3日連続一致�
 - `fund`/`fundSymbol`/`source` は既存値を保持し、`top` と `asOf`（`YYYY-MM`）だけ差し替える。書式は §2.4 で保持。
 - ワークフロー：`schedule: '0 3 1-20 * *'`＋`workflow_dispatch`（input `mode`: `write`(既定) / `dry-run`、`month`）。`apt-get install -y poppler-utils`。`concurrency: portfolio-data-batch`。`permissions: { contents: write, issues: write }`。更新があれば `git commit data/scheduler/fund-holdings.json -m "data: hifumi top10 <YYYY-MM>"` → push（§2.3）。
 - dry-run は書き込まず、ファンドごとの「現行 `top` → 新 `top`」の差分（code・name・weight）をジョブサマリに出す。
-- 失敗/未公開の通知：検証 NG・自己検証 NG・取得エラーは即、**20 日の実行でも前月分が未公開**ならラベル `fund-holdings-stale` の Issue。更新成功で自動クローズ。
+- 失敗/未公開の通知：検証 NG・自己検証 NG・取得エラー（404 以外）は即、**20 日の実行でも前月分が未公開**ならラベル `fund-holdings-stale` の Issue（§7.2 の表）。1〜19 日の 404 は通知しない。更新成功で自動クローズ。
 - 加重 PER の再計算は翌日の per-daily（PR3）が `fund-holdings.json` を読んで行う（このワークフローは `valuations.json` を触らない）。
 
 ### 7.3 受け入れ条件
@@ -323,6 +350,9 @@ PR1 KV 自動同期 ──┬─> PR2 PER 並行運転 ──(3日連続一致�
   - 2026-08 の fixture 2 本が検証 ①〜⑦ を通る。microscope 2026-08 で `141A.T`・`215A.T`・`278A.T`・`456A.T` が取れ、`278A.T` の name が `Ｔｅｒｒａ Ｄｒｏｎｅ`、`456A.T` が `ＨＵＭＡＮ ＭＡＤＥ`（半角スペース 1 つ）。microscope 2026-08 の 1 位が `7806.T`・0.0482、toushin 2026-08 の 1 位が `8001.T`・0.0618、10 位が `4676.T`・0.0282。
   - 説明文中の `%`（microscope 2026-05 の「40%を目安に」）を銘柄行として拾わない。toushin の「組入比率11～30位」の表を読まない。
   - 検証 ①〜⑦ の各違反ケースで NG。自己検証は 1 銘柄でも違えば NG（合成テキストで確認）。
+  - 見出し `組入比率1[~～]10位` が 2 回ある合成テキストで NG。toushin の 11〜30 位・microscope の業種表の行を拾わない。
+- [ ] 404 の扱い：対象月 404 のとき、実行日 1〜19 日は成功終了（書き込みなし・Issue なし）、20 日以降は失敗＋`fund-holdings-stale` Issue（日付を注入できる純関数で判定し、テストで確認）。片方のファンドだけ公開なら公開側だけ更新。
+- [ ] `month` 入力が現在の `asOf` 以前なら書き込まない。
 - [ ] `valuations.json` を書かない。`fund-holdings.json` の `top`/`asOf` 以外のキーを変えない。
 - [ ] 現行 `fund-holdings.json` の microscope を **PR4 の中で手で直さない**（§7.4）。
 - [ ] 品質ゲート PASS。マージ後の確認：`workflow_dispatch mode=dry-run` で前月分の差分がジョブサマリに出る（microscope は誤った 2026-05 構成からの差分になる）。
@@ -332,6 +362,10 @@ PR1 KV 自動同期 ──┬─> PR2 PER 並行運転 ──(3日連続一致�
 - **事実**：現行 JSON の microscope（2026-05）の上位10（6544・3139・9554・6200・4666・2782・4258・3480・2157・7381）は、§7.0 の資料 4 本のいずれとも一致しない（共通は 3480 のみで比率も異なる：JSON 2.35% / PDF 3.13%）。toushin は PDF と完全一致。
 - **今は手で直さない**：PR2 の並行運転は Mulmo のワークスペース版 `fund-holdings.json`（同じく誤っているはず）と同じ入力で突き合わせている。リポ側だけ直すと microscope の加重 PER が Mulmo 版とずれ、突き合わせが乱れる。
 - **直るタイミング**：PR4 は PR3（書き込み切替＝Actions が正）の後にマージする。PR4 マージ後の最初の月次実行（対象月＝前月。`asOf` が 2026-05 のままなので必ず更新対象になる）で、microscope の `top`/`asOf` が PDF 由来の正しい値に自動で上書きされる。toushin も同時に最新月へ進む。
+- **既定案（対象月のみ・未公開なら待つ）**：2026-10 中にマージした場合、対象月は 2026-09。2026-10-03 時点で 202609 は 404 のため、**202609 が公開されるまで microscope の誤データが残る**（10 月 20 日までに公開されなければ 11 月の対象月 202610 の公開まで残る）。公開済みの最新月（202608）へ一度だけ遡って更新するかは **要 Toshio 判断**（下記）。
+  - 代替案 B（コード変更なし）：PR4 マージ後に PM が `workflow_dispatch mode=write month=202608` を 1 回手動実行する（`asOf` 2026-05 → 2026-08 は前進なので §7.2 の後戻り防止に掛からない）。以後は通常の月次で 202609 に進む。
+  - 代替案 C（コード変更あり）：対象月が 404 のとき、`asOf` より新しい公開済みの最新月まで遡って更新する。毎月の挙動が変わるため既定にはしない。
+  - Toshio が B を選んだ場合、本節に「初回は B で実施」と追記し、PM がマージ後に実行する。
 - **それまでの影響**：microscope の加重 PER は誤った構成銘柄で計算され続ける。microscope は総資産比 約 0.2% のため影響は限定的（Toshio 了承済み）。
 - **Mulmo への共有（§9 の補足・PM が #652 にコメントで伝える）**：Mulmo のワークスペース版 `fund-holdings.json` の microscope も同じく誤っているはず。PR3 切替後は Actions（リポの `data/scheduler/fund-holdings.json`）が正となるため **Mulmo 側での修正は不要**。PR4 マージ後は §9 のとおりワークスペース版の手動更新をやめる。
 
@@ -505,7 +539,7 @@ PR1 KV 自動同期 ──┬─> PR2 PER 並行運転 ──(3日連続一致�
 | タイミング | Mulmo の作業 |
 |---|---|
 | PR2 の並行運転中 | 日次バッチは**今のまま**（フェーズ0・kv-resync とも継続）。毎日 1 回 `valuations.json` を commit/push すること（突き合わせの相手になる） |
-| PR3 マージ後 | ①フェーズ0から `watchlist-per.mjs --write` と `fund-per.mjs --write` を外す ②③a・③c の `kv-resync.mjs` 呼び出しを外す（Mulmo の push で kv-resync.yml が起動する） ③push 前に `git pull --rebase` を入れる ④`valuations.json` の `asOf` は**実行時の UTC 日付**。05:00 CST 実行時は「CST 日付の前日」なら当日分。違えば前日値で続行し、その旨を記録 ⑤ワークスペースの `watchlist-per.mjs`/`fund-per.mjs`/`kv-resync.mjs` を削除 |
+| PR3 マージ後 | ①フェーズ0から `watchlist-per.mjs --write` と `fund-per.mjs --write` を外す ②③a・③c の `kv-resync.mjs` 呼び出しを外す（Mulmo の push で kv-resync.yml が起動する） ③push 前に `git pull --rebase` を入れる ④Actions が当日分を書いたかは、**main に `github-actions[bot]` の `data: daily PER <D>` コミットがあるか**で判定する（D＝CST 日付の前日＝Actions 実行時の UTC 日付。例：2026-10-04 05:00 CST の実行なら `data: daily PER 2026-10-03`。確認例 `git fetch origin && git log origin/main --author=github-actions --fixed-strings --grep="data: daily PER 2026-10-03" -1`）。`valuations.json` 最上位の `asOf`/`updated` は段C の書き戻しでも変わるので判定に使わない。コミットが無ければ前日値で続行し、その旨を記録（2026-10-03 改訂・§6.2） ⑤ワークスペースの `watchlist-per.mjs`/`fund-per.mjs`/`kv-resync.mjs` を削除 |
 | PR4 マージ後 | ワークスペースの `fund-holdings.json` の手動更新をやめる（正本はリポの `data/scheduler/fund-holdings.json`） |
 | PR5/PR6 マージ後 | ワークスペースの古い `quality-us.mjs`（2026-06-20）を削除（as-is §4） |
 | 常時 | 21:00〜22:30 UTC 以外の時間帯でも、push 前は `git pull --rebase`。土曜のバンド見直しで `bandLow`/`bandHigh` を変えた場合、%タイルの再計算は翌日の Actions（20:15 UTC）で入る（従来の翌日フェーズ0と同じタイミング） |
