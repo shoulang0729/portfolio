@@ -1,0 +1,188 @@
+name: PER Daily
+
+# 毎日の PER を Actions で計算のみ実行し（shadow）、Mulmo の確定値と自動で突き合わせる（compare）（#652 PR2）。
+# - PR2 の範囲では data/** に書き込まない・push しない（permissions: contents: read）。
+# - Worker 中継口 /yahoo を叩くだけ。API キー・Secrets は使わない（GITHUB_TOKEN は artifact 取得と Issue 管理のみ）。
+# - 公開リポのログ・サマリ・Issue に出すのは銘柄シンボル・PER・%タイル・status・件数のみ（HTTP 本文は出さない）。
+# - 設計書: docs/handoff/2026-10-03-phase15-data-migration.md §5
+
+on:
+  schedule:
+    - cron: '15 20 * * *'   # shadow: 毎日 20:15 UTC（計算のみ → artifact）
+    - cron: '30 1 * * *'    # compare: 毎日 01:30 UTC（前日 UTC 日付の shadow と Mulmo の確定値を突き合わせ）
+  workflow_dispatch:
+    inputs:
+      job:
+        description: 'shadow = 計算のみ（artifact） / compare = 前日 UTC 日付の shadow と突き合わせ'
+        type: choice
+        options: [shadow, compare]
+        default: shadow
+
+concurrency:
+  group: portfolio-data-batch
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+  actions: read
+
+jobs:
+  shadow:
+    if: github.event.schedule == '15 20 * * *' || (github.event_name == 'workflow_dispatch' && inputs.job == 'shadow')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Compute PER (no --write)
+        id: run
+        run: |
+          OUT="$RUNNER_TEMP/per-shadow"
+          mkdir -p "$OUT"
+          node data/scheduler/watchlist-per.mjs --out "$OUT/watchlist-per.json"
+          node data/scheduler/fund-per.mjs --out "$OUT/fund-per.json"
+
+          D=$(jq -r '.asOf' "$OUT/watchlist-per.json")
+          TOTAL=$(jq '.results | length' "$OUT/watchlist-per.json")
+          SKIPPED=$(jq '.skipped | length' "$OUT/watchlist-per.json")
+          SKIPPED_SYMS=$(jq -r '[.skipped[].sym] | join(", ")' "$OUT/watchlist-per.json")
+          echo "date=$D" >> "$GITHUB_OUTPUT"
+          echo "dir=$OUT" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## PER shadow（計算のみ・${D}）"
+            echo ""
+            echo "| 項目 | 値 |"
+            echo "|---|---|"
+            echo "| runStartedAt | $(jq -r '.runStartedAt' "$OUT/watchlist-per.json") |"
+            echo "| 銘柄数 | ${TOTAL} |"
+            echo "| 更新（計算） | $((TOTAL - SKIPPED)) |"
+            echo "| skipped | ${SKIPPED} |"
+            echo "| skipped 銘柄 | ${SKIPPED_SYMS:-—} |"
+            echo ""
+            echo "| 投信 | PER | coverage |"
+            echo "|---|---|---|"
+            jq -r '.funds | to_entries[] | "| \(.key) | \(.value.perCurrent // "—") | \(.value.coverage) |"' "$OUT/fund-per.json"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Guard — no writes to data/**
+        run: |
+          if [ -n "$(git status --porcelain -- data/)" ]; then
+            echo "::error::shadow ジョブが data/** を変更しました（PR2 は計算のみ）"
+            git status --porcelain -- data/
+            exit 1
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: per-shadow-${{ steps.run.outputs.date }}
+          path: ${{ steps.run.outputs.dir }}/
+          retention-days: 7
+          if-no-files-found: error
+
+  compare:
+    if: github.event.schedule == '30 1 * * *' || (github.event_name == 'workflow_dispatch' && inputs.job == 'compare')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0   # Mulmo の確定コミットを git log / git show で読む
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Locate shadow artifact (previous UTC day)
+        id: locate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          D=$(date -u -d 'yesterday' +%F)
+          NAME="per-shadow-$D"
+          RUN_ID=""
+          for id in $(gh run list --repo "$GITHUB_REPOSITORY" --workflow per-daily.yml --limit 50 \
+                        --json databaseId --jq '.[].databaseId'); do
+            HIT=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$id/artifacts" \
+                    --jq ".artifacts[] | select(.name == \"$NAME\" and (.expired | not)) | .id" 2>/dev/null || true)
+            if [ -n "$HIT" ]; then RUN_ID=$id; break; fi
+          done
+          echo "date=$D" >> "$GITHUB_OUTPUT"
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+          echo "shadow artifact ${NAME}: run_id=${RUN_ID:-not found}"
+
+      - uses: actions/download-artifact@v4
+        if: steps.locate.outputs.run_id != ''
+        continue-on-error: true
+        with:
+          name: ${{ steps.locate.outputs.name }}
+          path: ${{ runner.temp }}/per-shadow
+          run-id: ${{ steps.locate.outputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Read tracking issue
+        id: issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create per-shadow \
+            --color 1D76DB \
+            --description "PER 並行運転の突き合わせ（自動管理・#652）" 2>/dev/null || true
+          NUM=$(gh issue list --state open --label per-shadow --json number --jq '.[0].number // ""')
+          if [ -n "$NUM" ]; then
+            gh issue view "$NUM" --json body --jq '.body' > "$RUNNER_TEMP/streak-body.md"
+          else
+            : > "$RUNNER_TEMP/streak-body.md"
+          fi
+          echo "number=$NUM" >> "$GITHUB_OUTPUT"
+
+      - name: Compare
+        id: cmp
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          OUT="$RUNNER_TEMP/per-compare"
+          node data/scheduler/per-compare.mjs \
+            --shadow-dir "$RUNNER_TEMP/per-shadow" \
+            --out-dir "$OUT" \
+            --streak-body "$RUNNER_TEMP/streak-body.md" \
+            --run-url "$RUN_URL"
+          cat "$OUT/summary.md" >> "$GITHUB_STEP_SUMMARY"
+          DAY=$(jq -r '.day' "$OUT/result.json")
+          echo "dir=$OUT" >> "$GITHUB_OUTPUT"
+          echo "day=$DAY" >> "$GITHUB_OUTPUT"
+          echo "reached=$(jq -r '.reached' "$OUT/result.json")" >> "$GITHUB_OUTPUT"
+          echo "streak=$(jq -r '.streak' "$OUT/result.json")" >> "$GITHUB_OUTPUT"
+          if [ "$DAY" = "undetermined" ]; then
+            echo "::warning::判定不能日: $(jq -r '.reason' "$OUT/result.json")"
+          fi
+
+      - name: Update tracking issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NUM: ${{ steps.issue.outputs.number }}
+          OUT: ${{ steps.cmp.outputs.dir }}
+          REACHED: ${{ steps.cmp.outputs.reached }}
+          STREAK: ${{ steps.cmp.outputs.streak }}
+        run: |
+          TITLE="PER 並行運転の突き合わせ（#652）"
+          if [ -n "$NUM" ]; then
+            gh issue edit "$NUM" --body-file "$OUT/body.md"
+          else
+            URL=$(gh issue create --title "$TITLE" --body-file "$OUT/body.md" --label per-shadow)
+            NUM="${URL##*/}"
+            echo "Created tracking issue #$NUM"
+          fi
+          gh issue comment "$NUM" --body-file "$OUT/comment.md"
+          if [ "$REACHED" = "true" ]; then
+            gh issue comment "$NUM" --body "🎯 切替条件達成（${STREAK} 日連続一致）。PR3 着手可。"
+          fi
