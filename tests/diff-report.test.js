@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest';
 import {
   diffValuations,
   diffOutcomes,
+  diffStale,
   renderMarkdown,
   fmtCell,
   VALUATION_BLOCKS,
@@ -190,5 +191,103 @@ describe('renderMarkdown', () => {
   it('notes を引用で出す', () => {
     const md = renderMarkdown({ valuations: [], outcomes: [], notes: ['HEAD に無い'] });
     expect(md).toContain('> HEAD に無い');
+  });
+});
+
+// ── #652 PR6: staleFields（null ガード）の差分 ──
+const OLD_STALE = {
+  valuations: {
+    AAA: { quality: { roic: 6, intCoverage: 80.2, qScore: 4 } },
+    BBB: {
+      staleFields: { 'quality.grossProf': '2026-10-04', 'sectorMedian.pb': '2026-10-04' },
+      quality: { grossProf: 0.3, qScore: 2 },
+      sectorMedian: { per: 15, pb: 1.1 },
+    },
+    CCC: { value: { perTrail: 20, targetGapPct: 5 } },
+  },
+};
+const NEW_STALE = {
+  valuations: {
+    // 保持（値は不変）＋新しい印・qScore は新値
+    AAA: {
+      staleFields: { 'quality.roic': '2026-10-11', 'quality.intCoverage': '2026-10-11' },
+      quality: { roic: 6, intCoverage: 80.2, qScore: 5 },
+    },
+    // grossProf は保持継続・pb は回復
+    BBB: {
+      staleFields: { 'quality.grossProf': '2026-10-04' },
+      quality: { grossProf: 0.3, qScore: 2 },
+      sectorMedian: { per: 15, pb: 1.4 },
+    },
+    // 保持されない null（ガード対象外の経路・想定外）
+    CCC: { value: { perTrail: 20, targetGapPct: null } },
+  },
+};
+
+describe('diffStale', () => {
+  it('kept-new / kept-cont / recovered を判定する', () => {
+    const d = diffStale(OLD_STALE, NEW_STALE);
+    expect(d).toEqual([
+      { symbol: 'AAA', key: 'quality.roic', kind: 'kept-new', since: '2026-10-11', old: 6, new: 6 },
+      { symbol: 'AAA', key: 'quality.intCoverage', kind: 'kept-new', since: '2026-10-11', old: 80.2, new: 80.2 },
+      { symbol: 'BBB', key: 'quality.grossProf', kind: 'kept-cont', since: '2026-10-04', old: 0.3, new: 0.3 },
+      { symbol: 'BBB', key: 'sectorMedian.pb', kind: 'recovered', since: '2026-10-04', old: 1.1, new: 1.4 },
+    ]);
+  });
+
+  it('staleFields が無い・同一・doc が null でも落ちない', () => {
+    expect(diffStale(OLD_VALS, NEW_VALS)).toEqual([]);
+    expect(diffStale(null, null)).toEqual([]);
+    expect(diffStale(OLD_STALE, OLD_STALE).every((c) => c.kind === 'kept-cont')).toBe(true);
+  });
+
+  it('staleFields 自体はブロック差分に出さない（VALUATION_BLOCKS は不変）', () => {
+    const d = diffValuations(OLD_STALE, NEW_STALE);
+    expect(d.some((c) => c.block === 'staleFields')).toBe(false);
+  });
+});
+
+describe('renderMarkdown（staleFields）', () => {
+  const md = renderMarkdown({
+    valuations: diffValuations(OLD_STALE, NEW_STALE),
+    outcomes: [],
+    stale: diffStale(OLD_STALE, NEW_STALE),
+    date: '2026-10-11',
+  });
+
+  it('サマリに「うち null 化（保持）」列を出し、保持されない null は従来どおり「うち null 化」に数える', () => {
+    expect(md).toContain('| うち null 化 | うち null 化（保持） |');
+    // quality: 変化は AAA.qScore のみ・保持 2 件
+    expect(md).toContain('| valuations.quality | 1 | 1 | 0 | 2 |');
+    // value: CCC.targetGapPct が保持されずに null → うち null 化 1・保持 0
+    expect(md).toContain('| valuations.value | 1 | 1 | 1 | 0 |');
+    // sectorMedian: 回復（pb）は null 化ではない
+    expect(md).toContain('| valuations.sectorMedian | 1 | 1 | 0 | 0 |');
+    expect(md).toContain('| verdict-outcomes | 0 | 0 | 0 | — |');
+  });
+
+  it('null 化（保持）・保持継続・回復の節を出す', () => {
+    expect(md).toContain('### null 化（保持）');
+    expect(md).toContain('| AAA | quality.roic | 2026-10-11 | 6 |');
+    expect(md).toContain('### 保持継続');
+    expect(md).toContain('| BBB | quality.grossProf | 2026-10-04 | 0.3 |');
+    expect(md).toContain('### 回復（old→new）');
+    expect(md).toContain('| BBB | sectorMedian.pb | 2026-10-04 | 1.1 | 1.4 |');
+    // 節は data/valuations.json の後・verdict-outcomes の前
+    expect(md.indexOf('## data/valuations.json')).toBeLessThan(md.indexOf('### null 化（保持）'));
+    expect(md.indexOf('### 回復（old→new）')).toBeLessThan(md.indexOf('## data/verdict-outcomes.json'));
+  });
+
+  it('0 件の節は省略する', () => {
+    const only = renderMarkdown({
+      valuations: [],
+      outcomes: [],
+      stale: [{ symbol: 'X', key: 'quality.roic', kind: 'kept-new', since: '2026-10-11', old: 1, new: 1 }],
+    });
+    expect(only).toContain('### null 化（保持）');
+    expect(only).not.toContain('### 保持継続');
+    expect(only).not.toContain('### 回復');
+    const none = renderMarkdown({ valuations: [], outcomes: [] });
+    expect(none).not.toContain('### null 化（保持）');
   });
 });
