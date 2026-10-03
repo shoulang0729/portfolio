@@ -1,7 +1,7 @@
 {
-  "updated": "2026-10-03-1356",
-  "asOf": "2026-10-03",
-  "note": " [2026-10-03 段C(Sonnet)書き戻し。土曜(rebuildBands=true・バンド見直し実施＝数値バンド変更0件・メタ変更4件・保有表記訂正3件)。日経68309.46(+2.93%/1w)・S&P500 7722.72(-0.27%/1w)・Nasdaq 27190.86(+0.45%/1w)・ハンセン23972(-2.19%/1w・^HSI)・TOPIX 4247(-0.07%/1w・1308.T換算)・VIX16.39(+4.59%/1w)。ドル円157.18(9/25)・米10年債5.24%(10/1・+6bp/1w・+45bp/1m)・8月CPI YoY3.71%・MoM+0.4%。スタンス=🔴弱気寄り中立（守り優先・現金復元と日本テーマ集中の同時解消）。保有=MF asOf 2026-10-02（stale 1日）・投資用キャッシュ8.36%（目標12-13%）・半導体(SMH+200A)10.16%（cap10%・前号10.84%はCIBR込みの誤算）・japan_theme 17.16%（cap13%・+4.16pt）。訂正：AAPL/TSLA/XLEの『非保有』誤記→保有(¥8.66M/¥6.99M/¥8.24M)・GOOGL bandConfidence high→med（TTM PERに持分評価益混入の疑い）・VT/VEA med→low（Yahoo算定替えの疑い）・PANW needsManual→true。売り発議(B2)：8050.T 1/4利確(最優先・japan_theme是正)/SMH 1.5割トリム(高)/1629.T 1/6トリム(中)/TSLA 1/4条件付き予備(低・downgraded)/1615.T 条件付き1/6(日銀10/30通過後・低)。AAPL 1/4トリムはkilled（触媒なし・cap内・品質最上位）。買い発議：GOOGL 第1弾$15K(中・downgraded・コア売り①〜③約定かつ買付後も現金≥10%・FOMC議事要旨通過後)/MSFT低(現金12%回復後)/SHLD監視のみ(downgraded)/6016.T弱/AMZN保留(指値$237.5・執行しない)。KV自己修復(段A)11銘柄同期済み。判断ファイル=briefing-judgment-verified.json（B2検証済み・verifiedBy:opus-b2・verifiedAt:2026-10-03T14:16:00+08:00・actions kept=8/downgraded=2/killed=1）。版ID=2026-10-03-1356。] [2026-09-15 段C(Sonnet)書き戻し。火曜(rebuildBands=false)。日経63492.99(-4.38%/1w・急落・調整局面入り)・S&P500 7656.98(-0.80%/1w・高値圏頭打ち)・Nasdaq 26333.04(-0.66%/1w・AI不透明感)・ハンセン24805.63(-3.30%/1w・^HSI)・TOPIX 4149(-1.82%/1w・1308.T換算・日銀利上げ警戒)・VIX15.84(+9.02%/1w・警戒上昇も低位)。ドル円153.71(-1.54%/1w・円高進行)。米10年債4.96%(+18bp/1w・じっちゃま警戒線突破・予想5.00%へ)。8月CPI YoY3.71%・MoM+0.40%（粘着・利上げ根拠続く）。スタンス=🔴弱気寄り中立（守り優先・現金復元最優先）（9/15-16 FOMC利上げ87%→9/17-18 日銀利上げ63%・ダブル政策決定週）。半導体集中12.1%(SMH/200A/CIBR)・投資用キャッシュ4.6%（目標12-13%・大幅未達）・MFデータ当日鮮度OK(stale=false・asOf=2026-09-15)。売り発議：SMH最優先1.5-2割トリム（%タイル70・rich・9/15-16 FOMC利上げ87%+10年債4.96%+9/13 AIブーム前提崩壊・集中低減+キャッシュ復元主原資・B2 kept）/8050.T winner利確1/4（%タイル100・rich・日銀利上げ×円高×過熱三重リスク・B2 kept）/1615.T据置（%タイル100だが銀行ETF=利上げ受益で触媒自壊・B2 downgraded・条件付き第三順位のみ）/200A.T据置（%タイル42・fair・SMHトリム後半導体12%超時のみ・B2 downgraded）。買い発議：GOOGL最優先段階仕込み（%タイル0・cheap・bandConfidence high・Anthropicランレート受益・TPU地主・ゆな/中島最大テーゼ・B2 kept）/MSFT低・現金復元後（%タイル23・cheap_real・bandConfidence high・日付触媒不在・B2 downgraded）/AMZN保留（%タイル0・cheap_fake・EVフェア・受動監視のみ・B2 kept）。じっちゃま9/14★（最新・弱気転換）：全方位売り・10年債5.00%予想・9/13 AIブーム大事件・Anthropic IPO 9月断念。後藤8/11★(cached)・中島9/9★(cached)・ゆな9/8★(cached)・藤沢9/8★(cached)。判断ファイル=briefing-judgment-verified.json（B2検証済み・verifiedBy:opus-b2・verifiedAt:2026-09-15・kept=5・downgraded=3・killed=0）。版ID=2026-09-15-0505。] [2026-09-14 段C(Sonnet)書き戻し。月曜(rebuildBands=false)。日経63492.99(-4.38%/1w・急落・調整局面入り)・S&P500 7656.98(-0.80%/1w・高値圏頭打ち)・Nasdaq 26333.04(-0.66%/1w・AI不透明感)・ハンセン24917.6(-1.95%/1w・^HSI)・TOPIX 4176(-1.63%/1w・1308.T換算・日銀利上げ警戒)・VIX15.84(+9.02%/1w・警戒上昇も低位)。ドル円156.11(-2.41%/1w・円高進行)。米10年債4.95%(+18bp/1w・じっちゃま警戒線突破・警戒線5.00%へ引上げ)。8月CPI YoY3.71%・MoM+0.40%（粘着・利上げ根拠続く）。スタンス=🔴弱気・守り最優先（政策トリプルヘッダー前にキャッシュ復元）（9/16 FOMC利上げ87%→9/17-18 日銀利上げ基本シナリオ候補）。半導体集中12.0%(SMH/200A/CBRS)・投資用キャッシュ4.5%（目標12-13%・大幅未達）・MFデータstale5日(asOf=2026-09-09)。売り発議：SMH最優先1.5-2割トリム（%タイル71・rich・9/16 FOMC利上げ87%+10年債4.95%+9/13 AIブーム前提崩壊・集中低減+キャッシュ復元主原資・B2 kept）/8050.T winner利確1/4（%タイル100・rich・日銀利上げ×円高×過熱三重リスク・B2 kept）/1615.T killed（%タイル100・rich・銀行ETF=利上げ受益で触媒自壊・B2 killed・段Cは描画なし）/200A.T条件付き二段目（%タイル55・fair・SMHトリム後半導体>12%時のみ・B2 downgraded）。買い発議：GOOGL最優先段階仕込み（%タイル0・cheap・bandConfidence high・Anthropicランレート受益・TPU地主・ゆな/中島最大テーゼ・B2 kept）/MSFT最低・現金復元後（%タイル25・cheap_real・bandConfidence high・日付触媒不在・B2 downgraded）/AMZN保留（%タイル0・cheap_fake・EVフェア・受動監視のみ・B2 kept）/3033.HK監視（%タイル7・cheap・bandConfidence low・能動買い見送り・B2 kept）。MFデータstale5日(asOf=2026-09-09)・前回スナップショット継続使用。じっちゃま9/14★（最新・弱気転換）：全方位売り・10年債5.00%予想・9/13 AIブーム大事件・Anthropic IPO断念。後藤8/11★(cached)。中島9/9★(cached)。ゆな9/8★(cached)。藤沢9/8★(cached)。判断ファイル=briefing-judgment-verified.json（B2検証済み・verifiedBy:opus-b2・verifiedAt:2026-09-14・kept=5・downgraded=2・killed=1 1615.T）。版ID=2026-09-14-2229。] [2026-09-08 段C(Sonnet)書き戻し。火曜(rebuildBands=false)。日経66399.84(+0.13%/1w・史上最高値圏)・S&P500 7718.60(+0.09%/1w・最高値圏・足踏み)・Nasdaq 26506.99(+0.40%/1w・AI主導)・ハンセン25650.87(+0.26%/1w・^HSI)・TOPIX 4245(-0.61%/1w・1308.T換算)・VIX14.32(-1.31%/1w・材料前の低ボラ凪)。ドル円159.97(+0.67%/1w・-2.37%/1m・円安→152割れ警戒)。米10年債4.77%(+10bp/1w・警戒線4.75%上抜け・6m+64bp)。7月CPI YoY3.54%・MoM+0.07%（粘着高止まり・次回8月CPI 9/11）。スタンス=🟡中立ディフェンシブ（政策三連発前は防御優先・現金復元を最優先）（9/11 CPI→9/16 FOMC→9/17-18 日銀）。半導体集中12.4%(SMH/200A/CIBR/285A.T)・投資用キャッシュ4.4%（目標12-13%・大幅未達）。売り発議：SMH最優先1.5-2割トリム（%タイル77・rich・10年債4.77%上抜け＋FOMC 9/16前防御・集中低減＋キャッシュ復元の主原資・B2 kept）/8050.T winner利確1/4（%タイル100・rich・一過性益疑惑・日銀利上げ×円高×過熱三重リスク・B2 kept）/1615.T条件付き補助（%タイル100・rich・B2 downgraded・低・SMH/8050執行後もキャッシュ12%未達なら第三順位・銀行ETF利上げ受益と内在矛盾ゆえ完全条件付き）/200A.T条件付き二段目（%タイル55・fair・B2 downgraded・SMHトリム後半導体12%超なら・単独割高根拠なし）。買い発議：GOOGL最優先（%タイル0・cheap・bandConfidence high・Anthropicランレート受益・TPU地主・ゆな/中島最大テーゼ・SMHトリム資金主振替先・B2 kept）/MSFT小さめ打診（%タイル21・cheap_real・bandConfidence high・日付触媒不在・現金復元後に限定・B2 downgraded）/AMZN保留（%タイル0・cheap_fake・EVフェア・受動監視のみ・B2 kept）/3033.HK監視（%タイル8・cheap・bandConfidence low・藤沢ハンセンロング整合・能動見送り・B2 kept）。MFデータ当日鮮度OK(stale=false・asOf=2026-09-08)。じっちゃま9/8再要約★（最新）：ドル円154.20に下落・152割れ警戒・130円台半ば可能性。ゆな先生9/8再要約★：マスク×ガスタービン参入・HWM急落。藤沢9/8再要約★：第747号 AI電力問題・GPT-6 Astra・メモリ株復活。中島8/27★(cached)・後藤8/11★(cached)。判断ファイル=briefing-judgment-verified.json（B2検証済み・verifiedBy:opus-b2・verifiedAt:2026-09-08 05:28・kept=6・downgraded=3・killed=0）。版ID=2026-09-08-0513。] [2026-09-05 段C(Sonnet)書き戻し。土曜(rebuildBands=true)・バンドレビュー実施（緊急引き直しなし）。日経65020.94(-2.1%/1w・高値圏一服)・S&P500 7747.71(最高値圏・小動き)・Nasdaq 26584.06(最高値圏)・ハンセン25213.31(-1.4%/1w・^HSI・軟調)・TOPIX 4220(-0.33%/1w・1308.T換算)・VIX14.32(低位・イベント前の凪)。ドル円159.97(-2.4%/1m・円高方向)。米10年債4.77%(警戒線4.75%上抜け・1m+14bp・6m+64bp)。7月CPI YoY3.54%・MoM+0.07%（粘着高止まり）。スタンス=🟡中立（防御優先・分水嶺待ち）（10年債4.77%が警戒線上抜け・9/11 CPI→9/16-17 FOMC→9/17-18 日銀の政策三連発）。半導体集中13.7%(SMH+200A+CBRS+PLTR)・投資用キャッシュ4.5%（目標12-13%・大幅未達）。売り発議：SMH最優先1.5-2割トリム（%タイル77・rich・10年債4.77%上抜け＋FOMC前防御・集中低減＋キャッシュ復元の主原資・B2 kept）/8050.T winner利確1/4（%タイル100・rich・trap一過性益疑惑・日銀×円高×過熱三重リスク・B2 kept）/1615.T条件付き補助（%タイル100・rich・B2 downgraded・低・SMH/8050執行後もキャッシュ12%未達なら第三順位・銀行ETF利上げ受益と部分相反ゆえ完全条件付き）/200A.T条件付き二段目（%タイル48・fair・B2 downgraded・SMHトリム後半導体12%超なら・単独割高根拠なし）。買い発議：GOOGL最優先（%タイル0・cheap・bandConfidence high・Anthropicランレート受益・TPU地主・ゆな/中島最大テーゼ・SMHトリム資金主振替先・B2 kept）/MSFT小さめ打診（%タイル25・cheap_real・bandConfidence high・日付触媒不在・サイズ抑制・B2 kept）/AMZN保留（%タイル0・cheap_fake・EVフェア・受動監視のみ・B2 kept）/3033.HK監視（%タイル7・cheap・bandConfidence low・藤沢ハンセンロング整合・能動見送り・B2 kept）。MFデータ当日鮮度OK(stale=false・asOf=2026-09-05)。判断ファイル=briefing-judgment-verified.json（B2検証済み・verifiedBy:opus-b2・kept=6・downgraded=2・killed=0）。バンドフラグ：PLTR(PER155=超割高だがバンド過適合でcheap表示・bandConf low・機械%タイル過信禁止)/AMZN(cheap_fake維持・EVフェア)/8050.T(trap一過性益・実態さらに割高疑惑)/ETF群%100=地合い過熱シグナル。版ID=2026-09-05-0504。] [2026-09-03 段C(Sonnet)書き戻し。木曜(rebuildBands=false)。日経64326(-2.92%/1w・高値圏で反落)・S&P500 7631(-0.60%/1w・高値圏NFP待ち)・Nasdaq 26100(-0.20%/1w・AI株上値重い)・ハンセン25330(-0.71%/1w・^HSI)・TOPIX 4310(+2.40%/1w・1308.T換算・内需ローテ堅調)・VIX16.34(+5.76%/1w・低位だが上向き)。ドル円159.97(+0.67%/1w・円安高止まり)。米10年債4.79%(+15bp/1w・警戒線4.75%を上抜け)。7月CPI YoY3.54%・MoM+0.07%（粘着高止まり）。スタンス=🟡中立・防御余力を作る（10年債4.79%が警戒線上抜け・9/4 NFP→9/11 CPI→9/16 FOMC→9/17-18 日銀の怒涛の分水嶺）。半導体集中13.6%(SMH+200A+CBRS+PLTR)・投資用キャッシュ4.6%（目標12-13%・大幅未達）。売り発議：SMH最優先1.5-2割トリム（%タイル78・rich・NVDA/ブロードコム好決算通過済＋9/4 NFP/9/16 FOMC前防御・集中低減＋キャッシュ復元の主原資・B2 kept）/8050.T winner利確1/4（%タイル100・rich・priceMom+257%・trap一過性益・B2 downgraded中→慎重）/9983.T 1/4トリム（%タイル67・rich・コア維持・急がない・B2 downgraded低）。買い発議：GOOGL最優先（%タイル0・cheap・bandConfidence high・Anthropicランレート受益・TPU地主・ゆな最大ポジ・SMHトリム資金主振替先・B2 kept）/MSFT低（%タイル21・cheap_real・bandConfidence high・日付触媒不在・キャッシュ復元優先ゆえ格下げ・B2 downgraded）/AMZN保留（%タイル0・cheap_fake・EVフェア・受動監視のみ・B2 kept）。MFデータ当日鮮度OK(stale=false・asOf=2026-09-03)。判断ファイル=briefing-judgment-verified.json（B2検証済み・verifiedBy:opus-b2・kept=3・downgraded=3・killed=0）。版ID=2026-09-03-0513。] [2026-09-02 段C(Sonnet)書き戻し。水曜(rebuildBands=false)。日経66215(+0.54%/1w・史上最高値圏)・S&P500 7686(+0.43%/1w・最高値圏楽観過剰)・Nasdaq 26371(+1.50%/1w・AI主導)・ハンセン25567(+0.19%/1w・^HSI)・TOPIX 4271(+1.93%/1w・1308.T換算)・VIX14.92(-5.87%/1w・低位・恐怖過少)。ドル円159.97(+0.67%/1w・-2.37%/1m・円安高止まり)。米10年債4.75%(+5bp/1w・6mで+70bp・レジスタンス到達)。7月CPI YoY3.54%・MoM+0.07%（粘着高止まり）。スタンス=中立・守り寄り（分水嶺イベント2週間・キャッシュ復元を最優先）｜ウォーシュJH(8/28)タカ派・9月FOMC利上げ確率57.7%・10年債4.75%レジスタンス到達・正念場。半導体集中12.0%(SMH %ile80・rich)・キャッシュ4.3%（目標12-13%・大幅未達）。買い発議：GOOGL最優先（%タイル0・cheap・bandConfidence high・Anthropicランレート受益・ゆな先生最大ポジ・SMHトリム資金主振替先・B2 kept）/MSFT中（%タイル24・cheap_real・bandConfidence high・Azure/Copilot触媒日付なし・B2 downgraded中・サイズ抑制）/DTCR低（%タイル23・cheap・bandConfidence low・REIT偏重+守り局面・B2 downgraded低・小口最小）/AMZN保留（%タイル0・cheap_fake・EVフェア・本人保留・B2 kept受動指値）/3033.HK監視（%タイル9・cheap・bandConfidence low・藤沢ハンセンロング整合・B2 kept監視）。売り発議：SMH最優先1.5-2割トリム（%タイル80・rich・NVIDIA Q2通過済み+JH後の板安定→今週実行・半導体集中12.0%削減＋キャッシュ復元の主原資・B2 kept）/8050.T winner利確1/4（%タイル100・rich・trap一過性益・priceMom1Y+257%・B2 kept高優先）/9983.T 1/4トリム（%タイル71・rich・急がない・B2 downgraded低）/200A.T条件付き（SMHトリム後半導体12%超なら二段目・10年債4.75%上抜けで格上げ・B2 downgraded低）。MFデータ当日鮮度OK(stale=false・asOf=2026-09-02)。判断ファイル=briefing-judgment-verified.json（B2検証済み・kept=5・downgraded=4・killed=0）。版ID=2026-09-02-0524。] [2026-08-31 段C(Sonnet)書き戻し。月曜(rebuildBands=false)。日経66405(+0.59%/1w・史上最高値圏)・S&P500 7711(+0.49%/1w・最高値圏楽観過剰)・Nasdaq 26402(+0.85%/1w・AI主導)・ハンセン25584(-1.63%/1w・^HSI)・TOPIX 4270(+2.06%/1w・1308.T換算)・VIX14.51(-9.37%/1w・低位・恐怖過少)。ドル円158.91(-2.56%/1m・円高進行)。米10年債4.67%(-2bp/1w・6mで+65bp)。7月CPI YoY3.54%・MoM+0.07%（粘着高止まり）。スタンス=中立・守り寄り（イベント連発前にキャッシュ復元優先）｜ウォーシュJH(8/28)タカ派・9月FOMC利上げ確率57.7%にジャンプ・10年債4.75%レジスタンス正念場。半導体集中11.0%(SMH %ile79・rich)・キャッシュ4.3%（目標12-13%・大幅未達）。買い発議：GOOGL最優先（%タイル0・cheap・bandConfidence high・Q2決算通過・Anthropicランレート受益・SMHトリム資金主振替先・B2 kept）/MSFT中（%タイル25・cheap_real・bandConfidence high・Azure/Copilot触媒日付なし・B2 downgraded中）/DTCR低（%タイル24・cheap・bandConfidence low・テーマのみ触媒・B2 downgraded低）/AMZN低・受動（%タイル0・cheap_fake・EVフェア・本人保留・B2 downgraded受動）。売り発議：SMH最優先1.5-2割トリム（%タイル79・rich・NVIDIA Q2通過(好材料出尽くし)+JH後の板安定→今週実行・半導体集中11.0%削減＋キャッシュ復元の主原資・B2 kept）/8050.T winner利確1/4（%タイル100・rich・trap・B2 kept）/9983.T 1/4トリム（%タイル69・rich・急がない・B2 downgraded低）/200A.T条件付き（%タイル49・fair・SMHトリム後半導体12%超なら・B2 downgraded低・保留）。3033.HK監視（%タイル9・cheap・bandConfidence low・藤沢ハンセンロング整合）。MFデータ当日鮮度OK(stale=false・asOf=2026-08-31)。判断ファイル=briefing-judgment-verified.json（B2検証済み・kept=3・downgraded=5・killed=0）。版ID=2026-08-31-0504。] [2026-08-30 段C(Sonnet)書き戻し。日曜(rebuildBands=false)。日経66405(+0.59%/1w・史上最高値圏)・S&P500 7711(+0.49%/1w・最高値圏楽観過剰)・Nasdaq 26402(+0.85%/1w・AI主導)・ハンセン25565(-0.52%/1w・^HSI)・TOPIX 4270(+2.06%/1w・1308.T換算)・VIX14.51(-9.37%/1w・低位・恐怖過少)。ドル円158.91(-2.56%/1m・円高進行)。米10年債4.67%(-2bp/1w・6mで+65bp)。7月CPI YoY3.54%・MoM+0.07%（粘着高止まり）。スタンス=中立・守り寄り（キャッシュ復元最優先）｜ウォーシュJH(8/28)タカ派・9月FOMC利上げ確率57.7%にジャンプ・10年債4.75%レジスタンス正念場。半導体集中11.3%(SMH+200A)(SMH %ile79・rich)・キャッシュ4.4%（目標12-13%・大幅未達）。買い発議：GOOGL最優先（%タイル0・cheap・bandConfidence high・Q2決算通過・Anthropicランレート受益・SMHトリム資金主振替先・B2 kept）/MSFT低（%タイル18・cheap・bandConfidence high・日付触媒不在・打診最小・B2 kept低）/DTCR killed（%タイル24・cheap/守り局面逆行・B2 killed・描画なし）/AMZN保留（%タイル0・cheap_fake・EVフェア・本人保留・B2 kept受動指値）。売り発議：SMH最優先1.5-2割トリム（%タイル79・rich・NVIDIA Q2通過(好材料出尽くし)+JH後の板安定→今週実行・半導体集中11.3%削減＋キャッシュ復元の主原資・B2 kept）/8050.T winner利確1/4（pack.watchlist未収録・定性trap・中優先・B2 downgraded中）/9983.T 1/4トリム（pack.watchlist未収録・機械裏付けなし・低優先・急がない・B2 downgraded低）/200A.T条件付き（SMHトリム後半導体12%超なら・B2 kept）。3033.HK監視（%タイル9・cheap・bandConfidence low・藤沢ハンセンロング整合・B2 kept監視）。MFデータ当日鮮度OK(stale=false・asOf=2026-08-30)。判断ファイル=briefing-judgment-verified.json（B2検証済み・kept=5能動+受動2・downgraded=2・killed=1 DTCR）。版ID=2026-08-30-0507。] [2026-08-29 段C(Sonnet)書き戻し。土曜(rebuildBands=true)。日経66405(+0.59%/1w・史上最高値圏)・S&P500 7731(+1.18%/1w・最高値圏楽観過剰)・Nasdaq 26541(+1.82%/1w・AI主導最高値圏)・ハンセン取得エラー(前日25653参照)・TOPIX 4234(+1.39%/1w・1308.T換算)・VIX14.51(-9.37%/1w・低位・恐怖過少)。ドル円158.91(-2.56%/1m・円高進行)。米10年債4.67%(-2bp/1w・6mで+65bp)。7月CPI YoY3.54%・MoM+0.07%（粘着高止まり）。スタンス=中立・守り寄り（キャッシュ復元最優先）｜ウォーシュJH(8/28)タカ派・9月FOMC利上げ確率57.7%にジャンプ・10年債4.75%レジスタンス正念場。半導体集中11.8%(SMH %ile79・rich)・キャッシュ5.0%（目標12-13%・大幅未達）。買い発議：GOOGL最優先（%タイル0・cheap・bandConfidence high・Q2決算通過・Anthropicランレート受益・SMHトリム資金主振替先・B2 kept）/MSFT低（%タイル18・cheap・bandConfidence high・日付触媒不在・打診最小・B2 kept低）/DTCR見送り（%タイル24・cheap/fair境界・bandConfidence low・日付触媒不在+REIT偏重+守り局面逆行・B2 downgraded見送り）/AMZN保留（%タイル0・cheap_fake・EVフェア・本人保留・B2 kept受動指値）。売り発議：SMH最優先1.5-2割トリム（%タイル79・rich・NVIDIA Q2通過(好材料出尽くし)+JH後の板安定→今週実行・半導体集中11.8%削減＋キャッシュ復元の主原資・B2 kept）/8050.T winner利確1/4（pack.watchlist未収録・定性trap・中優先・B2 downgraded中）/9983.T 1/4トリム（pack.watchlist未収録・機械裏付けなし・低優先・急がない・B2 downgraded低）/200A.T条件付き（SMHトリム後半導体12%超なら・B2 kept）。3033.HK監視（%タイル9・cheap・bandConfidence low・藤沢ハンセンロング整合・B2 kept監視）。土曜バンドレビュー(rebuildBands=true)実施：CRWD/PANW/LITE/1306.T/2800.HKをレビュー対象に。ETF broad-market群の%タイル99-100は据置（真のrich）。MFデータ当日鮮度OK(stale=false・asOf=2026-08-29)。判断ファイル=briefing-judgment-verified.json（B2検証済み・8050.T高→中格下げ/9983.T中→低格下げ/DTCR低→見送り格下げ・killなし）。版ID=2026-08-29-0509。] [2026-08-27 段C(Sonnet)書き戻し。木曜(rebuildBands=false)。日経66262(+1.43%/1w・史上最高値圏)・S&P500 7677(-0.19%/1w・上昇トレンド内の横ばい)・Nasdaq 26151(-0.53%/1w・決算前の様子見)・ハンセン25511(+0.16%/1w・独歩底堅さ)・TOPIX 4209(-1.34%/1w・1308.T換算)・VIX15.45(-2.46%/1w・低位＝油断のサイン)。ドル円158.91（-2.56%/1m・円高圧力じわり）。米10年債4.64%(-7bp/1w・6mで+60bp・一旦鎮静)。7月CPI YoY3.54%・MoM+0.07%（鈍化継続・PCE(8/26通過済み)）。スタンス=中立（守り優先）｜イベント密集週・弾を先に作る。半導体集中12.0%(SMH %ile79・rich)・キャッシュ4.3%（目標12-13%・大幅未達）。買い発議：GOOGL最優先（%タイル0・cheap・bandConfidence high・Q2決算通過・Anthropicランレート受益・SMHトリム資金主振替先・B2 kept）/MSFT低（%タイル20・cheap・bandConfidence high・日付触媒不在・打診最小・B2 downgraded）/DTCR監視（%タイル26・cheap/fair境界・bandConfidence low・日付触媒不在+REIT偏重・B2 downgraded）/AMZN保留（%タイル0・cheap_fake・EVフェア・本人保留・B2 kept受動指値）。売り発議：SMH最優先1.5-2割トリム（%タイル79・rich・NVIDIA/PCE通過済み→8/27-29JH前後に実行・半導体集中12.0%削減＋キャッシュ復元の主原資・B2 kept）/8050.T winner利確1/4（%タイル100・rich・trap一過性益・priceMom1Y+257%・B2 kept）/9983.T 1/4トリム（%タイル72・rich・急がない・低優先・B2 downgraded）/200A.T条件付き（%タイル50・fair・SMHトリム後半導体12%超なら・B2 kept）。3033.HK監視（%タイル9・cheap・bandConfidence low・藤沢ハンセンロング整合・B2 kept監視）。MFデータ当日鮮度OK(stale=false・asOf=2026-08-27)。判断ファイル=briefing-judgment-verified.json（B2検証済み・9983.T低格下げ/MSFT低格下げ/DTCR監視格下げ・killなし）。版ID=2026-08-27-0503。] [2026-08-25 段C(Sonnet)書き戻し。月曜(rebuildBands=false)。日経65528(-5.33%/1w・ターム・プレミアム重し)・S&P500 7674(-1.43%/1w・上昇トレンド内の押し)・Nasdaq 26180(-2.05%/1w・半導体ボラ)・ハンセン26009(+3.55%/1w・独歩底堅さ)・TOPIX 4190(-2.81%/1w・1308.T換算)・VIX15.13(+6.18%/1w・凪＝油断のサイン)。ドル円158.91（-0.19%/1w・-2.56%/1m・円高圧力）。米10年債4.74%(+6bp/1w・6mで+66bp・ジリ高)。7月CPI YoY3.54%・MoM+0.07%（鈍化継続・PCE(8/26)本丸）。スタンス=中立（守り優先）｜超イベント週・弾を先に作る。半導体集中11.7%(SMH %ile77・rich)・キャッシュ5.0%（目標12-13%・大幅未達・防御余力ほぼゼロ）。買い発議：GOOGL最優先（%タイル0・cheap・bandConfidence high・Q2決算通過・Cloud高成長・SMHトリム資金主振替先・B2 kept）/MSFT低（%タイル18・cheap・bandConfidence high・但し日付触媒なし・イベント週前打診最小・B2格下げ）/DTCR低（%タイル24・cheap/fair境界・bandConfidence low・日付触媒不在+REIT偏重・B2 kept最小）/AMZN保留（%タイル0・cheap_fake・EVフェア・本人保留・B2 kept受動指値）。売り発議：SMH最優先1.5-2割トリム（%タイル77・rich・8/26 PCE+NVIDIA Q2・8/27-29JH前後に実行・B2 kept）/8050.T winner利確1/4（%タイル100・rich・trap一過性益・B2 kept）/9983.T 1/4トリム（%タイル72・rich・急がず・B2 kept）/200A.T条件付き（%タイル50・fair・SMHトリム後半導体12%超なら・B2 kept）。3033.HK監視（%タイル9・cheap・bandConfidence low・藤沢ハンセンロング整合・B2 kept監視）。MFデータstale(asOf=2026-08-22・3日未反映・前日スナップショット継続)。判断ファイル=briefing-judgment-verified.json（B2検証済み・MSFTを中→低格下げ・killなし）。版ID=2026-08-25-0515。] [2026-08-22 段C(Sonnet)書き戻し。土曜(rebuildBands=true)。日経66016(-3.93%/1w・ターム・プレミアム重し)・S&P500 7641(-2.02%/1w・上昇トレンド内の押し)・Nasdaq 26067(-2.75%/1w・半導体ボラ)・ハンセン25698(+1.19%/1w・独歩底堅さ)・TOPIX 4176(-2.84%/1w・1308.T換算)・VIX16.01(+9.43%/1w・警戒感やや上昇も低位)。ドル円159.21（+1.1%/1w・円安継続）。米10年債4.69%(+6bp/1w・6mで+61bp・ジリ高)。7月CPI YoY3.54%・MoM+0.07%（鈍化継続・PCE(8/26)本丸）。スタンス=中立（やや慎重）｜超イベント週前・守りの弾を先に作る。半導体集中11.7%(SMH %ile81・rich)・キャッシュ4.3%（目標12-13%・大幅未達）。買い発議：GOOGL最優先（%タイル0・cheap・bandConfidence high・Q2決算通過・Cloud+82%・SMHトリム資金主振替先）/MSFT中（B2格下げ・pack.watchlist未収載・機械値未裏付け・サイズ抑制）/DTCR低（B2格下げ・日付触媒不在+REIT偏重低bandConfidence）/AMZN保留（B2格下げ・cheap_fake・EVフェア）。売り発議：SMH最優先1.5-2割トリム（%タイル81・rich・8/26 PCE+NVIDIA決算・8/27-29JH前後に実行）/8050.T winner利確1/4（%タイル100・rich・trap）/9983.T 1/4トリム（%タイル77・rich・急がず）/200A.T条件付き（%タイル51・fair・SMHトリム後半導体12%超なら）。3033.HK=B2格下げ（監視のみ・能動買い見送り）。じっちゃま8/19号★：ターム・プレミアム拡大=日本株下落の真因・強気継続・Anthropic IPO期待・半導体鬼門継続。中島8/18号★：AI研究者人材競争=中国台頭。藤沢744号★：SanDisk粗利80%複数年正式発表→キオクシア強気継続。ゆな先生8/9号★：アドバンテスト新規保有・テスト工程戦略部門化・Alphabet最大ポジ。後藤8/8号★：日銀9月利上げ「基本シナリオ候補」格上げ。MFデータ当日鮮度OK(stale=false・2026-08-22)。判断ファイル=briefing-judgment-verified.json（B2検証済み・MSFT中格下げ/DTCR低格下げ/AMZN保留格下げ/3033.HK監視格下げ反映）。土曜バンドレビュー実施・全バンド据置き（bandReview.revised=false）。版ID=2026-08-22-0507。] [2026-08-21 段C(Sonnet)書き戻し。金曜(rebuildBands=false)。日経66217(-3.06%/1w・高値圏の反落)・S&P500 7708(-0.52%/1w・イベント週前の様子見)・Nasdaq 26331(-0.97%/1w・半導体ボラ)・ハンセン25495(+0.22%/1w・-4.53%/6m)・TOPIX 4129(-3.08%/1w・1308.T換算)・VIX14.89(+2.34%/1w・低ボラ安定)。ドル円159.21（+1.06%/1w・円安進行）。米10年債4.65%(-3bp/1w・高止まり)。7月CPI YoY3.54%・MoM+0.07%（高止まり・8/26 PCE本丸）。スタンス=中立（やや守り優位）｜イベント週前にキャッシュ復元。半導体集中12.2%(SMH %ile81・rich)・キャッシュ5.0%（目標12-13%・大幅未達）。買い発議：GOOGL最優先（%タイル0・cheap・bandConfidence high・Q2決算通過・Cloud+82%・SMHトリム資金主振替先）/MSFT最優先（%タイル15・cheap_real・fwd20.5<trail・財務最良・Azure/Copilot触媒）/DTCR低（B2格下げ・日付触媒不在+REIT偏重低bandConfidence）/AMZN低保留（B2格下げ・cheap_fake・EVフェア）。売り発議：SMH最優先1.5-2割トリム（%タイル81・rich・8/26 PCE+NVIDIA・8/27-29JH前後に実行）/8050.T winner利確1/4（%タイル100・rich・trap）/9983.T 1/4トリム（%タイル80・rich・急がず）/200A.T条件付き（%タイル51・fair・SMHトリム後半導体12%超なら）。6016.T=B2killed（触媒なし・低流動・市場の質△）。じっちゃま8/19号★：ターム・プレミアム拡大=日本株下落の真因・強気継続・半導体鬼門継続。中島8/18号★：AI研究者人材競争=中国台頭。藤沢744号★：SanDisk粗利80%複数年正式発表→キオクシア強気継続。ゆな先生8/9号★：アドバンテスト新規保有・テスト工程戦略部門化・Alphabet最大ポジ。後藤8/8号★：日銀9月利上げ「基本シナリオ候補」格上げ。MFデータ当日鮮度OK(stale=false・2026-08-21)。判断ファイル=briefing-judgment-verified.json（B2検証済み・DTCR低格下げ/AMZN低格下げ/6016.T killed反映）。版ID=2026-08-21-0506。] [2026-08-20 段C(Sonnet)書き戻し。木曜(rebuildBands=false)。日経65326(-3.25%/1w・最高値圏から反落)・S&P500 7691(-0.47%/1w・最高値圏で一服)・Nasdaq 26289(-0.59%/1w・AI主導)・ハンセン25471(-0.71%/1w・+3.7%/1m)・TOPIX 4266(+0.92%/1w・1308.T換算)・VIX15.84(+3.66%/1w・低ボラ楽観)。ドル円159.21（+1.06%/1w・円安戻し）。米10年債4.71%(+1bp/1w・+16bp/1m・高止まり)。7月CPI YoY3.54%・MoM+0.07%（鈍化も高止まり）。スタンス=中立（やや守り優位）。半導体集中12.2%(SMH %ile81・rich)・キャッシュ4.9%（目標12-13%・大幅未達）。買い発議：GOOGL最優先（%タイル0・cheap・bandConfidence high・Q2決算通過・Cloud+82%）/MSFT最優先（%タイル16・cheap_real・fwd21<trail）/DTCR中（B2格下げ・日付触媒不在+REIT偏重low band）/AMZN中保留（B2格下げ・cheap_fake・EVフェア）。売り発議：SMH最優先1.5-2割トリム（%タイル81・rich・8/26 PCE・8/27JH前後に実行）/8050.T winner利確1/4（%タイル100・rich・trap）/9983.T 1/4トリム（%タイル77・rich）/200A.T条件付き（%タイル49・fair・SMHトリム後に半導体12%超なら）。6016.T=B2killed（触媒なし・低流動・市場の質△）。じっちゃま8/19号★：ターム・プレミアム拡大=日本株下落の真因（金利が落ち着けば戻る・強気継続）・半導体鬼門継続・9月Anthropic IPO期待。中島8/18号★：AI研究者人材競争=中国台頭（NeurIPS論文47%・R&D総額で中国が米超）。藤沢744号★：SanDisk粗利80%複数年正式発表→キオクシア強気継続。ゆな先生8/9号★：テスト工程戦略部門化・Alphabet最大ポジ。後藤8/8号★：日銀9月利上げ「基本シナリオ候補」格上げ（8/27氷見野副総裁講演が確認材料）。MFデータ当日鮮度OK(stale=false・2026-08-20)。判断ファイル=briefing-judgment-verified.json（B2検証済み・DTCR高→中格下げ/AMZN高→中格下げ/6016.T killed反映）。]PER採点の単一ストア(symbol→valuation)。保有テーブル・ウォッチリスト・Briefingが共有参照。保有∪ウォッチを和集合で1回採点(重複計算なし)。%タイルは概算。PER非該当(金GLDM/銀SLV/債券JPST,SHV)は本ストアに含めず=アプリは'–'表示。 [2026-08-19 段C(Sonnet)書き戻し。水曜(rebuildBands=false)。日経67460(+0.73%/1w・史上最高値圏過熱)・S&P500 7745(-0.10%/1w・最高値圏で一服)・Nasdaq 26644(+0.15%/1w・AI主導)・ハンセン25453(-1.87%/1w・+3.63%/1m)・TOPIX 4311(+1.99%/1w・1308.T換算)・VIX15.19(-1.75%/1w・低ボラ楽観)。ドル円159.21（+1.06%/1w・円安戻し）。米10年債4.72%(±0bp/1w・+17bp/1m・高止まり)。7月CPI YoY3.54%・MoM+0.07%（鈍化も高止まり）。スタンス=中立（やや守り優位）。半導体集中12.2%(SMH %ile89・rich)・キャッシュ4.9%（目標12-13%・大幅未達）。買い発議：GOOGL最優先（%タイル0・cheap・Q2決算通過・Cloud+82%・SMHトリム資金の振替先）/MSFT最優先（%タイル15・cheap_real・fwd21.0<trail）/DTCR中（B2格下げ・日付触媒不在+低バンド信頼）/AMZN中保留（B2格下げ・cheap_fake・EVフェア）。売り発議：SMH最優先1.5-2割トリム（%タイル89・rich・8/26 PCE/NVIDIA・8/27JH前後に実行）/8050.T winner利確1/4（%タイル100・rich・trap）/9983.T 1/4トリム（%タイル81・rich）/200A.T条件付き（%タイル63・fair・SMHトリム後に半導体12%超なら）。6016.T=B2killed（触媒なし・低流動・市場の質△）。じっちゃま8/19号★：ターム・プレミアム拡大=日本株下落の真因（金利が落ち着けば戻る・強気継続）・半導体鬼門継続・9月Anthropic IPO期待。中島8/18号★：AI研究者人材競争=中国台頭（NeurIPS論文47%・R&D総額で中国が米超）。藤沢744号★：SanDisk粗利80%複数年正式発表→キオクシア強気継続。ゆな先生8/9号★：テスト工程戦略部門化・Alphabet最大ポジ。後藤8/8号★：日銀9月利上げ「基本シナリオ候補」格上げ（8/27氷見野副総裁講演が確認材料）。MFデータ当日鮮度OK(stale=false・2026-08-19)。判断ファイル=briefing-judgment-verified.json（B2検証済み・DTCR高→中格下げ/AMZN高→中格下げ/6016.T killed反映）。] [2026-08-18 段C(Sonnet)書き戻し。火曜(rebuildBands=false)。日経69220(+3.36%/1w・史上最高値圏過熱)・S&P500 7786(+0.36%/1w・最高値圏)・Nasdaq 26729(+0.14%/1w・AI主導)・ハンセン25117(-2.15%/1w・+1.77%/1m)・TOPIX 4311(+1.99%/1w・1308.T換算)・VIX14.25(-9.06%/1m・低ボラ楽観)。ドル円157.54（-3.15%/1m・円高進行）。米10年債4.68%(+13bp/1m・高止まり)。7月CPI YoY3.54%・MoM+0.07%（鈍化・利下げ余地限定）。スタンス=中立〜やや強気（過熱を利確に回す局面）。半導体集中12.4%(SMH %ile89・rich昇格)・キャッシュ4.9%（目標12-13%・大幅未達）。買い発議：GOOGL最優先（%タイル0・cheap・Q2決算通過・Cloud+82%・SMHトリム資金の振替先）/MSFT最優先（%タイル15・cheap_real・fwd21.0<trail）/DTCR高優先小口分割（%タイル31・cheap・bandConfidence low）/AMZN低（保留中・B2格下げ・cheap_fake）。売り発議：SMH最優先1.5-2割トリム（%タイル89・rich昇格・FOMC議事録8/19前後に実行）/8050.T winner利確1/4（%タイル100・rich・trap）/9983.T 1/4トリム低（%タイル81・rich・B2格下げ）/200A.T条件付き（%タイル63・fair・SMHトリム後に半導体12%超なら）。じっちゃま8/16号★：「目先は上を予想」・Anthropic IPO期待・半導体鬼門継続。中島8/11号★：Cerebras×OpenAI $20B超大型契約。藤沢743号★：メモリ半導体歴史的ミスプライス・DRAM2027逼迫。ゆな先生8/9号★：テスト工程戦略部門化・Alphabet最大ポジ。後藤8/8号★：日銀9月利上げ「基本シナリオ候補」格上げ。MFデータ当日鮮度OK(stale=false・2026-08-18)。判断ファイル=briefing-judgment-verified.json（B2検証済み・AMZN格下げ/6016.T killed/9983.T格下げ反映）。] [2026-08-17 段C(Sonnet)書き戻し。月曜(rebuildBands=false)。日経68714(+4.74%/1w・史上最高値圏過熱)・S&P500 7786(+0.36%/1w・最高値圏)・Nasdaq 26729(+0.14%/1w・AI主導)・ハンセン25117(-2.15%/1w・+1.77%/1m)・TOPIX 4317(+3.03%/1w・1308.T換算)・VIX14.63(-3.43%/1w・低ボラ楽観)。ドル円157.54（-3.15%/1m・円高進行）。米10年債4.63%(-6bp/1w・高止まり)。7月CPI YoY3.54%・MoM+0.07%（鈍化・利下げ余地限定）。スタンス=中立〜やや強気（過熱を利確に回す局面）。半導体集中12.5%(SMH %ile88・rich)・キャッシュ4.9%（目標12-13%・大幅未達）。買い発議：GOOGL最優先（%タイル0・cheap・Q2決算通過・Cloud+82%・SMHトリム資金の振替先）/MSFT最優先（%タイル20・cheap_real・fwd21.0<trail）/DTCR高優先小口分割（%タイル31・cheap・bandConfidence low）/AMZN中保留（%タイル0・cheap_fake・B2格下げ）。売り発議：SMH最優先1.5-2割トリム（%タイル88・rich・FOMC議事録8/19前後に実行）/8050.T winner利確1/4（%タイル100・rich・trap）/9983.T 1/4トリム（%タイル82・rich）/200A.T条件付き（%タイル57・fair・SMHトリム後に半導体12%超なら）。じっちゃま8/16号★：「目先は上を予想」・Anthropic IPO期待・半導体鬼門継続。中島8/11号★：Cerebras×OpenAI $20B超大型契約。藤沢743号★：メモリ半導体歴史的ミスプライス・DRAM2027逼迫。ゆな先生8/9号★：テスト工程戦略部門化・Alphabet最大ポジ。後藤8/8号★：日銀9月利上げ「基本シナリオ候補」格上げ。MFデータ当日鮮度OK(stale=false・2026-08-17)。判断ファイル=briefing-judgment-verified.json（B2検証済み・AMZN格下げ/6016.T格下げ反映）。] [2026-08-16 段C(Sonnet)書き戻し。日曜(rebuildBands=false)。日経68714(+4.74%/1w・史上最高値圏過熱)・S&P500 7786(+0.36%/1w・最高値圏)・Nasdaq 26729(+0.14%/1w・AI主導)・ハンセン25117(-2.15%/1w・+1.77%/1m)・TOPIX 4317(+3.03%/1w・1308.T換算)・VIX14.63(-3.43%/1w・低ボラ楽観)。ドル円157.54（-3.15%/1m・円高進行）。米10年債4.63%(-6bp/1w・高止まり)。7月CPI YoY3.54%・MoM+0.07%（鈍化・利下げ余地限定）。スタンス=中立〜やや強気（過熱を利確に回す局面）。半導体集中12.2%(SMH %ile88・rich)・キャッシュ5.4%（目標12-13%・大幅未達）。買い発議：GOOGL最優先（%タイル0・cheap・Q2決算通過・Cloud+82%・SMHトリム資金の振替先）/MSFT最優先（%タイル20・cheap_real・fwd21.0<trail）/DTCR高優先小口分割（%タイル31・cheap・bandConfidence low）/AMZN高保留（%タイル0・cheap・保留中）。売り発議：SMH最優先1.5-2割トリム（%タイル88・rich・FOMC議事録8/19前後に実行）/8050.T winner利確1/4（%タイル100・rich・trap）/9983.T 1/4トリム（%タイル82・rich）/200A.T条件付き（%タイル57・fair・SMHトリム後に半導体12%超なら）。じっちゃま8/16号★：「目先は上を予想」・Anthropic IPO期待・半導体鬼門継続。中島8/11号★：Cerebras×OpenAI $20B超大型契約。藤沢743号★：メモリ半導体歴史的ミスプライス・DRAM2027逼迫。ゆな先生8/9号★：テスト工程戦略部門化・Alphabet最大ポジ。後藤8/8号★：日銀9月利上げ「基本シナリオ候補」格上げ。MFデータ当日鮮度OK(stale=false・2026-08-16)。KVresync=段Aで2銘柄同期済(kvResyncA ok・drift=2)。判断ファイル=briefing-judgment.json（B2未生成・B生判断使用）。] [2026-08-15 段C(Sonnet)書き戻し。土曜(rebuildBands=true)。日経68714(+4.74%/1w・史上最高値圏過熱)・S&P500 7799(+1.15%/1w・史上最高値圏更新)・Nasdaq 26803(+1.73%/1w・AI推論相場)・ハンセン25397(-0.52%/1w・+4.34%/1m)・TOPIX 4298(+3.00%/1w・1308.T換算)・VIX14.63(-3.43%/1w・年内最低圏楽観)。ドル円157.54（-1.02%/1w・円先高観じわり）。米10年債4.63%(-6bp/1w・高止まり)。7月CPI YoY3.54%・MoM+0.07%（高止まり・利下げ急がず）。スタンス=中立（強気の内訳・守り優先）。半導体集中12.6%(SMH %ile88・rich)・キャッシュ5.4%（目標12-13%・大幅未達）。買い発議：GOOGL最優先（%タイル0・cheap・Q2決算通過・Cloud+82%・SMHトリム資金の振替先）/MSFT最優先（%タイル20・cheap_real・fwd21.0<trail）/DTCR高優先小口分割（%タイル31・cheap・bandConfidence low）/AMZN高保留（%タイル0・cheap・保留中）。売り発議：SMH最優先1.5-2割トリム（%タイル88・rich・FOMC議事録8/20前後に実行）/8050.T winner利確1/4（%タイル100・rich・trap）/9983.T 1/4トリム（%タイル82・rich）/200A.T条件付き（%タイル57・fair・SMHトリム後に半導体12%超なら）。土曜バンドレビュー(rebuildBands=true)実施。中島8/11号★：Cerebras×OpenAI $20B超大型契約。藤沢743号★：メモリ半導体歴史的ミスプライス・DRAM2027逼迫。ゆな先生8/9号★：テスト工程戦略部門化・Alphabet最大ポジ。後藤8/8号★：日銀9月利上げ「基本シナリオ候補」格上げ。MFデータ当日鮮度OK(stale=false・2026-08-15)。KVresync=段Aで15銘柄同期済(kvResyncA ok)。判断ファイル=briefing-judgment.json（B2未生成・B生判断使用）。] [2026-08-14 段C(Sonnet)書き戻し。木曜(rebuildBands=false)。日経68308(+4.00%/1w・史上最高値圏過熱)・S&P500 7748(+0.32%/1w・最高値圏で一服)・Nasdaq 26588(+0.85%/1w・AI主導)・ハンセン25440(-1.84%/1w・+5.07%/1m)・TOPIX 4260(+2.38%/1w・1308.T換算)・VIX14.55(-7.97%/1w・低ボラ楽観)。ドル円157.54（-1.02%/1w・円やや戻す）。米10年債4.68%(+5bp/1w・高止まり)。7月CPI YoY3.54%・MoM+0.07%（CPI無風通過）。スタンス=中立（やや守り優位・FOMC議事録8/20・ジャクソンホール8/21-22前は防御余力確保）。半導体集中12.1%(SMH %ile88・rich)・キャッシュ4.9%（目標12-13%・大幅未達）。買い発議：GOOGL最優先（%タイル0・cheap・Q2決算通過・Cloud+82%・SMHトリム資金の振替先）/MSFT最優先（%タイル20・cheap_real・fwd20.5<trail）/DTCR高優先小口分割（%タイル30・cheap・bandConfidence low）/AMZN高保留（%タイル0・cheap・保留中）。売り発議：SMH最優先1.5-2割トリム（%タイル88・rich・FOMC議事録8/20前後に実行）/8050.T winner利確1/4（%タイル100・rich・trap）/9983.T 1/4トリム（%タイル82・rich）/200A.T条件付き（%タイル56・fair・SMHトリム後に半導体12%超なら）。中島8/11号★：Cerebras×OpenAI $20B超大型契約。藤沢743号★：メモリ半導体の需給整理・歴史的ミスプライス。ゆな先生8/9号★：テスト工程戦略部門化。後藤8/8号★：日銀9月利上げ「基本シナリオ候補」格上げ。MFデータ当日鮮度OK(stale=false・2026-08-14)。判断ファイル=briefing-judgment.json（B2未生成・B生判断使用）。] [2026-08-13 段C(Sonnet)書き戻し。木曜(rebuildBands=false)。日経67524(+1.85%/1w・史上最高値圏過熱)・S&P500 7728(-0.11%/1w・最高値圏で一服)・Nasdaq 26445(-0.52%/1w・AI主導)・ハンセン25653(-0.77%/1w・+6.11%/1m)・TOPIX 4260(+2.38%/1w・1308.T換算)・VIX15.28(-7.39%/1w・低ボラ楽観)。ドル円157.54（-1.02%/1w・円やや戻す）。米10年債4.70%(+7bp/1w・+14bp/1m・高止まり)。7月CPI YoY3.54%・MoM+0.07%（CPI無風通過）。スタンス=中立（やや守り優位・FOMC議事録/ジャクソンホール待ち）・守りを固め押し目の質を買う。半導体集中12.3%(SMH %ile87・rich)・キャッシュ5.5%（目標12-13%・大幅未達）。買い発議：GOOGL最優先（%タイル0・cheap・Q2決算通過・Cloud+82%・SMHトリム資金の振替先）/MSFT最優先（%タイル19・cheap_real・fwd20.9<trail）/DTCR高優先小口分割（%タイル28・cheap・bandConfidence low）/AMZN高保留（%タイル0・cheap・保留中）。売り発議：SMH最優先1.5-2割トリム（%タイル87・rich・FOMC議事録8/19前後に実行）/8050.T winner利確1/4（%タイル100・rich・trap）/9983.T 1/4トリム（%タイル84・rich）/200A.T条件付き（%タイル53・fair・SMHトリム後に半導体12%超なら）。中島8/11号★：Cerebras×OpenAI $20B超大型契約。藤沢743号★：メモリ半導体の需給整理・歴史的ミスプライス。ゆな先生8/9号★：アドバンテスト新規保有・テスト工程戦略部門化。後藤8/8号★：日銀9月利上げ「基本シナリオ候補」格上げ。MFデータ当日鮮度OK(stale=false・2026-08-13)。判断ファイル=briefing-judgment.json（B2未生成・B生判断使用）。] [2026-08-12 段C(Sonnet)書き戻し。水曜(rebuildBands=false)。日経66970(+5.04%/1w・史上最高値圏過熱)・S&P500 7753(+2.01%/1w・史上最高値圏)・Nasdaq 26605(+2.67%/1w・AI主導堅調)・ハンセン25937(-0.28%/1w・+7.29%/1m)・TOPIX 4227(+3.99%/1w・1308.T換算)・VIX15.46(-2.52%/1w・低ボラ楽観)。ドル円157.54（-1.02%/1w・円やや戻す）。米10年債4.72%(+2bp/1w・+16bp/1m・高止まり)。スタンス=中立（やや守り優位・CPI待ち）・8/12 CPI前はキャッシュ復元・過熱トリム優先。半導体集中11.8%(SMH %ile84・rich)・キャッシュ5.3%（目標12-13%・大幅未達）。買い発議：GOOGL最優先（%タイル0・cheap・Q2決算通過・8/12 CPI前に第1弾）/MSFT最優先（%タイル22・cheap_real）/DTCR高優先小口分割（%タイル24・cheap・bandConfidence low）/AMZN高保留（%タイル0・cheap・保留中）。売り発議：SMH最優先1.5-2割トリム（%タイル84・rich・8/12 CPI前に実行）/8050.T winner利確1/4（%タイル100・rich・trap）/9983.T 1/4トリム（%タイル85・rich）/200A.T条件付き（%タイル44・fair・半導体11%超なら）。中島8/11号★：Cerebras×OpenAI $20B超大型契約。藤沢743号★：メモリ半導体の需給整理・歴史的ミスプライス。ゆな先生8/9号★：アドバンテスト新規保有・テスト工程戦略部門化。後藤8/8号★：日銀9月利上げ「基本シナリオ候補」格上げ。MFデータ当日鮮度OK(stale=false・2026-08-12)。判断ファイル=briefing-judgment.json（B2未生成・B生判断使用）。] [2026-08-11 段C(Sonnet)書き戻し。火曜(rebuildBands=false)。日経66970(+5.04%/1w・-2.32%/1m・史上最高値圏過熱)・S&P500 7758(+3.58%/1w・史上最高値圏)・Nasdaq 26691(+5.19%/1w・AI主導最強)・ハンセン25668(-0.84%/1w・+6.07%/1m)・TOPIX 4227(+3.99%/1w・1308.T換算)・VIX14.9(-6.82%/1w・低ボラ安定)。ドル円157.54（-1.02%/1w・FIMA協調介入で円高転換）。米10年債4.65%(-10bp/1w・+9bp/1m・高止まり)。スタンス=中立（やや守り優位）・8/12 CPI前はキャッシュ復元・過熱トリム優先。半導体集中11.9%(SMH %ile83・rich)・キャッシュ5.3%（目標12-13%・大幅未達）。買い発議：GOOGL最優先（%タイル0・cheap・Q2決算通過・Cloud+82%・8/12 CPI前に第1弾）/MSFT最優先（%タイル23・cheap_real・fwd20.5<trail）/DTCR高優先小口分割（%タイル24・cheap・bandConfidence low）/AMZN高保留（%タイル0・cheap・保留中）。売り発議：SMH最優先1.5-2割トリム（%タイル83・rich・8/12 CPI前に実行）/8050.T winner利確1/4（%タイル100・rich・trap）/9983.T 1/4トリム（%タイル85・rich）/200A.T条件付き（%タイル44・fair・半導体11%超なら）。後藤8/8号★：日銀9月利上げ観測が「基本シナリオ候補」へ格上げ。ゆな先生8/9号★：アドバンテスト新規保有・半導体テスト工程戦略部門化。MFデータ当日鮮度OK(stale=false・2026-08-11)。KV noop（既に同期済み・drift=0）。判断ファイル=briefing-judgment.json（B2未生成・B生判断使用）。] [2026-06-18 バンドをTTM(Yahoo trailingPE)基準で全面再構築。日次はwatchlist-per.mjsがYahoo trailingPEで%タイル/status自動更新。ETF/シクリカル/新規上場はconfidence低・bandNote参照] [2026-06-19 個別株9銘柄に quality/momentum/value拡張(FCF利回り・還元) を追加。wacc仮置き米8/日6。qScore=Piotroski。8050/6301はAltman Zグレーゾーン注意。] [2026-06-27 土曜バンドレビュー実施・据え置き(Opus判断)。sellProposal/buyProposalを段B判断で更新。] [2026-06-30 段B(Opus)判断でsellProposal/buyProposal更新。SMH最優先トリム・MSFT/DTCR/AMZN買い発議。] [2026-07-01〜2026-07-31 段C(Sonnet)書き戻し累積。詳細は旧note参照。] [2026-08-01 段C(Sonnet)書き戻し。土曜バンドレビュー(rebuildBands=true)・据置き(Opus判断)。] [2026-08-02 段C(Sonnet)書き戻し。日曜(rebuildBands=false)。] [2026-08-03 段C(Sonnet)書き戻し。月曜(rebuildBands=false)。スタンス=中立（選別・守り優位＝押し目の質を買い、過熱をトリム）。7月NFP+187K通過済み・8/7次回NFP(予想+91K)・8/12 CPI待ち。半導体11.7%・キャッシュ7.7%（目標12-13%未達）。] [2026-08-04 段C(Sonnet)書き戻し。火曜(rebuildBands=false)。] [2026-08-05 段C(Sonnet)書き戻し。水曜(rebuildBands=false)。SMH fair→rich昇格(%タイル71)・半導体集中11.8%。] [2026-08-06 段C(Sonnet)書き戻し。木曜(rebuildBands=false)。日経66300(+7.92%/1w・-4.93%/1m・リバ強・最高値圏)・S&P500 7737(+4.14%/1w・史上最高値圏)・ハンセン25853(+2.14%/1w・+10.72%/1m)・TOPIX 4161(+1.56%/1w・1308.T換算)・VIX16.5(-9.39%/1w・低位楽観)。ドル円159.16（FIMA協調介入で円高転換-2.78%/1w）。米10年債4.63%(+2bp/1w・+14bp/1m・高止まり)。スタンス=中立（割安AIコアを段階仕込み・イベント前は守り優先）。半導体集中12.1%(SMH %ile70・rich)・キャッシュ7.4%（目標12-13%未達）。買い発議：GOOGL最優先（%タイル1・cheap・Q2決算通過・Cloud+82%・8/12 CPI前に第1弾）/MSFT最優先（%タイル11・cheap_real・fwd20.8<trail）/DTCR高優先小口分割（%タイル11・cheap・bandConfidence low）/AMZN高保留（%タイル0・cheap・保留中）。売り発議：SMH最優先1.5-2割トリム（%タイル70・rich・半導体12.1%集中削減＋キャッシュ→12-13%復元・8/7 NFP通過後実行）/8050.T winner利確1/4（%タイル100・rich・trap一過性益）/9983.T 1/4トリム（%タイル81・rich）/200A.T条件付き5-10%トリム（%タイル50・fair・SMH後半導体11%超なら）。じっちゃま8/5号：バフェット・インディケーター230%危険域・グローバルリバランス論。藤沢742号：キオクシア年末21万円・AI革命2-3年継続。中島8/4号：Broadcomオートクチュール・LPDDR5X争奪戦。MFデータ当日鮮度OK(stale=false・2026-08-06)。判断ファイル=briefing-judgment.json（B2未生成・B生判断使用）。] [2026-08-07 段C(Sonnet)書き戻し。金曜(rebuildBands=false)。日経65683(+6.17%/1w・-3.77%/1m・最高値圏過熱)・S&P500 7724(+5.57%/1w・史上最高値圏)・Nasdaq 26363(+7.86%/1w・AI主導急伸)・ハンセン25916(+0.42%/1w・+9.74%/1m)・TOPIX 4173(+2.38%/1w・1308.T換算)・VIX15.81(-23.48%/1w・恐怖後退楽観)。ドル円159.16（FIMA協調介入・円高-2.78%/1w）。米10年債4.63%(-4bp/1w・+15bp/1m・高止まり)。スタンス=中立ややディフェンシブ（過熱リフレ相場でキャッシュ復元・利確優先）。SMH PER36.88→40.54(%タイル70→83・一段過熱)・ASHR rich→fair格下げ。半導体集中12.0%・キャッシュ5.6%（目標12-13%・大幅未達）。買い発議：GOOGL最優先（%タイル0・cheap・8/12 CPI前に第1弾）/MSFT高優先（%タイル21・cheap_real・fwd21.3<trail）/DTCR高優先小口分割（%タイル24・cheap・bandConfidence low）/AMZN高保留（%タイル0・cheap・保留中）。売り発議：SMH最優先1.5-2割トリム（%タイル83・rich・NFP通過後実行）/8050.T winner利確1/4（%タイル100・rich・trap）/9983.T 1/4トリム（%タイル87・rich）/200A.T条件付き（%タイル44・fair・半導体11%超なら）。MFデータ当日鮮度OK(stale=false・2026-08-07)。kvResyncA=15銘柄同期済み。判断ファイル=briefing-judgment.json（B2未生成・B生判断使用）。] [2026-08-08 段C(Sonnet)書き戻し。土曜(rebuildBands=true)。日経65607(+1.93%/1w・-1.81%/1m・最高値圏)・S&P500 7710(+3.66%/1w・史上最高値圏)・Nasdaq 26348(+4.88%/1w・AI主導急伸)・ハンセン25530(-1.27%/1w・+8.65%/1m)・TOPIX 4190(+1.70%/1w・1308.T換算)・VIX15.15(-11.35%/1w・低位楽観)。ドル円159.16（FIMA協調介入・円高-2.78%/1w）。米10年債4.69%(+1bp/1w・+14bp/1m・高止まり)。スタンス=中立（やや守り優位）・リフレ相場で株は過熱・8/12 CPI前はキャッシュ復元優先。半導体集中11.8%(SMH %ile86・rich)・キャッシュ5.6%（目標12-13%・大幅未達）。買い発議：GOOGL最優先（%タイル0・cheap・Q2決算通過・Cloud+82%・8/12 CPI前に第1弾）/MSFT最優先（%タイル22・cheap_real・fwd20.5<trail）/DTCR高優先小口分割（%タイル26・cheap・bandConfidence low）/AMZN高保留（%タイル0・cheap・保留中）。売り発議：SMH最優先1.5-2割トリム（%タイル86・rich・8/7 NFP通過後実行）/8050.T winner利確1/4（%タイル100・rich・trap）/9983.T 1/4トリム（%タイル86・rich）/200A.T条件付き（%タイル42・fair・半導体11%超なら）。MFデータ当日鮮度OK(stale=false・2026-08-08)。土曜バンドレビュー=据置き（Opus段B判断・bandReview.decision=据え置き）。判断ファイル=briefing-judgment.json（B2未生成・B生判断使用）。] [2026-08-10 段C(Sonnet)書き戻し。月曜(rebuildBands=false)。日経65607(+1.93%/1w・-1.81%/1m・最高値圏)・S&P500 7758(+3.58%/1w・史上最高値圏)・Nasdaq 26691(+5.19%/1w・AI主導最強)・ハンセン25668(-0.84%/1w・+6.07%/1m)・TOPIX 4190(+1.70%/1w・1308.T換算)・VIX15.15(-11.35%/1w・低位楽観)。ドル円159.16（FIMA協調介入・円高-2.78%/1w）。米10年債4.69%(+1bp/1w・+14bp/1m・高止まり)。スタンス=中立（やや強気）守りを固めて押し目を拾う。NFP -23K（9月FOMC利上げ見送り織り込み）。半導体集中11.9%(SMH %ile86・rich)・キャッシュ5.6%（目標12-13%・大幅未達）。買い発議：GOOGL最優先（%タイル0・cheap・Q2決算通過・Cloud+82%・8/12 CPI前に第1弾）/MSFT最優先（%タイル21・cheap_real・fwd21.3<trail）/DTCR高優先小口分割（%タイル26・cheap・bandConfidence low）/AMZN高保留（%タイル0・cheap・保留中）。売り発議：SMH最優先1.5-2割トリム（%タイル86・rich・8/12 CPI前に実行）/8050.T winner利確1/4（%タイル100・rich・trap）/9983.T 1/4トリム（%タイル87・rich）/200A.T条件付き（%タイル42・fair・半導体11%超なら）。ゆな先生8/9号★：アドバンテスト新規保有・半導体テスト工程戦略部門化。MFデータ当日鮮度OK(stale=false・2026-08-10)。kvResyncA=16銘柄同期済みread-back検証OK（段A）。判断ファイル=briefing-judgment.json（B2未生成・B生判断使用）。]",
+  "updated": "2026-10-04-0511",
+  "asOf": "2026-10-04",
+  "note": " [2026-10-04 段C(Sonnet)書き戻し。日曜(rebuildBands=false・バンド固定・変更0件)。日経68309.46(+2.93%/1w)・S&P500 7722.72(-0.27%/1w)・Nasdaq 27190.86(+0.45%/1w)・ハンセン23972(-2.19%/1w・^HSI)・TOPIX 4247(-0.07%/1w・1308.T換算)・VIX16.39(+4.59%/1w)。ドル円157.18(9/25)・米10年債5.24%(10/1・+6bp/1w・+45bp/1m)・8月CPI YoY3.71%・MoM+0.4%。スタンス=🔴弱気寄り中立（据置）。保有=MF asOf 2026-10-02（stale 2日・自動取込が2日停止中）・投資用キャッシュ8.36%（暫定・10/2のGLDM売却/JPST買い未反映の可能性）。PER=前日値（perFresh=false・Actions当日分なし）＝PER系フィールドは変更なし。B2検証後＝Claude発の新規売買発議0件。残る売買項目はすべて本人10/2〜10/3決定の注文の追跡（SLV/REMX/MP全量退出GTC・買い1段目7本計$142,130・JPST960株売却）。前号(10/3 13:56)の自動発議（8050.T 1/4利確・SMH 1.5割トリム・1629.T 1/6・1615.T条件付き・TSLA条件付き・GOOGL第1弾$15K・MSFT打診・AMZN保留）は本人10/2〜10/3決定と逆向き／重複のため撤回・本人指値へ統合。1629.T/1615.Tの条件付きトリムはB2 killed（japan_theme cap13%超過は論点提起のみ）、REMXは最優先→高に downgraded。書戻し範囲=note/buyProposal/sellProposalのみ（39銘柄中、変更あり銘柄のみ更新）。判断ファイル=briefing-judgment-verified.json（B2検証済み・verifiedBy:opus-b2・verifiedAt:2026-10-04T05:26:53+08:00・actions kept=5/downgraded=2/killed=4）。版ID=2026-10-04-0511。] [2026-10-03 段C(Sonnet)書き戻し。土曜(rebuildBands=true・バンド見直し実施＝数値バンド変更0件・メタ変更4件・保有表記訂正3件)。日経68309.46(+2.93%/1w)・S&P500 7722.72(-0.27%/1w)・Nasdaq 27190.86(+0.45%/1w)・ハンセン23972(-2.19%/1w・^HSI)・TOPIX 4247(-0.07%/1w・1308.T換算)・VIX16.39(+4.59%/1w)。ドル円157.18(9/25)・米10年債5.24%(10/1・+6bp/1w・+45bp/1m)・8月CPI YoY3.71%・MoM+0.4%。スタンス=🔴弱気寄り中立（守り優先・現金復元と日本テーマ集中の同時解消）。保有=MF asOf 2026-10-02（stale 1日）・投資用キャッシュ8.36%（目標12-13%）・半導体(SMH+200A)10.16%（cap10%・前号10.84%はCIBR込みの誤算）・japan_theme 17.16%（cap13%・+4.16pt）。訂正：AAPL/TSLA/XLEの『非保有』誤記→保有(¥8.66M/¥6.99M/¥8.24M)・GOOGL bandConfidence high→med（TTM PERに持分評価益混入の疑い）・VT/VEA med→low（Yahoo算定替えの疑い）・PANW needsManual→true。売り発議(B2)：8050.T 1/4利確(最優先・japan_theme是正)/SMH 1.5割トリム(高)/1629.T 1/6トリム(中)/TSLA 1/4条件付き予備(低・downgraded)/1615.T 条件付き1/6(日銀10/30通過後・低)。AAPL 1/4トリムはkilled（触媒なし・cap内・品質最上位）。買い発議：GOOGL 第1弾$15K(中・downgraded・コア売り①〜③約定かつ買付後も現金≥10%・FOMC議事要旨通過後)/MSFT低(現金12%回復後)/SHLD監視のみ(downgraded)/6016.T弱/AMZN保留(指値$237.5・執行しない)。KV自己修復(段A)11銘柄同期済み。判断ファイル=briefing-judgment-verified.json（B2検証済み・verifiedBy:opus-b2・verifiedAt:2026-10-03T14:16:00+08:00・actions kept=8/downgraded=2/killed=1）。版ID=2026-10-03-1356。] [2026-09-15 段C(Sonnet)書き戻し。火曜(rebuildBands=false)。日経63492.99(-4.38%/1w・急落・調整局面入り)・S&P500 7656.98(-0.80%/1w・高値圏頭打ち)・Nasdaq 26333.04(-0.66%/1w・AI不透明感)・ハンセン24805.63(-3.30%/1w・^HSI)・TOPIX 4149(-1.82%/1w・1308.T換算・日銀利上げ警戒)・VIX15.84(+9.02%/1w・警戒上昇も低位)。ドル円153.71(-1.54%/1w・円高進行)。米10年債4.96%(+18bp/1w・じっちゃま警戒線突破・予想5.00%へ)。8月CPI YoY3.71%・MoM+0.40%（粘着・利上げ根拠続く）。スタンス=🔴弱気寄り中立（守り優先・現金復元最優先）（9/15-16 FOMC利上げ87%→9/17-18 日銀利上げ63%・ダブル政策決定週）。半導体集中12.1%(SMH/200A/CIBR)・投資用キャッシュ4.6%（目標12-13%・大幅未達）・MFデータ当日鮮度OK(stale=false・asOf=2026-09-15)。売り発議：SMH最優先1.5-2割トリム（%タイル70・rich・9/15-16 FOMC利上げ87%+10年債4.96%+9/13 AIブーム前提崩壊・集中低減+キャッシュ復元主原資・B2 kept）/8050.T winner利確1/4（%タイル100・rich・日銀利上げ×円高×過熱三重リスク・B2 kept）/1615.T据置（%タイル100だが銀行ETF=利上げ受益で触媒自壊・B2 downgraded・条件付き第三順位のみ）/200A.T据置（%タイル42・fair・SMHトリム後半導体12%超時のみ・B2 downgraded）。買い発議：GOOGL最優先段階仕込み（%タイル0・cheap・bandConfidence high・Anthropicランレート受益・TPU地主・ゆな/中島最大テーゼ・B2 kept）/MSFT低・現金復元後（%タイル23・cheap_real・bandConfidence high・日付触媒不在・B2 downgraded）/AMZN保留（%タイル0・cheap_fake・EVフェア・受動監視のみ・B2 kept）。じっちゃま9/14★（最新・弱気転換）：全方位売り・10年債5.00%予想・9/13 AIブーム大事件・Anthropic IPO 9月断念。後藤8/11★(cached)・中島9/9★(cached)・ゆな9/8★(cached)・藤沢9/8★(cached)。判断ファイル=briefing-judgment-verified.json（B2検証済み・verifiedBy:opus-b2・verifiedAt:2026-09-15・kept=5・downgraded=3・killed=0）。版ID=2026-09-15-0505。] [2026-09-14 段C(Sonnet)書き戻し。月曜(rebuildBands=false)。日経63492.99(-4.38%/1w・急落・調整局面入り)・S&P500 7656.98(-0.80%/1w・高値圏頭打ち)・Nasdaq 26333.04(-0.66%/1w・AI不透明感)・ハンセン24917.6(-1.95%/1w・^HSI)・TOPIX 4176(-1.63%/1w・1308.T換算・日銀利上げ警戒)・VIX15.84(+9.02%/1w・警戒上昇も低位)。ドル円156.11(-2.41%/1w・円高進行)。米10年債4.95%(+18bp/1w・じっちゃま警戒線突破・警戒線5.00%へ引上げ)。8月CPI YoY3.71%・MoM+0.40%（粘着・利上げ根拠続く）。スタンス=🔴弱気・守り最優先（政策トリプルヘッダー前にキャッシュ復元）（9/16 FOMC利上げ87%→9/17-18 日銀利上げ基本シナリオ候補）。半導体集中12.0%(SMH/200A/CBRS)・投資用キャッシュ4.5%（目標12-13%・大幅未達）・MFデータstale5日(asOf=2026-09-09)。売り発議：SMH最優先1.5-2割トリム（%タイル71・rich・9/16 FOMC利上げ87%+10年債4.95%+9/13 AIブーム前提崩壊・集中低減+キャッシュ復元主原資・B2 kept）/8050.T winner利確1/4（%タイル100・rich・日銀利上げ×円高×過熱三重リスク・B2 kept）/1615.T killed（%タイル100・rich・銀行ETF=利上げ受益で触媒自壊・B2 killed・段Cは描画なし）/200A.T条件付き二段目（%タイル55・fair・SMHトリム後半導体>12%時のみ・B2 downgraded）。買い発議：GOOGL最優先段階仕込み（%タイル0・cheap・bandConfidence high・Anthropicランレート受益・TPU地主・ゆな/中島最大テーゼ・B2 kept）/MSFT最低・現金復元後（%タイル25・cheap_real・bandConfidence high・日付触媒不在・B2 downgraded）/AMZN保留（%タイル0・cheap_fake・EVフェア・受動監視のみ・B2 kept）/3033.HK監視（%タイル7・cheap・bandConfidence low・能動買い見送り・B2 kept）。MFデータstale5日(asOf=2026-09-09)・前回スナップショット継続使用。じっちゃま9/14★（最新・弱気転換）：全方位売り・10年債5.00%予想・9/13 AIブーム大事件・Anthropic IPO断念。後藤8/11★(cached)。中島9/9★(cached)。ゆな9/8★(cached)。藤沢9/8★(cached)。判断ファイル=briefing-judgment-verified.json（B2検証済み・verifiedBy:opus-b2・verifiedAt:2026-09-14・kept=5・downgraded=2・killed=1 1615.T）。版ID=2026-09-14-2229。] [2026-09-08 段C(Sonnet)書き戻し。火曜(rebuildBands=false)。日経66399.84(+0.13%/1w・史上最高値圏)・S&P500 7718.60(+0.09%/1w・最高値圏・足踏み)・Nasdaq 26506.99(+0.40%/1w・AI主導)・ハンセン25650.87(+0.26%/1w・^HSI)・TOPIX 4245(-0.61%/1w・1308.T換算)・VIX14.32(-1.31%/1w・材料前の低ボラ凪)。ドル円159.97(+0.67%/1w・-2.37%/1m・円安→152割れ警戒)。米10年債4.77%(+10bp/1w・警戒線4.75%上抜け・6m+64bp)。7月CPI YoY3.54%・MoM+0.07%（粘着高止まり・次回8月CPI 9/11）。スタンス=🟡中立ディフェンシブ（政策三連発前は防御優先・現金復元を最優先）（9/11 CPI→9/16 FOMC→9/17-18 日銀）。半導体集中12.4%(SMH/200A/CIBR/285A.T)・投資用キャッシュ4.4%（目標12-13%・大幅未達）。売り発議：SMH最優先1.5-2割トリム（%タイル77・rich・10年債4.77%上抜け＋FOMC 9/16前防御・集中低減＋キャッシュ復元の主原資・B2 kept）/8050.T winner利確1/4（%タイル100・rich・一過性益疑惑・日銀利上げ×円高×過熱三重リスク・B2 kept）/1615.T条件付き補助（%タイル100・rich・B2 downgraded・低・SMH/8050執行後もキャッシュ12%未達なら第三順位・銀行ETF利上げ受益と内在矛盾ゆえ完全条件付き）/200A.T条件付き二段目（%タイル55・fair・B2 downgraded・SMHトリム後半導体12%超なら・単独割高根拠なし）。買い発議：GOOGL最優先（%タイル0・cheap・bandConfidence high・Anthropicランレート受益・TPU地主・ゆな/中島最大テーゼ・SMHトリム資金主振替先・B2 kept）/MSFT小さめ打診（%タイル21・cheap_real・bandConfidence high・日付触媒不在・現金復元後に限定・B2 downgraded）/AMZN保留（%タイル0・cheap_fake・EVフェア・受動監視のみ・B2 kept）/3033.HK監視（%タイル8・cheap・bandConfidence low・藤沢ハンセンロング整合・能動見送り・B2 kept）。MFデータ当日鮮度OK(stale=false・asOf=2026-09-08)。じっちゃま9/8再要約★（最新）：ドル円154.20に下落・152割れ警戒・130円台半ば可能性。ゆな先生9/8再要約★：マスク×ガスタービン参入・HWM急落。藤沢9/8再要約★：第747号 AI電力問題・GPT-6 Astra・メモリ株復活。中島8/27★(cached)・後藤8/11★(cached)。判断ファイル=briefing-judgment-verified.json（B2検証済み・verifiedBy:opus-b2・verifiedAt:2026-09-08 05:28・kept=6・downgraded=3・killed=0）。版ID=2026-09-08-0513。] [2026-09-05 段C(Sonnet)書き戻し。土曜(rebuildBands=true)・バンドレビュー実施（緊急引き直しなし）。日経65020.94(-2.1%/1w・高値圏一服)・S&P500 7747.71(最高値圏・小動き)・Nasdaq 26584.06(最高値圏)・ハンセン25213.31(-1.4%/1w・^HSI・軟調)・TOPIX 4220(-0.33%/1w・1308.T換算)・VIX14.32(低位・イベント前の凪)。ドル円159.97(-2.4%/1m・円高方向)。米10年債4.77%(警戒線4.75%上抜け・1m+14bp・6m+64bp)。7月CPI YoY3.54%・MoM+0.07%（粘着高止まり）。スタンス=🟡中立（防御優先・分水嶺待ち）（10年債4.77%が警戒線上抜け・9/11 CPI→9/16-17 FOMC→9/17-18 日銀の政策三連発）。半導体集中13.7%(SMH+200A+CBRS+PLTR)・投資用キャッシュ4.5%（目標12-13%・大幅未達）。売り発議：SMH最優先1.5-2割トリム（%タイル77・rich・10年債4.77%上抜け＋FOMC前防御・集中低減＋キャッシュ復元の主原資・B2 kept）/8050.T winner利確1/4（%タイル100・rich・trap一過性益疑惑・日銀×円高×過熱三重リスク・B2 kept）/1615.T条件付き補助（%タイル100・rich・B2 downgraded・低・SMH/8050執行後もキャッシュ12%未達なら第三順位・銀行ETF利上げ受益と部分相反ゆえ完全条件付き）/200A.T条件付き二段目（%タイル48・fair・B2 downgraded・SMHトリム後半導体12%超なら・単独割高根拠なし）。買い発議：GOOGL最優先（%タイル0・cheap・bandConfidence high・Anthropicランレート受益・TPU地主・ゆな/中島最大テーゼ・SMHトリム資金主振替先・B2 kept）/MSFT小さめ打診（%タイル25・cheap_real・bandConfidence high・日付触媒不在・サイズ抑制・B2 kept）/AMZN保留（%タイル0・cheap_fake・EVフェア・受動監視のみ・B2 kept）/3033.HK監視（%タイル7・cheap・bandConfidence low・藤沢ハンセンロング整合・能動見送り・B2 kept）。MFデータ当日鮮度OK(stale=false・asOf=2026-09-05)。判断ファイル=briefing-judgment-verified.json（B2検証済み・verifiedBy:opus-b2・kept=6・downgraded=2・killed=0）。バンドフラグ：PLTR(PER155=超割高だがバンド過適合でcheap表示・bandConf low・機械%タイル過信禁止)/AMZN(cheap_fake維持・EVフェア)/8050.T(trap一過性益・実態さらに割高疑惑)/ETF群%100=地合い過熱シグナル。版ID=2026-09-05-0504。] [2026-09-03 段C(Sonnet)書き戻し。木曜(rebuildBands=false)。日経64326(-2.92%/1w・高値圏で反落)・S&P500 7631(-0.60%/1w・高値圏NFP待ち)・Nasdaq 26100(-0.20%/1w・AI株上値重い)・ハンセン25330(-0.71%/1w・^HSI)・TOPIX 4310(+2.40%/1w・1308.T換算・内需ローテ堅調)・VIX16.34(+5.76%/1w・低位だが上向き)。ドル円159.97(+0.67%/1w・円安高止まり)。米10年債4.79%(+15bp/1w・警戒線4.75%を上抜け)。7月CPI YoY3.54%・MoM+0.07%（粘着高止まり）。スタンス=🟡中立・防御余力を作る（10年債4.79%が警戒線上抜け・9/4 NFP→9/11 CPI→9/16 FOMC→9/17-18 日銀の怒涛の分水嶺）。半導体集中13.6%(SMH+200A+CBRS+PLTR)・投資用キャッシュ4.6%（目標12-13%・大幅未達）。売り発議：SMH最優先1.5-2割トリム（%タイル78・rich・NVDA/ブロードコム好決算通過済＋9/4 NFP/9/16 FOMC前防御・集中低減＋キャッシュ復元の主原資・B2 kept）/8050.T winner利確1/4（%タイル100・rich・priceMom+257%・trap一過性益・B2 downgraded中→慎重）/9983.T 1/4トリム（%タイル67・rich・コア維持・急がない・B2 downgraded低）。買い発議：GOOGL最優先（%タイル0・cheap・bandConfidence high・Anthropicランレート受益・TPU地主・ゆな最大ポジ・SMHトリム資金主振替先・B2 kept）/MSFT低（%タイル21・cheap_real・bandConfidence high・日付触媒不在・キャッシュ復元優先ゆえ格下げ・B2 downgraded）/AMZN保留（%タイル0・cheap_fake・EVフェア・受動監視のみ・B2 kept）。MFデータ当日鮮度OK(stale=false・asOf=2026-09-03)。判断ファイル=briefing-judgment-verified.json（B2検証済み・verifiedBy:opus-b2・kept=3・downgraded=3・killed=0）。版ID=2026-09-03-0513。] [2026-09-02 段C(Sonnet)書き戻し。水曜(rebuildBands=false)。日経66215(+0.54%/1w・史上最高値圏)・S&P500 7686(+0.43%/1w・最高値圏楽観過剰)・Nasdaq 26371(+1.50%/1w・AI主導)・ハンセン25567(+0.19%/1w・^HSI)・TOPIX 4271(+1.93%/1w・1308.T換算)・VIX14.92(-5.87%/1w・低位・恐怖過少)。ドル円159.97(+0.67%/1w・-2.37%/1m・円安高止まり)。米10年債4.75%(+5bp/1w・6mで+70bp・レジスタンス到達)。7月CPI YoY3.54%・MoM+0.07%（粘着高止まり）。スタンス=中立・守り寄り（分水嶺イベント2週間・キャッシュ復元を最優先）｜ウォーシュJH(8/28)タカ派・9月FOMC利上げ確率57.7%・10年債4.75%レジスタンス到達・正念場。半導体集中12.0%(SMH %ile80・rich)・キャッシュ4.3%（目標12-13%・大幅未達）。買い発議：GOOGL最優先（%タイル0・cheap・bandConfidence high・Anthropicランレート受益・ゆな先生最大ポジ・SMHトリム資金主振替先・B2 kept）/MSFT中（%タイル24・cheap_real・bandConfidence high・Azure/Copilot触媒日付なし・B2 downgraded中・サイズ抑制）/DTCR低（%タイル23・cheap・bandConfidence low・REIT偏重+守り局面・B2 downgraded低・小口最小）/AMZN保留（%タイル0・cheap_fake・EVフェア・本人保留・B2 kept受動指値）/3033.HK監視（%タイル9・cheap・bandConfidence low・藤沢ハンセンロング整合・B2 kept監視）。売り発議：SMH最優先1.5-2割トリム（%タイル80・rich・NVIDIA Q2通過済み+JH後の板安定→今週実行・半導体集中12.0%削減＋キャッシュ復元の主原資・B2 kept）/8050.T winner利確1/4（%タイル100・rich・trap一過性益・priceMom1Y+257%・B2 kept高優先）/9983.T 1/4トリム（%タイル71・rich・急がない・B2 downgraded低）/200A.T条件付き（SMHトリム後半導体12%超なら二段目・10年債4.75%上抜けで格上げ・B2 downgraded低）。MFデータ当日鮮度OK(stale=false・asOf=2026-09-02)。判断ファイル=briefing-judgment-verified.json（B2検証済み・kept=5・downgraded=4・killed=0）。版ID=2026-09-02-0524。] [2026-08-31 段C(Sonnet)書き戻し。月曜(rebuildBands=false)。日経66405(+0.59%/1w・史上最高値圏)・S&P500 7711(+0.49%/1w・最高値圏楽観過剰)・Nasdaq 26402(+0.85%/1w・AI主導)・ハンセン25584(-1.63%/1w・^HSI)・TOPIX 4270(+2.06%/1w・1308.T換算)・VIX14.51(-9.37%/1w・低位・恐怖過少)。ドル円158.91(-2.56%/1m・円高進行)。米10年債4.67%(-2bp/1w・6mで+65bp)。7月CPI YoY3.54%・MoM+0.07%（粘着高止まり）。スタンス=中立・守り寄り（イベント連発前にキャッシュ復元優先）｜ウォーシュJH(8/28)タカ派・9月FOMC利上げ確率57.7%にジャンプ・10年債4.75%レジスタンス正念場。半導体集中11.0%(SMH %ile79・rich)・キャッシュ4.3%（目標12-13%・大幅未達）。買い発議：GOOGL最優先（%タイル0・cheap・bandConfidence high・Q2決算通過・Anthropicランレート受益・SMHトリム資金主振替先・B2 kept）/MSFT中（%タイル25・cheap_real・bandConfidence high・Azure/Copilot触媒日付なし・B2 downgraded中）/DTCR低（%タイル24・cheap・bandConfidence low・テーマのみ触媒・B2 downgraded低）/AMZN低・受動（%タイル0・cheap_fake・EVフェア・本人保留・B2 downgraded受動）。売り発議：SMH最優先1.5-2割トリム（%タイル79・rich・NVIDIA Q2通過(好材料出尽くし)+JH後の板安定→今週実行・半導体集中11.0%削減＋キャッシュ復元の主原資・B2 kept）/8050.T winner利確1/4（%タイル100・rich・trap・B2 kept）/9983.T 1/4トリム（%タイル69・rich・急がない・B2 downgraded低）/200A.T条件付き（%タイル49・fair・SMHトリム後半導体12%超なら・B2 downgraded低・保留）。3033.HK監視（%タイル9・cheap・bandConfidence low・藤沢ハンセンロング整合）。MFデータ当日鮮度OK(stale=false・asOf=2026-08-31)。判断ファイル=briefing-judgment-verified.json（B2検証済み・kept=3・downgraded=5・killed=0）。版ID=2026-08-31-0504。] [2026-08-30 段C(Sonnet)書き戻し。日曜(rebuildBands=false)。日経66405(+0.59%/1w・史上最高値圏)・S&P500 7711(+0.49%/1w・最高値圏楽観過剰)・Nasdaq 26402(+0.85%/1w・AI主導)・ハンセン25565(-0.52%/1w・^HSI)・TOPIX 4270(+2.06%/1w・1308.T換算)・VIX14.51(-9.37%/1w・低位・恐怖過少)。ドル円158.91(-2.56%/1m・円高進行)。米10年債4.67%(-2bp/1w・6mで+65bp)。7月CPI YoY3.54%・MoM+0.07%（粘着高止まり）。スタンス=中立・守り寄り（キャッシュ復元最優先）｜ウォーシュJH(8/28)タカ派・9月FOMC利上げ確率57.7%にジャンプ・10年債4.75%レジスタンス正念場。半導体集中11.3%(SMH+200A)(SMH %ile79・rich)・キャッシュ4.4%（目標12-13%・大幅未達）。買い発議：GOOGL最優先（%タイル0・cheap・bandConfidence high・Q2決算通過・Anthropicランレート受益・SMHトリム資金主振替先・B2 kept）/MSFT低（%タイル18・cheap・bandConfidence high・日付触媒不在・打診最小・B2 kept低）/DTCR killed（%タイル24・cheap/守り局面逆行・B2 killed・描画なし）/AMZN保留（%タイル0・cheap_fake・EVフェア・本人保留・B2 kept受動指値）。売り発議：SMH最優先1.5-2割トリム（%タイル79・rich・NVIDIA Q2通過(好材料出尽くし)+JH後の板安定→今週実行・半導体集中11.3%削減＋キャッシュ復元の主原資・B2 kept）/8050.T winner利確1/4（pack.watchlist未収録・定性trap・中優先・B2 downgraded中）/9983.T 1/4トリム（pack.watchlist未収録・機械裏付けなし・低優先・急がない・B2 downgraded低）/200A.T条件付き（SMHトリム後半導体12%超なら・B2 kept）。3033.HK監視（%タイル9・cheap・bandConfidence low・藤沢ハンセンロング整合・B2 kept監視）。MFデータ当日鮮度OK(stale=false・asOf=2026-08-30)。判断ファイル=briefing-judgment-verified.json（B2検証済み・kept=5能動+受動2・downgraded=2・killed=1 DTCR）。版ID=2026-08-30-0507。] [2026-08-29 段C(Sonnet)書き戻し。土曜(rebuildBands=true)。日経66405(+0.59%/1w・史上最高値圏)・S&P500 7731(+1.18%/1w・最高値圏楽観過剰)・Nasdaq 26541(+1.82%/1w・AI主導最高値圏)・ハンセン取得エラー(前日25653参照)・TOPIX 4234(+1.39%/1w・1308.T換算)・VIX14.51(-9.37%/1w・低位・恐怖過少)。ドル円158.91(-2.56%/1m・円高進行)。米10年債4.67%(-2bp/1w・6mで+65bp)。7月CPI YoY3.54%・MoM+0.07%（粘着高止まり）。スタンス=中立・守り寄り（キャッシュ復元最優先）｜ウォーシュJH(8/28)タカ派・9月FOMC利上げ確率57.7%にジャンプ・10年債4.75%レジスタンス正念場。半導体集中11.8%(SMH %ile79・rich)・キャッシュ5.0%（目標12-13%・大幅未達）。買い発議：GOOGL最優先（%タイル0・cheap・bandConfidence high・Q2決算通過・Anthropicランレート受益・SMHトリム資金主振替先・B2 kept）/MSFT低（%タイル18・cheap・bandConfidence high・日付触媒不在・打診最小・B2 kept低）/DTCR見送り（%タイル24・cheap/fair境界・bandConfidence low・日付触媒不在+REIT偏重+守り局面逆行・B2 downgraded見送り）/AMZN保留（%タイル0・cheap_fake・EVフェア・本人保留・B2 kept受動指値）。売り発議：SMH最優先1.5-2割トリム（%タイル79・rich・NVIDIA Q2通過(好材料出尽くし)+JH後の板安定→今週実行・半導体集中11.8%削減＋キャッシュ復元の主原資・B2 kept）/8050.T winner利確1/4（pack.watchlist未収録・定性trap・中優先・B2 downgraded中）/9983.T 1/4トリム（pack.watchlist未収録・機械裏付けなし・低優先・急がない・B2 downgraded低）/200A.T条件付き（SMHトリム後半導体12%超なら・B2 kept）。3033.HK監視（%タイル9・cheap・bandConfidence low・藤沢ハンセンロング整合・B2 kept監視）。土曜バンドレビュー(rebuildBands=true)実施：CRWD/PANW/LITE/1306.T/2800.HKをレビュー対象に。ETF broad-market群の%タイル99-100は据置（真のrich）。MFデータ当日鮮度OK(stale=false・asOf=2026-08-29)。判断ファイル=briefing-judgment-verified.json（B2検証済み・8050.T高→中格下げ/9983.T中→低格下げ/DTCR低→見送り格下げ・killなし）。版ID=2026-08-29-0509。] [2026-08-27 段C(Sonnet)書き戻し。木曜(rebuildBands=false)。日経66262(+1.43%/1w・史上最高値圏)・S&P500 7677(-0.19%/1w・上昇トレンド内の横ばい)・Nasdaq 26151(-0.53%/1w・決算前の様子見)・ハンセン25511(+0.16%/1w・独歩底堅さ)・TOPIX 4209(-1.34%/1w・1308.T換算)・VIX15.45(-2.46%/1w・低位＝油断のサイン)。ドル円158.91（-2.56%/1m・円高圧力じわり）。米10年債4.64%(-7bp/1w・6mで+60bp・一旦鎮静)。7月CPI YoY3.54%・MoM+0.07%（鈍化継続・PCE(8/26通過済み)）。スタンス=中立（守り優先）｜イベント密集週・弾を先に作る。半導体集中12.0%(SMH %ile79・rich)・キャッシュ4.3%（目標12-13%・大幅未達）。買い発議：GOOGL最優先（%タイル0・cheap・bandConfidence high・Q2決算通過・Anthropicランレート受益・SMHトリム資金主振替先・B2 kept）/MSFT低（%タイル20・cheap・bandConfidence high・日付触媒不在・打診最小・B2 downgraded）/DTCR監視（%タイル26・cheap/fair境界・bandConfidence low・日付触媒不在+REIT偏重・B2 downgraded）/AMZN保留（%タイル0・cheap_fake・EVフェア・本人保留・B2 kept受動指値）。売り発議：SMH最優先1.5-2割トリム（%タイル79・rich・NVIDIA/PCE通過済み→8/27-29JH前後に実行・半導体集中12.0%削減＋キャッシュ復元の主原資・B2 kept）/8050.T winner利確1/4（%タイル100・rich・trap一過性益・priceMom1Y+257%・B2 kept）/9983.T 1/4トリム（%タイル72・rich・急がない・低優先・B2 downgraded）/200A.T条件付き（%タイル50・fair・SMHトリム後半導体12%超なら・B2 kept）。3033.HK監視（%タイル9・cheap・bandConfidence low・藤沢ハンセンロング整合・B2 kept監視）。MFデータ当日鮮度OK(stale=false・asOf=2026-08-27)。判断ファイル=briefing-judgment-verified.json（B2検証済み・9983.T低格下げ/MSFT低格下げ/DTCR監視格下げ・killなし）。版ID=2026-08-27-0503。] [2026-08-25 段C(Sonnet)書き戻し。月曜(rebuildBands=false)。日経65528(-5.33%/1w・ターム・プレミアム重し)・S&P500 7674(-1.43%/1w・上昇トレンド内の押し)・Nasdaq 26180(-2.05%/1w・半導体ボラ)・ハンセン26009(+3.55%/1w・独歩底堅さ)・TOPIX 4190(-2.81%/1w・1308.T換算)・VIX15.13(+6.18%/1w・凪＝油断のサイン)。ドル円158.91（-0.19%/1w・-2.56%/1m・円高圧力）。米10年債4.74%(+6bp/1w・6mで+66bp・ジリ高)。7月CPI YoY3.54%・MoM+0.07%（鈍化継続・PCE(8/26)本丸）。スタンス=中立（守り優先）｜超イベント週・弾を先に作る。半導体集中11.7%(SMH %ile77・rich)・キャッシュ5.0%（目標12-13%・大幅未達・防御余力ほぼゼロ）。買い発議：GOOGL最優先（%タイル0・cheap・bandConfidence high・Q2決算通過・Cloud高成長・SMHトリム資金主振替先・B2 kept）/MSFT低（%タイル18・cheap・bandConfidence high・但し日付触媒なし・イベント週前打診最小・B2格下げ）/DTCR低（%タイル24・cheap/fair境界・bandConfidence low・日付触媒不在+REIT偏重・B2 kept最小）/AMZN保留（%タイル0・cheap_fake・EVフェア・本人保留・B2 kept受動指値）。売り発議：SMH最優先1.5-2割トリム（%タイル77・rich・8/26 PCE+NVIDIA Q2・8/27-29JH前後に実行・B2 kept）/8050.T winner利確1/4（%タイル100・rich・trap一過性益・B2 kept）/9983.T 1/4トリム（%タイル72・rich・急がず・B2 kept）/200A.T条件付き（%タイル50・fair・SMHトリム後半導体12%超なら・B2 kept）。3033.HK監視（%タイル9・cheap・bandConfidence low・藤沢ハンセンロング整合・B2 kept監視）。MFデータstale(asOf=2026-08-22・3日未反映・前日スナップショット継続)。判断ファイル=briefing-judgment-verified.json（B2検証済み・MSFTを中→低格下げ・killなし）。版ID=2026-08-25-0515。] [2026-08-22 段C(Sonnet)書き戻し。土曜(rebuildBands=true)。日経66016(-3.93%/1w・ターム・プレミアム重し)・S&P500 7641(-2.02%/1w・上昇トレンド内の押し)・Nasdaq 26067(-2.75%/1w・半導体ボラ)・ハンセン25698(+1.19%/1w・独歩底堅さ)・TOPIX 4176(-2.84%/1w・1308.T換算)・VIX16.01(+9.43%/1w・警戒感やや上昇も低位)。ドル円159.21（+1.1%/1w・円安継続）。米10年債4.69%(+6bp/1w・6mで+61bp・ジリ高)。7月CPI YoY3.54%・MoM+0.07%（鈍化継続・PCE(8/26)本丸）。スタンス=中立（やや慎重）｜超イベント週前・守りの弾を先に作る。半導体集中11.7%(SMH %ile81・rich)・キャッシュ4.3%（目標12-13%・大幅未達）。買い発議：GOOGL最優先（%タイル0・cheap・bandConfidence high・Q2決算通過・Cloud+82%・SMHトリム資金主振替先）/MSFT中（B2格下げ・pack.watchlist未収載・機械値未裏付け・サイズ抑制）/DTCR低（B2格下げ・日付触媒不在+REIT偏重低bandConfidence）/AMZN保留（B2格下げ・cheap_fake・EVフェア）。売り発議：SMH最優先1.5-2割トリム（%タイル81・rich・8/26 PCE+NVIDIA決算・8/27-29JH前後に実行）/8050.T winner利確1/4（%タイル100・rich・trap）/9983.T 1/4トリム（%タイル77・rich・急がず）/200A.T条件付き（%タイル51・fair・SMHトリム後半導体12%超なら）。3033.HK=B2格下げ（監視のみ・能動買い見送り）。じっちゃま8/19号★：ターム・プレミアム拡大=日本株下落の真因・強気継続・Anthropic IPO期待・半導体鬼門継続。中島8/18号★：AI研究者人材競争=中国台頭。藤沢744号★：SanDisk粗利80%複数年正式発表→キオクシア強気継続。ゆな先生8/9号★：アドバンテスト新規保有・テスト工程戦略部門化・Alphabet最大ポジ。後藤8/8号★：日銀9月利上げ「基本シナリオ候補」格上げ。MFデータ当日鮮度OK(stale=false・2026-08-22)。判断ファイル=briefing-judgment-verified.json（B2検証済み・MSFT中格下げ/DTCR低格下げ/AMZN保留格下げ/3033.HK監視格下げ反映）。土曜バンドレビュー実施・全バンド据置き（bandReview.revised=false）。版ID=2026-08-22-0507。] [2026-08-21 段C(Sonnet)書き戻し。金曜(rebuildBands=false)。日経66217(-3.06%/1w・高値圏の反落)・S&P500 7708(-0.52%/1w・イベント週前の様子見)・Nasdaq 26331(-0.97%/1w・半導体ボラ)・ハンセン25495(+0.22%/1w・-4.53%/6m)・TOPIX 4129(-3.08%/1w・1308.T換算)・VIX14.89(+2.34%/1w・低ボラ安定)。ドル円159.21（+1.06%/1w・円安進行）。米10年債4.65%(-3bp/1w・高止まり)。7月CPI YoY3.54%・MoM+0.07%（高止まり・8/26 PCE本丸）。スタンス=中立（やや守り優位）｜イベント週前にキャッシュ復元。半導体集中12.2%(SMH %ile81・rich)・キャッシュ5.0%（目標12-13%・大幅未達）。買い発議：GOOGL最優先（%タイル0・cheap・bandConfidence high・Q2決算通過・Cloud+82%・SMHトリム資金主振替先）/MSFT最優先（%タイル15・cheap_real・fwd20.5<trail・財務最良・Azure/Copilot触媒）/DTCR低（B2格下げ・日付触媒不在+REIT偏重低bandConfidence）/AMZN低保留（B2格下げ・cheap_fake・EVフェア）。売り発議：SMH最優先1.5-2割トリム（%タイル81・rich・8/26 PCE+NVIDIA・8/27-29JH前後に実行）/8050.T winner利確1/4（%タイル100・rich・trap）/9983.T 1/4トリム（%タイル80・rich・急がず）/200A.T条件付き（%タイル51・fair・SMHトリム後半導体12%超なら）。6016.T=B2killed（触媒なし・低流動・市場の質△）。じっちゃま8/19号★：ターム・プレミアム拡大=日本株下落の真因・強気継続・半導体鬼門継続。中島8/18号★：AI研究者人材競争=中国台頭。藤沢744号★：SanDisk粗利80%複数年正式発表→キオクシア強気継続。ゆな先生8/9号★：アドバンテスト新規保有・テスト工程戦略部門化・Alphabet最大ポジ。後藤8/8号★：日銀9月利上げ「基本シナリオ候補」格上げ。MFデータ当日鮮度OK(stale=false・2026-08-21)。判断ファイル=briefing-judgment-verified.json（B2検証済み・DTCR低格下げ/AMZN低格下げ/6016.T killed反映）。版ID=2026-08-21-0506。] [2026-08-20 段C(Sonnet)書き戻し。木曜(rebuildBands=false)。日経65326(-3.25%/1w・最高値圏から反落)・S&P500 7691(-0.47%/1w・最高値圏で一服)・Nasdaq 26289(-0.59%/1w・AI主導)・ハンセン25471(-0.71%/1w・+3.7%/1m)・TOPIX 4266(+0.92%/1w・1308.T換算)・VIX15.84(+3.66%/1w・低ボラ楽観)。ドル円159.21（+1.06%/1w・円安戻し）。米10年債4.71%(+1bp/1w・+16bp/1m・高止まり)。7月CPI YoY3.54%・MoM+0.07%（鈍化も高止まり）。スタンス=中立（やや守り優位）。半導体集中12.2%(SMH %ile81・rich)・キャッシュ4.9%（目標12-13%・大幅未達）。買い発議：GOOGL最優先（%タイル0・cheap・bandConfidence high・Q2決算通過・Cloud+82%）/MSFT最優先（%タイル16・cheap_real・fwd21<trail）/DTCR中（B2格下げ・日付触媒不在+REIT偏重low band）/AMZN中保留（B2格下げ・cheap_fake・EVフェア）。売り発議：SMH最優先1.5-2割トリム（%タイル81・rich・8/26 PCE・8/27JH前後に実行）/8050.T winner利確1/4（%タイル100・rich・trap）/9983.T 1/4トリム（%タイル77・rich）/200A.T条件付き（%タイル49・fair・SMHトリム後に半導体12%超なら）。6016.T=B2killed（触媒なし・低流動・市場の質△）。じっちゃま8/19号★：ターム・プレミアム拡大=日本株下落の真因（金利が落ち着けば戻る・強気継続）・半導体鬼門継続・9月Anthropic IPO期待。中島8/18号★：AI研究者人材競争=中国台頭（NeurIPS論文47%・R&D総額で中国が米超）。藤沢744号★：SanDisk粗利80%複数年正式発表→キオクシア強気継続。ゆな先生8/9号★：テスト工程戦略部門化・Alphabet最大ポジ。後藤8/8号★：日銀9月利上げ「基本シナリオ候補」格上げ（8/27氷見野副総裁講演が確認材料）。MFデータ当日鮮度OK(stale=false・2026-08-20)。判断ファイル=briefing-judgment-verified.json（B2検証済み・DTCR高→中格下げ/AMZN高→中格下げ/6016.T killed反映）。]PER採点の単一ストア(symbol→valuation)。保有テーブル・ウォッチリスト・Briefingが共有参照。保有∪ウォッチを和集合で1回採点(重複計算なし)。%タイルは概算。PER非該当(金GLDM/銀SLV/債券JPST,SHV)は本ストアに含めず=アプリは'–'表示。 [2026-08-19 段C(Sonnet)書き戻し。水曜(rebuildBands=false)。日経67460(+0.73%/1w・史上最高値圏過熱)・S&P500 7745(-0.10%/1w・最高値圏で一服)・Nasdaq 26644(+0.15%/1w・AI主導)・ハンセン25453(-1.87%/1w・+3.63%/1m)・TOPIX 4311(+1.99%/1w・1308.T換算)・VIX15.19(-1.75%/1w・低ボラ楽観)。ドル円159.21（+1.06%/1w・円安戻し）。米10年債4.72%(±0bp/1w・+17bp/1m・高止まり)。7月CPI YoY3.54%・MoM+0.07%（鈍化も高止まり）。スタンス=中立（やや守り優位）。半導体集中12.2%(SMH %ile89・rich)・キャッシュ4.9%（目標12-13%・大幅未達）。買い発議：GOOGL最優先（%タイル0・cheap・Q2決算通過・Cloud+82%・SMHトリム資金の振替先）/MSFT最優先（%タイル15・cheap_real・fwd21.0<trail）/DTCR中（B2格下げ・日付触媒不在+低バンド信頼）/AMZN中保留（B2格下げ・cheap_fake・EVフェア）。売り発議：SMH最優先1.5-2割トリム（%タイル89・rich・8/26 PCE/NVIDIA・8/27JH前後に実行）/8050.T winner利確1/4（%タイル100・rich・trap）/9983.T 1/4トリム（%タイル81・rich）/200A.T条件付き（%タイル63・fair・SMHトリム後に半導体12%超なら）。6016.T=B2killed（触媒なし・低流動・市場の質△）。じっちゃま8/19号★：ターム・プレミアム拡大=日本株下落の真因（金利が落ち着けば戻る・強気継続）・半導体鬼門継続・9月Anthropic IPO期待。中島8/18号★：AI研究者人材競争=中国台頭（NeurIPS論文47%・R&D総額で中国が米超）。藤沢744号★：SanDisk粗利80%複数年正式発表→キオクシア強気継続。ゆな先生8/9号★：テスト工程戦略部門化・Alphabet最大ポジ。後藤8/8号★：日銀9月利上げ「基本シナリオ候補」格上げ（8/27氷見野副総裁講演が確認材料）。MFデータ当日鮮度OK(stale=false・2026-08-19)。判断ファイル=briefing-judgment-verified.json（B2検証済み・DTCR高→中格下げ/AMZN高→中格下げ/6016.T killed反映）。] [2026-08-18 段C(Sonnet)書き戻し。火曜(rebuildBands=false)。日経69220(+3.36%/1w・史上最高値圏過熱)・S&P500 7786(+0.36%/1w・最高値圏)・Nasdaq 26729(+0.14%/1w・AI主導)・ハンセン25117(-2.15%/1w・+1.77%/1m)・TOPIX 4311(+1.99%/1w・1308.T換算)・VIX14.25(-9.06%/1m・低ボラ楽観)。ドル円157.54（-3.15%/1m・円高進行）。米10年債4.68%(+13bp/1m・高止まり)。7月CPI YoY3.54%・MoM+0.07%（鈍化・利下げ余地限定）。スタンス=中立〜やや強気（過熱を利確に回す局面）。半導体集中12.4%(SMH %ile89・rich昇格)・キャッシュ4.9%（目標12-13%・大幅未達）。買い発議：GOOGL最優先（%タイル0・cheap・Q2決算通過・Cloud+82%・SMHトリム資金の振替先）/MSFT最優先（%タイル15・cheap_real・fwd21.0<trail）/DTCR高優先小口分割（%タイル31・cheap・bandConfidence low）/AMZN低（保留中・B2格下げ・cheap_fake）。売り発議：SMH最優先1.5-2割トリム（%タイル89・rich昇格・FOMC議事録8/19前後に実行）/8050.T winner利確1/4（%タイル100・rich・trap）/9983.T 1/4トリム低（%タイル81・rich・B2格下げ）/200A.T条件付き（%タイル63・fair・SMHトリム後に半導体12%超なら）。じっちゃま8/16号★：「目先は上を予想」・Anthropic IPO期待・半導体鬼門継続。中島8/11号★：Cerebras×OpenAI $20B超大型契約。藤沢743号★：メモリ半導体歴史的ミスプライス・DRAM2027逼迫。ゆな先生8/9号★：テスト工程戦略部門化・Alphabet最大ポジ。後藤8/8号★：日銀9月利上げ「基本シナリオ候補」格上げ。MFデータ当日鮮度OK(stale=false・2026-08-18)。判断ファイル=briefing-judgment-verified.json（B2検証済み・AMZN格下げ/6016.T killed/9983.T格下げ反映）。] [2026-08-17 段C(Sonnet)書き戻し。月曜(rebuildBands=false)。日経68714(+4.74%/1w・史上最高値圏過熱)・S&P500 7786(+0.36%/1w・最高値圏)・Nasdaq 26729(+0.14%/1w・AI主導)・ハンセン25117(-2.15%/1w・+1.77%/1m)・TOPIX 4317(+3.03%/1w・1308.T換算)・VIX14.63(-3.43%/1w・低ボラ楽観)。ドル円157.54（-3.15%/1m・円高進行）。米10年債4.63%(-6bp/1w・高止まり)。7月CPI YoY3.54%・MoM+0.07%（鈍化・利下げ余地限定）。スタンス=中立〜やや強気（過熱を利確に回す局面）。半導体集中12.5%(SMH %ile88・rich)・キャッシュ4.9%（目標12-13%・大幅未達）。買い発議：GOOGL最優先（%タイル0・cheap・Q2決算通過・Cloud+82%・SMHトリム資金の振替先）/MSFT最優先（%タイル20・cheap_real・fwd21.0<trail）/DTCR高優先小口分割（%タイル31・cheap・bandConfidence low）/AMZN中保留（%タイル0・cheap_fake・B2格下げ）。売り発議：SMH最優先1.5-2割トリム（%タイル88・rich・FOMC議事録8/19前後に実行）/8050.T winner利確1/4（%タイル100・rich・trap）/9983.T 1/4トリム（%タイル82・rich）/200A.T条件付き（%タイル57・fair・SMHトリム後に半導体12%超なら）。じっちゃま8/16号★：「目先は上を予想」・Anthropic IPO期待・半導体鬼門継続。中島8/11号★：Cerebras×OpenAI $20B超大型契約。藤沢743号★：メモリ半導体歴史的ミスプライス・DRAM2027逼迫。ゆな先生8/9号★：テスト工程戦略部門化・Alphabet最大ポジ。後藤8/8号★：日銀9月利上げ「基本シナリオ候補」格上げ。MFデータ当日鮮度OK(stale=false・2026-08-17)。判断ファイル=briefing-judgment-verified.json（B2検証済み・AMZN格下げ/6016.T格下げ反映）。] [2026-08-16 段C(Sonnet)書き戻し。日曜(rebuildBands=false)。日経68714(+4.74%/1w・史上最高値圏過熱)・S&P500 7786(+0.36%/1w・最高値圏)・Nasdaq 26729(+0.14%/1w・AI主導)・ハンセン25117(-2.15%/1w・+1.77%/1m)・TOPIX 4317(+3.03%/1w・1308.T換算)・VIX14.63(-3.43%/1w・低ボラ楽観)。ドル円157.54（-3.15%/1m・円高進行）。米10年債4.63%(-6bp/1w・高止まり)。7月CPI YoY3.54%・MoM+0.07%（鈍化・利下げ余地限定）。スタンス=中立〜やや強気（過熱を利確に回す局面）。半導体集中12.2%(SMH %ile88・rich)・キャッシュ5.4%（目標12-13%・大幅未達）。買い発議：GOOGL最優先（%タイル0・cheap・Q2決算通過・Cloud+82%・SMHトリム資金の振替先）/MSFT最優先（%タイル20・cheap_real・fwd21.0<trail）/DTCR高優先小口分割（%タイル31・cheap・bandConfidence low）/AMZN高保留（%タイル0・cheap・保留中）。売り発議：SMH最優先1.5-2割トリム（%タイル88・rich・FOMC議事録8/19前後に実行）/8050.T winner利確1/4（%タイル100・rich・trap）/9983.T 1/4トリム（%タイル82・rich）/200A.T条件付き（%タイル57・fair・SMHトリム後に半導体12%超なら）。じっちゃま8/16号★：「目先は上を予想」・Anthropic IPO期待・半導体鬼門継続。中島8/11号★：Cerebras×OpenAI $20B超大型契約。藤沢743号★：メモリ半導体歴史的ミスプライス・DRAM2027逼迫。ゆな先生8/9号★：テスト工程戦略部門化・Alphabet最大ポジ。後藤8/8号★：日銀9月利上げ「基本シナリオ候補」格上げ。MFデータ当日鮮度OK(stale=false・2026-08-16)。KVresync=段Aで2銘柄同期済(kvResyncA ok・drift=2)。判断ファイル=briefing-judgment.json（B2未生成・B生判断使用）。] [2026-08-15 段C(Sonnet)書き戻し。土曜(rebuildBands=true)。日経68714(+4.74%/1w・史上最高値圏過熱)・S&P500 7799(+1.15%/1w・史上最高値圏更新)・Nasdaq 26803(+1.73%/1w・AI推論相場)・ハンセン25397(-0.52%/1w・+4.34%/1m)・TOPIX 4298(+3.00%/1w・1308.T換算)・VIX14.63(-3.43%/1w・年内最低圏楽観)。ドル円157.54（-1.02%/1w・円先高観じわり）。米10年債4.63%(-6bp/1w・高止まり)。7月CPI YoY3.54%・MoM+0.07%（高止まり・利下げ急がず）。スタンス=中立（強気の内訳・守り優先）。半導体集中12.6%(SMH %ile88・rich)・キャッシュ5.4%（目標12-13%・大幅未達）。買い発議：GOOGL最優先（%タイル0・cheap・Q2決算通過・Cloud+82%・SMHトリム資金の振替先）/MSFT最優先（%タイル20・cheap_real・fwd21.0<trail）/DTCR高優先小口分割（%タイル31・cheap・bandConfidence low）/AMZN高保留（%タイル0・cheap・保留中）。売り発議：SMH最優先1.5-2割トリム（%タイル88・rich・FOMC議事録8/20前後に実行）/8050.T winner利確1/4（%タイル100・rich・trap）/9983.T 1/4トリム（%タイル82・rich）/200A.T条件付き（%タイル57・fair・SMHトリム後に半導体12%超なら）。土曜バンドレビュー(rebuildBands=true)実施。中島8/11号★：Cerebras×OpenAI $20B超大型契約。藤沢743号★：メモリ半導体歴史的ミスプライス・DRAM2027逼迫。ゆな先生8/9号★：テスト工程戦略部門化・Alphabet最大ポジ。後藤8/8号★：日銀9月利上げ「基本シナリオ候補」格上げ。MFデータ当日鮮度OK(stale=false・2026-08-15)。KVresync=段Aで15銘柄同期済(kvResyncA ok)。判断ファイル=briefing-judgment.json（B2未生成・B生判断使用）。] [2026-08-14 段C(Sonnet)書き戻し。木曜(rebuildBands=false)。日経68308(+4.00%/1w・史上最高値圏過熱)・S&P500 7748(+0.32%/1w・最高値圏で一服)・Nasdaq 26588(+0.85%/1w・AI主導)・ハンセン25440(-1.84%/1w・+5.07%/1m)・TOPIX 4260(+2.38%/1w・1308.T換算)・VIX14.55(-7.97%/1w・低ボラ楽観)。ドル円157.54（-1.02%/1w・円やや戻す）。米10年債4.68%(+5bp/1w・高止まり)。7月CPI YoY3.54%・MoM+0.07%（CPI無風通過）。スタンス=中立（やや守り優位・FOMC議事録8/20・ジャクソンホール8/21-22前は防御余力確保）。半導体集中12.1%(SMH %ile88・rich)・キャッシュ4.9%（目標12-13%・大幅未達）。買い発議：GOOGL最優先（%タイル0・cheap・Q2決算通過・Cloud+82%・SMHトリム資金の振替先）/MSFT最優先（%タイル20・cheap_real・fwd20.5<trail）/DTCR高優先小口分割（%タイル30・cheap・bandConfidence low）/AMZN高保留（%タイル0・cheap・保留中）。売り発議：SMH最優先1.5-2割トリム（%タイル88・rich・FOMC議事録8/20前後に実行）/8050.T winner利確1/4（%タイル100・rich・trap）/9983.T 1/4トリム（%タイル82・rich）/200A.T条件付き（%タイル56・fair・SMHトリム後に半導体12%超なら）。中島8/11号★：Cerebras×OpenAI $20B超大型契約。藤沢743号★：メモリ半導体の需給整理・歴史的ミスプライス。ゆな先生8/9号★：テスト工程戦略部門化。後藤8/8号★：日銀9月利上げ「基本シナリオ候補」格上げ。MFデータ当日鮮度OK(stale=false・2026-08-14)。判断ファイル=briefing-judgment.json（B2未生成・B生判断使用）。] [2026-08-13 段C(Sonnet)書き戻し。木曜(rebuildBands=false)。日経67524(+1.85%/1w・史上最高値圏過熱)・S&P500 7728(-0.11%/1w・最高値圏で一服)・Nasdaq 26445(-0.52%/1w・AI主導)・ハンセン25653(-0.77%/1w・+6.11%/1m)・TOPIX 4260(+2.38%/1w・1308.T換算)・VIX15.28(-7.39%/1w・低ボラ楽観)。ドル円157.54（-1.02%/1w・円やや戻す）。米10年債4.70%(+7bp/1w・+14bp/1m・高止まり)。7月CPI YoY3.54%・MoM+0.07%（CPI無風通過）。スタンス=中立（やや守り優位・FOMC議事録/ジャクソンホール待ち）・守りを固め押し目の質を買う。半導体集中12.3%(SMH %ile87・rich)・キャッシュ5.5%（目標12-13%・大幅未達）。買い発議：GOOGL最優先（%タイル0・cheap・Q2決算通過・Cloud+82%・SMHトリム資金の振替先）/MSFT最優先（%タイル19・cheap_real・fwd20.9<trail）/DTCR高優先小口分割（%タイル28・cheap・bandConfidence low）/AMZN高保留（%タイル0・cheap・保留中）。売り発議：SMH最優先1.5-2割トリム（%タイル87・rich・FOMC議事録8/19前後に実行）/8050.T winner利確1/4（%タイル100・rich・trap）/9983.T 1/4トリム（%タイル84・rich）/200A.T条件付き（%タイル53・fair・SMHトリム後に半導体12%超なら）。中島8/11号★：Cerebras×OpenAI $20B超大型契約。藤沢743号★：メモリ半導体の需給整理・歴史的ミスプライス。ゆな先生8/9号★：アドバンテスト新規保有・テスト工程戦略部門化。後藤8/8号★：日銀9月利上げ「基本シナリオ候補」格上げ。MFデータ当日鮮度OK(stale=false・2026-08-13)。判断ファイル=briefing-judgment.json（B2未生成・B生判断使用）。] [2026-08-12 段C(Sonnet)書き戻し。水曜(rebuildBands=false)。日経66970(+5.04%/1w・史上最高値圏過熱)・S&P500 7753(+2.01%/1w・史上最高値圏)・Nasdaq 26605(+2.67%/1w・AI主導堅調)・ハンセン25937(-0.28%/1w・+7.29%/1m)・TOPIX 4227(+3.99%/1w・1308.T換算)・VIX15.46(-2.52%/1w・低ボラ楽観)。ドル円157.54（-1.02%/1w・円やや戻す）。米10年債4.72%(+2bp/1w・+16bp/1m・高止まり)。スタンス=中立（やや守り優位・CPI待ち）・8/12 CPI前はキャッシュ復元・過熱トリム優先。半導体集中11.8%(SMH %ile84・rich)・キャッシュ5.3%（目標12-13%・大幅未達）。買い発議：GOOGL最優先（%タイル0・cheap・Q2決算通過・8/12 CPI前に第1弾）/MSFT最優先（%タイル22・cheap_real）/DTCR高優先小口分割（%タイル24・cheap・bandConfidence low）/AMZN高保留（%タイル0・cheap・保留中）。売り発議：SMH最優先1.5-2割トリム（%タイル84・rich・8/12 CPI前に実行）/8050.T winner利確1/4（%タイル100・rich・trap）/9983.T 1/4トリム（%タイル85・rich）/200A.T条件付き（%タイル44・fair・半導体11%超なら）。中島8/11号★：Cerebras×OpenAI $20B超大型契約。藤沢743号★：メモリ半導体の需給整理・歴史的ミスプライス。ゆな先生8/9号★：アドバンテスト新規保有・テスト工程戦略部門化。後藤8/8号★：日銀9月利上げ「基本シナリオ候補」格上げ。MFデータ当日鮮度OK(stale=false・2026-08-12)。判断ファイル=briefing-judgment.json（B2未生成・B生判断使用）。] [2026-08-11 段C(Sonnet)書き戻し。火曜(rebuildBands=false)。日経66970(+5.04%/1w・-2.32%/1m・史上最高値圏過熱)・S&P500 7758(+3.58%/1w・史上最高値圏)・Nasdaq 26691(+5.19%/1w・AI主導最強)・ハンセン25668(-0.84%/1w・+6.07%/1m)・TOPIX 4227(+3.99%/1w・1308.T換算)・VIX14.9(-6.82%/1w・低ボラ安定)。ドル円157.54（-1.02%/1w・FIMA協調介入で円高転換）。米10年債4.65%(-10bp/1w・+9bp/1m・高止まり)。スタンス=中立（やや守り優位）・8/12 CPI前はキャッシュ復元・過熱トリム優先。半導体集中11.9%(SMH %ile83・rich)・キャッシュ5.3%（目標12-13%・大幅未達）。買い発議：GOOGL最優先（%タイル0・cheap・Q2決算通過・Cloud+82%・8/12 CPI前に第1弾）/MSFT最優先（%タイル23・cheap_real・fwd20.5<trail）/DTCR高優先小口分割（%タイル24・cheap・bandConfidence low）/AMZN高保留（%タイル0・cheap・保留中）。売り発議：SMH最優先1.5-2割トリム（%タイル83・rich・8/12 CPI前に実行）/8050.T winner利確1/4（%タイル100・rich・trap）/9983.T 1/4トリム（%タイル85・rich）/200A.T条件付き（%タイル44・fair・半導体11%超なら）。後藤8/8号★：日銀9月利上げ観測が「基本シナリオ候補」へ格上げ。ゆな先生8/9号★：アドバンテスト新規保有・半導体テスト工程戦略部門化。MFデータ当日鮮度OK(stale=false・2026-08-11)。KV noop（既に同期済み・drift=0）。判断ファイル=briefing-judgment.json（B2未生成・B生判断使用）。] [2026-06-18 バンドをTTM(Yahoo trailingPE)基準で全面再構築。日次はwatchlist-per.mjsがYahoo trailingPEで%タイル/status自動更新。ETF/シクリカル/新規上場はconfidence低・bandNote参照] [2026-06-19 個別株9銘柄に quality/momentum/value拡張(FCF利回り・還元) を追加。wacc仮置き米8/日6。qScore=Piotroski。8050/6301はAltman Zグレーゾーン注意。] [2026-06-27 土曜バンドレビュー実施・据え置き(Opus判断)。sellProposal/buyProposalを段B判断で更新。] [2026-06-30 段B(Opus)判断でsellProposal/buyProposal更新。SMH最優先トリム・MSFT/DTCR/AMZN買い発議。] [2026-07-01〜2026-07-31 段C(Sonnet)書き戻し累積。詳細は旧note参照。] [2026-08-01 段C(Sonnet)書き戻し。土曜バンドレビュー(rebuildBands=true)・据置き(Opus判断)。] [2026-08-02 段C(Sonnet)書き戻し。日曜(rebuildBands=false)。] [2026-08-03 段C(Sonnet)書き戻し。月曜(rebuildBands=false)。スタンス=中立（選別・守り優位＝押し目の質を買い、過熱をトリム）。7月NFP+187K通過済み・8/7次回NFP(予想+91K)・8/12 CPI待ち。半導体11.7%・キャッシュ7.7%（目標12-13%未達）。] [2026-08-04 段C(Sonnet)書き戻し。火曜(rebuildBands=false)。] [2026-08-05 段C(Sonnet)書き戻し。水曜(rebuildBands=false)。SMH fair→rich昇格(%タイル71)・半導体集中11.8%。] [2026-08-06 段C(Sonnet)書き戻し。木曜(rebuildBands=false)。日経66300(+7.92%/1w・-4.93%/1m・リバ強・最高値圏)・S&P500 7737(+4.14%/1w・史上最高値圏)・ハンセン25853(+2.14%/1w・+10.72%/1m)・TOPIX 4161(+1.56%/1w・1308.T換算)・VIX16.5(-9.39%/1w・低位楽観)。ドル円159.16（FIMA協調介入で円高転換-2.78%/1w）。米10年債4.63%(+2bp/1w・+14bp/1m・高止まり)。スタンス=中立（割安AIコアを段階仕込み・イベント前は守り優先）。半導体集中12.1%(SMH %ile70・rich)・キャッシュ7.4%（目標12-13%未達）。買い発議：GOOGL最優先（%タイル1・cheap・Q2決算通過・Cloud+82%・8/12 CPI前に第1弾）/MSFT最優先（%タイル11・cheap_real・fwd20.8<trail）/DTCR高優先小口分割（%タイル11・cheap・bandConfidence low）/AMZN高保留（%タイル0・cheap・保留中）。売り発議：SMH最優先1.5-2割トリム（%タイル70・rich・半導体12.1%集中削減＋キャッシュ→12-13%復元・8/7 NFP通過後実行）/8050.T winner利確1/4（%タイル100・rich・trap一過性益）/9983.T 1/4トリム（%タイル81・rich）/200A.T条件付き5-10%トリム（%タイル50・fair・SMH後半導体11%超なら）。じっちゃま8/5号：バフェット・インディケーター230%危険域・グローバルリバランス論。藤沢742号：キオクシア年末21万円・AI革命2-3年継続。中島8/4号：Broadcomオートクチュール・LPDDR5X争奪戦。MFデータ当日鮮度OK(stale=false・2026-08-06)。判断ファイル=briefing-judgment.json（B2未生成・B生判断使用）。] [2026-08-07 段C(Sonnet)書き戻し。金曜(rebuildBands=false)。日経65683(+6.17%/1w・-3.77%/1m・最高値圏過熱)・S&P500 7724(+5.57%/1w・史上最高値圏)・Nasdaq 26363(+7.86%/1w・AI主導急伸)・ハンセン25916(+0.42%/1w・+9.74%/1m)・TOPIX 4173(+2.38%/1w・1308.T換算)・VIX15.81(-23.48%/1w・恐怖後退楽観)。ドル円159.16（FIMA協調介入・円高-2.78%/1w）。米10年債4.63%(-4bp/1w・+15bp/1m・高止まり)。スタンス=中立ややディフェンシブ（過熱リフレ相場でキャッシュ復元・利確優先）。SMH PER36.88→40.54(%タイル70→83・一段過熱)・ASHR rich→fair格下げ。半導体集中12.0%・キャッシュ5.6%（目標12-13%・大幅未達）。買い発議：GOOGL最優先（%タイル0・cheap・8/12 CPI前に第1弾）/MSFT高優先（%タイル21・cheap_real・fwd21.3<trail）/DTCR高優先小口分割（%タイル24・cheap・bandConfidence low）/AMZN高保留（%タイル0・cheap・保留中）。売り発議：SMH最優先1.5-2割トリム（%タイル83・rich・NFP通過後実行）/8050.T winner利確1/4（%タイル100・rich・trap）/9983.T 1/4トリム（%タイル87・rich）/200A.T条件付き（%タイル44・fair・半導体11%超なら）。MFデータ当日鮮度OK(stale=false・2026-08-07)。kvResyncA=15銘柄同期済み。判断ファイル=briefing-judgment.json（B2未生成・B生判断使用）。] [2026-08-08 段C(Sonnet)書き戻し。土曜(rebuildBands=true)。日経65607(+1.93%/1w・-1.81%/1m・最高値圏)・S&P500 7710(+3.66%/1w・史上最高値圏)・Nasdaq 26348(+4.88%/1w・AI主導急伸)・ハンセン25530(-1.27%/1w・+8.65%/1m)・TOPIX 4190(+1.70%/1w・1308.T換算)・VIX15.15(-11.35%/1w・低位楽観)。ドル円159.16（FIMA協調介入・円高-2.78%/1w）。米10年債4.69%(+1bp/1w・+14bp/1m・高止まり)。スタンス=中立（やや守り優位）・リフレ相場で株は過熱・8/12 CPI前はキャッシュ復元優先。半導体集中11.8%(SMH %ile86・rich)・キャッシュ5.6%（目標12-13%・大幅未達）。買い発議：GOOGL最優先（%タイル0・cheap・Q2決算通過・Cloud+82%・8/12 CPI前に第1弾）/MSFT最優先（%タイル22・cheap_real・fwd20.5<trail）/DTCR高優先小口分割（%タイル26・cheap・bandConfidence low）/AMZN高保留（%タイル0・cheap・保留中）。売り発議：SMH最優先1.5-2割トリム（%タイル86・rich・8/7 NFP通過後実行）/8050.T winner利確1/4（%タイル100・rich・trap）/9983.T 1/4トリム（%タイル86・rich）/200A.T条件付き（%タイル42・fair・半導体11%超なら）。MFデータ当日鮮度OK(stale=false・2026-08-08)。土曜バンドレビュー=据置き（Opus段B判断・bandReview.decision=据え置き）。判断ファイル=briefing-judgment.json（B2未生成・B生判断使用）。] [2026-08-10 段C(Sonnet)書き戻し。月曜(rebuildBands=false)。日経65607(+1.93%/1w・-1.81%/1m・最高値圏)・S&P500 7758(+3.58%/1w・史上最高値圏)・Nasdaq 26691(+5.19%/1w・AI主導最強)・ハンセン25668(-0.84%/1w・+6.07%/1m)・TOPIX 4190(+1.70%/1w・1308.T換算)・VIX15.15(-11.35%/1w・低位楽観)。ドル円159.16（FIMA協調介入・円高-2.78%/1w）。米10年債4.69%(+1bp/1w・+14bp/1m・高止まり)。スタンス=中立（やや強気）守りを固めて押し目を拾う。NFP -23K（9月FOMC利上げ見送り織り込み）。半導体集中11.9%(SMH %ile86・rich)・キャッシュ5.6%（目標12-13%・大幅未達）。買い発議：GOOGL最優先（%タイル0・cheap・Q2決算通過・Cloud+82%・8/12 CPI前に第1弾）/MSFT最優先（%タイル21・cheap_real・fwd21.3<trail）/DTCR高優先小口分割（%タイル26・cheap・bandConfidence low）/AMZN高保留（%タイル0・cheap・保留中）。売り発議：SMH最優先1.5-2割トリム（%タイル86・rich・8/12 CPI前に実行）/8050.T winner利確1/4（%タイル100・rich・trap）/9983.T 1/4トリム（%タイル87・rich）/200A.T条件付き（%タイル42・fair・半導体11%超なら）。ゆな先生8/9号★：アドバンテスト新規保有・半導体テスト工程戦略部門化。MFデータ当日鮮度OK(stale=false・2026-08-10)。kvResyncA=16銘柄同期済みread-back検証OK（段A）。判断ファイル=briefing-judgment.json（B2未生成・B生判断使用）。]",
   "valuations": {
     "VEA": {
       "value": {
@@ -14,12 +14,12 @@
       "bandMedian": 15,
       "percentile": 70,
       "status": "rich",
-      "note": "先進国ex-US・非保有。PER 18.38→16.56（-9.9%・比較基準は9/14）はYahoo trailingPE算定替えの疑い（同時期ACWIは横ばい）→本日バンド見直しでbandConfidence med→low。",
+      "note": "先進国ex-US・非保有。rich %70（bandConf low・Yahoo算定替え疑い）。",
       "asOf": "2026-10-03",
       "bandBasis": "TTM(ETF)",
       "bandConfidence": "low",
       "bandNote": "Yahoo trailingPE anchor 18.66 (先進国ex-US)。VEAのTTM P/Eは過去5-10年で概ね12(2020/2022の底)〜18近辺で推移。現在18.66は近年の高位＝バンド上端付近。MSCI World系の5年平均~21より低い水準で、先進国ex-USは構造的に米国より割安。bandは目測レンジ(GuruFocus/Vanguard公式17.3xは算定方式差で参考)。不確実性: ETFのPER集計は提供元差大。",
-      "sellProposal": "N/A（非保有）。新規買いは見送り。"
+      "sellProposal": "N/A（非保有）。新規買い見送り。"
     },
     "VGK": {
       "value": {
@@ -32,12 +32,12 @@
       "bandMedian": 14.5,
       "percentile": 80,
       "status": "rich",
-      "note": "欧州株・非保有。条件付き買い戻し（WTI<$85＋ホルムズ正常化）は未達（原油は100ドル近辺）。rich %80。",
+      "note": "欧州株・非保有。rich %80（med）。条件付き買い戻し（WTI<$85＋ホルムズ正常化）は未達（原油100ドル近辺）。",
       "asOf": "2026-10-03",
       "bandBasis": "TTM(ETF)",
       "bandConfidence": "med",
       "bandNote": "Yahoo trailingPE anchor 17.77 (欧州)。欧州株(STOXX/MSCI Europe)のTTM P/Eは過去5-10年で概ね12(2020/2022の安値)〜18(2021ピーク)。現17.77はバンド上端寄り＝近年高位。欧州は構造的低PER市場。bandは指数レンジからの推計、ETF集計方式差に留意。confidence med。",
-      "sellProposal": "N/A（条件未達で据置）。新規買い見送り。買い発議は%90 richゆえ監視のみへ格下げ（B2）。",
+      "sellProposal": "N/A（非保有）。新規買い見送り・監視のみ。",
       "buyProposal": "見送り（条件未達・rich）。監視のみを継続。"
     },
     "6016.T": {
@@ -61,7 +61,7 @@
       "bandMedian": 20,
       "percentile": 41,
       "status": "fair",
-      "note": "J-ENG（舶用エンジン）。fair %41・低流動・無触媒・bandConfidence low。",
+      "note": "J-ENG・非保有・fair %41（low）・低流動・無触媒。本人8/25の旧押し目指値（打診¥8,500/本玉¥7,800）が生きているか未確認。",
       "asOf": "2026-10-03",
       "bandBasis": "TTM",
       "bandConfidence": "low",
@@ -76,7 +76,7 @@
         "intCoverage": 161.9,
         "qScore": 6
       },
-      "buyProposal": "¥8,500以下の小口指値のみ＝弱。現金の復元を優先し、急がない。"
+      "buyProposal": "新規発議なし。旧指値の維持/取消を本人確認（厳密現金12%未達下で約定すると現金を削る）。"
     },
     "SMH": {
       "perCurrent": 43.07,
@@ -85,7 +85,7 @@
       "bandMedian": 28,
       "percentile": 93,
       "status": "rich",
-      "note": "保有 ¥25.44M。rich %90→93（PER 42.2→43.07、バンド上端45に接近）。半導体比率は訂正後10.16%（cap+0.16pt≈¥0.88M）で、集中度という根拠は弱まった。残る根拠は割高度の上昇・10年債5.24%・AI資金調達の信用リスク（じっちゃま10/3）。",
+      "note": "保有¥25.44M。rich %93（bandConf low）。本人10/3＝トリム対象外・押し目で1段ずつ積み増し（半導体上限15%以上・売りトリガー17%超）。richを-8%押し目でのみ買う本人設計は機械値と整合。1段目約定後の半導体≈11.3%（暫定・MF再取込後に補正）。",
       "asOf": "2026-10-03",
       "bandBasis": "TTM(ETF)",
       "bandConfidence": "low",
@@ -94,7 +94,8 @@
         "perTrail": 43.07,
         "perSource": "fund-trailing"
       },
-      "sellProposal": "1.5割トリム（≈¥3.82M）＝高（前号の最優先から格下げ、上限2割は撤回）。トリム後の半導体比率は9.45%。"
+      "sellProposal": "なし（本人keep・買い指値中）。",
+      "buyProposal": "本人1段目 $565×70 を維持（重ね発議なし）。約定→次段$495×110。"
     },
     "6301.T": {
       "staleFields": {
@@ -114,7 +115,7 @@
       "bandMedian": 13,
       "percentile": 100,
       "status": "rich",
-      "note": "コマツ・保有 ¥2.28M（小口）。シクリカルで、利益減（-14%YoY）によりPERが上がっている。japan_theme構成銘柄。",
+      "note": "コマツ・保有¥2.28M（小口）。rich %100（med）だが利益減（-14%YoY）でPERが上がるシクリカル。",
       "asOf": "2026-10-03",
       "bandBasis": "TTM",
       "bandConfidence": "med",
@@ -154,7 +155,7 @@
         "epsRev90d": null,
         "rsVsSector": null
       },
-      "sellProposal": "据置（小口のため、japan_themeの調整は8050/1629/1615で行う）。買い増しは見送り。"
+      "sellProposal": "据置（小口・japan_theme是正は1629/1615の条件付きで扱う）。買い増し見送り。"
     },
     "1306.T": {
       "perCurrent": 18.03,
@@ -163,12 +164,12 @@
       "bandMedian": 14.5,
       "percentile": 100,
       "status": "rich",
-      "note": "TOPIX ETF・保有 ¥26.19M・コア。rich %100（bandConfidence med）＝日本株の高値圏。",
+      "note": "TOPIX ETF・保有¥26.19M・コア。rich %100（med）＝日本株高値圏。本人は『日本保有維持』を選択済み。",
       "asOf": "2026-10-03",
       "bandBasis": "TTM",
       "bandConfidence": "med",
       "bandNote": "TOPIX連動ETF。構成指数TOPIX(現プライム市場)のTTM PERで代替。10年平均は概ね14〜15倍、常用域12〜18倍。東証は2022/3でTOPIX PER公表終了→以降プライム市場PERで接続(ソース差あり)。アンカー18.36はレンジ上端=最高値圏で日経7万円の過熱と整合。",
-      "sellProposal": "据置（コア）。現金12%未達が続く場合の予備原資（第3順位＝TSLA→1615.Tの後）。買い増しは見送り。"
+      "sellProposal": "据置（コア）。買い増し見送り。"
     },
     "VT": {
       "value": {
@@ -181,13 +182,13 @@
       "bandMedian": 19,
       "percentile": 62,
       "status": "fair",
-      "note": "rich→fair（%87→62）はYahoo算定替えの疑い（PER 22.83→20.56は9/14比、同時期ACWIは21.09→21.27）。全世界株は実質的に高値圏との評価を据え置く。本日bandConfidence med→low。",
+      "note": "全世界株・非保有。fair %62（low・算定替え疑い）。",
       "asOf": "2026-10-03",
       "bandBasis": "TTM(ETF)",
       "bandConfidence": "low",
       "bandNote": "Yahoo trailingPE anchor 22.5 (全世界)。VTのTTM P/Eは過去5-10年で概ね15(2022弱気相場の底)〜24(2021/2024-26の高値圏)。現22.5はバンド上位80%付近=高値圏。全世界株は米国比率高でMSCI World 5年平均~21に近い。Vanguard公式21.3xは参考。confidence med。",
       "sellProposal": "N/A（監視）。新規買い見送り。",
-      "buyProposal": "見送り（status変化がデータ由来の可能性あり）。オルカンは積立継続のみ。"
+      "buyProposal": "見送り。オルカンは積立継続のみ。"
     },
     "XLF": {
       "value": {
@@ -200,12 +201,12 @@
       "bandMedian": 15.5,
       "percentile": 45,
       "status": "fair",
-      "note": "米金融・非保有・fair %45。米大手銀のQ3決算（10/13〜）が触媒。",
+      "note": "米金融・非保有・fair %45（med）。米大手銀Q3決算（10/13〜）が触媒。",
       "asOf": "2026-10-03",
       "bandBasis": "TTM(ETF)",
       "bandConfidence": "med",
       "bandNote": "Financials基準=Yahoo trailingPE。XLFは銀行/保険/資本市場の比率高くTTM P/Eは構造的に低位。5-10年で概ね12-18台で推移(2020コロナ底/2022は低位、2024-26は上端)。アンカー17.08は上限寄り(~70%タイル)で現状の高値圏と整合。⚠Yahoo TTM≈17.6に対しInvesting.com≈15.06と算定差大(加重平均/赤字除外等)。バンドはYahoo基準に寄せた。",
-      "sellProposal": "N/A（非保有）。新規買い見送り。"
+      "sellProposal": "N/A（非保有）。現金12%未達で新規買い見送り。"
     },
     "XLV": {
       "value": {
@@ -218,12 +219,12 @@
       "bandMedian": 20.5,
       "percentile": 100,
       "status": "rich",
-      "note": "ヘルスケア・非保有。rich %100だがYahooとInvesting.comの差が極端。",
+      "note": "ヘルスケア・非保有。rich %100（med）だがデータ源間の差が極端。",
       "asOf": "2026-10-03",
       "bandBasis": "TTM(ETF)",
       "bandConfidence": "med",
       "bandNote": "Health Care基準=Yahoo trailingPE。ディフェンシブで安定的、5-10年で概ね16-25。アンカー24.14はバンド上端付近(~85-90%タイル)=Yahoo基準では割高寄りに見える。⚠ただしInvesting.com等は≈17.6と大きく低く、ソース差が極端なセクター(製薬の一時費用/減損でTTM EPSが振れやすい)。Yahoo trailingPEに寄せたためアンカーが上端化、note留意。",
-      "sellProposal": "N/A（非保有）。新規買いは見送り。"
+      "sellProposal": "N/A（非保有）。新規買い見送り。"
     },
     "XLP": {
       "value": {
@@ -236,12 +237,12 @@
       "bandMedian": 22.5,
       "percentile": 69,
       "status": "rich",
-      "note": "生活必需・非保有・rich %69。",
+      "note": "生活必需・非保有。rich %69（med）。",
       "asOf": "2026-10-03",
       "bandBasis": "TTM(ETF)",
       "bandConfidence": "med",
       "bandNote": "Consumer Staples基準=Yahoo trailingPE。低ボラ・安定収益でレンジ狭く5-10年概ね19-26。アンカー25.16は上端寄り(~75-80%タイル)=現状割高で台帳の🔴richと整合。⚠Yahoo TTM≈25に対しInvesting.com≈19.89/別ソース22.78と分散。Yahoo基準に寄せた。",
-      "sellProposal": "N/A（非保有）。新規買いは見送り。"
+      "sellProposal": "N/A（非保有）。新規買い見送り。"
     },
     "DTCR": {
       "value": {
@@ -254,12 +255,12 @@
       "bandMedian": 24,
       "percentile": 6,
       "status": "cheap",
-      "note": "保有 ¥6.20M。cheap %6・bandConfidence low（REIT偏重）。新規のcheap入りではない。触媒が逆風：10年債5.24%に加え、AIデータセンターのSPV資金調達が詰まっている（じっちゃま10/3：貸し手が条件を上積み、IPO窓が閉鎖、プロジェクト縮小リスク）。",
+      "note": "保有¥6.20M・本人『継続追跡』。cheap %6（low・REIT偏重）・新規cheap入りではない。触媒は逆風（10年債5.2%台・AIデータセンターのSPV資金調達の詰まり＝じっちゃま10/3）。",
       "asOf": "2026-10-03",
       "bandBasis": "TTM P/E (Yahoo trailingPE)",
       "bandConfidence": "low",
       "bandNote": "Global X データセンター&デジタルインフラETF(2020設定・履歴薄)。REIT偏重でFFOベースが本来適切なためP/Eは過大に出やすく信頼度低。現アンカー22.3(Yahoo)に対しRobinhood23.95/Investing.com28と source差が大きい。履歴が短く正式な分位は出せないため現値中心の暫定バンド。出典: Yahoo/Robinhood/Investing.com(2026-06取得)。",
-      "buyProposal": "見送り（cheapだが触媒が逆風）。追加は信用スプレッドの沈静化を確認してから。保有は継続。"
+      "buyProposal": "見送り（信用スプレッドの沈静化を確認してから）。保有継続。"
     },
     "LITE": {
       "sectorMedian": {
@@ -280,7 +281,7 @@
       "bandMedian": 45,
       "percentile": 100,
       "status": "rich",
-      "note": "光通信・非保有。データは8/12で停止（needsManual）。利益サイクルの底でPERが膨らんでいる。",
+      "note": "光通信・非保有。rich %100（low）・データ8/12停止・利益サイクル底でPER膨張。",
       "asOf": "2026-08-12",
       "bandBasis": "TTM P/E (Yahoo trailingPE)",
       "bandConfidence": "low",
@@ -296,7 +297,7 @@
         "qScore": 7
       },
       "sellProposal": "N/A（非保有）。forward/正規化EPS併読が必須・バンド位置単独では判断しない。",
-      "buyProposal": "見送り（$700以下の遠い指値のみ）。"
+      "buyProposal": "見送り（旧台帳の$700以下の遠い指値のみ）。"
     },
     "CRWD": {
       "sectorMedian": {
@@ -317,7 +318,7 @@
       "bandMedian": 95,
       "percentile": 100,
       "status": "rich",
-      "note": "GAAP利益がほぼゼロでtrailingPE 9001はNM。forwardPEバンドに日次のtrailingを当てており、%ile/statusは無意味。非保有。",
+      "note": "非保有。trailingPE 9001はNM＝%ile/statusは無意味。",
       "asOf": "2026-10-03",
       "bandBasis": "forwardPE",
       "bandConfidence": "low",
@@ -353,7 +354,7 @@
       "bandMedian": 80,
       "percentile": 100,
       "status": "rich",
-      "note": "GAAP薄利でtrailingPE 1008はNM。本日needsManual false→true。非保有。",
+      "note": "非保有。trailingPE 1008はNM・needsManual。",
       "asOf": "2026-10-03",
       "bandBasis": "TTM",
       "bandConfidence": "low",
@@ -379,7 +380,7 @@
       "percentile": 75,
       "status": "rich",
       "asOf": "2026-06-14",
-      "note": "ハンセン・データは6/14で停止（needsManual）。非保有。ハンセン指数は1m -5.3%。",
+      "note": "ハンセン・非保有。rich %75（low・データ停止）。ハンセン1m -5.3%・国慶節で10/7まで本土休場。",
       "bandBasis": "TTM(指数代替)",
       "bandConfidence": "low",
       "bandNote": "Yahoo trailingPE取得不可のためハンセン指数PERで代替。ハンセン指数TTM P/Eは過去10年 record低6.7/中央値10.2/高24.2、typical 8.8-12.4 (GuruFocus)。bandHighは外れ値高24.2を除き常用上端14に圧縮。トラッカーファンド(2800)はほぼ指数連動。現~12.8は常用域上端=高値圏(中国株ラリー)。ETF実値が取れない=confidence low、指数代替を明記。",
@@ -393,12 +394,12 @@
       "percentile": 56,
       "status": "fair",
       "asOf": "2026-10-03",
-      "note": "中国A株・非保有・fair %56。藤沢の多極化・中国強気論と整合。",
+      "note": "中国A株・非保有・fair %56（med）。藤沢の多極化・中国強気論と整合。",
       "bandBasis": "TTM(ETF)",
       "bandConfidence": "med",
       "bandNote": "Yahoo trailingPE anchor 17.39 (中国A株・CSI300連動)。CSI300指数のTTM P/Eは過去10年で record低8.1/中央値13.2/高54.9、typical 11.4-14 (GuruFocus)。bandHighはバブル期(54.9)を外れ値として除き常用上端18に圧縮。現17.39は常用域の上=高値圏(2025-26中国株ラリー)。confidence med(指数データは堅いがETF集計差あり)。",
       "sellProposal": "N/A（監視）。今は追いかけ見送り。",
-      "buyProposal": "見送り（現金の復元を優先し、押し目を待つ）。"
+      "buyProposal": "見送り（現金12%未達・押し目待ち）。"
     },
     "3033.HK": {
       "perCurrent": 16.71,
@@ -408,11 +409,11 @@
       "percentile": 7,
       "status": "cheap",
       "asOf": "2026-10-03",
-      "note": "ハンセンTECH・非保有。cheap %7（新規のcheap入りではない）。bandConfidence low・%タイルは目測。",
+      "note": "ハンセンTECH・非保有。cheap %7（low）・新規cheap入りではない（PER系列の整備待ち）。",
       "bandBasis": "TTM(ETF)",
       "bandConfidence": "low",
       "bandNote": "Yahoo trailingPE anchor 18.43 (香港・ハンセンTECH)。CSOP 3033は2020/8設定で履歴薄=バンド信頼度低。ハンセンTECHのTTM P/Eはバブル期(2020-21)30-60倍、底(2022-23)15-18倍。現18.43はバンド下半分=過熱なし。若い指数ゆえ%タイル目測・確立した標準域なし。confidence low(履歴薄を明記)。",
-      "buyProposal": "保留（PER系列の整備待ち・B2方針を継続）。"
+      "buyProposal": "保留（%タイルが目測・現金12%未達）。"
     },
     "AAPL": {
       "sectorMedian": {
@@ -430,7 +431,7 @@
       "bandMedian": 30,
       "percentile": 87,
       "status": "rich",
-      "note": "保有 ¥8.66M（valuations側の『非保有』記載は誤り→訂正）。rich %87・bandConfidence high・verdictはrich_real・PEG 2.85。機械値の質が最も高い保有rich銘柄。",
+      "note": "保有¥8.66M。rich %87（high）・本物の割高・PEG2.85。本人目標$75K（薄め・低優先・1段目外）＝積み増し方向。",
       "asOf": "2026-10-03",
       "bandBasis": "TTM",
       "bandConfidence": "high",
@@ -468,7 +469,7 @@
         "epsRev90d": null,
         "rsVsSector": null
       },
-      "sellProposal": "据置（B2：1/4トリム発議は除外）。保有の訂正自体は正しい。新規買いは見送り。"
+      "sellProposal": "出さない（本人$75K目標と逆向き）。追加もrichのうちは低優先のまま（本人方針と整合）。"
     },
     "AMZN": {
       "sectorMedian": {
@@ -486,7 +487,7 @@
       "bandMedian": 35,
       "percentile": 0,
       "status": "cheap",
-      "note": "保有 ¥7.85M。cheap %0だがcheap_fake（EVで見るとフェア）。GPU80億ドル分をSPVへ売却しリースバック（じっちゃま10/3）＝資金繰り面に注意。",
+      "note": "保有¥7.85M。cheap %0（med）だが見せかけの割安（EVでフェア）。GPU80億ドル分をSPVへ売却・リースバック＝資金繰り面に注意（じっちゃま10/3）。決算10/29（推定）。",
       "asOf": "2026-10-03",
       "bandBasis": "TTM",
       "bandConfidence": "med",
@@ -525,7 +526,7 @@
         "epsRev90d": null,
         "rsVsSector": null
       },
-      "buyProposal": "保留＝受動監視のみ。指値は台帳値の$237.5以下で第1弾$15K（前号の『$45以下』は誤記）。本人判断(6/25)により執行はしない。"
+      "buyProposal": "本人1段目 $246×90 を維持（重ね発議なし。6/25の『保留』は本人10/3で上書き）。約定→次段$222×125。"
     },
     "GOOGL": {
       "sectorMedian": {
@@ -543,7 +544,7 @@
       "bandMedian": 25,
       "percentile": 0,
       "status": "cheap",
-      "note": "保有 ¥8.13M。cheap %0だが、TTM PER 16.98がvalue.perTrail 28.1/perFwd 29.4と40%超ずれている。TTM EPSに持分評価益（SpaceX上場・Anthropic評価替え）が混じっている疑い→本日bandConfidence high→med。それでもROIC 21.8%・自己資金でCapExを賄える・メンター（ゆな/中島）の最大テーゼ。",
+      "note": "保有¥8.13M。cheap %0（med）。TTM PER 16.98は持分評価益混入の疑い（perFwd 29.4ではフェア）。ROIC21.8%・CapExを自己資金で賄える＝信用収縮に最も強い。ゆな/中島の最大テーゼ。",
       "asOf": "2026-10-03",
       "bandBasis": "TTM",
       "bandConfidence": "med",
@@ -579,7 +580,7 @@
         "epsRev90d": null,
         "rsVsSector": null
       },
-      "buyProposal": "段階仕込み第1弾 $15K（≈¥2.36M）＝中（B2で高→中）。条件：コア売り①〜③が約定し、買付後も現金≥10%であること＋FOMC議事要旨を通過していること。第2弾はCPI（10/14）後に再判定。"
+      "buyProposal": "本人1段目 $336×90 を維持（前号の『第1弾$15K』は本人指値に統合・重ね発議なし）。約定→次段$305×60。"
     },
     "MSFT": {
       "sectorMedian": {
@@ -597,7 +598,7 @@
       "bandMedian": 32,
       "percentile": 25,
       "status": "cheap",
-      "note": "保有 ¥15.93M。cheap %25・cheap_real・bandConfidence high・fwd<trail。台帳トリガー（%ile≤5で$15K）は未抵触。",
+      "note": "保有¥15.93M≈$101K。cheap %25（high）・本物の割安。本人ルール＝満玉HOLD（EPS改定が上向くまで上乗せなし）。EPS改定データ未取得（epsRev90d=null）。",
       "asOf": "2026-10-03",
       "bandBasis": "TTM",
       "bandConfidence": "high",
@@ -636,7 +637,7 @@
         "epsRev90d": null,
         "rsVsSector": null
       },
-      "buyProposal": "小さめ打診＝低（現金12%回復後のみ）。"
+      "buyProposal": "発議しない（本人満玉HOLD）。EPS改定上向きの確認が取れたら本人判断で再検討。"
     },
     "TSLA": {
       "sectorMedian": {
@@ -654,7 +655,7 @@
       "bandMedian": 120,
       "percentile": 100,
       "status": "rich",
-      "note": "保有 ¥6.99M（valuations側の『非保有』記載は誤り→訂正）。rich %100・rich_real・PER 334/fwd 186・PEG 4.06・ROIC 3%。bandConfidence lowだが絶対水準で割高。",
+      "note": "保有¥6.99M。rich %100（low）・本物の割高（PER334/fwd186・PEG4.06・ROIC3%）。本人10/3＝目標$100K・新規買い禁止(PEG≥3)解除。",
       "asOf": "2026-10-03",
       "bandBasis": "TTM",
       "bandConfidence": "low",
@@ -692,7 +693,8 @@
         "epsRev90d": null,
         "rsVsSector": null
       },
-      "sellProposal": "条件付き1/4トリム（≈¥1.75M）＝低（B2で中→低）。コア売り①〜③の約定とMF再計算の後も現金<12%なら、予備の第1順位として執行。新規買いは台帳どおり禁止（PEG≥3）。"
+      "sellProposal": "出さない（本人$100K目標・買い指値中）。",
+      "buyProposal": "本人1段目 $320×45 を維持（重ね発議なし）。2段目以降の時期は論点提起（health.insights）"
     },
     "COPX": {
       "value": {
@@ -704,9 +706,9 @@
       "bandMedian": 18,
       "percentile": 29,
       "status": "cheap",
-      "note": "銅鉱山・保有 ¥4.00M。cheap %29・シクリカル・bandConfidence low。",
+      "note": "銅鉱山・保有¥4.00M。cheap %29（low）・シクリカル。",
       "asOf": "2026-10-03",
-      "buyProposal": "見送り（現金の復元を優先）。保有は継続。",
+      "buyProposal": "見送り（現金12%未達）。保有継続。",
       "bandBasis": "TTM P/E (Yahoo trailingPE)",
       "bandConfidence": "low",
       "bandNote": "Global X 銅鉱山ETF=高シクリカル(コモディティのレバレッジ的値動き)。銅価ピーク(2021 >$4.5/lb)では鉱山利益最大化でPE圧縮(10〜12)、価格下落・コスト上昇局面では利益縮小でPE拡大(30+)。現アンカー20.12はサイクル中位。source間で16.3〜23とブレ。コモディティ価格次第で大きく振れるためバンド位置のみで割安判断不可、銅価サイクルを併読。出典: Yahoo/Investing.com/stockanalysis/Statista(2026-06取得)。"
@@ -718,7 +720,7 @@
       "bandMedian": 11,
       "percentile": 48,
       "status": "fair",
-      "note": "中南米・保有 ¥5.44M・fair %48。",
+      "note": "中南米・保有¥5.44M・fair %48（low）。",
       "asOf": "2026-10-03",
       "bandBasis": "TTM(ETF)",
       "bandConfidence": "low",
@@ -735,12 +737,12 @@
       "bandMedian": 30,
       "percentile": 34,
       "status": "fair",
-      "note": "レアアース・保有 ¥5.06M・fair %34・bandConfidence low。",
+      "note": "レアアース・保有¥5.06M・fair %34（low）。本人10/2テーマ撤退。",
       "asOf": "2026-10-03",
       "bandBasis": "TTM P/E (Yahoo trailingPE)",
       "bandConfidence": "low",
       "bandNote": "VanEck レアアース/戦略金属ETF=高シクリカル。2021-22のレアアース価格ブームでは構成株(MP Materials等)の利益急増しPEは低め、2023以降は価格下落・利益急減(MP 2023 EBITDA-56%)でPE膨張〜赤字(NM)化。年次リターンも+80%(21)/-31%(22)/-19%(23)と乱高下。現アンカー40.21はTTM利益縮小局面の高PE。source間で23.8〜41とブレ、一部-119(赤字)も。サイクルで大きく振れるため広めレンジ＋note必須。出典: Yahoo/Investing.com/etfdb/MP Materials 8-K(2026-06取得)。",
-      "sellProposal": "据置。"
+      "sellProposal": "本人の全量退出指値 $64×500 を維持（高・本人指値の追跡＝新規発議ではない）"
     },
     "SHLD": {
       "value": {
@@ -753,12 +755,12 @@
       "bandMedian": 30,
       "percentile": 26,
       "status": "cheap",
-      "note": "防衛テック・非保有。cheap %26・bandConfidence low（2023年設定で履歴が薄い）。触媒は藤沢9/28（米国のトマホーク/THAAD/PAC-3在庫が1/3〜2/3消失・補充に3-5年）。",
+      "note": "防衛テック・非保有。cheap %26（low・2023年設定で履歴が薄い）。触媒は藤沢9/28（米ミサイル在庫枯渇・補充3-5年）。",
       "asOf": "2026-10-03",
       "bandBasis": "TTM P/E (Yahoo trailingPE)",
       "bandConfidence": "low",
       "bandNote": "Global X 防衛テックETF(2023/9設定・履歴約2.5年で極薄)。2024 +35%/2025 +74%の急騰で構成株のバリュエーションが拡大(Rheinmetall PE 2024末37→2026 72、Palantir 100倍超)。現アンカー29.26に対しYahoo trailingPE 33.93の報告もあり。歴史不足で分位は目測。地政学テーマで触媒は強いがマルチプル圧縮リスク大。出典: stockanalysis/Investing.com/financecharts(2026-06取得)。",
-      "buyProposal": "監視のみ（B2：小口候補の指定は撤回）。"
+      "buyProposal": "監視のみ（現金12%未達・バンド信頼度低）。"
     },
     "XLE": {
       "value": {
@@ -770,12 +772,12 @@
       "bandMedian": 13,
       "percentile": 77,
       "status": "rich",
-      "note": "エネルギー・保有 ¥8.24M（valuations側の『非保有』記載は誤り→訂正）。rich %77だが利益の循環でPERが歪む（bandConfidence low）。",
+      "note": "エネルギー・保有¥8.24M。rich %77（low・利益循環でPER歪み）。原油100ドル近辺・CPI3.7%のインフレヘッジ役。",
       "asOf": "2026-10-03",
       "bandBasis": "TTM(ETF)",
       "bandConfidence": "low",
       "bandNote": "Energy基準=Yahoo trailingPE。原油市況でEPSが激しく循環しP/Eが最も不安定なセクター。利益急増局面は一桁台(2022油高でTTM P/E≈8-10)、利益縮小/赤字局面はP/E急騰orNM(2020は赤字でP/E無意味化)。通常の利益局面で概ね12-20。アンカー20.03はバンド高値圏=earnings谷でP/Eが上振れた状態の可能性が高く、'割高'というより分母(EPS)縮小の解釈が必要。confidence=lowでnoteに循環性明記。⚠Yahoo TTM≈20 vs Investing.com≈12.55とソース差極大。",
-      "sellProposal": "据置（インフレ・原油100ドルのヘッジ役）。買い増しは見送り。"
+      "sellProposal": "据置（ヘッジ役）。買い増し見送り。"
     },
     "PLTR": {
       "sectorMedian": {
@@ -793,7 +795,7 @@
       "bandMedian": 280,
       "percentile": 10,
       "status": "cheap",
-      "note": "保有 ¥11.14M。cheap %10は自己バンド過適合によるもの（絶対値はfwd 81・EV/EBITDA 149で過熱）。",
+      "note": "保有¥11.14M。cheap %10（low）は自己バンド過適合（fwd81・EV/EBITDA149で絶対値は過熱）＝cheap表示は根拠にしない。",
       "asOf": "2026-10-03",
       "bandBasis": "TTM",
       "bandConfidence": "low",
@@ -832,7 +834,7 @@
         "epsRev90d": null,
         "rsVsSector": null
       },
-      "buyProposal": "見送り（$90-100の押し目を待つ遠い指値のみ）。",
+      "buyProposal": "本人1段目 $160×60（深い押し目）を維持。約定→次段$140×70。",
       "sellProposal": "据置（売りの発議もしない）。"
     },
     "1615.T": {
@@ -842,12 +844,12 @@
       "bandMedian": 11,
       "percentile": 100,
       "status": "rich",
-      "note": "銀行業ETF・保有 ¥29.45M（japan_themeで最大）。%100はbandConfidence lowで、指数算定差の疑いがあるため根拠には使わない。日銀は9/18に1.25%へ利上げ済み、次回10/29-30。",
+      "note": "銀行業ETF・保有¥29.45M（japan_theme最大）。rich %100（low・指数算定差疑い）。銀行＝利上げ受益で、10/6植田講演・10/29-30日銀までは追い風側。",
       "asOf": "2026-10-03",
       "bandBasis": "TTM",
       "bandConfidence": "low",
       "bandNote": "東証銀行業株価指数連動ETF。銀行セクターは伝統的にTTM PER 8〜13倍と低位。直近の金利上昇による再評価で上振れ。Yahoo記載の現値は約11.5倍だが、アンカー18.18は通常域を大きく上回り、指数算定方式差/一部構成銘柄の利益要因の可能性=理由不明瞭につきnote明記・confidence=low。",
-      "sellProposal": "条件付き1/6トリム（≈¥4.91M）＝低。発火条件：①〜⑤の約定後も現金<12%、またはjapan_theme>15%。タイミングは日銀10/30通過後（材料出尽くし）。根拠はjapan_themeのcap超過のみ。【B2】発火条件は①〜③約定後のjapan_theme 15.42%で事実上充足済み（予備の第2順位）。日銀の結果とMF最新値で再判定したうえで執行する。"
+      "sellProposal": "据置（B2：条件付き1/6トリムは除外＝本人10/2『日本保有維持』と逆向き）。japan_theme cap超過は論点提起（health.insights）"
     },
     "1629.T": {
       "perCurrent": 17.22,
@@ -856,12 +858,12 @@
       "bandMedian": 11,
       "percentile": 100,
       "status": "rich",
-      "note": "商社・卸売ETF・保有 ¥23.98M。%100（bandConfidence low）。構造的な再評価のため割高度は割り引いて読む。",
+      "note": "商社・卸売ETF・保有¥23.98M。rich %100（low・構造的再評価で割り引いて読む）。本人keep対象外だが、本人は『深い段は日本トリムでなくJPST取り崩し（日本保有維持）』を選択済み。",
       "asOf": "2026-10-03",
       "bandBasis": "TTM",
       "bandConfidence": "low",
       "bandNote": "実体はNEXT FUNDS 商社・卸売(TOPIX-17)上場投信=総合商社中心(三菱商事/三井物産等)。プロンプトの『機械セクターETF』は誤り(機械はTOPIX-17別コード1624)。商社は歴史的に5〜10倍の万年割安だったがバフェット買い/ROE再評価で2025年以降12〜16倍へ再レーティング。アンカー16.12はレンジ高値圏。",
-      "sellProposal": "1/6トリム（≈¥4.00M）＝中【新規発議】。根拠はjapan_theme 17.16%（cap13%・+4.16pt）という集中度のみ。"
+      "sellProposal": "据置（B2：条件付き1/6トリムは除外＝本人10/2『日本保有維持』と逆向き）。japan_theme cap超過は論点提起（health.insights）"
     },
     "8050.T": {
       "sectorMedian": {
@@ -877,7 +879,7 @@
       "bandMedian": 17,
       "percentile": 100,
       "status": "rich",
-      "note": "セイコーG・保有 ¥21.12M。rich %100・verdictはtrap（一過性益）・1年で+257%・52週高値圏96。",
+      "note": "セイコーG・保有¥21.12M。rich %100（low）は機械値。本人10/2＝確信保有・利確/トリム中止（valuationsの『罠』verdictは本人撤回済みの見立て＝根拠に使わない）。論点提起：≈$134K（総資産比3.66%）で本人の単一銘柄3%≒$110K天井を超過。",
       "asOf": "2026-10-03",
       "bandBasis": "TTM",
       "bandConfidence": "low",
@@ -914,7 +916,7 @@
         "epsRev90d": null,
         "rsVsSector": null
       },
-      "sellProposal": "1/4利確（≈¥5.28M）＝最優先（前号の高から格上げ）。japan_themeのcap超過への最大寄与。日銀利上げ×円高も逆風。"
+      "sellProposal": "出さない（本人keep）。3%天井との整合のみ本人確認。"
     },
     "9983.T": {
       "sectorMedian": {
@@ -930,7 +932,7 @@
       "bandMedian": 38,
       "percentile": 70,
       "status": "rich",
-      "note": "ファストリ・保有 ¥14.55M。rich %70（72→70）。通期決算は10/8。7/9に上方修正済み。",
+      "note": "ファストリ・保有¥14.55M・本人コア（トリム中止）。rich %70（med）。通期決算10/8（7/9に上方修正済み）。台帳トリガー（%ile≥95）未抵触。",
       "asOf": "2026-10-03",
       "bandBasis": "TTM",
       "bandConfidence": "med",
@@ -968,7 +970,7 @@
         "epsRev90d": null,
         "rsVsSector": null
       },
-      "sellProposal": "決算(10/8)通過後に再判定。台帳トリガー（%ile≥95で1/4トリム）は未抵触のため決算前には売らない。japan_theme調整の第二弾候補。"
+      "sellProposal": "出さない（本人keep）。保有のまま決算通過・決算後は%ile確認のみ。"
     },
     "ACWI": {
       "value": {
@@ -981,13 +983,13 @@
       "bandMedian": 19,
       "percentile": 70,
       "status": "rich",
-      "note": "全世界株・オルカン（eMAXIS Slim ¥63.70M）のproxy。rich %70・bandConfidence med。VTより信頼できる参照値。",
+      "note": "全世界株・オルカン（¥63.70M）のproxy。rich %70（med）。",
       "asOf": "2026-10-03",
       "bandBasis": "TTM(ETF)",
       "bandConfidence": "med",
       "bandNote": "Yahoo trailingPE anchor 23.26 (全世界・MSCI ACWI)。MSCI ACWIのTTM P/Eは過去5-10年で概ね15(2022底)〜24(高値圏)、5年平均~20。現23.26はバンド上端付近=高値圏。VTとほぼ同等の全世界エクスポージャだが米大型成長偏重でやや高め。confidence med。",
       "sellProposal": "N/A（監視）。新規買い見送り。",
-      "buyProposal": "スポット追加は見送り（積立のみ継続）。"
+      "buyProposal": "スポット追加見送り（積立のみ継続）。"
     },
     "1477.T": {
       "perCurrent": 17.27,
@@ -996,7 +998,7 @@
       "bandMedian": 15,
       "percentile": 88,
       "status": "rich",
-      "note": "日本株最小分散・非保有・rich %88。",
+      "note": "日本株最小分散・非保有・rich %88（low）。",
       "asOf": "2026-10-03",
       "bandBasis": "TTM",
       "bandConfidence": "low",
@@ -1010,7 +1012,7 @@
       "bandMedian": 20,
       "percentile": 56,
       "status": "fair",
-      "note": "グロース250・非保有・fair %56・bandConfidence low。",
+      "note": "グロース250・非保有・fair %56（low）。",
       "asOf": "2026-10-03",
       "bandBasis": "TTM",
       "bandConfidence": "low",
@@ -1024,12 +1026,12 @@
       "bandMedian": 35,
       "percentile": 57,
       "status": "fair",
-      "note": "日経半導体・保有 ¥28.68M。fair %57・bandConfidence low（2024年上場）。",
+      "note": "日経半導体・保有¥28.68M。fair %57（low・2024年上場）。SMHとの二重保有は本人が地域分散として意図的に維持。",
       "asOf": "2026-10-03",
       "bandBasis": "TTM",
       "bandConfidence": "low",
       "bandNote": "NEXT FUNDS 日経半導体株指数連動ETF(東京エレクトロン/アドバンテスト等30銘柄)、2024/6上場で履歴が極端に薄くhold相当。主力4銘柄の予想PER平均は約39.5倍、半導体はサイクルでTTM PERが15〜50倍超まで大きく振れる。アンカー53.45はAI需要でレンジ高値圏。設定新しくバンド薄くconfidence=low。",
-      "sellProposal": "据置（前号の条件付き二段目トリムは撤回）。SMH 1.5割トリム後に半導体9.45%＜cap10%となり、発火条件が消える。"
+      "sellProposal": "据置（本人keep）。"
     },
     "SPCX": {
       "perCurrent": null,
@@ -1042,9 +1044,10 @@
       "asOf": "2026-06-26",
       "bandBasis": "none(IPO直後)",
       "bandConfidence": "low",
-      "note": "SpaceX・保有 ¥4.52M。6/12にIPO、trailingPERはまだ形成されていない（needsManual）。",
+      "note": "SpaceX・保有¥4.52M。IPO直後でtrailing PER未形成（status=hold）＝PER系の判断不可。本人はStarship成功の実需を評価しnear-market。",
       "bandNote": "上場6/12で履歴極薄=自前PERバンド未確立。trailing EPSが揃うまで%タイル算定不可。週次Opusでバンド初期化を検討。",
-      "sellProposal": "据置（発議なし）。"
+      "sellProposal": "据置（発議なし）。",
+      "buyProposal": "本人1段目 $155×72 を維持（space theme約定後≈1.2%・cap3%内）。"
     },
     "ひふみ投信": {
       "perCurrent": 20.82,
@@ -1115,7 +1118,7 @@
       ],
       "status": "na",
       "percentile": null,
-      "note": "PER 20.82（2026-05月報）・バンドなし。名寄せで¥69.27Mの最大保有。日本株アクティブの実質エクスポージャが大きい点に留意。",
+      "note": "PER20.82（2026-05月報）・バンドなし。名寄せ¥69.27Mの最大保有＝日本株アクティブの実質エクスポージャ。",
       "sellProposal": "据置（発議なし）。"
     },
     "ひふみマイクロスコープpro": {
@@ -1187,7 +1190,7 @@
       ],
       "status": "na",
       "percentile": null,
-      "note": "PER 23.09（2026-05月報）・バンドなし。",
+      "note": "PER23.09（2026-05月報）・バンドなし。",
       "sellProposal": "据置（発議なし）。"
     }
   }
