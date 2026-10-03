@@ -7,6 +7,7 @@
 //   node data/scheduler/per-daily-gate.mjs mode [--now <ISO>]      # write / compute-only を出力（20:55〜22:30 UTC 開始は compute-only）
 //   node data/scheduler/per-daily-gate.mjs push-ok [--now <ISO>]   # push 可なら exit 0、21:00〜22:30 UTC は exit 3
 //   node data/scheduler/per-daily-gate.mjs message <YYYY-MM-DD>    # コミットメッセージ `data: daily PER <日付>` を出力
+//   node data/scheduler/per-daily-gate.mjs updated <watchlist-per.json> # ウォッチの更新件数を出力。0 件なら exit 4（コミットしない）
 //   node data/scheduler/per-daily-gate.mjs check-diff              # HEAD と作業ツリーの data/valuations.json を比べ、
 //                                                                  #   §6.3 の許可フィールド以外の変更・書式の変化があれば exit 1
 // 公開リポのログに出るため、check-diff が出すのはエントリ名とフィールド名だけ（値は出さない）。
@@ -15,7 +16,13 @@ import { execFileSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
 
-import { dailyPerCommitMessage, runMode, isPushBlocked, findDisallowedChanges } from './lib/per-daily.mjs';
+import {
+  dailyPerCommitMessage,
+  runMode,
+  isPushBlocked,
+  findDisallowedChanges,
+  countWatchlistUpdated,
+} from './lib/per-daily.mjs';
 import { detectFormat } from './lib/json-format.mjs';
 
 const __dir = dirname(fileURLToPath(import.meta.url));
@@ -73,10 +80,20 @@ switch (cmd) {
       process.exit(2);
     }
     break;
+  case 'updated': {
+    if (!rest[0]) {
+      console.error('[per-daily-gate] updated には watchlist-per の --out ファイルが必要です');
+      process.exit(2);
+    }
+    const n = countWatchlistUpdated(JSON.parse(readFileSync(rest[0], 'utf8')));
+    console.log(String(n));
+    if (n === 0) process.exit(4);
+    break;
+  }
   case 'check-diff':
     checkDiff();
     break;
   default:
-    console.error('[per-daily-gate] usage: mode | push-ok | message <YYYY-MM-DD> | check-diff');
+    console.error('[per-daily-gate] usage: mode | push-ok | message <YYYY-MM-DD> | updated <file> | check-diff');
     process.exit(2);
 }

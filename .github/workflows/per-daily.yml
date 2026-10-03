@@ -83,6 +83,22 @@ jobs:
             jq -r '.funds | to_entries[] | "| \(.key) | \(.value.perCurrent // "—") | \(.value.coverage) |"' "$OUT/fund-per.json"
           } >> "$GITHUB_STEP_SUMMARY"
 
+          # ウォッチの更新が 1 件も無い日は失敗扱い（コミット・push しない。Mulmo の「当日分あり」誤判定を防ぐ・Toshio 決定）。
+          # fund-per だけ成功した日も同じ。skipped の割合の閾値は設けない。
+          set +e
+          UPDATED=$(node data/scheduler/per-daily-gate.mjs updated "$OUT/watchlist-per.json")
+          UCODE=$?
+          set -e
+          echo "updated=${UPDATED}" >> "$GITHUB_OUTPUT"
+          if [ "$UCODE" -eq 4 ]; then
+            echo "no_updates=true" >> "$GITHUB_OUTPUT"
+            echo "::error::ウォッチの PER を 1 件も更新できませんでした（全 ${TOTAL} 件 skipped）。コミット・push しません"
+            exit 1
+          elif [ "$UCODE" -ne 0 ]; then
+            echo "::error::更新件数の判定に失敗しました（per-daily-gate updated exit ${UCODE}）"
+            exit 1
+          fi
+
       - name: Guard — only allowed fields of data/valuations.json changed
         id: guard
         env:
@@ -113,12 +129,23 @@ jobs:
           DATE: ${{ steps.run.outputs.date }}
         run: |
           # 21:00〜22:30 UTC は Mulmo が valuations.json を書く時間帯なので push しない（§2.3）。
-          if ! node data/scheduler/per-daily-gate.mjs push-ok; then
-            echo "::warning::21:00〜22:30 UTC（push 禁止時間帯）のため commit/push しません。当日の PER は前日値のままです"
-            echo "pushed=false" >> "$GITHUB_OUTPUT"
-            echo "skipped=push-window" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
+          # push-ok の exit 3 だけが「禁止時間帯」。それ以外の非 0 は判定の異常＝失敗にする。
+          push_window() {
+            set +e
+            node data/scheduler/per-daily-gate.mjs push-ok
+            local code=$?
+            set -e
+            if [ "$code" -eq 0 ]; then return 0; fi
+            if [ "$code" -eq 3 ]; then
+              echo "::warning::21:00〜22:30 UTC（push 禁止時間帯）のため push しません。当日の PER は前日値のままです"
+              echo "pushed=false" >> "$GITHUB_OUTPUT"
+              echo "skipped=push-window" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "::error::push 可否の判定に失敗しました（per-daily-gate push-ok exit ${code}）"
+            exit 1
+          }
+          push_window
           MSG=$(node data/scheduler/per-daily-gate.mjs message "$DATE")
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -126,12 +153,7 @@ jobs:
           # 差分が無い日も同じメッセージのコミットを作る（Mulmo の当日分判定用・§6.2）
           git commit --allow-empty -m "$MSG"
           for i in 1 2 3; do
-            if ! node data/scheduler/per-daily-gate.mjs push-ok; then
-              echo "::warning::21:00〜22:30 UTC（push 禁止時間帯）に入ったため push しません。当日の PER は前日値のままです"
-              echo "pushed=false" >> "$GITHUB_OUTPUT"
-              echo "skipped=push-window" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
+            push_window
             # git pull --rebase origin main 相当。空コミット・main と同内容になったコミットも残す
             # （既定の rebase はこれらを落とし、判定用コミットが消えるため）。
             # rebase が衝突したら force せずジョブを失敗させる（main 側を残す）。
@@ -244,6 +266,7 @@ jobs:
           DATE: ${{ steps.run.outputs.date }}
           MODE_OUTCOME: ${{ steps.mode.outcome }}
           RUN_OUTCOME: ${{ steps.run.outcome }}
+          NO_UPDATES: ${{ steps.run.outputs.no_updates }}
           GUARD_OUTCOME: ${{ steps.guard.outcome }}
           PUSH_OUTCOME: ${{ steps.push.outcome }}
           PUSHED: ${{ steps.push.outputs.pushed }}
@@ -254,8 +277,12 @@ jobs:
           #         failure = 計算・検査・push の失敗（kv-resync の失敗は kv-resync-failed Issue で別管理）
           REASONS=""
           if [ "$MODE_OUTCOME" != "success" ]; then REASONS="${REASONS} mode=${MODE_OUTCOME}"; fi
-          if [ "$RUN_OUTCOME" != "success" ]; then REASONS="${REASONS} compute=${RUN_OUTCOME}"; fi
-          if [ "$GUARD_OUTCOME" != "success" ]; then REASONS="${REASONS} guard=${GUARD_OUTCOME}"; fi
+          if [ "$NO_UPDATES" = "true" ]; then
+            REASONS="${REASONS} watch-updated=0"
+          elif [ "$RUN_OUTCOME" != "success" ]; then
+            REASONS="${REASONS} compute=${RUN_OUTCOME}"
+          fi
+          if [ "$GUARD_OUTCOME" = "failure" ]; then REASONS="${REASONS} guard=failure"; fi
           if [ "$PUSH_OUTCOME" = "failure" ]; then REASONS="${REASONS} push=failure"; fi
           REASONS=$(echo "$REASONS" | xargs)
           if [ -n "$REASONS" ]; then

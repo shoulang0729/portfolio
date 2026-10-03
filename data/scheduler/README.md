@@ -97,7 +97,7 @@ node data/scheduler/diff-report.mjs
 | `watchlist-per.mjs` | `valuations` の全銘柄の実績PER を Worker `/yahoo` から取得し、バンド内%タイルと status を計算（原本＝Mulmo ワークスペース版の移植・計算は不変）。`--write` で銘柄の `perCurrent`/`percentile`/`status`/`asOf` とトップの `updated`/`asOf` を更新。`--out <file>` / 銘柄指定 |
 | `fund-per.mjs` | `fund-holdings.json`（ひふみ上位10・公開開示）の加重実績PER と coverage。`--write` でファンドエントリの `perCurrent`/`coverage`/`source`/`asOf`/`components` を追加マージ。`--out <file>` |
 | `fund-holdings.json` | ファンドの上位10銘柄（月次レポートの公開情報） |
-| `per-daily-gate.mjs` | ワークフローの判定 CLI：`mode`（開始 20:55〜22:30 UTC は計算のみ）／`push-ok`（21:00〜22:30 UTC は push しない）／`message <日付>`（コミットメッセージ）／`check-diff`（許可フィールド以外の変更・書式の変化を検出） |
+| `per-daily-gate.mjs` | ワークフローの判定 CLI：`mode`（開始 20:55〜22:30 UTC は計算のみ）／`push-ok`（21:00〜22:30 UTC は push しない）／`message <日付>`（コミットメッセージ）／`updated <file>`（ウォッチの更新件数・0 件で exit 4）／`check-diff`（許可フィールド以外の変更・書式の変化を検出） |
 | `per-compare.mjs` | PR2 の突き合わせ CLI（ワークフローからは呼ばない・参考に残置） |
 | `lib/per-calc.mjs` / `lib/json-format.mjs` / `lib/per-daily.mjs` / `lib/per-compare.mjs` | 純関数（`tests/per-calc.test.js`・`tests/per-daily.test.js` ほか） |
 
@@ -115,6 +115,7 @@ node data/scheduler/diff-report.mjs
 6. push 後、同じジョブで `kv-resync.mjs --json`（GITHUB_TOKEN の push では `kv-resync.yml` の `on: push` が起動しないため）。
 
 - 計算のみに落ちた日・失敗した日はコミットしない（Mulmo は前日値で続行）。
+- **ウォッチの PER を 1 件も更新できなかった日**（全銘柄 skipped・fund-per だけ成功した日を含む）は失敗扱いでコミット・push しない（`per-daily-gate.mjs updated` が exit 4。Mulmo の「当日分あり」誤判定を防ぐ）。skipped の割合の閾値は設けない。
 - 失敗時はラベル `per-daily-failed` の Issue を起票/更新し、書き込み成功で自動クローズ。kv-resync の失敗は `kv-resync-failed` の Issue。
 - concurrency グループは `portfolio-data-batch`（週次・ひふみ月次と共通・`cancel-in-progress: false`）。待機できる実行は 1 つだけで、
   後から来た実行が待機中の実行を取り消す（cancelled になり失敗 Issue は立たない）。**手動実行を重ねるときは前の実行の終了を待つ**。

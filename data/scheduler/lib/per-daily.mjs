@@ -133,3 +133,26 @@ export function findDisallowedChanges(before, after) {
   }
   return out;
 }
+
+/**
+ * watchlist-per の結果（`--out` の JSON）から、PER を新しく計算できた銘柄数を数える。
+ * results のうち skipped に入っていない銘柄（投信エントリは skipped に入るので数えない）。
+ * @param {any} watchlistOut `{ results: Record<string, any>, skipped: Array<{sym: string}> }`
+ * @returns {number}
+ */
+export function countWatchlistUpdated(watchlistOut) {
+  const results = (watchlistOut && watchlistOut.results) || {};
+  const skipped = new Set(((watchlistOut && watchlistOut.skipped) || []).map((/** @type {any} */ s) => s && s.sym));
+  return Object.keys(results).filter((sym) => !skipped.has(sym)).length;
+}
+
+/**
+ * その日の書き込みをコミットしてよいか（2026-10-03 Toshio 決定）。
+ * ウォッチの更新が 1 件も無い日は失敗扱い（コミットすると Mulmo が「当日分あり」と誤判定するため）。
+ * fund-per だけ成功した日も同じく失敗。skipped の割合の閾値は設けない。
+ * @param {any} watchlistOut
+ * @returns {boolean}
+ */
+export function hasWatchlistUpdates(watchlistOut) {
+  return countWatchlistUpdated(watchlistOut) > 0;
+}

@@ -10,6 +10,8 @@ import {
   isPushBlocked,
   findDisallowedChanges,
   deepEqual,
+  countWatchlistUpdated,
+  hasWatchlistUpdates,
 } from '../data/scheduler/lib/per-daily.mjs';
 import { score, FUND_SOURCE } from '../data/scheduler/lib/per-calc.mjs';
 import { detectFormat, stringifyLike } from '../data/scheduler/lib/json-format.mjs';
@@ -228,6 +230,58 @@ describe('findDisallowedChanges（§6.3 の許可フィールドのみ）', () =
   });
 });
 
+describe('countWatchlistUpdated / hasWatchlistUpdates（更新 0 件の日はコミットしない）', () => {
+  const upd = (perCurrent) => ({ perCurrent, percentile: 50, status: 'fair', asOf: T });
+  const kept = { perCurrent: 20, percentile: 50, status: 'fair', asOf: '2026-01-09', note: '前回維持' };
+
+  it('skipped に無い銘柄だけを数える（投信エントリは skipped なので数えない）', () => {
+    const out = {
+      results: { AAA: upd(21), BBB: upd(14), CCC: kept, ファンドX: { ...kept, source: FUND_SOURCE } },
+      skipped: [
+        { sym: 'CCC', reason: 'PE無し' },
+        { sym: 'ファンドX', reason: 'fund-monthly-top10（fund-per で計算）' },
+      ],
+    };
+    expect(countWatchlistUpdated(out)).toBe(2);
+    expect(hasWatchlistUpdates(out)).toBe(true);
+  });
+
+  it('1 件だけ更新できた日はコミットしてよい（skipped 割合の閾値は無い）', () => {
+    const results = { AAA: upd(21) };
+    const skipped = [];
+    for (let i = 0; i < 50; i++) {
+      results[`S${i}`] = kept;
+      skipped.push({ sym: `S${i}`, reason: 'fetch:timeout' });
+    }
+    expect(countWatchlistUpdated({ results, skipped })).toBe(1);
+    expect(hasWatchlistUpdates({ results, skipped })).toBe(true);
+  });
+
+  it('全銘柄 skipped（取得全滅）の日は 0 件＝コミットしない', () => {
+    const out = {
+      results: { AAA: kept, BBB: kept, ファンドX: { ...kept, source: FUND_SOURCE } },
+      skipped: [
+        { sym: 'AAA', reason: 'fetch:HTTP 503' },
+        { sym: 'BBB', reason: 'fetch:HTTP 503' },
+        { sym: 'ファンドX', reason: 'fund-monthly-top10（fund-per で計算）' },
+      ],
+    };
+    expect(countWatchlistUpdated(out)).toBe(0);
+    expect(hasWatchlistUpdates(out)).toBe(false);
+  });
+
+  it('投信エントリしか無い／結果が空・形が壊れている日も 0 件', () => {
+    const fundOnly = {
+      results: { ファンドX: { ...kept, source: FUND_SOURCE } },
+      skipped: [{ sym: 'ファンドX', reason: 'fund-monthly-top10（fund-per で計算）' }],
+    };
+    expect(hasWatchlistUpdates(fundOnly)).toBe(false);
+    expect(hasWatchlistUpdates({ results: {}, skipped: [] })).toBe(false);
+    expect(hasWatchlistUpdates({})).toBe(false);
+    expect(hasWatchlistUpdates(null)).toBe(false);
+  });
+});
+
 describe('per-daily.yml（PR3 の切り替え）', () => {
   it('compare ジョブと 01:30 UTC の schedule が無い', () => {
     expect(WORKFLOW).not.toMatch(/30 1 \* \* \*/);
@@ -247,6 +301,16 @@ describe('per-daily.yml（PR3 の切り替え）', () => {
     expect(WORKFLOW).toMatch(/per-daily-gate\.mjs check-diff/);
     expect(WORKFLOW).toMatch(/per-daily-failed/);
     expect(WORKFLOW).toMatch(/kv-resync-failed/);
+  });
+  it('ウォッチ更新 0 件の日は Compute を失敗させる（gate updated の exit 4）', () => {
+    expect(WORKFLOW).toMatch(/per-daily-gate\.mjs updated "\$OUT\/watchlist-per\.json"/);
+    expect(WORKFLOW).toMatch(/if \[ "\$UCODE" -eq 4 \]; then[\s\S]*?no_updates=true[\s\S]*?exit 1/);
+    expect(WORKFLOW).toMatch(/watch-updated=0/);
+  });
+  it('push-ok は exit 3 だけを禁止時間帯として扱い、それ以外の非 0 は失敗にする', () => {
+    expect(WORKFLOW).not.toMatch(/if ! node data\/scheduler\/per-daily-gate\.mjs push-ok/);
+    expect(WORKFLOW).toMatch(/if \[ "\$code" -eq 3 \]; then[\s\S]*?skipped=push-window[\s\S]*?exit 0/);
+    expect(WORKFLOW).toMatch(/push 可否の判定に失敗しました[^\n]*\n\s*exit 1/);
   });
   it('Secrets は GITHUB_TOKEN のみ', () => {
     const secrets = [...WORKFLOW.matchAll(/secrets\.([A-Z_]+)/g)].map((m) => m[1]);
