@@ -10,7 +10,7 @@
 ## 実装ログ（implementer が更新）
 | PR | 子 Issue | branch | PR | 状態 |
 |---|---|---|---|---|
-| PR1 計算モジュール（純関数） | #____ | `feat/____-order-sheet-calc` | #____ | 未着手 |
+| PR1 計算モジュール（純関数） | #670 | `feat/670-calc` | #____ | 実装済み・レビュー待ち（needs-toshio） |
 | PR2 戦略設定（公開キー追加） | #____ | `feat/____-order-strategy-config` | #____ | 未着手（#668 マージ後） |
 | PR3 Worker ルート＋約定の自動反映 | #____ | `feat/____-order-sheet-worker` | #____ | 未着手（PR1 後）／マージ後 Toshio が Worker デプロイ |
 | PR4 mf-holdings に株数 `qty` | #____ | `feat/____-mf-qty` | #____ | 未着手（独立）／Mac 実機確認要 |
