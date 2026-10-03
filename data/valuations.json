@@ -592,11 +592,11 @@
         "source": "finnhub-peers",
         "asOf": "2026-10-03"
       },
-      "perCurrent": 28.82,
+      "perCurrent": 28.58,
       "bandLow": 24,
       "bandHigh": 42,
       "bandMedian": 32,
-      "percentile": 27,
+      "percentile": 25,
       "status": "cheap",
       "note": "保有¥15.93M≈$101K。cheap %25（high）・本物の割安。本人ルール＝満玉HOLD（EPS改定が上向くまで上乗せなし）。EPS改定データ未取得（epsRev90d=null）。",
       "asOf": "2026-10-03",
@@ -873,7 +873,7 @@
         "etf": "1625.T",
         "asOf": "2026-10-03"
       },
-      "perCurrent": 38.91,
+      "perCurrent": 38.95,
       "bandLow": 12,
       "bandHigh": 26,
       "bandMedian": 17,
@@ -1050,7 +1050,7 @@
       "buyProposal": "本人1段目 $155×72 を維持（space theme約定後≈1.2%・cap3%内）。"
     },
     "ひふみ投信": {
-      "perCurrent": 23.07,
+      "perCurrent": 23.08,
       "coverage": 0.375,
       "source": "fund-monthly-top10",
       "asOf": "2026-08",
@@ -1107,7 +1107,7 @@
           "code": "7012.T",
           "name": "川崎重工業",
           "w": 0.0301,
-          "per": 18.15
+          "per": 18.17
         },
         {
           "code": "4676.T",
@@ -1143,7 +1143,7 @@
           "code": "2170.T",
           "name": "リンクアンドモチベーション",
           "w": 0.0286,
-          "per": 42
+          "per": 42.03
         },
         {
           "code": "4377.T",
@@ -1161,7 +1161,7 @@
           "code": "215A.T",
           "name": "タイミー",
           "w": 0.0263,
-          "per": 72.47
+          "per": 72.44
         },
         {
           "code": "278A.T",
