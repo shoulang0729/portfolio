@@ -2,7 +2,7 @@
 import { readFileSync, writeFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
-import { execSync } from 'child_process';
+import { workerJson } from './lib/worker-client.mjs';
 import { resolveOutcome, HORIZON_DAYS, DEFAULT_BENCHMARK } from '../../src/verdict-outcomes.js';
 
 // ══════════════════════════════════════════════════════════════
@@ -19,7 +19,6 @@ import { resolveOutcome, HORIZON_DAYS, DEFAULT_BENCHMARK } from '../../src/verdi
 const __dir = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dir, '../..');
 const OUT_PATH = resolve(ROOT, 'data/verdict-outcomes.json');
-const WORKER = 'https://portfolio-proxy.shoulang.workers.dev';
 
 const args = process.argv.slice(2);
 const DRY_RUN = args.includes('--dry-run');
@@ -34,12 +33,14 @@ function toYahooSymbol(sym) {
   return /^\d{4}$/.test(sym) ? `${sym}.T` : sym;
 }
 
-/** Worker /yahoo 経由で chart（日足）を取得。{tsSec[], close[]} を返す。 */
+/**
+ * Worker /yahoo 経由で chart（日足）を取得。{tsSec[], close[]} を返す。
+ * Origin・リトライ・スロットルは worker-client.mjs 共通。
+ * コミットはしない（ワークフロー weekly-valuations.yml が 1 回でコミットする・#652 PR5）。
+ */
 async function fetchChart(sym, range = '1y') {
   const yurl = `https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=${range}`;
-  const r = await fetch(`${WORKER}/yahoo?url=${encodeURIComponent(yurl)}`);
-  if (!r.ok) throw new Error(`HTTP ${r.status}`);
-  const j = await r.json();
+  const j = await workerJson(`/yahoo?url=${encodeURIComponent(yurl)}`);
   const res = j && j.chart && j.chart.result && j.chart.result[0];
   const ts = res && res.timestamp;
   const close = res && res.indicators && res.indicators.quote && res.indicators.quote[0] && res.indicators.quote[0].close;
@@ -128,12 +129,6 @@ async function main() {
 
   writeFileSync(OUT_PATH, `${JSON.stringify(doc, null, 2)}\n`, 'utf8');
   console.log(`\nWrote ${OUT_PATH} (${proposed} proposed)`);
-  execSync(`git commit data/verdict-outcomes.json -m "chore: verdict-outcomes proposedOutcome auto-update $(date +%F)"`, {
-    cwd: ROOT,
-    shell: true,
-  });
-  execSync('git push', { cwd: ROOT });
-  console.log('Committed and pushed.');
 }
 
 main().catch((err) => {
