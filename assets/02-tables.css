@@ -305,6 +305,45 @@ table.t td { font-size: var(--fs-sm); font-weight: 700; border-bottom: 1px solid
 }
 .bf-past-select:hover { border-color: var(--accent); }
 
+/* ── リチウム市況モニタカード（#611） ── */
+.li-card {
+  width: 100%; max-width: 600px; margin-inline: auto; box-sizing: border-box;
+  padding: 12px 14px; margin-bottom: 8px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+}
+.li-card-header {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
+  margin-bottom: 6px;
+}
+.li-card-title-wrap { display: flex; flex-direction: column; gap: 3px; }
+.li-card-title { font-size: var(--fs-base); font-weight: 700; color: var(--text); }
+.li-proxy-badge {
+  font-size: var(--fs-xs); color: var(--text2);
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 4px; padding: 1px 5px; white-space: nowrap;
+}
+.li-status-badge {
+  flex: 0 0 auto; font-size: var(--fs-sm); font-weight: 600;
+  padding: 3px 8px; border-radius: 20px; white-space: nowrap;
+  border: 1px solid transparent;
+}
+.li-status-bull  { color: var(--success); background: color-mix(in srgb, var(--success) 12%, transparent); border-color: color-mix(in srgb, var(--success) 30%, transparent); }
+.li-status-bear  { color: var(--danger);  background: color-mix(in srgb, var(--danger)  12%, transparent); border-color: color-mix(in srgb, var(--danger)  30%, transparent); }
+.li-status-neutral { color: var(--text2);  background: var(--surface2); border-color: var(--border2); }
+.li-card-desc {
+  margin: 0 0 8px; font-size: var(--fs-sm); color: var(--text2); line-height: 1.4;
+}
+.li-metrics {
+  display: flex; flex-wrap: wrap; gap: 6px 12px; margin-bottom: 8px;
+}
+.li-metric { display: flex; flex-direction: column; align-items: center; min-width: 56px; }
+.li-metric-label { font-size: var(--fs-xs); color: var(--text2); }
+.li-metric-value { font-size: var(--fs-base); font-weight: 600; color: var(--text); }
+.li-pct-up   { color: var(--success); }
+.li-pct-down { color: var(--danger); }
+.li-metric-loading { font-size: var(--fs-sm); color: var(--text2); }
+.li-card-trigger { margin: 0; font-size: var(--fs-xs); color: var(--text2); line-height: 1.4; }
+
 /* ── シミュレーションバー（ヒートマップパネル内）── 横スクロール可能1行 */
 .sim-bar {
   display: flex;
