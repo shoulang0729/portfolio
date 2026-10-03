@@ -36,6 +36,7 @@
  * @property {string} [ySymbol] Yahoo Finance ティッカー（投信は無し）
  * @property {number} [avgCost] 平均取得単価（円換算済み）
  * @property {number} [price] 現在値（円換算済み）
+ * @property {number} [qty] 保有数（株・ETF=株数／投信=口数。#673・取れない行は無し。本ファイルでは未使用）
  */
 
 /**
