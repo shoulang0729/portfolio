@@ -12,7 +12,7 @@
 | PR1 KV 自動同期 | #653 | `feat/653-kv-resync` | | 実装済み（PR 作成待ち） |
 | PR2 毎日 PER 並行運転 | #654 | `feat/654-per-shadow` | | 実装済み（PR 作成待ち） |
 | PR3 書き込みへ切り替え | #____ | | | 未着手（PR2＋3日連続一致待ち） |
-| PR4 ひふみ上位10 月次自動更新 | #____ | | | 未着手 |
+| PR4 ひふみ上位10 月次自動更新 | #656 | | | 実装停止→§7 改訂済み（2026-10-03・microscope の正解値を PDF 由来に変更）。再着手可。マージは PR3 の後 |
 | PR5 週次バッチ再開（差分レポート） | #657 | `feat/657-weekly-report` | | 実装済み（PR 作成待ち） |
 | PR6 週次バッチ書き込み開始 | #658 | `feat/658-weekly-write` | | 実装済み（PR 作成待ち） |
 
@@ -220,34 +220,120 @@ PR1 KV 自動同期 ──┬─> PR2 PER 並行運転 ──(3日連続一致�
 
 ## 7. PR4：ひふみ上位10の月次自動更新
 
-### 7.0 前提資料（着手前に PM が用意）
-- 実装環境（クラウド）から `hifumi.rheos.jp` に接続できない（2026-10-03 確認：egress で拒否）。パーサを書くために、**2026-05 の月次レポート 2 本（`toushin` / `microscope`）の `pdftotext -layout` 出力テキスト**を `docs/handoff/assets/2026-10-03-phase15/hifumi-report-202605-<f>.txt` として置く（Mulmo に依頼。ファンドの公開資料なのでコミット可）。用意できない場合、PR4 は保留。
+> **2026-10-03 改訂（Toshio 決定）**：implementer の停止報告で、現行 `data/scheduler/fund-holdings.json` の **microscope（2026-05）が月次レポートと一致しない（誤り）** ことが判明した。toushin は月次レポートと完全一致。以下の 4 点を決定し、§7.0〜7.3 に反映した。
+> 1. fixture テストの期待値：toushin＝現行 JSON（＝PDF と一致）、**microscope＝PDF の目視値**（§7.2.3 の表）を正とする。
+> 2. 既知月の自己検証の比較相手は現行 JSON ではなく、**PDF 由来の正しい 2026-05 上位10の定数**（`hifumi-known.mjs`）。
+> 3. 誤った現行 JSON の microscope は**今は手で直さない**。PR4 を PR3 の後にマージし、PR4 の初回の月次実行で正しい値に自動上書きさせる（§7.4）。
+> 4. 銘柄名内の連続空白は**半角スペース 1 つ**にまとめる。
+
+### 7.0 前提資料（用意済み・2026-10-03）
+- 実装環境（クラウド）から `hifumi.rheos.jp` に接続できない（2026-10-03 確認：egress で拒否）ため、Mulmo が月次レポートの `pdftotext -layout` 出力を用意した。ファンドの公開資料なのでコミット可。
+- 置き場所 `docs/handoff/assets/2026-10-03-phase15/`、ファイル名 **`hifumi-<f>-report<YYYYMM>.layout.txt`**（`<f>` = `toushin` / `microscope`）：
+
+| ファイル | 内容 | 上位10の範囲（行） |
+|---|---|---|
+| `hifumi-toushin-report202605.layout.txt` | ひふみ投信 2026年5月度 | 224〜276 |
+| `hifumi-microscope-report202605.layout.txt` | ひふみマイクロスコープpro 2026年5月度（作成基準日 2026-05-29） | 149〜213 |
+| `hifumi-toushin-report202608.layout.txt` | ひふみ投信 2026年8月度 | 229〜290 |
+| `hifumi-microscope-report202608.layout.txt` | ひふみマイクロスコープpro 2026年8月度（英数コード・銘柄名内の連続空白を含む） | 148〜212 |
+
+- 行番号は確認時点の目安。パーサは行番号に依存せず §7.2.1 の見出しと終端で範囲を決める。
 
 ### 7.1 対象ファイル
 | ファイル | 状態 | 内容 |
 |---|---|---|
-| `data/scheduler/lib/hifumi-parse.mjs` | 新規 | 純関数 `parseTop10(text)` → `[{code, name, weight}]`、`validateTop10(rows)` |
-| `data/scheduler/fund-holdings-update.mjs` | 新規 | PDF 取得→`pdftotext -layout`→パース→検証→`fund-holdings.json` 更新。`--month YYYYMM` / `--dry-run` |
-| `tests/hifumi-parse.test.js` | 新規 | §7.0 のテキストを fixture に、2026-05 の既存 `fund-holdings.json` と完全一致すること |
-| `tests/fixtures/hifumi/*.txt` | 新規 | §7.0 のテキスト（コピー） |
+| `data/scheduler/lib/hifumi-parse.mjs` | 新規 | 純関数 `parseTop10(text, fund)` → `[{code, name, weight}]`（`fund` = `'toushin'`/`'microscope'`）、`validateTop10(rows)` → `{ok, errors[]}`、`normalizeName(s)` |
+| `data/scheduler/lib/hifumi-known.mjs` | 新規 | **PDF 由来の正しい 2026-05 上位10の定数** `KNOWN_MONTH = '202605'`・`KNOWN_TOP10 = { toushin: [...], microscope: [...] }`（値は §7.2.3。`code` は `.T` 付き・`weight` は小数）。自己検証とテストが共用する唯一の定義元 |
+| `data/scheduler/fund-holdings-update.mjs` | 新規 | PDF 取得→`pdftotext -layout`→パース→検証→自己検証→`fund-holdings.json` 更新。`--month YYYYMM` / `--dry-run` |
+| `tests/hifumi-parse.test.js` | 新規 | §7.3 のとおり |
+| `tests/fixtures/hifumi/*.layout.txt` | 新規 | §7.0 の 4 ファイルのコピー（ファイル名はそのまま） |
 | `.github/workflows/fund-holdings-monthly.yml` | 新規 | 下記 |
 | `CLAUDE.md` | 変更 | 「データの書き手」表に `data/scheduler/fund-holdings.json` ＝ GitHub Actions `fund-holdings-monthly.yml`（月次）を追加 |
 
 ### 7.2 手順・決定
 - 対象＝`toushin`（ひふみ投信）と `microscope`（ひふみマイクロスコープpro）。**クロスオーバーpro は対象外**（上位5のみ・未上場中心・as-is §3.2）。
+- `fund-holdings.json` の要素との対応は `fund` の値で引く：`toushin` ↔ `"ひふみ投信"`、`microscope` ↔ `"ひふみマイクロスコープpro"`。どちらかが見つからなければ書き込まずに失敗。
 - 取得 URL：`https://hifumi.rheos.jp/fund/<f>/pdf/report<YYYYMM>.pdf`。対象月＝実行日の**前月**。`fund-holdings.json` の該当ファンドの `asOf`（`YYYY-MM`）が既に対象月なら何もしない。404 は「未公開」で正常終了。
-- 変換：`code` は 4 桁（英数字・例 `8001` / `285A`）に `.T` を付ける。`weight` は % → 小数 4 桁（5.28% → 0.0528）。`name` は PDF 表記のまま。`fund`/`fundSymbol`/`source` は既存値を保持し、`top` と `asOf` だけ差し替える。書式は §2.4 で保持。
-- **検証（すべて満たさなければ書き込まない）**：①ちょうど 10 行 ②code が `^[0-9][0-9A-Z]{3}$` ③0 < weight < 0.2 ④weight 合計 ≤ 1 ⑤name が空でない ⑥code 重複なし。
-- **既知月の自己検証**：毎回、2026-05 の PDF も取得・パースし、テスト fixture と同じ結果（＝現行 `fund-holdings.json` の 2026-05 値）になることを確認する。違えば「パーサ不整合（レイアウト変更の疑い）」として書き込まない。
+
+#### 7.2.1 パース仕様（`parseTop10`）
+両ファンド共通：
+1. **範囲**：見出し `組入比率1[~～]10位`（半角 `~` と全角 `～` の両方を受ける。toushin は全角、microscope は半角）を含む最初の行の次の行から、その後に最初に現れる `※「組入比率」は` を含む行の直前まで。見出しまたは終端が見つからなければ 0 行（→検証①で NG）。toushin は終端の後に「組入比率11～30位」の表が続くが、範囲外なので読まない。
+2. **銘柄行**：範囲内で次の正規表現に一致する行だけを銘柄行とする（それ以外の説明文・見出し・空行は捨てる）。
+   - toushin：`^\s*(\d{1,2})\s+(.+?)\s{2,}([0-9][0-9A-Z]{3})\s+\S+\s+\S+\s+\S+\s+(\d+(?:\.\d+)?)%\s*$`（No・銘柄名・コード・規模・上場市場・業種・比率。順位は行頭にある）
+   - microscope：`^\s*(.+?)\s{2,}([0-9][0-9A-Z]{3})\s+\S+\s+(\d+(?:\.\d+)?)%\s*$`（銘柄名・コード・業種・比率。**順位の数字は別の行に単独で出る**ため順位は読まず、出現順を順位とする）
+   - 説明文中の `%`（例：microscope 2026-05 の「40%を目安に…」）は、コード列と行末の比率の形に一致しないので銘柄行にならない。
+   - 銘柄名の lazy マッチは、銘柄名内に 2 個以上の空白がある場合（例：`Ｔｅｒｒａ   Ｄｒｏｎｅ`）でもコードの位置まで伸びる（空白の後がコード形式でなければ一致しないため）。実装時にこの 2 例（`Ｔｅｒｒａ   Ｄｒｏｎｅ`・`ＨＵＭＡＮ   ＭＡＤＥ`）がテストで通ることを確認する。
+3. **変換**：
+   - `code`：英数字 4 桁（例 `8001` / `141A`）に `.T` を付ける。
+   - `name`：前後の空白を除き、**連続する空白（半角・全角 U+3000 を問わない）を半角スペース 1 つにまとめる**。それ以外（全角英字・中黒など）は PDF 表記のまま。例：`Ｔｅｒｒａ   Ｄｒｏｎｅ` → `Ｔｅｒｒａ Ｄｒｏｎｅ`、`ＭＴＧ` → `ＭＴＧ`。
+   - `weight`：% → 小数 4 桁（`Math.round(pct * 100) / 10000`。例 5.28% → 0.0528、3.80% → 0.038）。
+4. toushin は行頭の順位が 1〜10 の昇順で欠番なしであることも確認する（違えば検証 NG 扱い）。
+5. 上記 1〜3 は architect が §7.0 の 4 ファイルで試算し、4 本とも 10 行が取れ、2026-05 の 2 本は §7.2.3 の表と完全一致することを確認済み（2026-10-03）。
+
+#### 7.2.2 検証（`validateTop10`・すべて満たさなければ書き込まない）
+①ちょうど 10 行 ②code が `^[0-9][0-9A-Z]{3}\.T$` ③0 < weight < 0.2 ④weight 合計 ≤ 1 ⑤name が空でない ⑥code 重複なし ⑦weight が出現順に非増加（同値は可。例：microscope 2026-08 の 6492 と 2782 はともに 2.43%）。
+
+#### 7.2.3 既知月の自己検証（比較相手＝`hifumi-known.mjs` の定数）
+- 毎回、2026-05 の PDF も取得・パースし、`KNOWN_TOP10`（下表＝PDF 由来の正しい値）と `code`・`name`・`weight` が完全一致することを確認する。違えば「パーサ不整合（レイアウト変更の疑い）」として書き込まない。
+- **比較相手は現行 `fund-holdings.json` ではない**（現行 JSON の microscope は誤り。§7.4）。
+- 2026-05 PDF の取得自体が失敗（404・ネットワーク）した場合も書き込まない（自己検証できないため）。
+
+`KNOWN_TOP10.toushin`（2026-05・現行 JSON と同一）：
+
+| 順位 | code | name | weight |
+|---|---|---|---|
+| 1 | 8001.T | 伊藤忠商事 | 0.0528 |
+| 2 | 5802.T | 住友電気工業 | 0.0513 |
+| 3 | 6723.T | ルネサスエレクトロニクス | 0.0411 |
+| 4 | 7012.T | 川崎重工業 | 0.0411 |
+| 5 | 8002.T | 丸紅 | 0.0406 |
+| 6 | 8035.T | 東京エレクトロン | 0.0392 |
+| 7 | 8411.T | みずほフィナンシャルグループ | 0.038 |
+| 8 | 8802.T | 三菱地所 | 0.0352 |
+| 9 | 8031.T | 三井物産 | 0.0328 |
+| 10 | 6981.T | 村田製作所 | 0.0328 |
+
+`KNOWN_TOP10.microscope`（2026-05・PDF 目視値。**現行 JSON とは異なる**）：
+
+| 順位 | code | name | weight |
+|---|---|---|---|
+| 1 | 7806.T | ＭＴＧ | 0.0428 |
+| 2 | 6492.T | 岡野バルブ製造 | 0.0398 |
+| 3 | 5074.T | テスホールディングス | 0.0393 |
+| 4 | 3480.T | ジェイ・エス・ビー | 0.0313 |
+| 5 | 8366.T | 滋賀銀行 | 0.0262 |
+| 6 | 4390.T | ＩＰＳ | 0.0239 |
+| 7 | 2170.T | リンクアンドモチベーション | 0.0225 |
+| 8 | 4275.T | カーリット | 0.0223 |
+| 9 | 6143.T | ソディック | 0.0218 |
+| 10 | 4377.T | ワンキャリア | 0.021 |
+
+- `name` は PDF 表記（全角英字を含む）。上表の表記と PDF テキストの表記が食い違う場合は **PDF テキスト（fixture）を正**とし、定数をそれに合わせる（目視転記の誤りの訂正として可。code・weight が食い違う場合は止めて PM に報告）。
+
+#### 7.2.4 書き込み・ワークフロー
+- `fund`/`fundSymbol`/`source` は既存値を保持し、`top` と `asOf`（`YYYY-MM`）だけ差し替える。書式は §2.4 で保持。
 - ワークフロー：`schedule: '0 3 1-20 * *'`＋`workflow_dispatch`（input `mode`: `write`(既定) / `dry-run`、`month`）。`apt-get install -y poppler-utils`。`concurrency: portfolio-data-batch`。`permissions: { contents: write, issues: write }`。更新があれば `git commit data/scheduler/fund-holdings.json -m "data: hifumi top10 <YYYY-MM>"` → push（§2.3）。
+- dry-run は書き込まず、ファンドごとの「現行 `top` → 新 `top`」の差分（code・name・weight）をジョブサマリに出す。
 - 失敗/未公開の通知：検証 NG・自己検証 NG・取得エラーは即、**20 日の実行でも前月分が未公開**ならラベル `fund-holdings-stale` の Issue。更新成功で自動クローズ。
 - 加重 PER の再計算は翌日の per-daily（PR3）が `fund-holdings.json` を読んで行う（このワークフローは `valuations.json` を触らない）。
 
 ### 7.3 受け入れ条件
-- [ ] `tests/hifumi-parse.test.js`：fixture 2 本のパース結果が現行 `fund-holdings.json`（2026-05）の `top` と完全一致。検証 ①〜⑥ の各違反ケースで NG。
+- [ ] `tests/hifumi-parse.test.js`：
+  - 2026-05 の fixture 2 本のパース結果が `KNOWN_TOP10`（§7.2.3）と `code`・`name`・`weight` で完全一致（toushin＝現行 JSON と同値、**microscope＝PDF の目視値**。現行 JSON の microscope とは一致しないのが正しい）。
+  - 2026-08 の fixture 2 本が検証 ①〜⑦ を通る。microscope 2026-08 で `141A.T`・`215A.T`・`278A.T`・`456A.T` が取れ、`278A.T` の name が `Ｔｅｒｒａ Ｄｒｏｎｅ`、`456A.T` が `ＨＵＭＡＮ ＭＡＤＥ`（半角スペース 1 つ）。microscope 2026-08 の 1 位が `7806.T`・0.0482、toushin 2026-08 の 1 位が `8001.T`・0.0618、10 位が `4676.T`・0.0282。
+  - 説明文中の `%`（microscope 2026-05 の「40%を目安に」）を銘柄行として拾わない。toushin の「組入比率11～30位」の表を読まない。
+  - 検証 ①〜⑦ の各違反ケースで NG。自己検証は 1 銘柄でも違えば NG（合成テキストで確認）。
 - [ ] `valuations.json` を書かない。`fund-holdings.json` の `top`/`asOf` 以外のキーを変えない。
-- [ ] 品質ゲート PASS。マージ後の確認：`workflow_dispatch mode=dry-run` で前月分の差分がジョブサマリに出る。
+- [ ] 現行 `fund-holdings.json` の microscope を **PR4 の中で手で直さない**（§7.4）。
+- [ ] 品質ゲート PASS。マージ後の確認：`workflow_dispatch mode=dry-run` で前月分の差分がジョブサマリに出る（microscope は誤った 2026-05 構成からの差分になる）。
 - [ ] マージは PR3 の後（PR3 前に入れると Mulmo のワークスペース版と入力がずれる）。
+
+### 7.4 現行 `fund-holdings.json` の microscope の誤りの扱い（2026-10-03 Toshio 決定）
+- **事実**：現行 JSON の microscope（2026-05）の上位10（6544・3139・9554・6200・4666・2782・4258・3480・2157・7381）は、§7.0 の資料 4 本のいずれとも一致しない（共通は 3480 のみで比率も異なる：JSON 2.35% / PDF 3.13%）。toushin は PDF と完全一致。
+- **今は手で直さない**：PR2 の並行運転は Mulmo のワークスペース版 `fund-holdings.json`（同じく誤っているはず）と同じ入力で突き合わせている。リポ側だけ直すと microscope の加重 PER が Mulmo 版とずれ、突き合わせが乱れる。
+- **直るタイミング**：PR4 は PR3（書き込み切替＝Actions が正）の後にマージする。PR4 マージ後の最初の月次実行（対象月＝前月。`asOf` が 2026-05 のままなので必ず更新対象になる）で、microscope の `top`/`asOf` が PDF 由来の正しい値に自動で上書きされる。toushin も同時に最新月へ進む。
+- **それまでの影響**：microscope の加重 PER は誤った構成銘柄で計算され続ける。microscope は総資産比 約 0.2% のため影響は限定的（Toshio 了承済み）。
+- **Mulmo への共有（§9 の補足・PM が #652 にコメントで伝える）**：Mulmo のワークスペース版 `fund-holdings.json` の microscope も同じく誤っているはず。PR3 切替後は Actions（リポの `data/scheduler/fund-holdings.json`）が正となるため **Mulmo 側での修正は不要**。PR4 マージ後は §9 のとおりワークスペース版の手動更新をやめる。
 
 ---
 
