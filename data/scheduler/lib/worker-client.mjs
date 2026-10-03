@@ -1,0 +1,73 @@
+// @ts-check
+// worker-client.mjs — Worker 中継口（portfolio-proxy）の共通クライアント（#652 §2.2）。
+//
+// - ベース URL は WORKER_BASE。全リクエストに Origin: https://shoulang0729.github.io を付ける。
+// - タイムアウト 25 秒。429 / 5xx / ネットワークエラー（タイムアウト含む）は最大 3 回リトライ（2s→4s→8s）。
+// - レート制限対象パス（/yahoo /finnhub /fmp /edgar /edinet-db）は呼び出し間隔を最低 600ms あける。
+//   /watchlist などそれ以外のパスはスロットル対象外。
+// - API キーは扱わない（Worker Secrets が付与する）。
+
+export const WORKER_BASE = 'https://portfolio-proxy.shoulang.workers.dev';
+export const ORIGIN = 'https://shoulang0729.github.io';
+
+export const TIMEOUT_MS = 25_000;
+export const RETRY_DELAYS_MS = [2000, 4000, 8000];
+export const THROTTLE_MS = 600;
+export const THROTTLED_PREFIXES = ['/yahoo', '/finnhub', '/fmp', '/edgar', '/edinet-db'];
+
+/** @param {number} ms */
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * レート制限対象パスか（クエリ文字列は無視）。
+ * @param {string} path 例: '/yahoo?url=...'
+ */
+export function isThrottledPath(path) {
+  const p = path.split('?')[0];
+  return THROTTLED_PREFIXES.some((pre) => p === pre || p.startsWith(`${pre}/`));
+}
+
+/** リトライ対象の HTTP ステータスか（429 / 5xx）。 @param {number} status */
+export function isRetryableStatus(status) {
+  return status === 429 || (status >= 500 && status <= 599);
+}
+
+let lastThrottledAt = 0;
+
+async function throttle() {
+  const wait = lastThrottledAt + THROTTLE_MS - Date.now();
+  if (wait > 0) await sleep(wait);
+  lastThrottledAt = Date.now();
+}
+
+/**
+ * Worker 中継口を呼ぶ。最終的に得た Response を返す（429/5xx でもリトライを使い切ったらその Response を返す）。
+ * ネットワークエラーがリトライを使い切った場合は最後のエラーを throw する。
+ * @param {string} path '/watchlist' など（先頭スラッシュ付き）
+ * @param {RequestInit} [init]
+ * @returns {Promise<Response>}
+ */
+export async function workerFetch(path, init = {}) {
+  const url = `${WORKER_BASE}${path}`;
+  const headers = new Headers(init.headers || {});
+  headers.set('Origin', ORIGIN);
+  const throttled = isThrottledPath(path);
+
+  /** @type {unknown} */
+  let lastErr = null;
+  for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
+    if (attempt > 0) await sleep(RETRY_DELAYS_MS[attempt - 1]);
+    if (throttled) await throttle();
+    try {
+      const res = await fetch(url, { ...init, headers, signal: AbortSignal.timeout(TIMEOUT_MS) });
+      if (isRetryableStatus(res.status) && attempt < RETRY_DELAYS_MS.length) {
+        lastErr = new Error(`HTTP ${res.status}`);
+        continue;
+      }
+      return res;
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
+}
