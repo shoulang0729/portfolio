@@ -72,6 +72,60 @@ export async function workerFetch(path, init = {}) {
   throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
 }
 
+// ── 中継口ヘルパー（#652 PR5・§8.1）──────────────────────────────
+// いずれも workerFetch 経由（Origin・タイムアウト・リトライ・スロットル共通）。
+// 非 2xx は `HTTP <status>` だけを持つ Error を throw する（公開ログに本文を出さないため本文は読まない）。
+
+/**
+ * Worker 中継口を GET して JSON を返す。
+ * @param {string} path '/fmp?path=...' など（先頭スラッシュ付き）
+ * @returns {Promise<any>}
+ */
+export async function workerJson(path) {
+  const res = await workerFetch(path);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+/**
+ * `<route>?path=<path>&<params>` を組み立てる（値は URL エンコード）。
+ * @param {string} route '/fmp' など
+ * @param {string} path 上流 API のパス（例: '/stable/profile'）
+ * @param {Record<string, string|number>} [params]
+ */
+export function relayPath(route, path, params = {}) {
+  const qs = new URLSearchParams({ path });
+  for (const [k, v] of Object.entries(params)) qs.set(k, String(v));
+  return `${route}?${qs}`;
+}
+
+/**
+ * FMP（/fmp）。apikey は Worker が付与する。
+ * @param {string} path 例: '/stable/income-statement'
+ * @param {Record<string, string|number>} [params]
+ */
+export const fmp = (path, params = {}) => workerJson(relayPath('/fmp', path, params));
+
+/**
+ * EDINET DB（/edinet-db）。X-API-Key は Worker が付与する。
+ * @param {string} path 例: '/v1/search'
+ * @param {Record<string, string|number>} [params]
+ */
+export const edinetDb = (path, params = {}) => workerJson(relayPath('/edinet-db', path, params));
+
+/**
+ * SEC EDGAR（/edgar）。XBRL 系パスのみ（Worker の許可パス）。
+ * @param {string} path 例: '/api/xbrl/companyfacts/CIK0000320193.json'
+ */
+export const edgar = (path) => workerJson(relayPath('/edgar', path));
+
+/**
+ * Finnhub（/finnhub）。token は Worker が付与する。
+ * @param {string} path 例: '/stock/peers'
+ * @param {Record<string, string|number>} [params]
+ */
+export const finnhub = (path, params = {}) => workerJson(relayPath('/finnhub', path, params));
+
 /**
  * Yahoo Finance quoteSummary を Worker /yahoo 経由で取得し、パース済み JSON を返す（#652 PR2 で追加）。
  * 原本（watchlist-per / fund-per）の curl と同じ URL を組み立てる。HTTP ステータスに関わらず本文を JSON として読む

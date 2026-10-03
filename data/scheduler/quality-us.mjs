@@ -2,8 +2,12 @@
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
-import { execSync } from 'child_process';
 import { writeQualityBlocks } from './writeback.mjs';
+import { fmp, edgar } from './lib/worker-client.mjs';
+
+// FMP / SEC EDGAR companyfacts は Worker 中継口（/fmp・/edgar）経由（キーは Worker Secrets・#652 PR5）。
+// 直接取得するのは SEC の company_tickers.json だけ（Worker の許可パス外・キー不要）。
+// コミットはしない（ワークフロー weekly-valuations.yml が 1 回でコミットする）。
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dir, '../..');
@@ -20,20 +24,7 @@ const DRY_RUN = args.includes('--dry-run');
 const symbolIdx = args.indexOf('--symbol');
 const ONLY_SYMBOL = symbolIdx !== -1 ? args[symbolIdx + 1] : null;
 
-// --- API key ---
-function getApiKey() {
-  if (process.env.FMP_API_KEY) return process.env.FMP_API_KEY;
-  try {
-    const cfg = JSON.parse(readFileSync(resolve(__dir, 'fmp-config.json'), 'utf8'));
-    if (cfg.FMP_API_KEY) return cfg.FMP_API_KEY;
-  } catch {
-    // ignore
-  }
-  console.error('Error: FMP_API_KEY not set and fmp-config.json not found or missing key.');
-  process.exit(1);
-}
-
-// --- Fetch with retry ---
+// --- Fetch with retry（SEC company_tickers.json の直接取得用） ---
 async function fetchWithRetry(url, options = {}, retries = 1, delayMs = 3000) {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
@@ -51,10 +42,9 @@ async function fetchWithRetry(url, options = {}, retries = 1, delayMs = 3000) {
   }
 }
 
-// --- FMP fetch helpers ---
-async function fmpFetch(path, key) {
-  const url = `https://financialmodelingprep.com${path}${path.includes('?') ? '&' : '?'}apikey=${key}`;
-  return fetchWithRetry(url);
+// --- FMP fetch helpers（Worker /fmp 経由） ---
+async function fmpFetch(path, params) {
+  return fmp(path, params);
 }
 
 function fmpToFundamentals(profile, incomes, balances, cashflows, keyMetrics) {
@@ -129,7 +119,7 @@ async function getEdgarCik(sym) {
     console.log('  Fetching SEC tickers.json...');
     edgarTickersCache = await fetchWithRetry(
       'https://www.sec.gov/files/company_tickers.json',
-      { headers: { 'User-Agent': 'portfolio-quality contact@example.com' } }
+      { headers: { 'User-Agent': 'portfolio-quality (github-actions)' } }
     );
   }
   const entry = Object.values(edgarTickersCache).find(v => v.ticker === sym);
@@ -140,25 +130,21 @@ async function fetchEdgarFundamentals(sym) {
   const cikStr = await getEdgarCik(sym);
   if (!cikStr) throw new Error(`CIK not found for ${sym}`);
   const cik10 = String(cikStr).padStart(10, '0');
-  const facts = await fetchWithRetry(
-    `https://data.sec.gov/api/xbrl/companyfacts/CIK${cik10}.json`,
-    { headers: { 'User-Agent': 'portfolio-quality contact@example.com' } }
-  );
+  const facts = await edgar(`/api/xbrl/companyfacts/CIK${cik10}.json`);
   const { normalizeEdgarFacts } = await import('../../src/edgar-normalize.js');
   return normalizeEdgarFacts(facts, { market: 'us', marketCap: null });
 }
 
 // --- Per-symbol processing ---
-async function processFmp(sym, key) {
+async function processFmp(sym) {
   console.log(`  [FMP] Fetching ${sym}...`);
-  const [profile, incomes, balances, cashflows, keyMetrics] = await Promise.all([
-    fmpFetch(`/stable/profile?symbol=${sym}`, key),
-    fmpFetch(`/stable/income-statement?symbol=${sym}&limit=2`, key),
-    fmpFetch(`/stable/balance-sheet-statement?symbol=${sym}&limit=2`, key),
-    fmpFetch(`/stable/cash-flow-statement?symbol=${sym}&limit=2`, key),
-    // key-metrics の returnOnInvestedCapital を直接 ROIC に使う。無料枠外なら取得失敗 → null 扱い。
-    fmpFetch(`/stable/key-metrics?symbol=${sym}&limit=1`, key).catch(() => null),
-  ]);
+  // 中継口のスロットル（600ms 間隔）を守るため順に呼ぶ（取得する 5 本・失敗時の扱いは従来どおり）。
+  const profile = await fmpFetch('/stable/profile', { symbol: sym });
+  const incomes = await fmpFetch('/stable/income-statement', { symbol: sym, limit: 2 });
+  const balances = await fmpFetch('/stable/balance-sheet-statement', { symbol: sym, limit: 2 });
+  const cashflows = await fmpFetch('/stable/cash-flow-statement', { symbol: sym, limit: 2 });
+  // key-metrics の returnOnInvestedCapital を直接 ROIC に使う。無料枠外なら取得失敗 → null 扱い。
+  const keyMetrics = await fmpFetch('/stable/key-metrics', { symbol: sym, limit: 1 }).catch(() => null);
 
   const incomesArr = Array.isArray(incomes) ? incomes : [];
   const balancesArr = Array.isArray(balances) ? balances : [];
@@ -171,9 +157,9 @@ async function processFmp(sym, key) {
   return fmpToFundamentals(profile, incomesArr, balancesArr, cashflowsArr, keyMetrics);
 }
 
-async function getFundamentals(sym, key) {
+async function getFundamentals(sym) {
   try {
-    return await processFmp(sym, key);
+    return await processFmp(sym);
   } catch (fmpErr) {
     console.warn(`  [FMP] Failed for ${sym}: ${fmpErr.message} — trying EDGAR fallback`);
     return await fetchEdgarFundamentals(sym);
@@ -182,8 +168,6 @@ async function getFundamentals(sym, key) {
 
 // --- Main ---
 async function main() {
-  const key = getApiKey();
-
   // valuations.json は { updated, note, asOf, valuations: { "SYM": {entry} } } 構造
   const doc = JSON.parse(readFileSync(VALS_PATH, 'utf8'));
   const valuations = doc.valuations || {};
@@ -204,7 +188,7 @@ async function main() {
   }
 
   console.log(`Processing ${targets.length} US stocks: ${targets.join(', ')}`);
-  if (DRY_RUN) console.log('DRY RUN — will not write or commit');
+  if (DRY_RUN) console.log('DRY RUN — will not write');
 
   const { computeQuality } = await import('../../src/quality-calc.js');
 
@@ -213,7 +197,7 @@ async function main() {
   for (const sym of targets) {
     try {
       console.log(`\n[${sym}]`);
-      const fundamentals = await getFundamentals(sym, key);
+      const fundamentals = await getFundamentals(sym);
       const quality = computeQuality(fundamentals);
       results[sym] = quality;
       console.log(`  quality.qScore = ${quality?.qScore ?? 'null'}`);
@@ -231,15 +215,6 @@ async function main() {
   // Write back: 元フォーマットを保ったまま quality ブロックだけ差し替え
   const written = writeQualityBlocks(VALS_PATH, results);
   console.log(`\nWrote ${VALS_PATH} (${written} symbols)`);
-
-  // Git commit & push（パス限定コミット: 共有ワークツリーで他にステージ済みの
-  // ファイルがあっても valuations.json だけをコミットする）
-  execSync(
-    `git commit data/valuations.json -m "chore: quality auto-update US stocks $(date +%F)"`,
-    { cwd: ROOT, shell: true }
-  );
-  execSync('git push', { cwd: ROOT });
-  console.log('Committed and pushed.');
 }
 
 main().catch(err => {

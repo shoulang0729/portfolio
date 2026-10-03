@@ -2,8 +2,8 @@
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
-import { execSync } from 'child_process';
 import { writeBlocks } from './writeback.mjs';
+import { finnhub as finnhubRelay } from './lib/worker-client.mjs';
 
 // ══════════════════════════════════════════════════════════════
 // sector-median.mjs ―― 同業（セクター）中央値ベンチマークを valuations.json に投入する週次バッチ（#493）
@@ -19,7 +19,6 @@ import { writeBlocks } from './writeback.mjs';
 const __dir = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dir, '../..');
 const VALS_PATH = resolve(ROOT, 'data/valuations.json');
-const WORKER = 'https://portfolio-proxy.shoulang.workers.dev';
 const THROTTLE_MS = 1100; // 60/分 を超えないよう metric 呼び出しを間引く
 
 const args = process.argv.slice(2);
@@ -29,19 +28,15 @@ const ONLY_SYMBOL = symbolIdx !== -1 ? args[symbolIdx + 1] : null;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/** Worker /finnhub 経由で JSON を取得（1回リトライ）。 */
-async function finnhub(path, symbol, extra = '') {
-  const url = `${WORKER}/finnhub?path=${encodeURIComponent(path)}&symbol=${encodeURIComponent(symbol)}${extra}`;
-  for (let attempt = 0; attempt <= 1; attempt++) {
-    try {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return await res.json();
-    } catch (e) {
-      if (attempt === 0) await sleep(3000);
-      else throw e;
-    }
-  }
+/**
+ * Worker /finnhub 経由で JSON を取得（Origin・リトライ・スロットルは worker-client.mjs 共通）。
+ * コミットはしない（ワークフロー weekly-valuations.yml が 1 回でコミットする・#652 PR5）。
+ * @param {string} path
+ * @param {string} symbol
+ * @param {Record<string, string>} [extra] 追加クエリ（例: { metric: 'all' }）
+ */
+async function finnhub(path, symbol, extra = {}) {
+  return finnhubRelay(path, { symbol, ...extra });
 }
 
 /** 数値配列の中央値（空は null）。 */
@@ -71,7 +66,7 @@ async function computeSectorMedian(sym) {
   for (const peer of peers) {
     let m;
     try {
-      const res = await finnhub('/stock/metric', peer, '&metric=all');
+      const res = await finnhub('/stock/metric', peer, { metric: 'all' });
       m = (res && res.metric) || {};
     } catch (e) {
       console.warn(`    ${sym} peer ${peer}: metric 取得失敗（${e.message}）`);
@@ -122,7 +117,7 @@ async function main() {
   }
 
   console.log(`Processing ${targets.length} US stocks: ${targets.join(', ')}`);
-  if (DRY_RUN) console.log('DRY RUN — will not write or commit');
+  if (DRY_RUN) console.log('DRY RUN — will not write');
 
   /** @type {Record<string, object>} */
   const results = {};
@@ -151,13 +146,6 @@ async function main() {
 
   const written = writeBlocks(VALS_PATH, results, 'sectorMedian');
   console.log(`\nWrote ${VALS_PATH} (${written} symbols)`);
-
-  execSync(`git commit data/valuations.json -m "chore: sector median auto-update $(date +%F)"`, {
-    cwd: ROOT,
-    shell: true,
-  });
-  execSync('git push', { cwd: ROOT });
-  console.log('Committed and pushed.');
 }
 
 main().catch((err) => {
