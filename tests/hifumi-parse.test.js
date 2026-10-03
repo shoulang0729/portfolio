@@ -23,6 +23,9 @@ import { KNOWN_MONTH, KNOWN_TOP10 } from '../data/scheduler/lib/hifumi-known.mjs
 const __dir = dirname(fileURLToPath(import.meta.url));
 const FIX = resolve(__dir, 'fixtures/hifumi');
 const fx = (f, m) => readFileSync(join(FIX, `hifumi-${f}-report${m}.layout.txt`), 'utf8');
+// fund-holdings.json のテスト用コピー（2026-05 時点の形・書式で固定）。実データ data/scheduler/fund-holdings.json は
+// 月次ワークフローが自動で書き換えるので、テストからは読まない。
+const SAMPLE = join(FIX, 'fund-holdings.sample.json');
 
 /** 合成の正常 10 行（検証違反ケースの土台） */
 const good = () =>
@@ -46,17 +49,17 @@ describe('parseTop10：2026-05 fixture は KNOWN_TOP10 と完全一致', () => {
     expect(KNOWN_MONTH).toBe('202605');
   });
 
-  it('toushin 2026-05 = KNOWN_TOP10.toushin（現行 fund-holdings.json と同値）', () => {
+  it('toushin 2026-05 = KNOWN_TOP10.toushin（2026-05 時点の fund-holdings.json と同値）', () => {
     const rows = parseTop10(fx('toushin', '202605'), 'toushin');
     expect(rows).toEqual(KNOWN_TOP10.toushin);
-    const cur = JSON.parse(readFileSync(resolve(__dir, '../data/scheduler/fund-holdings.json'), 'utf8'));
+    const cur = JSON.parse(readFileSync(SAMPLE, 'utf8'));
     expect(cur.find((f) => f.fund === 'ひふみ投信').top).toEqual(KNOWN_TOP10.toushin);
   });
 
-  it('microscope 2026-05 = KNOWN_TOP10.microscope（PDF の値。現行 JSON の microscope とは一致しないのが正しい）', () => {
+  it('microscope 2026-05 = KNOWN_TOP10.microscope（PDF の値。2026-05 時点の JSON の microscope とは一致しないのが正しい）', () => {
     const rows = parseTop10(fx('microscope', '202605'), 'microscope');
     expect(rows).toEqual(KNOWN_TOP10.microscope);
-    const cur = JSON.parse(readFileSync(resolve(__dir, '../data/scheduler/fund-holdings.json'), 'utf8'));
+    const cur = JSON.parse(readFileSync(SAMPLE, 'utf8'));
     expect(cur.find((f) => f.fund === 'ひふみマイクロスコープpro').top).not.toEqual(KNOWN_TOP10.microscope);
   });
 
@@ -261,7 +264,7 @@ describe('月次更新の判定（純関数）', () => {
 
 // ── スクリプト全体（fund-holdings-update.mjs）を一時ディレクトリで実行 ──────────────
 // fetch は fixture を返すスタブ、pdftotext は入力をそのまま出す偽コマンド（fixture は既にテキスト）。
-// 日付は FAKE_NOW で固定する。リポの data/scheduler/fund-holdings.json は触らない。
+// 日付は FAKE_NOW で固定する。入力は SAMPLE（asOf 2026-05 固定）で、リポの data/scheduler/fund-holdings.json は読まない・触らない。
 describe('fund-holdings-update.mjs（スタブで通し実行）', () => {
   const SCHED = resolve(__dir, '../data/scheduler');
   const canRun = process.platform !== 'win32';
@@ -272,7 +275,7 @@ describe('fund-holdings-update.mjs（スタブで通し実行）', () => {
     mkdirSync(join(dir, 'bin'));
     cpSync(join(SCHED, 'lib'), join(dir, 'sched/lib'), { recursive: true });
     cpSync(join(SCHED, 'fund-holdings-update.mjs'), join(dir, 'sched/fund-holdings-update.mjs'));
-    cpSync(join(SCHED, 'fund-holdings.json'), join(dir, 'sched/fund-holdings.json'));
+    cpSync(SAMPLE, join(dir, 'sched/fund-holdings.json'));
     writeFileSync(join(dir, 'bin/pdftotext'), '#!/bin/sh\ncat "$2"\n');
     chmodSync(join(dir, 'bin/pdftotext'), 0o755);
     writeFileSync(
@@ -329,7 +332,7 @@ describe('fund-holdings-update.mjs（スタブで通し実行）', () => {
   }
 
   const ALL_05 = ['toushin-202605', 'microscope-202605'];
-  const orig = readFileSync(join(SCHED, 'fund-holdings.json'), 'utf8');
+  const orig = readFileSync(SAMPLE, 'utf8');
 
   it.runIf(canRun)('対象月 404・実行日 1〜19 日：成功終了・書き込みなし・Issue なし', () => {
     const dir = setup();

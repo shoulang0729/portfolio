@@ -121,6 +121,7 @@ jobs:
           HM=$(date -u +%H%M)
           if [ "$HM" -ge 2100 ] && [ "$HM" -le 2230 ]; then
             echo "::warning::21:00〜22:30 UTC（push 禁止時間帯）のため commit/push しません"
+            echo "skipped=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           git config user.name "github-actions[bot]"
@@ -149,6 +150,7 @@ jobs:
           FAILED: ${{ steps.run.outputs.failed }}
           ALL_CURRENT: ${{ steps.run.outputs.all_current }}
           PUSH_OUTCOME: ${{ steps.push.outcome }}
+          PUSH_SKIPPED: ${{ steps.push.outputs.skipped }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           gh label create fund-holdings-stale \
@@ -170,11 +172,12 @@ jobs:
               gh issue create --title "$TITLE" --body-file "$BODY_FILE" --label fund-holdings-stale
               echo "Created stale issue"
             fi
-          elif [ "$ALL_CURRENT" = "true" ] && [ "$PUSH_OUTCOME" != "failure" ] && [ -n "$EXISTING" ]; then
+          elif [ "$ALL_CURRENT" = "true" ] && [ "$PUSH_OUTCOME" != "failure" ] && [ "$PUSH_SKIPPED" != "true" ] && [ -n "$EXISTING" ]; then
             gh issue close "$EXISTING" --comment "✅ ひふみ上位10が全ファンドで更新済みになりました（${RUN_URL}）。自動クローズします。"
             echo "Closed stale issue #$EXISTING"
           else
-            echo "Issue 操作なし"
+            # push 禁止時間帯で push を見送った場合は、更新が main に入っていないので Issue を閉じない
+            echo "Issue 操作なし${PUSH_SKIPPED:+（push 見送り）}"
           fi
 
       - name: Fail job on update failure

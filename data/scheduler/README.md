@@ -86,6 +86,7 @@ node data/scheduler/diff-report.mjs
 - FMP の新キーは `/stable/` エンドポイントのみ有効（v3 legacy は 401）。
 - フロントと同じく、本バッチも Worker 経由（`/fmp` `/edgar` `/edinet-db` `/finnhub` `/yahoo`）でキーを隠蔽する。
   バッチ側にキーを読むコード（環境変数・設定ファイル）は無い。
+- ひふみ上位10の月次更新（`fund-holdings-update.mjs`・#656）は毎回 2026-05 の月次レポート PDF で自己検証する。この PDF が公開終了（404）になったら、取得できる月の PDF で `lib/hifumi-known.mjs` の `KNOWN_MONTH`/`KNOWN_TOP10` を更新する（それまで更新は止まる）。
 
 ## 毎日の PER（GitHub Actions・並行運転中・#652 PR2）
 
