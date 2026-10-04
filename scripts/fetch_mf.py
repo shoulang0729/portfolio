@@ -558,7 +558,7 @@ def _txt_body(page):
 # ── 負債スクレイピング（#577 スコープA・fail-soft） ─────────────────────────────
 def scrape_liabilities(page, c):
     """/bs/liability の負債行を抽出する。成功時 rows=[{institution,name,balance}]、
-    失敗時 None（notify 済み）。
+    失敗時 None（notify 済み）。name があり残高 > 0 の行はすべて採用する（#696）。
 
     ★fail-soft（config fetch.liabilities.onFailure）: 負債の取得失敗・0行・
     チェックサム不一致は notify して None を返すだけ。資産スナップショットの
@@ -582,7 +582,8 @@ def scrape_liabilities(page, c):
             notify("負債: ログイン切れで /bs/liability を開けず。負債はスキップ。")
             return None
         total = _net_from_text(_txt_body(page), lc["totalRegex"])
-        cats = inc.get("categories", [])
+        # #696（2026-10-04 Toshio 決定）: 残高のある行はすべて取り込む。
+        # include.liabilities.categories（部分一致の対象リスト）による絞り込みはやめた＝読まない。
         cols = lc["table"]["cols"]
         rows = []
         tables = page.locator(lc["table"]["selector"])
@@ -602,9 +603,6 @@ def scrape_liabilities(page, c):
                 if not name or bal <= 0:
                     _liab_diag_add(d, "noName" if not name else "nonPositive", bal)
                     continue  # 空行/見出し/完済(0円)をスキップ
-                if cats and not any(k in name or k in inst for k in cats):
-                    _liab_diag_add(d, "notInCategories", bal)
-                    continue  # 負債側 allowlist（部分一致・config include.liabilities）
                 _liab_diag_add(d, "adopted", bal)
                 rows.append({"institution": inst, "name": name, "balance": bal})
         if not rows:
@@ -635,6 +633,7 @@ def scrape_liabilities(page, c):
 # scrape_liabilities の判定はそのまま、捨てた理由ごとの行数・残高合計を _LIAB_DIAG に数える。
 # 表示は liab_diag_report() の 1 行だけ。金額・名前・金融機関名は出さない（比は小数 3 桁）。
 # 理由: noName=name 列が空 / nonPositive=残高 0 以下・読めず / notInCategories=対象リスト外 / adopted=採用
+# #696 の修正後は対象リストで絞らないため notInCategories は常に 0（表示の形を保つため項目は残す）
 _LIAB_DIAG = None
 _LIAB_DIAG_REASONS = ("noName", "nonPositive", "notInCategories", "adopted")
 
