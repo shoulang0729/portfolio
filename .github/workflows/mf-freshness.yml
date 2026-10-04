@@ -92,8 +92,9 @@ jobs:
 
           ### 確認手順（Mac mini）
           1. エラーログの末尾を見る: \`tail -n 50 ~/.mf-snapshot/err.log\`
-          2. 取込を再実行する: \`launchctl kickstart -k gui/\$(id -u)/com.toshio.mf-snapshot\`
-          3. 直らなければ [scripts/README-mf-snapshot.md](https://github.com/${REPO}/blob/main/scripts/README-mf-snapshot.md) のトラブルシュートを見る
+          2. 「非公開設定の不備で取込を中止」（exit 6）なら、Mac mini で非公開設定 \`~/.mf-snapshot/private-config.json\` を作成・修正し、\`python3 scripts/fetch_mf.py check-config\` が OK になるのを確かめる（中身はどこにも貼らない・手順は README の「非公開設定」節）
+          3. 取込を再実行する: \`launchctl kickstart -k gui/\$(id -u)/com.toshio.mf-snapshot\`
+          4. 直らなければ [scripts/README-mf-snapshot.md](https://github.com/${REPO}/blob/main/scripts/README-mf-snapshot.md) のトラブルシュートを見る
 
           > このIssueは \`MF Holdings Freshness\` ワークフロー（毎日 08:40 CST）が自動管理しています（取込が当日分まで戻ると自動クローズ）。
           EOF

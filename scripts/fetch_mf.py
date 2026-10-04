@@ -15,6 +15,15 @@
   python fetch_mf.py run --dry-run  # 試運転: 取得（再試行込み）→build→verify と公開コピー検査まで。
                                     # data/ 書き込み・commit/push・KV 送信・履歴取得をしない（#685・#687）
   （--dry-run 単独も同じ。未知の引数・打ち間違いは exit 2 で本番処理に入らない）
+  python fetch_mf.py check-config   # 非公開設定を重ねた結果の件数だけ表示（ブラウザ・通信なし・#687）
+
+非公開ローカル設定（#687・docs/handoff/2026-10-04-mf-private-config.md）:
+- 実名の除外リスト（exclude.accounts）は Mac mini の ~/.mf-snapshot/private-config.json（リポ外。
+  環境変数 MF_PRIVATE_CONFIG で上書き可）にだけ置き、run / run --dry-run / check-config の起動時に
+  公開 config へ重ねる。公開 config の exclude.accounts は常に空。要素が '=' で始まれば完全一致。
+- 非公開設定が無い・壊れている・許可外キーがある・除外リストが空・公開側の exclude.accounts が
+  空でない、のどれかならブラウザを起動する前に通知して exit 6（Mac mini で作成・修正して再実行）。
+- setup と fetch_mf_history.py は公開 config だけで動く。
 
 ⚠ 資格情報（cookie・TG トークン等）はログ/コミットに出さない。
 ⚠ DOM 構造は data/mf-import-config.json の fetch.dom（資産種類別テーブル＋列インデックスマップ）。
@@ -61,8 +70,168 @@ WORKER_USER_AGENT = "portfolio-mf-snapshot/1 (+https://github.com/shoulang0729/p
 
 
 def cfg():
+    """公開 config だけを読む（setup 用。run / check-config は load_config を使う）。"""
     with open(CONFIG, encoding="utf-8") as f:
         return json.load(f)
+
+
+# ── 非公開ローカル設定の重ね合わせ（#687 PR2・docs/handoff/2026-10-04-mf-private-config.md §3） ──
+# 実名の除外リストは Mac mini のリポ外ファイルにだけ置き、run の起動時に公開 config へ重ねる。
+# 公開 config の exclude.accounts は常に空。無い・壊れているときはブラウザ起動前に中止（exit 6）。
+# 通知・ログには実名を出さない（パスの種類・件数・落ちた条件だけ）。
+PRIVATE_CONFIG_ENV = "MF_PRIVATE_CONFIG"
+PRIVATE_CONFIG_DEFAULT = os.path.join("~", ".mf-snapshot", "private-config.json")
+EXIT_PRIVATE_CONFIG = 6
+EXACT_MATCH_PREFIX = "="  # exclude.accounts の要素がこれで始まれば完全一致（それ以外は部分一致）
+_PRIVATE_TOP_KEYS = ("version", "exclude", "liabilityAccountMap")
+_PRIVATE_EXCLUDE_KEYS = ("accounts",)
+_PRIVATE_FIX_HINT = (
+    "Mac mini で非公開設定（~/.mf-snapshot/private-config.json）を作成・修正してから再実行して"
+    "（手順は scripts/README-mf-snapshot.md）。"
+)
+
+
+class PrivateConfigError(Exception):
+    """非公開設定の不備（§3.3 の中止条件）。メッセージに実名を含めない。"""
+
+    def __init__(self, reason, hint=_PRIVATE_FIX_HINT):
+        super().__init__(reason)
+        self.reason = reason
+        self.hint = hint
+
+
+def private_config_path(private_path=None):
+    """(パス, 種類) を返す。種類は 'arg'（引数）/ 'env'（環境変数）/ 'default'（既定パス）。"""
+    if private_path:
+        return private_path, "arg"
+    env = os.environ.get(PRIVATE_CONFIG_ENV)
+    if env:
+        return os.path.expanduser(env), "env"
+    return os.path.expanduser(PRIVATE_CONFIG_DEFAULT), "default"
+
+
+_PATH_KIND_LABEL = {"arg": "指定パス", "env": f"環境変数 {PRIVATE_CONFIG_ENV}", "default": "既定パス"}
+
+
+def _has_edge_space(a):
+    """要素（'=' 始まりなら '=' の後ろ）に前後の空白があるか。照合が黙って外れるのを防ぐ。"""
+    if a != a.strip():
+        return True
+    if a.startswith(EXACT_MATCH_PREFIX):
+        rest = a[len(EXACT_MATCH_PREFIX):]
+        return rest != rest.strip()
+    return False
+
+
+def _validate_private(priv):
+    """§3.3 の 3〜5（許可外キー・exclude.accounts・liabilityAccountMap）。不備は PrivateConfigError。"""
+    if not isinstance(priv, dict):
+        raise PrivateConfigError("非公開設定のトップレベルが object でない")
+    extra = [k for k in priv if k not in _PRIVATE_TOP_KEYS]
+    excl = priv.get("exclude")
+    if isinstance(excl, dict):
+        extra += [k for k in excl if k not in _PRIVATE_EXCLUDE_KEYS]
+    if extra:
+        raise PrivateConfigError(f"非公開設定に許可外のキーが {len(extra)} 件ある（許可は exclude.accounts と liabilityAccountMap だけ）")
+    if not isinstance(excl, dict) or "accounts" not in excl:
+        raise PrivateConfigError("非公開設定に exclude.accounts が無い")
+    accounts = excl["accounts"]
+    if not isinstance(accounts, list):
+        raise PrivateConfigError("非公開設定の exclude.accounts が配列でない")
+    if not accounts:
+        raise PrivateConfigError("非公開設定の exclude.accounts が空")
+    if any(not isinstance(a, str) for a in accounts):
+        raise PrivateConfigError("非公開設定の exclude.accounts に文字列以外の要素がある")
+    if any(a.strip() in ("", EXACT_MATCH_PREFIX) for a in accounts):
+        raise PrivateConfigError("非公開設定の exclude.accounts に空文字または '=' だけの要素がある")
+    padded = sum(1 for a in accounts if _has_edge_space(a))
+    if padded:
+        raise PrivateConfigError(f"非公開設定の exclude.accounts に前後の空白がある要素が {padded} 件ある")
+    if "liabilityAccountMap" in priv:
+        m = priv["liabilityAccountMap"]
+        if not isinstance(m, dict):
+            raise PrivateConfigError("非公開設定の liabilityAccountMap が object でない")
+        if any(not isinstance(v, str) for v in m.values()):
+            raise PrivateConfigError("非公開設定の liabilityAccountMap に文字列以外の値がある")
+
+
+def load_config(public_path=None, private_path=None):
+    """公開 config に非公開ローカル設定を重ねた dict を返す（形は cfg() と同じ）。
+
+    private_path が None なら環境変数 MF_PRIVATE_CONFIG → 既定パスの順。
+    不備（§3.3 の 1〜6）は PrivateConfigError。読み込みだけで書き込みはしない。
+    戻り値の dict には件数表示用に '_privateConfig'（パスの種類・件数だけ。実名なし）を付ける。"""
+    with open(public_path or CONFIG, encoding="utf-8") as f:
+        c = json.load(f)
+    pub_accounts = c.get("exclude", {}).get("accounts", [])
+    if pub_accounts:
+        raise PrivateConfigError(
+            f"公開 config（data/mf-import-config.json）の exclude.accounts が空でない（{len(pub_accounts)} 件）",
+            hint="実名の除外リストは非公開設定にだけ置き、公開 config の exclude.accounts は空に戻して。",
+        )
+    path, kind = private_config_path(private_path)
+    where = _PATH_KIND_LABEL[kind]
+    if not os.path.isfile(path):
+        raise PrivateConfigError(f"非公開設定が見つからない（{where}）")
+    try:
+        with open(path, encoding="utf-8") as f:
+            priv = json.load(f)
+    except (OSError, ValueError):
+        raise PrivateConfigError(f"非公開設定が JSON として読めない（{where}）") from None
+    _validate_private(priv)
+
+    merged = list(pub_accounts)
+    for a in priv["exclude"]["accounts"]:
+        if a not in merged:
+            merged.append(a)
+    c.setdefault("exclude", {})["accounts"] = merged
+    lam = dict(c.get("liabilityAccountMap", {}))
+    lam.update(priv.get("liabilityAccountMap", {}))
+    c["liabilityAccountMap"] = lam
+
+    loose_perm = False
+    try:
+        loose_perm = bool(os.stat(path).st_mode & 0o077)
+    except OSError:
+        pass
+    c["_privateConfig"] = {
+        "kind": kind,
+        "accounts": len(merged),
+        "exact": sum(1 for a in merged if a.startswith(EXACT_MATCH_PREFIX)),
+        "liabilityAccountMap": len([k for k in lam if k != "note"]),
+        "publicAccounts": len(pub_accounts),
+        "loosePermission": loose_perm,
+    }
+    return c
+
+
+def load_config_or_abort(public_path=None, private_path=None, notify_prefix=""):
+    """load_config を呼び、不備なら通知して exit(6)（ブラウザ起動・書き出し・KV・commit の前）。
+    グループ/他人に読み権限があれば警告だけ通知して続ける。"""
+    global _NOTIFY_PREFIX
+    saved = _NOTIFY_PREFIX
+    _NOTIFY_PREFIX = notify_prefix
+    try:
+        try:
+            c = load_config(public_path, private_path)
+        except PrivateConfigError as e:
+            notify(f"非公開設定の不備で取込を中止（書き出し・KV 送信・commit はしていない）: {e.reason}。{e.hint}")
+            sys.exit(EXIT_PRIVATE_CONFIG)
+        if c["_privateConfig"]["loosePermission"]:
+            notify("非公開設定のパーミッションがグループ/他人に開いている。`chmod 600` を推奨（取込は続行）。")
+        return c
+    finally:
+        _NOTIFY_PREFIX = saved
+
+
+def check_config_report(c):
+    """check-config の表示行（件数だけ・実名なし）。例:
+    private=default exclude.accounts=7（完全一致1） liabilityAccountMap=0 public.exclude.accounts=0 OK"""
+    p = c["_privateConfig"]
+    return (
+        f"private={p['kind']} exclude.accounts={p['accounts']}（完全一致{p['exact']}） "
+        f"liabilityAccountMap={p['liabilityAccountMap']} public.exclude.accounts={p['publicAccounts']} OK"
+    )
 
 
 # run --dry-run 中は通知の先頭に付ける（本番 run の通知と見分けるため・#687）。
@@ -439,11 +608,12 @@ def scrape_liabilities(page, c):
 
 # ── 整形（除外/分類/シンボル/レコード化）→ v4 スキーマ ──────────────────────────
 def _account_excluded(institution, exclude_accounts):
-    """口座/金融機関の除外判定。部分一致。ただし『非公開12』は完全名のみ
-    （『マネックス証券』との衝突回避・config 注記）。"""
+    """口座/金融機関の除外判定。要素が '=' で始まれば残りとの完全一致、それ以外は部分一致
+    （要素 in 金融機関名）。完全一致は、取込対象の口座名と部分一致で衝突する口座に使う（#687）。"""
+    institution = institution or ""
     for e in exclude_accounts:
-        if e == "非公開12":
-            if institution == e:
+        if e.startswith(EXACT_MATCH_PREFIX):
+            if institution == e[len(EXACT_MATCH_PREFIX):]:
                 return True
         elif e in institution:
             return True
@@ -1130,21 +1300,22 @@ def _run_history_script():
         print(f"[history] fetch_mf_history.py の起動に失敗（無視）: {e}", file=sys.stderr)
 
 
-_USAGE = "使い方: fetch_mf.py [setup | run [--dry-run]]（引数なしは run）"
+_USAGE = "使い方: fetch_mf.py [setup | run [--dry-run] | check-config]（引数なしは run）"
 
 
 def parse_args(args):
     """コマンドライン引数（sys.argv[1:]）を (cmd, dry_run) にする。不正なら None。
 
     #687: 打ち間違いや未知のオプションで本番 run（書き出し・KV・commit/push）に入らないよう、
-    認識できない引数はすべて不正扱い。`--dry-run` 単独は `run --dry-run` と同じ。"""
+    認識できない引数はすべて不正扱い。`--dry-run` 単独は `run --dry-run` と同じ。
+    `check-config`（#687 PR2）は非公開設定の重ね合わせ結果の件数だけを表示する（--dry-run は付けない）。"""
     dry_run = "--dry-run" in args
     opts = [a for a in args if a.startswith("-")]
     positional = [a for a in args if not a.startswith("-")]
     if any(o != "--dry-run" for o in opts) or len(positional) > 1:
         return None
     cmd = positional[0] if positional else "run"
-    if cmd not in ("setup", "run") or (cmd == "setup" and dry_run):
+    if cmd not in ("setup", "run", "check-config") or (cmd != "run" and dry_run):
         return None
     return cmd, dry_run
 
@@ -1155,11 +1326,17 @@ def main(argv):
         print(f"不明な引数のため中止（本番処理はしていない）。{_USAGE}", file=sys.stderr)
         sys.exit(2)
     cmd, dry_run = parsed
-    conf = cfg()
     if cmd == "setup":
-        do_setup(conf)
-    else:
-        do_run(conf, dry_run=dry_run)
+        do_setup(cfg())  # ログインだけ＝公開 config だけで動く（非公開設定は不要）
+        return
+    if cmd == "check-config":
+        # ネットワークもブラウザも使わない。不備なら通知して exit 6
+        conf = load_config_or_abort(notify_prefix="[check-config] ")
+        print(check_config_report(conf))
+        return
+    # run / run --dry-run: ブラウザを起動する前に非公開設定を重ねる。不備なら通知して exit 6
+    conf = load_config_or_abort(notify_prefix="[dry-run] " if dry_run else "")
+    do_run(conf, dry_run=dry_run)
 
 
 if __name__ == "__main__":
