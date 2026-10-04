@@ -36,7 +36,14 @@
 
 ### クラウドから実行できないもの
 - **Worker のデプロイ**：`worker/**` を含む PR がマージされたら、Toshio が Mac で `cd worker && npx wrangler deploy` ＋ curl 検証を行う（reviewer が報告する）。
-- **Mac 実機の確認**：`scripts/fetch_mf*.py` など MF へのログインが要る処理は Claude Code では動作確認できない。PR に「Mac 実機確認要」と書き、Mac mini での確認後にマージする。
+- **Mac 実機の確認**：`scripts/fetch_mf*.py` など MF へのログインが要る処理は Claude Code では動作確認できない。原則は **マージ直後に即時確認**：
+  1. CI green ＋ reviewer 承認でマージし、PM が Toshio に起動を依頼する。
+  2. Toshio が Mac mini で `launchctl kickstart -k gui/$(id -u)/com.toshio.mf-snapshot`（毎朝のバッチと同じ条件で即時実行）。
+  3. PM がクラウドから main の `data: refresh MF holdings snapshot` コミット・公開ファイルの形と変更点・非公開項目の漏れなしを確認して報告する。
+  4. Toshio が MF 画面との数値の突き合わせ（必要なら KV）だけを目視する（数値はどこにも貼らない）。
+  5. 問題があれば PM が即 revert する。
+  - **例外（マージ前に Mac で確認）**：ログイン・取得処理、公開用の除去処理（`sanitize_for_public()`）、自動 commit/push 処理そのものを変える PR。PR に「Mac 実機確認要」と書く。
+  - `fetch_mf.py run` は main 上での自動 commit/push を前提とするため、feature ブランチで実行しない。
 
 ### 公開リポの原則
 このリポは PUBLIC。個人の資産データ（物件・評価額・負債・ネットワース実額・口座情報）と秘密（APIキー・トークン・PIN/ハッシュ値）をコミットしない。テストデータは合成値にする。reviewer は差分ごとに検査する。
