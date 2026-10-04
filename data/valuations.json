@@ -49,7 +49,7 @@
         "n": null,
         "source": "etf-proxy",
         "etf": "1624.T",
-        "asOf": "2026-10-03"
+        "asOf": "2026-10-04"
       },
       "value": {
         "perTrail": 14.7,
@@ -107,7 +107,7 @@
         "n": null,
         "source": "etf-proxy",
         "etf": "1624.T",
-        "asOf": "2026-10-03"
+        "asOf": "2026-10-04"
       },
       "perCurrent": 18.12,
       "bandLow": 9,
@@ -264,13 +264,13 @@
     },
     "LITE": {
       "sectorMedian": {
-        "per": 35.6,
-        "evEbitda": 48.1,
+        "per": 35.4,
+        "evEbitda": 48.5,
         "grossMargin": 46.2,
         "pb": 9,
         "n": 7,
         "source": "finnhub-peers",
-        "asOf": "2026-10-03"
+        "asOf": "2026-10-04"
       },
       "value": {
         "targetGapPct": 7
@@ -301,13 +301,13 @@
     },
     "CRWD": {
       "sectorMedian": {
-        "per": 63,
-        "evEbitda": 50.4,
+        "per": 62.6,
+        "evEbitda": 50.1,
         "grossMargin": 76,
         "pb": 8.2,
         "n": 7,
         "source": "finnhub-peers",
-        "asOf": "2026-10-03"
+        "asOf": "2026-10-04"
       },
       "value": {
         "targetGapPct": -13
@@ -337,13 +337,13 @@
     },
     "PANW": {
       "sectorMedian": {
-        "per": 63,
-        "evEbitda": 50.4,
+        "per": 62.6,
+        "evEbitda": 50.1,
         "grossMargin": 76,
         "pb": 8.2,
         "n": 7,
         "source": "finnhub-peers",
-        "asOf": "2026-10-03"
+        "asOf": "2026-10-04"
       },
       "value": {
         "targetGapPct": -2
@@ -417,13 +417,13 @@
     },
     "AAPL": {
       "sectorMedian": {
-        "per": 31.1,
-        "evEbitda": 22.6,
+        "per": 31.3,
+        "evEbitda": 22.7,
         "grossMargin": 42.7,
         "pb": 7.2,
         "n": 9,
         "source": "finnhub-peers",
-        "asOf": "2026-10-03"
+        "asOf": "2026-10-04"
       },
       "perCurrent": 38.31,
       "bandLow": 24,
@@ -479,7 +479,7 @@
         "pb": 4.6,
         "n": 9,
         "source": "finnhub-peers",
-        "asOf": "2026-10-03"
+        "asOf": "2026-10-04"
       },
       "perCurrent": 20.23,
       "bandLow": 24,
@@ -536,7 +536,7 @@
         "pb": 4.8,
         "n": 8,
         "source": "finnhub-peers",
-        "asOf": "2026-10-03"
+        "asOf": "2026-10-04"
       },
       "perCurrent": 17.24,
       "bandLow": 18,
@@ -584,13 +584,13 @@
     },
     "MSFT": {
       "sectorMedian": {
-        "per": 63,
-        "evEbitda": 50.4,
+        "per": 62.6,
+        "evEbitda": 50.1,
         "grossMargin": 76,
         "pb": 8.2,
         "n": 7,
         "source": "finnhub-peers",
-        "asOf": "2026-10-03"
+        "asOf": "2026-10-04"
       },
       "perCurrent": 28.58,
       "bandLow": 24,
@@ -641,13 +641,13 @@
     },
     "TSLA": {
       "sectorMedian": {
-        "per": 27.9,
+        "per": 27.7,
         "evEbitda": 12.6,
         "grossMargin": 7.1,
         "pb": 1.5,
         "n": 4,
         "source": "finnhub-peers",
-        "asOf": "2026-10-03"
+        "asOf": "2026-10-04"
       },
       "perCurrent": 346.35,
       "bandLow": 40,
@@ -782,12 +782,12 @@
     "PLTR": {
       "sectorMedian": {
         "per": 31.2,
-        "evEbitda": 24,
+        "evEbitda": 23.9,
         "grossMargin": 80.2,
         "pb": 9.9,
         "n": 10,
         "source": "finnhub-peers",
-        "asOf": "2026-10-03"
+        "asOf": "2026-10-04"
       },
       "perCurrent": 161.32,
       "bandLow": 130,
@@ -871,7 +871,7 @@
         "n": null,
         "source": "etf-proxy",
         "etf": "1625.T",
-        "asOf": "2026-10-03"
+        "asOf": "2026-10-04"
       },
       "perCurrent": 38.95,
       "bandLow": 12,
@@ -924,7 +924,7 @@
         "n": null,
         "source": "etf-proxy",
         "etf": "1630.T",
-        "asOf": "2026-10-03"
+        "asOf": "2026-10-04"
       },
       "perCurrent": 46.08,
       "bandLow": 25,
