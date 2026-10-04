@@ -26,9 +26,9 @@ MulmoClaude を頭脳とした投資運用システムの設計。本リポジ�
   "asOf": "ISO8601", "source": "moneyforward/claude-for-chrome", "configVersion": 2,
   "totals": { "mfNetWorth": 0, "imported": 0, "excludedAccounts": 0 },
   "holdings": [
-    { "account": "マネックス証券", "cat": "米国株・ETF", "name": "アップル",
-      "symbol": "AAPL", "ySymbol": "AAPL", "shares": 186,
-      "avgCost": 208.92, "price": 308.33, "value": 9072672, "cur": "USD" }
+    { "account": "サンプル証券", "cat": "米国株・ETF", "name": "アップル",
+      "symbol": "AAPL", "ySymbol": "AAPL", "shares": 100,
+      "avgCost": 100.00, "price": 200.00, "value": 1000000, "cur": "USD" }
   ]
 }
 ```

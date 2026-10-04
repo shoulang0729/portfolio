@@ -6,10 +6,10 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { loadMfHoldings, getMfTotals, getMfManualAssets, getMfLiabilities } from '../src/networth.js';
 
 const HOLDINGS = [
-  { institution: 'マネックス証券', cat: '日本株・ETF', name: 'TOPIX連動', value: 300_000_000, cur: 'JPY' },
-  { institution: '三井住友銀行', cat: '現金・預金', name: '普通預金', value: 60_000_000, cur: 'JPY' },
-  { institution: 'SMBC信託', cat: '現金・預金', name: '外貨預金', value: 10_000_000, cur: 'USD' },
-  { institution: 'bitFlyer', cat: '暗号資産', name: 'ビットコイン', value: 5_000_000, cur: 'JPY' },
+  { institution: 'サンプル証券', cat: '日本株・ETF', name: 'TOPIX連動', value: 300_000_000, cur: 'JPY' },
+  { institution: 'テスト銀行', cat: '現金・預金', name: '普通預金', value: 60_000_000, cur: 'JPY' },
+  { institution: 'サンプル信託銀行', cat: '現金・預金', name: '外貨預金', value: 10_000_000, cur: 'USD' },
+  { institution: 'サンプル暗号資産取引所', cat: '暗号資産', name: 'ビットコイン', value: 5_000_000, cur: 'JPY' },
 ];
 
 const V4_DOC = {

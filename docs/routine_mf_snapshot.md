@@ -54,8 +54,8 @@
     "excludedAccounts": ["<除外した口座/金融機関名>", "..."]
   },
   "holdings": [
-    { "institution": "マネックス証券", "cat": "米国株・ETF", "name": "アップル", "ySymbol": "AAPL", "avgCost": 208.92, "price": 308.33, "value": 9072672, "cur": "USD", "asOf": "2026-06-14" },
-    { "institution": "三井住友銀行", "cat": "現金・預金", "name": "円普通預金 JPY", "value": 32747, "cur": "JPY", "asOf": "2026-06-14" }
+    { "institution": "サンプル証券", "cat": "米国株・ETF", "name": "アップル", "ySymbol": "AAPL", "avgCost": 100.00, "price": 200.00, "value": 1000000, "cur": "USD", "asOf": "2026-06-14" },
+    { "institution": "テスト銀行", "cat": "現金・預金", "name": "円普通預金 JPY", "value": 100000, "cur": "JPY", "asOf": "2026-06-14" }
   ]
 }
 ```
