@@ -535,6 +535,122 @@ class TestPushNetworthToWorker(unittest.TestCase):
         self.assertTrue(any("network down" in m for m in self.notified))
 
 
+class TestPushNetworthDiagnostics(unittest.TestCase):
+    """#684 A1: HTTPError/URLError の診断ログと User-Agent の明示を検算する（合成値のみ）。"""
+
+    PIN = "SYNTHETIC_PIN_HASH"
+    AMOUNT = 98765432  # 合成金額
+
+    def setUp(self):
+        import io
+        self.notified = []
+        self._orig_notify = fetch_mf.notify
+        fetch_mf.notify = lambda msg, *a, **k: self.notified.append(msg)
+        self._orig_env = dict(os.environ)
+        self._orig_urlopen = fetch_mf.urllib.request.urlopen
+        self._orig_stderr = sys.stderr
+        self.stderr = io.StringIO()
+        sys.stderr = self.stderr
+        os.environ["MF_WORKER_URL"] = "https://worker.example.invalid/"
+        os.environ["MF_PIN_HASH"] = self.PIN
+        self.captured = {}
+
+    def tearDown(self):
+        sys.stderr = self._orig_stderr
+        fetch_mf.urllib.request.urlopen = self._orig_urlopen
+        fetch_mf.notify = self._orig_notify
+        os.environ.clear()
+        os.environ.update(self._orig_env)
+
+    def _doc(self):
+        return {"asOf": "2026-10-04", "totals": {"imported": self.AMOUNT, "netWorthComputed": self.AMOUNT}}
+
+    def _raise_http(self, code, reason, headers, body):
+        import io
+        import email.message
+        import urllib.error
+
+        msg = email.message.Message()
+        for k, v in headers.items():
+            msg[k] = v
+
+        def _fake(req, timeout=None):
+            self.captured["ua"] = req.get_header("User-agent")
+            self.captured["url"] = req.full_url
+            raise urllib.error.HTTPError(req.full_url, code, reason, msg, io.BytesIO(body))
+
+        fetch_mf.urllib.request.urlopen = _fake
+
+    def _assert_no_secrets(self):
+        out = "\n".join(self.notified) + "\n" + self.stderr.getvalue()
+        for bad in (self.PIN, str(self.AMOUNT), f"{self.AMOUNT:,}", "X-Pin-Hash", "netWorthComputed"):
+            self.assertNotIn(bad, out)
+
+    def test_http_403_cloudflare_text_body(self):
+        self._raise_http(
+            403,
+            "Forbidden",
+            {"Server": "cloudflare", "CF-RAY": "0000000000000000-XXX", "Content-Type": "text/plain; charset=UTF-8"},
+            b"error code: 1010",
+        )
+        result = fetch_mf.push_networth_to_worker(self._doc())
+        self.assertFalse(result)
+        self.assertEqual(len(self.notified), 1)
+        m = self.notified[0]
+        self.assertIn("networth KV 送信失敗: HTTP 403 Forbidden", m)
+        self.assertIn("server=cloudflare", m)
+        self.assertIn("cf-ray=0000000000000000-XXX", m)
+        self.assertIn('body="error code: 1010"', m)
+        self.assertIn("host=worker.example.invalid/networth", m)
+        self.assertIn(m, self.stderr.getvalue())  # ログ（stderr）にも同じ 1 行
+        self._assert_no_secrets()
+
+    def test_request_has_explicit_user_agent(self):
+        self._raise_http(403, "Forbidden", {}, b"")
+        fetch_mf.push_networth_to_worker(self._doc())
+        self.assertEqual(self.captured["ua"], fetch_mf.WORKER_USER_AGENT)
+        self.assertTrue(self.captured["ua"].startswith("portfolio-mf-snapshot/1 (+"))
+
+    def test_html_body_extracts_only_code_and_title(self):
+        body = (
+            b"<!DOCTYPE html><html><head><title>Access denied | worker.example.invalid used Cloudflare</title>"
+            b"</head><body><p>secret-ish page text SHOULD_NOT_APPEAR</p><span>Error code: 1010</span></body></html>"
+        )
+        self._raise_http(
+            403, "Forbidden", {"Server": "cloudflare", "cf-mitigated": "challenge", "Content-Type": "text/html"}, body
+        )
+        fetch_mf.push_networth_to_worker(self._doc())
+        m = self.notified[0]
+        self.assertIn("cf-mitigated=challenge", m)
+        self.assertIn("error code: 1010", m)
+        self.assertIn("title: Access denied", m)
+        self.assertNotIn("SHOULD_NOT_APPEAR", m)
+        self._assert_no_secrets()
+
+    def test_long_body_truncated_to_160(self):
+        self._raise_http(500, "Internal Server Error", {"Content-Type": "application/json"}, b"x" * 2000)
+        fetch_mf.push_networth_to_worker(self._doc())
+        m = self.notified[0]
+        snippet = m.split('body="', 1)[1].split('"', 1)[0]
+        self.assertEqual(len(snippet), 160)
+
+    def test_url_error_reports_class_and_reason(self):
+        import urllib.error
+
+        def _fake(req, timeout=None):
+            raise urllib.error.URLError("proxy refused")
+
+        fetch_mf.urllib.request.urlopen = _fake
+        result = fetch_mf.push_networth_to_worker(self._doc())
+        self.assertFalse(result)
+        self.assertEqual(len(self.notified), 1)
+        m = self.notified[0]
+        self.assertIn("URLError", m)
+        self.assertIn("reason=proxy refused", m)
+        self.assertIn("host=worker.example.invalid/networth", m)
+        self._assert_no_secrets()
+
+
 class TestUpdateRealAssets(unittest.TestCase):
     """#580 スコープA': update_real_assets の field-level merge / ±guard% / fail-soft 検算。
 
