@@ -1,8 +1,8 @@
 {
   "asOf": "2026-10-04",
   "totals": {
-    "mfNetWorth": 574326739,
-    "imported": 529220539,
+    "mfNetWorth": 574335299,
+    "imported": 529229099,
     "excludedAccounts": [
       "非公開29",
       "非公開16",
@@ -573,7 +573,7 @@
       "institution": "非公開21",
       "cat": "暗号資産",
       "name": "ビットコイン残高",
-      "value": 2004746,
+      "value": 2007584,
       "cur": "JPY",
       "asOf": "2026-10-04"
     },
@@ -581,7 +581,7 @@
       "institution": "非公開21",
       "cat": "暗号資産",
       "name": "イーサリアム残高",
-      "value": 2092806,
+      "value": 2098528,
       "cur": "JPY",
       "asOf": "2026-10-04"
     }
