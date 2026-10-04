@@ -9,8 +9,8 @@
 ## 実装ログ（implementer が更新）
 | PR | branch | PR | 状態 |
 |---|---|---|---|
-| PR1 公開コピーから口座名を除去＋`--dry-run` | `fix/____-mf-public-sanitize-institution` | #687 | 未着手／Mac 実機確認要（マージ前） |
-| PR2 非公開ローカル設定の重ね合わせ＋公開 config の実名削除 | `fix/____-mf-private-config` | #687 | 未着手（PR1 後）／Mac 実機確認要（マージ前）／macops の事前作業要 |
+| PR1 公開コピーから口座名を除去＋`--dry-run` | `fix/687-mf-public-sanitize-institution` | #____ | 未着手／Mac 実機確認要（マージ前） |
+| PR2 非公開ローカル設定の重ね合わせ＋公開 config の実名削除 | `fix/687-mf-private-config` | #____ | 未着手（PR1 後）／Mac 実機確認要（マージ前）／macops の事前作業要 |
 
 - [ ] macops: Mac mini に非公開設定を作成（§7 手順 1。中身はどこにも貼らない）
 - [ ] git 履歴の扱い（§9）: Toshio 判断 ＿＿＿（A 残す / B 文字列置換で履歴書き換え）
