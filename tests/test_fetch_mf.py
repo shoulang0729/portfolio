@@ -581,13 +581,15 @@ class TestDryRun(unittest.TestCase):
         pub = fetch_mf.sanitize_for_public(doc)
         lines, ok = fetch_mf.dry_run_report(doc, pub, pub)  # 直近出力が通し番号化済み
         self.assertTrue(ok)
-        self.assertTrue(any("比較不可" in l for l in lines))
-        self.assertTrue(any("除外口座の集合: 不一致" in l for l in lines))
+        self.assertIn("取込対象の金融機関の集合: 比較不可（直近出力が通し番号化済み）", lines)
+        self.assertIn("除外口座の集合: 比較不可（直近出力が通し番号化済み）", lines)
         prev = json.loads(json.dumps(doc))
         prev["totals"]["imported"] = int(doc["totals"]["imported"] * 1.5)
         prev["holdings"][0]["institution"] = "テスト別銀行"
+        prev["totals"]["excludedAccounts"] = [TEST_EXCL_IC_INST]
         lines, _ = fetch_mf.dry_run_report(doc, pub, prev)
         self.assertTrue(any("取込対象の金融機関の集合: 不一致" in l for l in lines))
+        self.assertTrue(any("除外口座の集合: 不一致" in l for l in lines))
         self.assertTrue(any("超" in l for l in lines))
         lines, _ = fetch_mf.dry_run_report(doc, pub, None)
         self.assertTrue(any("省略" in l for l in lines))
@@ -598,6 +600,93 @@ class TestDryRun(unittest.TestCase):
         lines, ok = fetch_mf.dry_run_report(doc, leaked, None)
         self.assertFalse(ok)
         self.assertIn("NG", lines[-1])
+
+    def test_public_check_ng_exits_4_without_side_effects(self):
+        orig = fetch_mf.sanitize_for_public
+        fetch_mf.sanitize_for_public = lambda d: json.loads(json.dumps(d))  # 除去されない退行を模擬
+        try:
+            with self.assertRaises(SystemExit) as cm:
+                self._run()
+        finally:
+            fetch_mf.sanitize_for_public = orig
+        self.assertEqual(cm.exception.code, 4)
+        self.assertEqual(self.calls, [])
+        self.assertFalse(os.path.exists(fetch_mf.OUT))
+
+    def test_notify_prefixed_during_dry_run_only(self):
+        import io
+        import contextlib
+        fetch_mf.notify = self._orig["notify"]  # 本物の notify（Telegram なし・osascript はモック）
+        orig_run, orig_env = fetch_mf.subprocess.run, dict(os.environ)
+        fetch_mf.subprocess.run = lambda *a, **k: None
+        os.environ.pop("TG_BOT_TOKEN", None)
+        os.environ.pop("TG_CHAT", None)
+        bad_summary = _fixture_summary()
+        bad_summary[fetch_mf._norm("投資信託")] += 50_000_000  # 種類ズレ → verify が notify して exit 3
+        fetch_mf.with_page = lambda c, headless, fn: (NET, _fixture_rows(), bad_summary, None, None)
+        err = io.StringIO()
+        try:
+            with contextlib.redirect_stderr(err), self.assertRaises(SystemExit) as cm:
+                self._run()
+            self.assertEqual(cm.exception.code, 3)
+            self.assertIn("[NOTIFY] [dry-run] 種類ズレ", err.getvalue())
+            self.assertEqual(fetch_mf._NOTIFY_PREFIX, "")  # 終了後は元に戻る
+            err2 = io.StringIO()
+            with contextlib.redirect_stderr(err2):
+                fetch_mf.notify("テスト通知")
+            self.assertIn("[NOTIFY] テスト通知", err2.getvalue())
+            self.assertNotIn("[dry-run]", err2.getvalue())
+        finally:
+            fetch_mf.subprocess.run = orig_run
+            os.environ.clear()
+            os.environ.update(orig_env)
+        self.assertEqual(self.calls, [])
+
+
+class TestMainArgs(unittest.TestCase):
+    """#687 レビュー M1: 打ち間違い・未知オプションで本番 run（書き出し・KV・commit/push）に入らない。"""
+
+    def setUp(self):
+        self.calls = []
+        self._orig = {n: getattr(fetch_mf, n) for n in ("do_run", "do_setup", "cfg")}
+        fetch_mf.do_run = lambda c, dry_run=False: self.calls.append(("run", dry_run))
+        fetch_mf.do_setup = lambda c: self.calls.append(("setup",))
+        fetch_mf.cfg = lambda: {}
+
+    def tearDown(self):
+        for n, v in self._orig.items():
+            setattr(fetch_mf, n, v)
+
+    def _main(self, *args):
+        fetch_mf.main(["fetch_mf.py", *args])
+
+    def test_valid_commands(self):
+        self._main()
+        self._main("run")
+        self._main("run", "--dry-run")
+        self._main("--dry-run")  # 単独でも dry-run（本番には入らない）
+        self._main("--dry-run", "run")
+        self._main("setup")
+        self.assertEqual(
+            self.calls,
+            [("run", False), ("run", False), ("run", True), ("run", True), ("run", True), ("setup",)],
+        )
+
+    def test_invalid_args_exit_2_without_running(self):
+        import io
+        import contextlib
+        bad = [
+            ("--dryrun",), ("--dry_run",), ("-n",), ("run", "--dry"), ("run", "--force"),
+            ("dry-run",), ("rnu",), ("run", "extra"), ("setup", "--dry-run"),
+        ]
+        for args in bad:
+            with self.subTest(args=args):
+                err = io.StringIO()
+                with contextlib.redirect_stderr(err), self.assertRaises(SystemExit) as cm:
+                    self._main(*args)
+                self.assertEqual(cm.exception.code, 2)
+                self.assertIn("本番処理はしていない", err.getvalue())
+        self.assertEqual(self.calls, [])
 
 
 class TestPushNetworthToWorker(unittest.TestCase):
