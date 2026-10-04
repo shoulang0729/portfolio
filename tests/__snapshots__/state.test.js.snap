@@ -31,6 +31,12 @@ exports[`state.js > state (initial values) > state matches snapshot 1`] = `
   "listSortDir": "desc",
   "liveConstituents": {},
   "liveTopHoldings": {},
+  "orderSheet": {
+    "busy": false,
+    "data": null,
+    "error": null,
+    "status": "idle",
+  },
   "prevPrices": {},
   "providerHealth": {
     "finnhub": {
