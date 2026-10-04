@@ -1801,13 +1801,14 @@ _DIAG_TABLES = [
         ["テストローン残", "---", "テスト信販"],  # 残高が読めない
     ],
     [
-        ["テストリボ払い", "20,000,000円", "テスト信販Z"],  # 対象リスト外
+        ["テストリボ払い", "20,000,000円", "テスト信販Z"],  # 旧・対象リスト外 → #696 以降は採用
         ["テスト事業借入", "22,000,000円", "テスト銀行B"],  # 採用
     ],
 ]
 _DIAG_SECRETS = (
     "住宅ローン", "テスト銀行", "テスト信販", "テストリボ払い", "テスト事業借入", "テストカードローン",
     "40,000,000", "40000000", "22,000,000", "20,000,000", "5,000,000", "62,000,000", "62000000",
+    "82,000,000", "82000000",
     "100,000,000", "100000000",
 )
 
@@ -1873,7 +1874,7 @@ class TestLiabilityDiag(unittest.TestCase):
         self.c = _load_config()
         self.lc = self.c["fetch"]["liabilities"]
         self.c["include"]["liabilities"]["enabled"] = True
-        self.c["include"]["liabilities"]["categories"] = ["住宅ローン", "ローン", "借入"]
+        self.c["include"]["liabilities"]["categories"] = ["住宅ローン", "ローン", "借入"]  # #696: 残っていても無視される
         self.notified = []
         self._orig = {n: getattr(fetch_mf, n) for n in ("notify", "_LIAB_DIAG")}
         fetch_mf.notify = lambda msg, *a, **k: self.notified.append(msg)
@@ -1899,13 +1900,13 @@ class TestLiabilityDiag(unittest.TestCase):
 
     def test_counts_and_ratios_on_mismatch(self):
         rows, d = self._scan(self._page())
-        self.assertIsNone(rows)  # 採用 62% → チェックサム不一致（従来どおり None）
+        self.assertIsNone(rows)  # 採用 82% → チェックサム不一致（従来どおり None）
         line = fetch_mf.liab_diag_report(d)
         self.assertEqual(
             line,
             "liab-diag: result=mismatch tables=2 tbodyRows=[4,2] totalRead=yes "
-            "noName=1(ratio=0.050) nonPositive=2(ratio=0.000) notInCategories=1(ratio=0.200) "
-            "adopted=2(ratio=0.620)",
+            "noName=1(ratio=0.050) nonPositive=2(ratio=0.000) notInCategories=0(ratio=0.000) "
+            "adopted=3(ratio=0.820)",
         )
         self._assert_no_secrets(line)
 
@@ -1917,20 +1918,20 @@ class TestLiabilityDiag(unittest.TestCase):
         self.assertEqual(rows_off, rows_on)
         self.assertEqual(notified_off, self.notified)
         # 総額が行合計と一致するページでは診断の有無にかかわらず同じ行を返す
-        ok_off, _ = self._scan(self._page(total=62_000_000), diag=False)
-        ok_on, d = self._scan(self._page(total=62_000_000), diag=True)
+        ok_off, _ = self._scan(self._page(total=82_000_000), diag=False)
+        ok_on, d = self._scan(self._page(total=82_000_000), diag=True)
         self.assertEqual(ok_off, ok_on)
-        self.assertEqual(len(ok_on), 2)
+        self.assertEqual(len(ok_on), 3)
         self.assertEqual(d["result"], "ok")
-        self.assertIn("adopted=2(ratio=1.000)", fetch_mf.liab_diag_report(d))
+        self.assertIn("adopted=3(ratio=1.000)", fetch_mf.liab_diag_report(d))
 
     def test_total_unreadable_ratios_na(self):
         rows, d = self._scan(self._page(total=0))
-        self.assertEqual(len(rows), 2)  # 総額なし＝照合スキップで採用（従来どおり）
+        self.assertEqual(len(rows), 3)  # 総額なし＝照合スキップで採用（従来どおり）
         line = fetch_mf.liab_diag_report(d)
         self.assertIn("result=ok", line)
         self.assertIn("totalRead=no", line)
-        self.assertIn("adopted=2(ratio=n/a)", line)
+        self.assertIn("adopted=3(ratio=n/a)", line)
         self.assertNotIn("0.", line)
         self._assert_no_secrets(line)
 
@@ -1971,7 +1972,7 @@ class TestLiabilityDiagRun(unittest.TestCase):
     def setUp(self):
         TestDryRun.setUp(self)
         self.c["include"]["liabilities"]["enabled"] = True
-        self.c["include"]["liabilities"]["categories"] = ["住宅ローン", "ローン", "借入"]
+        self.c["include"]["liabilities"]["categories"] = ["住宅ローン", "ローン", "借入"]  # #696: 残っていても無視される
         sel = self.c["fetch"]["liabilities"]["table"]["selector"]
         page = _LiabPage(_DIAG_TABLES, f"負債総額：{_DIAG_TOTAL:,}円", sel)
         self._orig["_scrape_all"] = fetch_mf._scrape_all
@@ -1996,8 +1997,8 @@ class TestLiabilityDiagRun(unittest.TestCase):
         text = self._run_diag(dry_run=True, diag_liabilities=True)
         self.assertIn(
             "[dry-run] liab-diag: result=mismatch tables=2 tbodyRows=[4,2] totalRead=yes "
-            "noName=1(ratio=0.050) nonPositive=2(ratio=0.000) notInCategories=1(ratio=0.200) "
-            "adopted=2(ratio=0.620)",
+            "noName=1(ratio=0.050) nonPositive=2(ratio=0.000) notInCategories=0(ratio=0.000) "
+            "adopted=3(ratio=0.820)",
             text,
         )
         self.assertIn("[dry-run] OK", text)
@@ -2048,6 +2049,91 @@ class TestLiabilityDiagRun(unittest.TestCase):
         finally:
             for n, v in orig.items():
                 setattr(fetch_mf, n, v)
+
+
+# ── #696: 残高のある負債行はすべて取り込む（対象リストで絞らない） ──────────────
+_ALL_TOTAL = 91_234_567
+_ALL_TABLES = [
+    [
+        ["テスト住宅ローン", "31,111,111円", "テスト銀行A"],
+        ["テストリボ払い", "26,222,222円", "テスト信販Z"],  # 旧 categories（ローン/借入）に当たらない
+        ["", "7,000,000円", "テスト銀行X"],  # name 空 → 捨てる
+        ["テストカード", "0円", "テスト銀行Y"],  # 残高 0 → 捨てる
+    ],
+    [
+        ["テスト分割払い", "33,901,234円", "テストカードW"],  # 旧 categories に当たらない
+    ],
+]
+
+
+class TestLiabilitiesIncludeAll(unittest.TestCase):
+    def setUp(self):
+        self.c = _load_config()
+        self.c["include"]["liabilities"]["enabled"] = True
+        self.c["liabilityAccountMap"] = {"テスト銀行A": "自宅", "テスト信販Z": "生活", "note": "テスト用"}
+        self.c["realAssets"] = {"dir": "tests/fixtures/real-assets"}
+        self.lc = self.c["fetch"]["liabilities"]
+        self.notified = []
+        self._orig = {n: getattr(fetch_mf, n) for n in ("notify", "_LIAB_DIAG")}
+        fetch_mf.notify = lambda msg, *a, **k: self.notified.append(msg)
+        fetch_mf._LIAB_DIAG = None
+
+    def tearDown(self):
+        for n, v in self._orig.items():
+            setattr(fetch_mf, n, v)
+
+    def _scrape(self, categories):
+        self.c["include"]["liabilities"]["categories"] = categories
+        page = _LiabPage(_ALL_TABLES, f"負債総額：{_ALL_TOTAL:,}円", self.lc["table"]["selector"])
+        with contextlib.redirect_stderr(io.StringIO()):
+            return fetch_mf.scrape_liabilities(page, self.c)
+
+    def test_public_config_categories_empty_but_key_kept(self):
+        with open(fetch_mf.CONFIG, encoding="utf-8") as f:
+            public = json.load(f)
+        self.assertEqual(public["include"]["liabilities"]["categories"], [])
+
+    def test_adopts_rows_outside_old_categories_and_checksum_passes(self):
+        for cats in ([], ["住宅ローン", "ローン", "借入"]):  # 古い値が残っていても絞らない
+            with self.subTest(categories=cats):
+                self.notified.clear()
+                rows = self._scrape(cats)
+                self.assertIsNotNone(rows)
+                self.assertEqual(
+                    [r["name"] for r in rows], ["テスト住宅ローン", "テストリボ払い", "テスト分割払い"]
+                )
+                self.assertEqual(sum(r["balance"] for r in rows), _ALL_TOTAL)
+                self.assertEqual(self.notified, [])  # チェックサム一致＝通知なし
+
+    def test_zero_balance_and_empty_name_still_dropped(self):
+        rows = self._scrape([])
+        names = [r["name"] for r in rows]
+        self.assertNotIn("", names)
+        self.assertNotIn("テストカード", names)
+        self.assertTrue(all(r["balance"] > 0 for r in rows))
+
+    def test_diag_not_in_categories_is_zero(self):
+        fetch_mf._LIAB_DIAG = {}
+        self._scrape(["住宅ローン", "ローン", "借入"])
+        line = fetch_mf.liab_diag_report(fetch_mf._LIAB_DIAG)
+        self.assertIn("result=ok", line)
+        self.assertIn("notInCategories=0(ratio=0.000)", line)
+        self.assertIn("adopted=3(ratio=1.000)", line)
+
+    def test_tags_all_rows_and_public_copy_has_no_liabilities(self):
+        rows = self._scrape([])
+        doc = fetch_mf.attach_liabilities(self.c, fetch_mf.build(self.c, NET, _fixture_rows()), rows)
+        self.assertEqual(len(doc["liabilities"]), 3)
+        self.assertEqual([l["tag"] for l in doc["liabilities"]], ["自宅", "生活", ""])  # 未マッチは空で落とさない
+        self.assertEqual(doc["totals"]["liabilitiesTotal"], _ALL_TOTAL)
+        pub = fetch_mf.sanitize_for_public(doc)
+        s = json.dumps(pub, ensure_ascii=False)
+        for forbidden in (
+            "liabilities", "liabilitiesTotal", "realAssetsTotal", "netWorthComputed",
+            "テスト住宅ローン", "テストリボ払い", "テスト分割払い", "テスト信販Z", "テストカードW",
+            "91,234,567", "91234567", "31111111", "26222222", "33901234",
+        ):
+            self.assertNotIn(forbidden, s)
 
 
 if __name__ == "__main__":

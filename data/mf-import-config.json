@@ -16,8 +16,8 @@
     "note": "allowlist。ここに無い種類は取り込まない。除外: ポイント・マイル / 保険 / 不動産 / 年金(2026/06 ユーザー判断で年金は全除外→カテゴリごと外した。一部の年金口座が口座名マッチで判定できないためカテゴリ除外が確実)。※不動産の『資産としての取込』は引き続き除外（実物資産レイヤー data/real-assets/ が正・#577）。",
     "liabilities": {
       "enabled": true,
-      "categories": ["住宅ローン", "ローン", "借入"],
-      "note": "#577 スコープA。負債は holdings とは別の liabilities 配列に取り込む（運用アロケーションの分母に絶対に混ぜない）。categories は負債側 allowlist（部分一致）。★#589 Phase2: fetch_mf.py が完全版（liabilities 込み）を Worker PUT /networth(KV・PIN認証) に送信し、公開リポには sanitize_for_public() で機微フィールドを除去したコピーだけを commit する（enabled:true に復帰）。"
+      "categories": [],
+      "note": "#577 スコープA。負債は holdings とは別の liabilities 配列に取り込む（運用アロケーションの分母に絶対に混ぜない）。#696（2026-10-04）: 負債ページの残高のある行（name あり・残高 > 0）はすべて取り込む。categories による絞り込みは廃止し fetch_mf.py は読まない（キーは schema の形を保つため空配列で残す）。★#589 Phase2: fetch_mf.py が完全版（liabilities 込み）を Worker PUT /networth(KV・PIN認証) に送信し、公開リポには sanitize_for_public() で機微フィールドを除去したコピーだけを commit する（enabled:true に復帰）。"
     }
   },
   "liabilityAccountMap": {
