@@ -4,7 +4,19 @@
 `data/mf-holdings.json`（v4）を更新して無人で commit & push します。**LLM は経路に存在しません**
 （＝プロンプトインジェクション穴なし）。設計の根拠は `docs/handoff/2026-06-21-mf-snapshot-automation.md`。
 
-- 承認ゼロ：成功は無通知でコミット。**通知が来るのは「ログイン切れ」か「チェックサム不一致」だけ**。
+- 承認ゼロ：成功は無通知でコミット。**通知が来るのは「ログイン切れ」「チェックサム不一致」「再試行しても取得に失敗」「networth KV 送信失敗」だけ**。
+- 実行時刻は**毎日 05:00（Mac のローカル時刻＝CST）**。launchd `com.toshio.mf-snapshot` が `fetch_mf.py run` を叩く。
+- **再試行**（#685）: ブラウザの起動失敗・EAGAIN・Playwright の TimeoutError（ページ表示・表の出現待ち）だけは、
+  ブラウザを閉じてから最大 3 回まで取得をやり直す（待ち 30 秒 → 120 秒）。ログイン切れ・チェックサム不一致・
+  抽出 0 件は再試行せずその場で中止。検証・書き込み・commit/push・KV 送信は取得が成功した後に 1 回だけ。
+  stderr（`err.log`）に `mf-snapshot: attempt 1/3 failed: … — retry in 30s` / `attempt 2/3 succeeded` が出る。
+- **待ち条件**（#685）: ページは `domcontentloaded` で開き、`fetch.dom.tables` のセレクタ（負債は
+  `fetch.liabilities.table.selector`）の表が現れるまで `fetch.timeoutMs` 待ってから `fetch.settleMs` 待って読む
+  （以前の `networkidle` 待ちはやめた）。
+- **鮮度の見張り**: GitHub Actions `mf-freshness.yml` が毎朝 08:40 CST に `asOf` を確かめ、当日の取込が無ければ
+  Issue（ラベル `stale-mf-holdings`）を立てる。Mac 側の通知が見落とされても GitHub で気づける。
+- **通知の届け先**: plist に `TG_BOT_TOKEN`/`TG_CHAT` が無いと、通知は stderr と **macOS の通知センターだけ**になる
+  （現在の運用は Telegram を設定していない＝実質の見張りは上記の鮮度 Issue）。
 - 永続プロファイルで MF セッションを保持（1回ログイン→持続）。Mac mini の residential IP で cookie 失効を回避。
 
 ---
@@ -36,7 +48,7 @@
 5. **（任意）Telegram 通知**: `~/Library/LaunchAgents/com.toshio.mf-snapshot.plist` の
    `TG_BOT_TOKEN`/`TG_CHAT` を設定（使わないなら `EnvironmentVariables` ブロックごと削除）。
    **トークンはリポジトリにコミットしない**（plist はホームの LaunchAgents にのみ置く）。
-6. **launchd 登録**（毎日 09:00 JST）:
+6. **launchd 登録**（毎日 05:00・Mac のローカル時刻＝CST）:
    ```sh
    # plist 内のパス（python3 / fetch_mf.py / ログ出力先）を自分の環境に合わせて編集してから
    cp scripts/com.toshio.mf-snapshot.plist ~/Library/LaunchAgents/
@@ -45,6 +57,10 @@
    ```
 7. **動作確認**: `python3 scripts/fetch_mf.py run` を手動実行 → `data/mf-holdings.json` 更新と
    `git log -1` の push を確認。
+8. **試運転（`--dry-run`）**: `python3 scripts/fetch_mf.py run --dry-run` は取得・検証までを行い、
+   `data/` への書き込み・commit/push・networth の KV 送信・履歴取得を**しない**。出力は件数と検証結果だけ
+   （例 `DRY-RUN OK verify=passed rows=N holdings=N liabilities=N realEstate=skipped …`。金額は出さない）。
+   feature ブランチの確認は main とは別の作業ツリーで、必ずこのモードで行う（`run` を feature ブランチで実行しない）。
 
 ---
 
@@ -52,6 +68,7 @@
 
 | 症状 | 対処 |
 |---|---|
+| 「取得が 3 回とも一時的な失敗で中止」通知 | `err.log` の `attempt n/3 failed` 行で例外（TimeoutError / EAGAIN 等）を確認。Mac の再起動やプロキシ（UCSS）の状態を確認し、`launchctl kickstart -k gui/$(id -u)/com.toshio.mf-snapshot` で再実行 |
 | 「ログイン切れ」通知 | `python3 scripts/fetch_mf.py setup` で再ログイン（MF がセッションを切った時だけ・稀） |
 | 「口座ズレ / 総額ズレ」通知 | 除外漏れ or セレクタずれ。`fetch.selectors` / `exclude.accounts` を確認。データは push されていない |
 | 「口座を1件も抽出できず」 | `fetch.selectors.accountSection` が実 DOM と不一致。DevTools で確認して修正 |
