@@ -200,8 +200,8 @@ if __name__ == "__main__":
 
 ---
 
-> 🚀 **無人運用 稼働開始（2026-06-25）**＝Mac mini に launchd `com.toshio.mf-snapshot`(毎朝09:00 JST) 登録済み・git remote を SSH化(`git@github.com`・PAT不要/無期限)・`ssh -T` 認証OK・launchd経由の実走で取得→SSH push 成功(origin `40a587e` asOf 2026-06-25 / imported 530,893,757 / 49)。**MF取込は Mac mini 1本に統一・承認ゼロで毎朝自動更新。** 前提＝Mac miniはログイン状態で常時起動(headful)。
-> 🎉 **実機検証 完了（2026-06-23）**＝Mac mini ローカル run が抽出→種類別チェックサム通過→commit→push 成功。origin/main `b09fdd1`＝asOf 2026-06-23 / mfNetWorth 585,034,186 / imported 540,500,188 / 49 holdings。残＝launchd登録（無人化）＋無人push認証のkeychainキャッシュ。
+> 🚀 **無人運用 稼働開始（2026-06-25）**＝Mac mini に launchd `com.toshio.mf-snapshot`(毎朝09:00 JST) 登録済み・git remote を SSH化(`git@github.com`・PAT不要/無期限)・`ssh -T` 認証OK・launchd経由の実走で取得→SSH push 成功(origin `40a587e` asOf 2026-06-25 / imported（値は省略） / 49)。**MF取込は Mac mini 1本に統一・承認ゼロで毎朝自動更新。** 前提＝Mac miniはログイン状態で常時起動(headful)。
+> 🎉 **実機検証 完了（2026-06-23）**＝Mac mini ローカル run が抽出→種類別チェックサム通過→commit→push 成功。origin/main `b09fdd1`＝asOf 2026-06-23 / mfNetWorth・imported（値は省略） / 49 holdings。残＝launchd登録（無人化）＋無人push認証のkeychainキャッシュ。
 > ✅ **§7改修 実装完了（2026-06-23・PR #467 / Closes #466）**＝scrape/build/verify を資産種類別テーブル方式に刷新・`fetch.dom`列マップ・headless:false・種類別checksum・テスト11件green・CodeRabbit実バグ(summaryセレクタ自己矛盾)修正込み。残＝Mac miniで run の実機確認(§7.4)。
 
 ## 7. 実DOM確定 & 改修指示（2026-06-22・実機headfulで確認）★scrape/build/verify を作り直す
@@ -210,8 +210,8 @@ if __name__ == "__main__":
 
 ### 7.1 確定した DOM 構造
 - **headless はブロックされる**（空ページ）。→ `fetch.headless = false` に固定（launchd は GUI ログインセッションで headful 実行）。`settleMs`≈5000 待つ。
-- **資産総額**：本文テキストに `資産総額： 585,034,186円`。→ 正規表現 `資産総額[：:]\s*([0-9,]+)` で取得（DOM class に依存しない）。
-- **内訳サマリ表**＝`table.table-bordered` で **table-{depo,eq,mf,pns…} 接尾辞が無い**もの（3列：カテゴリ名／円／％）。**種類別チェックサムに使う**（例：株式(現物)=338,454,356円）。
+- **資産総額**：本文テキストに `資産総額： 123,456,789円`（値は例示）。→ 正規表現 `資産総額[：:]\s*([0-9,]+)` で取得（DOM class に依存しない）。
+- **内訳サマリ表**＝`table.table-bordered` で **table-{depo,eq,mf,pns…} 接尾辞が無い**もの（3列：カテゴリ名／円／％）。**種類別チェックサムに使う**（例：株式(現物)=12,345,678円・値は例示）。
 - **保有テーブル（処理対象）**：列は0始まりインデックス。
   | テーブル | `selector` | kind | 列マップ |
   |---|---|---|---|
@@ -232,7 +232,7 @@ MF のこのページに**口座別合計は無い**ので、当初の「口座�
 - (2') **種類別**：Σ(`table-eq` 取込行) ≈ サマリ「株式(現物)」値 ±1%、Σ(`table-mf`) ≈ 「投資信託」±1%、Σ(取込`depo`) ≈ 「預金・現金・暗号資産」±1%（除外口座=Suica等を引いた値で照合）。
 - (3) `mfNetWorth(資産総額) − Σ(除外分: 年金/保険/ポイント＋持株会等除外口座) ≈ imported` ±1%。
 - いずれか外れたら **書かず・push せず・通知**（既存どおり）。
-- 参考実測（2026-06-22）：資産総額 585,034,186 / 株式(現物) 338,454,356 / 投資信託 130,537,011 / 預金・現金・暗号資産 73,515,659。
+- 参考実測（2026-06-22）：資産総額 / 株式(現物) / 投資信託 / 預金・現金・暗号資産 の4値で照合（値は省略）。
 
 ### 7.4 受け入れ基準（追加）
 - [ ] `headless:false` で MF が描画され、`table-eq/table-mf/table-depo` から保有が抽出される。

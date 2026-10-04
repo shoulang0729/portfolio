@@ -47,9 +47,9 @@ https://raw.githubusercontent.com/shoulang0729/portfolio/main/data/mf-history.js
   "updatedAt": "2026-07-09",
   "count": 151,
   "series": [
-    { "date":"2014-09-30", "total":18193380, "cash":4769702, "equity":7273828,
-      "equityMargin":0, "fund":5948948, "bond":0, "crypto":0, "fx":600,
-      "insurance":0, "pension":96436, "points":103866 }
+    { "date":"2014-09-30", "total":10000000, "cash":3000000, "equity":4000000,
+      "equityMargin":0, "fund":2800000, "bond":0, "crypto":0, "fx":0,
+      "insurance":0, "pension":100000, "points":100000 }
     // ... 151 件（直近=日次、過去=月末の混在）
   ]
 }
@@ -81,7 +81,7 @@ https://raw.githubusercontent.com/shoulang0729/portfolio/main/data/mf-history.js
 - 既存 `#stats-eye` と同じ SVG（eye + eye-slash 線）を流用
 - `localStorage` キー `hm-wealth-eye` で永続化
 - ON 時: 金額（KPI・Y 軸・ツールチップ・年末表の金額列）を伏字。**構成比%・各種比率は隠さない**
-- **伏字の表記は Briefing / statsバーと同一＝`src/fmt.js` の `maskAmount`**（`String(s).replace(/[0-9]/g,'*')`）を使う。例: `¥573,286,603 → ¥***,***,***`（数字のみ `*`・¥ とカンマは残す）。`••••••` のような独自表記は使わない
+- **伏字の表記は Briefing / statsバーと同一＝`src/fmt.js` の `maskAmount`**（`String(s).replace(/[0-9]/g,'*')`）を使う。例: `¥123,456,789 → ¥***,***,***`（数字のみ `*`・¥ とカンマは残す）。`••••••` のような独自表記は使わない
 
 ---
 
@@ -95,7 +95,7 @@ https://raw.githubusercontent.com/shoulang0729/portfolio/main/data/mf-history.js
 
 目隠し ON 時: 資産総額・開設来倍率は伏字（`maskAmount`）。現金比率はそのまま。
 
-**KPI カードのレイアウト（確定・2026-07-09）**: 3 枚を**常に横並び**（`grid-template-columns:repeat(3,1fr)`）で、狭幅でも折り返さない。各カード＝ラベル（1行・省略可）／値（大・右寄せ・`white-space:nowrap`）／補助（下段・右寄せ小＝資産総額は日付 `2026-07-09`、開設来は `0.18→5.73億` 等）。値が長い（¥9桁）ので**コンテナクエリ＋clamp で自動縮小**（`.kpi{container-type:inline-size}` ＋ `.v{font-size:clamp(13px,11cqi,19px)}`）。日付・倍率明細は値と同じ行に詰め込まず**下段 `.sub2` に分離**してごちゃつきを防ぐ。
+**KPI カードのレイアウト（確定・2026-07-09）**: 3 枚を**常に横並び**（`grid-template-columns:repeat(3,1fr)`）で、狭幅でも折り返さない。各カード＝ラベル（1行・省略可）／値（大・右寄せ・`white-space:nowrap`）／補助（下段・右寄せ小＝資産総額は日付 `2026-07-09`、開設来は `0.10→1.00億` 等）。値が長い（¥9桁）ので**コンテナクエリ＋clamp で自動縮小**（`.kpi{container-type:inline-size}` ＋ `.v{font-size:clamp(13px,11cqi,19px)}`）。日付・倍率明細は値と同じ行に詰め込まず**下段 `.sub2` に分離**してごちゃつきを防ぐ。
 
 **数値の揃え（確定・2026-07-09）**: KPI カードの値・年末サマリ表の数値列は **右寄せ**＋`font-variant-numeric: tabular-nums`（桁が揃う等幅数字）。ラベルは左のまま。
 

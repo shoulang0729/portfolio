@@ -6,7 +6,7 @@ import { fmtJPYInt, fmtPctInt, fmtShares, escapeHTML, getColor as getColorFn, fm
 // ── fmtYen（1円単位・カンマ区切り・¥前置） ──────────────────────────
 describe('fmtYen', () => {
   it('formats whole yen with thousands separators', () => {
-    expect(fmtYen(524345245)).toBe('¥524,345,245');
+    expect(fmtYen(123456789)).toBe('¥123,456,789');
     expect(fmtYen(0)).toBe('¥0');
     expect(fmtYen(1000)).toBe('¥1,000');
   });
@@ -20,7 +20,7 @@ describe('fmtYen', () => {
 // ── maskAmount（数字のみ * 置換） ──────────────────────────────────
 describe('maskAmount', () => {
   it('masks digits but keeps separators and symbols', () => {
-    expect(maskAmount('¥524,345,245')).toBe('¥***,***,***');
+    expect(maskAmount('¥123,456,789')).toBe('¥***,***,***');
     expect(maskAmount('¥0')).toBe('¥*');
     expect(maskAmount('10.6%')).toBe('**.*%');
   });
