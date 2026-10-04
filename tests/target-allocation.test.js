@@ -9,6 +9,9 @@ import {
   getThemeCap,
   computeThemeUsage,
   computeGap,
+  getAiTechConfig,
+  getStressConfig,
+  getOrderSheetConfig,
 } from '../src/target-allocation.js';
 
 /** Minimal config matching the real data/target-allocation.json schema */
@@ -180,5 +183,82 @@ describe('data/target-allocation.json の設定値（#668）', () => {
     __setConfig(real);
     expect(getThemeCap('semiconductor')).toBe(15);
     expect(getThemeCap('megatech')).toBe(17);
+  });
+});
+
+// ── 注文表の戦略設定（#671・設計書 2026-10-03-order-sheet §3.2 / §12） ─────
+describe('getAiTechConfig / getStressConfig / getOrderSheetConfig', () => {
+  const DEFAULT_SCENARIOS = [
+    {
+      id: 'ai-crash',
+      label: 'AI −40%・他の株 −15%',
+      shocks: [
+        { group: 'aiTech', pct: -40 },
+        { group: 'otherEquity', pct: -15 },
+      ],
+    },
+    { id: 'semi-crash', label: '半導体 −50%', shocks: [{ group: 'theme:semiconductor', pct: -50 }] },
+  ];
+
+  it('config 未読込（null）なら §3.2 の既定値を返す', () => {
+    __setConfig(null);
+    expect(getAiTechConfig()).toEqual({ themes: ['semiconductor', 'megatech'], capPct: 29 });
+    expect(getStressConfig()).toEqual({
+      tolerancePct: 20,
+      nonEquity: ['JPST', 'GLDM', 'SLV'],
+      scenarios: DEFAULT_SCENARIOS,
+    });
+    expect(getOrderSheetConfig()).toEqual({ cashFloorPct: 12, rebaseMovePct: 5 });
+  });
+
+  it('新キーが無い config（既存キーのみ）でも既定値を返す', () => {
+    __setConfig(TEST_CONFIG);
+    expect(getAiTechConfig().capPct).toBe(29);
+    expect(getStressConfig().tolerancePct).toBe(20);
+    expect(getOrderSheetConfig().rebaseMovePct).toBe(5);
+  });
+
+  it('設定値があればそれを優先し、欠けた・型不正の項目だけ既定値で補う（合成値）', () => {
+    __setConfig({
+      ...TEST_CONFIG,
+      aiTech: { themes: ['megatech'], capPct: 'x' },
+      stress: { tolerancePct: 15, scenarios: [{ id: 's1', label: 'AAA −10%', shocks: [] }] },
+      orderSheet: { cashFloorPct: 9 },
+    });
+    expect(getAiTechConfig()).toEqual({ themes: ['megatech'], capPct: 29 });
+    expect(getStressConfig()).toEqual({
+      tolerancePct: 15,
+      nonEquity: ['JPST', 'GLDM', 'SLV'],
+      scenarios: [{ id: 's1', label: 'AAA −10%', shocks: [] }],
+    });
+    expect(getOrderSheetConfig()).toEqual({ cashFloorPct: 9, rebaseMovePct: 5 });
+  });
+
+  it('戻り値を書き換えても既定値は変わらない', () => {
+    __setConfig(null);
+    getAiTechConfig().themes.push('ai_power');
+    getStressConfig().scenarios[0].shocks[0].pct = 0;
+    expect(getAiTechConfig().themes).toEqual(['semiconductor', 'megatech']);
+    expect(getStressConfig().scenarios[0].shocks[0].pct).toBe(-40);
+  });
+
+  it('実データ data/target-allocation.json に aiTech・stress・orderSheet があり §12 の既定案と一致する', () => {
+    const real = JSON.parse(readFileSync(new URL('../data/target-allocation.json', import.meta.url), 'utf8'));
+    expect(real.aiTech).toMatchObject({ themes: ['semiconductor', 'megatech'], capPct: 29 });
+    expect(typeof real.aiTech.note).toBe('string');
+    expect(real.stress).toEqual({ tolerancePct: 20, nonEquity: ['JPST', 'GLDM', 'SLV'], scenarios: DEFAULT_SCENARIOS });
+    expect(real.orderSheet).toMatchObject({ cashFloorPct: 12, rebaseMovePct: 5 });
+    expect(typeof real.orderSheet.note).toBe('string');
+    __setConfig(real);
+    expect(getAiTechConfig()).toEqual({ themes: ['semiconductor', 'megatech'], capPct: 29 });
+    expect(getStressConfig().scenarios).toEqual(DEFAULT_SCENARIOS);
+    expect(getOrderSheetConfig()).toEqual({ cashFloorPct: 12, rebaseMovePct: 5 });
+  });
+
+  it('既存キーの値は変わっていない（#668 の値を維持）', () => {
+    const real = JSON.parse(readFileSync(new URL('../data/target-allocation.json', import.meta.url), 'utf8'));
+    expect(real.convictionPct).toEqual({ probe: 0.3, standard: 1.4, high: 3.0 });
+    expect(real.themeCaps.semiconductor.cap).toBe(15);
+    expect(real.themeCaps.megatech.cap).toBe(17);
   });
 });
