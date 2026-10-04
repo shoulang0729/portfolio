@@ -19,17 +19,27 @@ sys.path.insert(0, os.path.join(ROOT, "scripts"))
 import fetch_mf  # noqa: E402
 
 
-# 合成 fixture 用の除外口座名（架空）。公開 config の exclude.accounts に加えて、
-# テスト内だけで除外対象として扱う（実在の口座名を fixture に置かないため）。
+# 合成 fixture 用の除外口座名（架空）。#687 PR2: 一時ディレクトリに作る合成の非公開設定に置き、
+# fetch_mf.load_config() で公開 config に重ねる（実在の口座名を fixture に置かないため）。
 TEST_EXCL_HOLDING_INST = "テスト社員持株会"
 TEST_EXCL_IC_INST = "テスト交通系IC"
 
 
-def _load_config():
-    with open(os.path.join(ROOT, "data", "mf-import-config.json"), encoding="utf-8") as f:
-        c = json.load(f)
-    c["exclude"]["accounts"] = list(c["exclude"]["accounts"]) + [TEST_EXCL_HOLDING_INST, TEST_EXCL_IC_INST]
-    return c
+def _write_private(dirpath, data, name="private-config.json"):
+    """合成の非公開設定を一時ディレクトリに書いてパスを返す（data が str ならそのまま書く）。"""
+    path = os.path.join(dirpath, name)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(data if isinstance(data, str) else json.dumps(data, ensure_ascii=False))
+    os.chmod(path, 0o600)
+    return path
+
+
+def _load_config(accounts=(TEST_EXCL_HOLDING_INST, TEST_EXCL_IC_INST)):
+    """公開 config＋合成の非公開設定（架空の除外名）を fetch_mf.load_config で重ねた設定。"""
+    import tempfile as _tf
+    with _tf.TemporaryDirectory() as d:
+        path = _write_private(d, {"version": 1, "exclude": {"accounts": list(accounts)}})
+        return fetch_mf.load_config(private_path=path)
 
 
 # ★合成値（実額ではない）。サマリ＝種類別合計（除外口座分を含む）。
@@ -342,6 +352,11 @@ class TestLiabilities(unittest.TestCase):
         # 用途タグ・物件名の PII マッピングは引き続き公開 config に書かない（note 以外空）。
         cfg = _load_config()
         self.assertEqual([k for k in cfg["liabilityAccountMap"] if k != "note"], [])
+        # #687 PR2: 実名の除外リストは非公開設定が正本。公開 config の exclude.accounts は常に空
+        with open(fetch_mf.CONFIG, encoding="utf-8") as f:
+            public = json.load(f)
+        self.assertEqual(public["exclude"]["accounts"], [])
+        self.assertEqual([k for k in public["liabilityAccountMap"] if k != "note"], [])
         self.assertEqual([k for k in cfg["fetch"]["realEstate"]["nameMap"] if k != "note"], [])
         self.assertTrue(cfg["include"]["liabilities"]["enabled"])
         self.assertTrue(cfg["fetch"]["realEstate"]["enabled"])
@@ -695,10 +710,13 @@ class TestMainArgs(unittest.TestCase):
 
     def setUp(self):
         self.calls = []
-        self._orig = {n: getattr(fetch_mf, n) for n in ("do_run", "do_setup", "cfg")}
+        self._orig = {n: getattr(fetch_mf, n) for n in ("do_run", "do_setup", "cfg", "load_config_or_abort")}
         fetch_mf.do_run = lambda c, dry_run=False: self.calls.append(("run", dry_run))
         fetch_mf.do_setup = lambda c: self.calls.append(("setup",))
         fetch_mf.cfg = lambda: {}
+        fetch_mf.load_config_or_abort = lambda *a, **k: {
+            "_privateConfig": {"kind": "env", "accounts": 2, "exact": 1, "liabilityAccountMap": 0, "publicAccounts": 0}
+        }
 
     def tearDown(self):
         for n, v in self._orig.items():
@@ -725,6 +743,7 @@ class TestMainArgs(unittest.TestCase):
         bad = [
             ("--dryrun",), ("--dry_run",), ("-n",), ("run", "--dry"), ("run", "--force"),
             ("dry-run",), ("rnu",), ("run", "extra"), ("setup", "--dry-run"),
+            ("check-config", "--dry-run"), ("check_config",), ("check-config", "run"),
         ]
         for args in bad:
             with self.subTest(args=args):
@@ -734,6 +753,18 @@ class TestMainArgs(unittest.TestCase):
                 self.assertEqual(cm.exception.code, 2)
                 self.assertIn("本番処理はしていない", err.getvalue())
         self.assertEqual(self.calls, [])
+
+    def test_check_config_prints_counts_only_without_running(self):
+        import io
+        import contextlib
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self._main("check-config")
+        self.assertEqual(self.calls, [])  # run も setup も呼ばない
+        self.assertEqual(
+            out.getvalue().strip(),
+            "private=env exclude.accounts=2（完全一致1） liabilityAccountMap=0 public.exclude.accounts=0 OK",
+        )
 
 
 class TestPushNetworthToWorker(unittest.TestCase):
@@ -1486,6 +1517,263 @@ class TestWaitCondition(unittest.TestCase):
         self.assertIsNone(fetch_mf.scrape_liabilities(page, self.c))
         self.assertEqual(len(self.notified), 1)
         self.assertIn("負債", self.notified[0])
+
+
+# ── #687 PR2: 非公開ローカル設定の重ね合わせ・中止条件・'=' 記法・check-config ──────────
+# すべて架空名・合成値。非公開設定は一時ディレクトリに作り private_path か MF_PRIVATE_CONFIG で渡す。
+_PRIV_NAMES = ("テスト社員持株会", "テスト交通系IC", "テスト暗号口座", "テスト銀行A")
+
+
+class _EnvRestore(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self._env = os.environ.get(fetch_mf.PRIVATE_CONFIG_ENV)
+
+    def tearDown(self):
+        if self._env is None:
+            os.environ.pop(fetch_mf.PRIVATE_CONFIG_ENV, None)
+        else:
+            os.environ[fetch_mf.PRIVATE_CONFIG_ENV] = self._env
+        self.tmp.cleanup()
+
+
+class TestPrivateConfigMerge(_EnvRestore):
+    def test_merge_excludes_and_imported_unchanged(self):
+        path = _write_private(self.tmp.name, {
+            "version": 1,
+            "exclude": {"accounts": [TEST_EXCL_HOLDING_INST, TEST_EXCL_IC_INST]},
+        })
+        c = fetch_mf.load_config(private_path=path)
+        self.assertEqual(c["exclude"]["accounts"], [TEST_EXCL_HOLDING_INST, TEST_EXCL_IC_INST])
+        doc = fetch_mf.build(c, NET, _fixture_rows())
+        self.assertEqual(doc["totals"]["imported"], IMPORTED_EXPECTED)
+        self.assertEqual(len(doc["holdings"]), 5)
+        self.assertEqual(set(doc["totals"]["excludedAccounts"]), {TEST_EXCL_HOLDING_INST, TEST_EXCL_IC_INST})
+
+    def test_env_var_path_and_liability_map_merge(self):
+        path = _write_private(self.tmp.name, {
+            "exclude": {"accounts": ["テスト交通系IC", "テスト交通系IC", "=テスト暗号口座"]},
+            "liabilityAccountMap": {"テスト銀行A": "自宅"},
+        })
+        os.environ[fetch_mf.PRIVATE_CONFIG_ENV] = path
+        c = fetch_mf.load_config()
+        self.assertEqual(c["exclude"]["accounts"], ["テスト交通系IC", "=テスト暗号口座"])  # 重複は除く
+        self.assertEqual(c["liabilityAccountMap"]["テスト銀行A"], "自宅")
+        self.assertIn("note", c["liabilityAccountMap"])  # 公開側の note は残る
+        self.assertEqual(fetch_mf._liab_tag("テスト銀行A 本店", "住宅ローン", c["liabilityAccountMap"]), "自宅")
+        p = c["_privateConfig"]
+        self.assertEqual((p["kind"], p["accounts"], p["exact"], p["liabilityAccountMap"], p["publicAccounts"]),
+                         ("env", 2, 1, 1, 0))
+
+    def test_private_path_resolution_order(self):
+        os.environ[fetch_mf.PRIVATE_CONFIG_ENV] = "/tmp/x-env.json"
+        self.assertEqual(fetch_mf.private_config_path("/tmp/x-arg.json"), ("/tmp/x-arg.json", "arg"))
+        self.assertEqual(fetch_mf.private_config_path(), ("/tmp/x-env.json", "env"))
+        os.environ.pop(fetch_mf.PRIVATE_CONFIG_ENV)
+        path, kind = fetch_mf.private_config_path()
+        self.assertEqual(kind, "default")
+        self.assertTrue(path.endswith(os.path.join(".mf-snapshot", "private-config.json")))
+
+    def test_check_config_report_counts_only(self):
+        path = _write_private(self.tmp.name, {
+            "version": 1,
+            "exclude": {"accounts": list(_PRIV_NAMES[:2]) + ["=テスト暗号口座"]},
+            "liabilityAccountMap": {"テスト銀行A": "自宅"},
+        })
+        line = fetch_mf.check_config_report(fetch_mf.load_config(private_path=path))
+        self.assertEqual(
+            line, "private=arg exclude.accounts=3（完全一致1） liabilityAccountMap=1 public.exclude.accounts=0 OK"
+        )
+        for n in _PRIV_NAMES:
+            self.assertNotIn(n, line)
+
+
+class TestExactMatchNotation(unittest.TestCase):
+    def test_equals_prefix_is_exact_match(self):
+        excl = ["=テスト暗号口座"]
+        self.assertTrue(fetch_mf._account_excluded("テスト暗号口座", excl))
+        self.assertFalse(fetch_mf._account_excluded("テスト暗号口座証券", excl))
+        self.assertFalse(fetch_mf._account_excluded("家族のテスト暗号口座", excl))
+
+    def test_plain_is_partial_match(self):
+        excl = ["テスト交通系IC"]
+        self.assertTrue(fetch_mf._account_excluded("テスト交通系IC", excl))
+        self.assertTrue(fetch_mf._account_excluded("家族のテスト交通系IC", excl))
+        self.assertFalse(fetch_mf._account_excluded("テスト銀行", excl))
+
+    def test_build_and_verify_with_exact_match(self):
+        # 完全一致の除外口座と、名前が前方一致する取込対象の口座が共存する（合成値）
+        c = _load_config(accounts=(TEST_EXCL_HOLDING_INST, TEST_EXCL_IC_INST, "=テスト暗号口座"))
+        rows = _fixture_rows() + [
+            {"kind": "depo", "institution": "テスト暗号口座", "rawCategory": "暗号資産",
+             "name": "暗号A", "code": "", "shares": None, "avgCost": None, "price": None,
+             "value": 70_000, "cur": "JPY"},
+            {"kind": "depo", "institution": "テスト暗号口座証券", "rawCategory": "暗号資産",
+             "name": "暗号B", "code": "", "shares": None, "avgCost": None, "price": None,
+             "value": 30_000, "cur": "JPY"},
+        ]
+        doc = fetch_mf.build(c, NET + 100_000, rows)
+        self.assertEqual(doc["totals"]["imported"], IMPORTED_EXPECTED + 30_000)
+        self.assertIn("テスト暗号口座", doc["totals"]["excludedAccounts"])
+        self.assertNotIn("テスト暗号口座証券", doc["totals"]["excludedAccounts"])
+        summary = _fixture_summary()
+        summary[fetch_mf._norm("暗号資産")] += 100_000
+        fetch_mf.verify(c, doc, rows, summary)  # 種類別・総額チェックサムが通る（exit しない）
+
+    def test_no_hardcoded_account_name_in_matcher(self):
+        import inspect
+        src = inspect.getsource(fetch_mf._account_excluded)
+        body = src.split('"""')[-1]  # docstring を除いた本体
+        self.assertNotRegex(body, r'["\'][^"\']+["\']')  # 文字列リテラル（口座名の特例）が無い
+
+
+class TestPrivateConfigAbort(_EnvRestore):
+    """§3.3 の中止条件: ブラウザ起動前に exit 6＋通知。取得・build 以降・書き出し・KV・git は呼ばれない。"""
+
+    _RECORDED = ("fetch_with_retry", "with_page", "build", "update_real_assets", "push_networth_to_worker",
+                 "git_commit_push", "_run_history_script")
+    _PATCHED = _RECORDED + ("notify", "OUT", "CONFIG", "do_setup")
+
+    def setUp(self):
+        super().setUp()
+        self._saved = {n: getattr(fetch_mf, n) for n in self._PATCHED}
+        self.calls = []
+        self.notified = []
+        fetch_mf.notify = lambda msg, *a, **k: self.notified.append(f"{fetch_mf._NOTIFY_PREFIX}{msg}")
+
+        def _rec(name):
+            return lambda *a, **k: self.calls.append(name)
+
+        for n in self._RECORDED:
+            setattr(fetch_mf, n, _rec(n))
+        fetch_mf.do_setup = lambda c: self.calls.append(("setup", c["exclude"]["accounts"]))
+        self.out = os.path.join(self.tmp.name, "mf-holdings.json")
+        fetch_mf.OUT = self.out
+
+    def tearDown(self):
+        for n, v in self._saved.items():
+            setattr(fetch_mf, n, v)
+        super().tearDown()
+
+    def _use(self, data):
+        os.environ[fetch_mf.PRIVATE_CONFIG_ENV] = _write_private(self.tmp.name, data)
+
+    def _assert_aborts(self, args=("run",), reason=None):
+        self.calls.clear()
+        self.notified.clear()
+        with contextlib.redirect_stdout(io.StringIO()), self.assertRaises(SystemExit) as cm:
+            fetch_mf.main(["fetch_mf.py", *args])
+        self.assertEqual(cm.exception.code, 6)
+        self.assertEqual(self.calls, [])  # 取得・build・書き出し・KV・git のどれも呼ばれない
+        self.assertFalse(os.path.exists(self.out))
+        self.assertEqual(len(self.notified), 1)
+        msg = self.notified[0]
+        self.assertIn("中止", msg)
+        if reason:
+            self.assertIn(reason, msg)
+        for n in _PRIV_NAMES:  # 通知文に非公開設定の要素（架空名）を出さない
+            self.assertNotIn(n, msg)
+        return msg
+
+    def test_missing_file(self):
+        os.environ[fetch_mf.PRIVATE_CONFIG_ENV] = os.path.join(self.tmp.name, "nope.json")
+        msg = self._assert_aborts(reason="見つからない")
+        self.assertIn("Mac mini", msg)
+        self.assertIn("再実行", msg)
+        self.assertIn("環境変数", msg)
+
+    def test_broken_json(self):
+        self._use('{"exclude": {"accounts": ["テスト交通系IC",')
+        self._assert_aborts(reason="JSON")
+
+    def test_non_object_top_level(self):
+        self._use(["テスト交通系IC"])
+        self._assert_aborts()
+
+    def test_disallowed_keys(self):
+        for extra in ({"fetch": {"realEstate": {"nameMap": {"テスト物件": "x"}}}}, {"checksum": {}}):
+            with self.subTest(extra=list(extra)):
+                self._use({"exclude": {"accounts": ["テスト交通系IC"]}, **extra})
+                self._assert_aborts(reason="許可外のキー")
+
+    def test_disallowed_key_under_exclude(self):
+        self._use({"exclude": {"accounts": ["テスト交通系IC"], "holdings": ["テスト銀行A"]}})
+        self._assert_aborts(reason="許可外のキー")
+
+    def test_bad_accounts(self):
+        cases = [
+            {},
+            {"exclude": {}},
+            {"exclude": {"accounts": []}},
+            {"exclude": {"accounts": "テスト交通系IC"}},
+            {"exclude": {"accounts": ["テスト交通系IC", 1]}},
+            {"exclude": {"accounts": ["テスト交通系IC", "="]}},
+            {"exclude": {"accounts": ["テスト交通系IC", ""]}},
+        ]
+        for data in cases:
+            with self.subTest(data=data):
+                self._use(data)
+                self._assert_aborts(reason="exclude.accounts")
+
+    def test_bad_liability_map(self):
+        for m in (["テスト銀行A"], {"テスト銀行A": 1}):
+            with self.subTest(m=m):
+                self._use({"exclude": {"accounts": ["テスト交通系IC"]}, "liabilityAccountMap": m})
+                self._assert_aborts(reason="liabilityAccountMap")
+
+    def test_public_exclude_accounts_not_empty(self):
+        with open(self._saved["CONFIG"], encoding="utf-8") as f:
+            public = json.load(f)
+        public["exclude"]["accounts"] = ["テスト銀行A"]
+        pub_path = os.path.join(self.tmp.name, "mf-import-config.json")
+        with open(pub_path, "w", encoding="utf-8") as f:
+            json.dump(public, f, ensure_ascii=False)
+        fetch_mf.CONFIG = pub_path
+        self._use({"exclude": {"accounts": ["テスト交通系IC"]}})  # 非公開設定は正常でも中止
+        self._assert_aborts(reason="公開 config")
+
+    def test_dry_run_and_check_config_also_abort(self):
+        os.environ[fetch_mf.PRIVATE_CONFIG_ENV] = os.path.join(self.tmp.name, "nope.json")
+        msg = self._assert_aborts(args=("run", "--dry-run"))
+        self.assertTrue(msg.startswith("[dry-run] "))
+        msg = self._assert_aborts(args=("check-config",))
+        self.assertTrue(msg.startswith("[check-config] "))
+        self.assertEqual(fetch_mf._NOTIFY_PREFIX, "")  # 後始末される
+
+    def test_loose_permission_warns_but_continues(self):
+        self._use({"exclude": {"accounts": ["テスト交通系IC"]}})
+        os.chmod(os.environ[fetch_mf.PRIVATE_CONFIG_ENV], 0o644)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            fetch_mf.main(["fetch_mf.py", "check-config"])
+        self.assertIn("OK", out.getvalue())
+        self.assertEqual(len(self.notified), 1)
+        self.assertIn("chmod 600", self.notified[0])
+
+    def test_run_proceeds_with_valid_private_config(self):
+        self._use({"exclude": {"accounts": ["テスト交通系IC"]}})
+        got = []
+        saved = fetch_mf.do_run
+        fetch_mf.do_run = lambda c, dry_run=False: got.append((c["exclude"]["accounts"], dry_run))
+        try:
+            fetch_mf.main(["fetch_mf.py", "run", "--dry-run"])
+        finally:
+            fetch_mf.do_run = saved
+        self.assertEqual(got, [(["テスト交通系IC"], True)])
+        self.assertEqual(self.notified, [])
+
+    def test_setup_works_without_private_file(self):
+        os.environ[fetch_mf.PRIVATE_CONFIG_ENV] = os.path.join(self.tmp.name, "nope.json")
+        fetch_mf.main(["fetch_mf.py", "setup"])
+        self.assertEqual(self.calls, [("setup", [])])  # 公開 config だけ（除外リストは空）で動く
+        self.assertEqual(self.notified, [])
+
+    def test_history_script_config_ignores_private_file(self):
+        import fetch_mf_history
+        os.environ[fetch_mf.PRIVATE_CONFIG_ENV] = os.path.join(self.tmp.name, "nope.json")
+        c = fetch_mf_history._load_cfg()
+        self.assertIn("userDataDir", c["fetch"])
+        self.assertEqual(c["exclude"]["accounts"], [])
 
 
 if __name__ == "__main__":
