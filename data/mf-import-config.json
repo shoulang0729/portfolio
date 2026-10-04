@@ -90,7 +90,8 @@
       "optionalForSecurities": {
         "ySymbol": "string — Yahoo用シンボル(日本株/ETF=<code>.T, 米国=ティッカー)。証券のみ",
         "avgCost": "number — 取得単価(平均)。証券のみ・不明は省略",
-        "price": "number — 現在値/基準価額。証券のみ・不明は省略"
+        "price": "number — 現在値/基準価額。証券のみ・不明は省略",
+        "qty": "(任意・#673) number — 保有数(MFの「保有数」列。株・ETF=株数、投信=口数)。取れない行は省略。公開可"
       }
     }
   },
