@@ -382,6 +382,10 @@ def build(c, net, rows):
             rec["avgCost"] = r["avgCost"]
         if r.get("price") is not None:
             rec["price"] = r["price"]
+        # 注文表 PR4（#673）: 保有数（株・ETF=株数／投信=口数）。取れない行はキーごと省く。
+        # 公開可（Toshio 決定 B3）なので sanitize_for_public() では消さない。
+        if r.get("shares") is not None:
+            rec["qty"] = r["shares"]
         holdings.append(rec)
 
     imported = sum(h["value"] for h in holdings)

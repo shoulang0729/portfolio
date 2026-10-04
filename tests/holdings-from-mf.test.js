@@ -232,6 +232,27 @@ describe('buildPositionsFromMf', () => {
   it('MF_SYMBOL_OVERRIDES はスキーマを持つ（200A→200A.T）', () => {
     expect(MF_SYMBOL_OVERRIDES['200A'].ySymbol).toBe('200A.T');
   });
+
+  it('qty（#673・任意）の有無で出力は変わらない（後方互換・挙動不変）', () => {
+    // 合成値のみ。qty 無しの既存データ（PR4 前）と qty 付きで同一のタイルになること
+    const base = {
+      asOf: '2026-10-03',
+      totals: { mfNetWorth: 3000, imported: 3000, excludedAccounts: [] },
+      holdings: [
+        row('米国株・ETF', 'テスト米国株', 1000, { ySymbol: 'AAPL', avgCost: 10, price: 20 }),
+        row('日本株・ETF', 'テスト日本株', 1000, { ySymbol: '1306.T', avgCost: 10, price: 20 }),
+        row('投資信託', 'eMAXIS Slim 全世界株式(オール・カントリー)', 1000, { avgCost: 10, price: 20 }),
+      ],
+    };
+    const withQty = {
+      ...base,
+      holdings: base.holdings.map((h, i) => (i < 2 ? { ...h, qty: 50 } : { ...h, qty: 12.5 })),
+    };
+    const outBase = buildPositionsFromMf(base, FUND_DEFS);
+    const outQty = buildPositionsFromMf(withQty, FUND_DEFS);
+    expect(outBase.length).toBeGreaterThan(0);
+    expect(outQty).toEqual(outBase);
+  });
 });
 
 describe('buildPositionsFromMf × 実データ（data/mf-holdings.json）', () => {

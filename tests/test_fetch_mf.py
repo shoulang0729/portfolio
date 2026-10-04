@@ -374,6 +374,63 @@ class TestSanitizeForPublic(unittest.TestCase):
             self.assertNotIn(forbidden, s)
 
 
+class TestQty(unittest.TestCase):
+    """#673 注文表 PR4: build() が shares のある行に qty を出し、無い行はキーを省く。
+    sanitize_for_public() は qty を残す。既存フィールド・チェックサムは不変。値は合成値。"""
+
+    def _rows(self):
+        return [
+            {"kind": "eq", "institution": "テスト証券", "rawCategory": "株式(現物)",
+             "name": "テスト米国株", "code": "AAA", "shares": 81.0,
+             "avgCost": 10.0, "price": 20.0, "value": 1_000, "cur": "JPY"},
+            {"kind": "mf", "institution": "テスト証券", "rawCategory": "投資信託",
+             "name": "テスト投信", "code": "", "shares": 1234.5,
+             "avgCost": 10.0, "price": 20.0, "value": 2_000, "cur": "JPY"},
+            {"kind": "eq", "institution": "テスト証券", "rawCategory": "株式(現物)",
+             "name": "テスト日本株", "code": "1306", "shares": None,
+             "avgCost": None, "price": None, "value": 3_000, "cur": "JPY"},
+            # shares キー自体が無い行（depo 等・列マップに shares が無いテーブル）
+            {"kind": "depo", "institution": "テスト銀行", "rawCategory": "預金・現金",
+             "name": "普通預金", "code": "", "avgCost": None, "price": None,
+             "value": 4_000, "cur": "JPY"},
+        ]
+
+    def setUp(self):
+        self.c = _load_config()
+        self.doc = fetch_mf.build(self.c, 10_000, self._rows())
+        self.by_name = {h["name"]: h for h in self.doc["holdings"]}
+
+    def test_qty_emitted_when_shares_present(self):
+        self.assertEqual(self.by_name["テスト米国株"]["qty"], 81.0)
+        self.assertEqual(self.by_name["テスト投信"]["qty"], 1234.5)
+        self.assertIsInstance(self.by_name["テスト米国株"]["qty"], (int, float))
+
+    def test_qty_key_absent_when_shares_missing(self):
+        self.assertNotIn("qty", self.by_name["テスト日本株"])
+        self.assertNotIn("qty", self.by_name["普通預金"])
+
+    def test_existing_fields_unchanged(self):
+        h = self.by_name["テスト米国株"]
+        for k in ("institution", "cat", "name", "value", "cur", "asOf", "ySymbol", "avgCost", "price"):
+            self.assertIn(k, h)
+        self.assertEqual(self.doc["totals"]["imported"], 10_000)
+
+    def test_sanitize_for_public_keeps_qty(self):
+        pub = fetch_mf.sanitize_for_public(self.doc)
+        by_name = {h["name"]: h for h in pub["holdings"]}
+        self.assertEqual(by_name["テスト米国株"]["qty"], 81.0)
+        self.assertNotIn("qty", by_name["テスト日本株"])
+        self.assertEqual(pub["holdings"], self.doc["holdings"])
+
+    def test_reference_fixture_qty_and_verify_still_passes(self):
+        # 既存 fixture（shares あり/なし混在）でも qty が付き、チェックサムは従来どおり通る
+        doc = fetch_mf.build(self.c, NET, _fixture_rows())
+        by_name = {h["name"]: h for h in doc["holdings"]}
+        self.assertEqual(by_name["アップル"]["qty"], 100.0)
+        self.assertNotIn("qty", by_name["普通預金"])
+        fetch_mf.verify(self.c, doc, _fixture_rows(), _fixture_summary())  # SystemExit が出なければ通過
+
+
 class TestPushNetworthToWorker(unittest.TestCase):
     """#589 Phase2: push_networth_to_worker() の fail-soft 挙動を検算する。
     実ネットワーク呼び出しはしない（urllib.request.urlopen をモック）。"""
