@@ -3,7 +3,7 @@
 
 実機 DOM 走査（scrape）は Playwright + ライブ MF が要るため §7.4 手動 run で確認。
 ここでは scrape が返す形（フラット行＋サマリ）を合成し、§7.2 分類・§7.3 種類別
-チェックサムが §7 実測参考値で通る/外れたら落ちることを stdlib unittest で検証する。
+チェックサムが合成値（実額ではない）で通る/外れたら落ちることを stdlib unittest で検証する。
 
 実行: python3 -m unittest tests/test_fetch_mf.py -v
 依存なし（pytest 不要）。fetch_mf は playwright 未導入でも import 可（try/except 済）。
@@ -19,50 +19,58 @@ sys.path.insert(0, os.path.join(ROOT, "scripts"))
 import fetch_mf  # noqa: E402
 
 
+# 合成 fixture 用の除外口座名（架空）。公開 config の exclude.accounts に加えて、
+# テスト内だけで除外対象として扱う（実在の口座名を fixture に置かないため）。
+TEST_EXCL_HOLDING_INST = "テスト社員持株会"
+TEST_EXCL_IC_INST = "テスト交通系IC"
+
+
 def _load_config():
     with open(os.path.join(ROOT, "data", "mf-import-config.json"), encoding="utf-8") as f:
-        return json.load(f)
+        c = json.load(f)
+    c["exclude"]["accounts"] = list(c["exclude"]["accounts"]) + [TEST_EXCL_HOLDING_INST, TEST_EXCL_IC_INST]
+    return c
 
 
-# §7 実測参考値（2026-06-22）。サマリ＝種類別合計（除外口座分を含む）。
-NET = 585_034_186
-SUM_EQ = 338_454_356
-SUM_MF = 130_537_011
-SUM_DEPO = 73_515_659
-SUM_PENSION = 42_527_160  # 非取込（年金）。4種合計＝NET になるよう設定。
+# ★合成値（実額ではない）。サマリ＝種類別合計（除外口座分を含む）。
+NET = 500_000_000
+SUM_EQ = 200_000_000
+SUM_MF = 100_000_000
+SUM_DEPO = 50_000_000
+SUM_PENSION = 150_000_000  # 非取込（年金）。4種合計＝NET になるよう設定。
 
 # 除外口座の保有（サマリには含まれるが imported からは落ちる）。
-EXCL_NTT = 5_000_000      # NTTデータ社員持株会（eq・持株会）
-EXCL_SUICA = 15_659       # ようたのSuica（depo・交通系）
+EXCL_HOLDING = 5_000_000  # テスト社員持株会（eq・持株会）
+EXCL_IC = 10_000          # テスト交通系IC（depo・交通系）
 
 
 def _fixture_rows():
-    """scrape() が返すフラット行を §7 参考値に合わせて合成。"""
+    """scrape() が返すフラット行を合成値で組み立てる（種類別チェックサムが通る整合）。"""
     return [
         # eq: 取込（日本株 / 米国株）＋ 除外（持株会）
-        {"kind": "eq", "institution": "マネックス証券", "rawCategory": "株式(現物)",
-         "name": "ファーストリテイリング", "code": "9983", "shares": 100.0,
-         "avgCost": 30000.0, "price": 34000.0, "value": SUM_EQ - EXCL_NTT - 30_000_000, "cur": "JPY"},
-        {"kind": "eq", "institution": "マネックス証券", "rawCategory": "株式(現物)",
-         "name": "アップル", "code": "AAPL", "shares": 100.0,
+        {"kind": "eq", "institution": "サンプル証券", "rawCategory": "株式(現物)",
+         "name": "サンプル日本株", "code": "1306", "shares": 100.0,
+         "avgCost": 30000.0, "price": 34000.0, "value": SUM_EQ - EXCL_HOLDING - 30_000_000, "cur": "JPY"},
+        {"kind": "eq", "institution": "サンプル証券", "rawCategory": "株式(現物)",
+         "name": "サンプル米国株", "code": "AAA", "shares": 100.0,
          "avgCost": 150.0, "price": 200.0, "value": 30_000_000, "cur": "JPY"},
-        {"kind": "eq", "institution": "NTTデータ社員持株会", "rawCategory": "株式(現物)",
-         "name": "NTTデータ持株", "code": "", "shares": None,
-         "avgCost": None, "price": None, "value": EXCL_NTT, "cur": "JPY"},
+        {"kind": "eq", "institution": TEST_EXCL_HOLDING_INST, "rawCategory": "株式(現物)",
+         "name": "テスト持株", "code": "", "shares": None,
+         "avgCost": None, "price": None, "value": EXCL_HOLDING, "cur": "JPY"},
         # mf: 取込
-        {"kind": "mf", "institution": "ひふみ投信", "rawCategory": "投資信託",
-         "name": "ひふみ投信", "code": "", "shares": 1000.0,
+        {"kind": "mf", "institution": "サンプル投信会社", "rawCategory": "投資信託",
+         "name": "サンプル投信", "code": "", "shares": 1000.0,
          "avgCost": 50000.0, "price": 60000.0, "value": SUM_MF, "cur": "JPY"},
-        # depo: 取込（現金 / 暗号資産）＋ 除外（Suica）
-        {"kind": "depo", "institution": "三井住友銀行", "rawCategory": "預金・現金",
+        # depo: 取込（現金 / 暗号資産）＋ 除外（交通系IC）
+        {"kind": "depo", "institution": "テスト銀行", "rawCategory": "預金・現金",
          "name": "普通預金", "code": "", "shares": None,
-         "avgCost": None, "price": None, "value": SUM_DEPO - EXCL_SUICA - 3_500_000, "cur": "JPY"},
-        {"kind": "depo", "institution": "bitFlyer", "rawCategory": "暗号資産",
+         "avgCost": None, "price": None, "value": SUM_DEPO - EXCL_IC - 3_500_000, "cur": "JPY"},
+        {"kind": "depo", "institution": "サンプル暗号資産取引所", "rawCategory": "暗号資産",
          "name": "ビットコイン", "code": "", "shares": None,
          "avgCost": None, "price": None, "value": 3_500_000, "cur": "JPY"},
-        {"kind": "depo", "institution": "ようたのSuica", "rawCategory": "預金・現金",
-         "name": "Suica残高", "code": "", "shares": None,
-         "avgCost": None, "price": None, "value": EXCL_SUICA, "cur": "JPY"},
+        {"kind": "depo", "institution": TEST_EXCL_IC_INST, "rawCategory": "預金・現金",
+         "name": "IC残高", "code": "", "shares": None,
+         "avgCost": None, "price": None, "value": EXCL_IC, "cur": "JPY"},
     ]
 
 
@@ -81,7 +89,7 @@ def _fixture_summary():
     }
 
 
-IMPORTED_EXPECTED = (SUM_EQ - EXCL_NTT) + SUM_MF + (SUM_DEPO - EXCL_SUICA)
+IMPORTED_EXPECTED = (SUM_EQ - EXCL_HOLDING) + SUM_MF + (SUM_DEPO - EXCL_IC)
 
 
 class TestBuild(unittest.TestCase):
@@ -91,20 +99,20 @@ class TestBuild(unittest.TestCase):
 
     def test_imported_excludes_excluded_accounts(self):
         self.assertEqual(self.doc["totals"]["imported"], IMPORTED_EXPECTED)
-        # 取込は5件（持株会・Suica が落ちる）
+        # 取込は5件（持株会・交通系IC が落ちる）
         self.assertEqual(len(self.doc["holdings"]), 5)
 
     def test_excluded_accounts_listed(self):
         excl = set(self.doc["totals"]["excludedAccounts"])
-        self.assertIn("NTTデータ社員持株会", excl)
-        self.assertIn("ようたのSuica", excl)
+        self.assertIn(TEST_EXCL_HOLDING_INST, excl)
+        self.assertIn(TEST_EXCL_IC_INST, excl)
 
     def test_jp_us_symbol_resolution(self):
         by_name = {h["name"]: h for h in self.doc["holdings"]}
-        self.assertEqual(by_name["ファーストリテイリング"]["cat"], "日本株・ETF")
-        self.assertEqual(by_name["ファーストリテイリング"]["ySymbol"], "9983.T")
-        self.assertEqual(by_name["アップル"]["cat"], "米国株・ETF")
-        self.assertEqual(by_name["アップル"]["ySymbol"], "AAPL")
+        self.assertEqual(by_name["サンプル日本株"]["cat"], "日本株・ETF")
+        self.assertEqual(by_name["サンプル日本株"]["ySymbol"], "1306.T")
+        self.assertEqual(by_name["サンプル米国株"]["cat"], "米国株・ETF")
+        self.assertEqual(by_name["サンプル米国株"]["ySymbol"], "AAA")
 
     def test_crypto_split_and_cash(self):
         by_name = {h["name"]: h for h in self.doc["holdings"]}
@@ -168,7 +176,7 @@ class TestParseAmount(unittest.TestCase):
 
     def test_normal(self):
         self.assertEqual(fetch_mf.parse_amount("1,234,567円"), 1234567)
-        self.assertEqual(fetch_mf.parse_amount("¥338,454,356"), 338454356)
+        self.assertEqual(fetch_mf.parse_amount("¥200,000,000"), 200000000)
 
     def test_negative(self):
         self.assertEqual(fetch_mf.parse_amount("-500"), -500)
@@ -234,13 +242,13 @@ class TestCells(unittest.TestCase):
     _cells は th と td を DOM 順で読む必要がある（td のみだと category が落ちる）。"""
 
     def test_summary_row_reads_th_and_td(self):
-        tr = _FakeTr({"th, td": ["株式(現物)", "338,454,356円", "57.85%"]})
-        self.assertEqual(fetch_mf._cells(tr), ["株式(現物)", "338,454,356円", "57.85%"])
+        tr = _FakeTr({"th, td": ["株式(現物)", "200,000,000円", "40.00%"]})
+        self.assertEqual(fetch_mf._cells(tr), ["株式(現物)", "200,000,000円", "40.00%"])
 
     def test_asset_row_td_only_unchanged(self):
         # 保有テーブルのデータ行は td のみ＝列インデックス不変
-        tr = _FakeTr({"th, td": ["", "NTTデータグループ", "1", "4,400,412"]})
-        self.assertEqual(fetch_mf._cells(tr), ["", "NTTデータグループ", "1", "4,400,412"])
+        tr = _FakeTr({"th, td": ["", "サンプル銘柄", "1", "1,000,000"]})
+        self.assertEqual(fetch_mf._cells(tr), ["", "サンプル銘柄", "1", "1,000,000"])
 
 
 class TestLiabilities(unittest.TestCase):
@@ -426,7 +434,7 @@ class TestQty(unittest.TestCase):
         # 既存 fixture（shares あり/なし混在）でも qty が付き、チェックサムは従来どおり通る
         doc = fetch_mf.build(self.c, NET, _fixture_rows())
         by_name = {h["name"]: h for h in doc["holdings"]}
-        self.assertEqual(by_name["アップル"]["qty"], 100.0)
+        self.assertEqual(by_name["サンプル米国株"]["qty"], 100.0)
         self.assertNotIn("qty", by_name["普通預金"])
         fetch_mf.verify(self.c, doc, _fixture_rows(), _fixture_summary())  # SystemExit が出なければ通過
 
