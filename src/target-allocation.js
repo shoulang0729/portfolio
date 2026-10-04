@@ -182,3 +182,108 @@ export function computeGap(symbol, currentPct) {
   const gapPct = targetPct != null ? currentPct - targetPct : null;
   return { symbol, currentPct, targetPct, gapPct };
 }
+
+// ══════════════════════════════════════════════════════════════
+// 注文表の戦略設定（aiTech / stress / orderSheet・設計書 2026-10-03-order-sheet §3.2）
+//
+// 既定値はここ 1 か所にまとめる（要 Toshio 判断 #2/#5/#6 の既定案・§12）。
+// data/target-allocation.json に値があればそれを優先し、未設定・型不正の項目だけ既定値で補う。
+// アプリ側では v1 で表示に使わない（計算は Worker）。Value/Risk タブで将来使えるよう用意する。
+// ══════════════════════════════════════════════════════════════
+
+/**
+ * 戦略設定の既定値（§3.2 / §12 の既定案）。値を変えるときはここだけ。
+ */
+export const ORDER_STRATEGY_DEFAULTS = Object.freeze({
+  aiTech: Object.freeze({
+    themes: Object.freeze(['semiconductor', 'megatech']),
+    capPct: 29,
+  }),
+  stress: Object.freeze({
+    tolerancePct: 20,
+    nonEquity: Object.freeze(['JPST', 'GLDM', 'SLV']),
+    scenarios: Object.freeze([
+      Object.freeze({
+        id: 'ai-crash',
+        label: 'AI −40%・他の株 −15%',
+        shocks: Object.freeze([
+          Object.freeze({ group: 'aiTech', pct: -40 }),
+          Object.freeze({ group: 'otherEquity', pct: -15 }),
+        ]),
+      }),
+      Object.freeze({
+        id: 'semi-crash',
+        label: '半導体 −50%',
+        shocks: Object.freeze([Object.freeze({ group: 'theme:semiconductor', pct: -50 })]),
+      }),
+    ]),
+  }),
+  orderSheet: Object.freeze({
+    cashFloorPct: 12,
+    rebaseMovePct: 5,
+  }),
+});
+
+/** @param {unknown} v */
+function _isNum(v) {
+  return typeof v === 'number' && Number.isFinite(v);
+}
+
+/**
+ * 既定値の配列をディープコピーする（呼び出し側の変更が既定値に波及しないように）。
+ * @param {readonly any[]} arr
+ * @returns {any[]}
+ */
+function _cloneArr(arr) {
+  return JSON.parse(JSON.stringify(arr));
+}
+
+/**
+ * config の section を取り出す（無ければ空オブジェクト）。
+ * @param {string} key
+ * @returns {any}
+ */
+function _section(key) {
+  const sec = _cfg && _cfg[key];
+  return sec && typeof sec === 'object' && !Array.isArray(sec) ? sec : {};
+}
+
+/**
+ * AI/テック合計の設定を返す（未設定項目は既定値）。
+ * @returns {{ themes: string[], capPct: number }}
+ */
+export function getAiTechConfig() {
+  const d = ORDER_STRATEGY_DEFAULTS.aiTech;
+  const s = _section('aiTech');
+  return {
+    themes: Array.isArray(s.themes) ? [...s.themes] : _cloneArr(d.themes),
+    capPct: _isNum(s.capPct) ? s.capPct : d.capPct,
+  };
+}
+
+/**
+ * ストレスの設定を返す（未設定項目は既定値）。
+ * @returns {{ tolerancePct: number, nonEquity: string[], scenarios: Array<{ id: string, label: string, shocks: Array<{ group: string, pct: number }> }> }}
+ */
+export function getStressConfig() {
+  const d = ORDER_STRATEGY_DEFAULTS.stress;
+  const s = _section('stress');
+  return {
+    tolerancePct: _isNum(s.tolerancePct) ? s.tolerancePct : d.tolerancePct,
+    nonEquity: Array.isArray(s.nonEquity) ? [...s.nonEquity] : _cloneArr(d.nonEquity),
+    scenarios: Array.isArray(s.scenarios) ? _cloneArr(s.scenarios) : _cloneArr(d.scenarios),
+  };
+}
+
+/**
+ * 注文表の設定を返す（未設定項目は既定値）。
+ * @returns {{ cashFloorPct: number, rebaseMovePct: number }}
+ */
+export function getOrderSheetConfig() {
+  const d = ORDER_STRATEGY_DEFAULTS.orderSheet;
+  const s = _section('orderSheet');
+  return {
+    cashFloorPct: _isNum(s.cashFloorPct) ? s.cashFloorPct : d.cashFloorPct,
+    rebaseMovePct: _isNum(s.rebaseMovePct) ? s.rebaseMovePct : d.rebaseMovePct,
+  };
+}

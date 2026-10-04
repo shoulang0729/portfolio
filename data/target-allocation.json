@@ -87,5 +87,34 @@
       "note": "保険・$300K例外・固定"
     }
   },
-  "themeEtfs": ["SMH", "200A.T", "NLR", "DTCR", "URA", "1615.T", "1629.T", "COPX", "REMX", "SLV", "VGK", "XLE"]
+  "themeEtfs": ["SMH", "200A.T", "NLR", "DTCR", "URA", "1615.T", "1629.T", "COPX", "REMX", "SLV", "VGK", "XLE"],
+  "aiTech": {
+    "themes": ["semiconductor", "megatech"],
+    "capPct": 29,
+    "note": "AI/テック合計＝themes の members の現在%の和。capPct 超で警告。"
+  },
+  "stress": {
+    "tolerancePct": 20,
+    "nonEquity": ["JPST", "GLDM", "SLV"],
+    "scenarios": [
+      {
+        "id": "ai-crash",
+        "label": "AI −40%・他の株 −15%",
+        "shocks": [
+          { "group": "aiTech", "pct": -40 },
+          { "group": "otherEquity", "pct": -15 }
+        ]
+      },
+      {
+        "id": "semi-crash",
+        "label": "半導体 −50%",
+        "shocks": [{ "group": "theme:semiconductor", "pct": -50 }]
+      }
+    ]
+  },
+  "orderSheet": {
+    "cashFloorPct": 12,
+    "rebaseMovePct": 5,
+    "note": "単一銘柄の上限は convictionPct.high（総資産比%）を使う。"
+  }
 }
