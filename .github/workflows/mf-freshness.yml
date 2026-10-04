@@ -1,20 +1,27 @@
 name: MF Holdings Freshness
 
 # data/mf-holdings.json（MoneyForward 取り込み）の鮮度を見張る専任ワークフロー。
-# MFログイン不要（asOf を見るだけ）なので Actions で完結し、Mulmo が落ちていても動く。
-# 取り込み本体は Claude for Chrome（実ブラウザセッション）のまま。Actions は鮮度の見張り専任（#312）。
+# MFログイン不要（asOf を見るだけ）なので Actions で完結し、Mac mini が落ちていても動く。
+# 取り込み本体は Mac mini の launchd `com.toshio.mf-snapshot`（毎日 05:00 CST・scripts/fetch_mf.py run）。
+# 判定は「CST の当日」と asOf（取込を実行した日の Mac ローカル日付）の日付差（#685 B1・
+# docs/handoff/2026-10-04-mf-ingest-p1.md §3.2）。取込が 1 日でも漏れたら当日朝に Issue を起票する。
 
 on:
   schedule:
-    - cron: '0 22 * * *'   # 毎日 22:00 UTC = 翌 07:00 JST（朝にチェック）
+    - cron: '40 0 * * *'   # 毎日 00:40 UTC = 08:40 CST（05:00 CST の取込＋再試行に 3 時間以上の余裕）
   workflow_dispatch:         # 手動実行
+
+# データバッチの portfolio-data-batch には入れない（commit しないジョブが待機中のバッチを取り消さないように）
+concurrency:
+  group: mf-freshness
+  cancel-in-progress: false
 
 permissions:
   contents: read
   issues: write
 
 env:
-  STALE_DAYS: '3'            # この日数以上古ければ Issue を起票（既定3・env で可変）
+  STALE_DAYS: '1'            # CST 当日と asOf の日付差がこの日数以上なら Issue を起票（既定1・env で可変）
 
 jobs:
   check:
@@ -24,19 +31,33 @@ jobs:
 
       - name: Compute freshness
         id: fresh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
         run: |
-          ASOF=$(jq -r '.asOf // empty' data/mf-holdings.json)
-          if [ -z "$ASOF" ]; then
+          ASOF_RAW=$(jq -r '.asOf // empty' data/mf-holdings.json)
+          if [ -z "$ASOF_RAW" ]; then
             echo "::error::data/mf-holdings.json に asOf がありません"
             exit 1
           fi
-          ASOF_EPOCH=$(date -d "$ASOF" +%s)
-          NOW_EPOCH=$(date +%s)
-          DAYS=$(( (NOW_EPOCH - ASOF_EPOCH) / 86400 ))
-          ASOF_DATE=$(date -d "$ASOF" +%Y-%m-%d)
-          echo "asof=$ASOF_DATE" >> "$GITHUB_OUTPUT"
-          echo "days=$DAYS"      >> "$GITHUB_OUTPUT"
-          echo "MF asOf=$ASOF_DATE / 経過 $DAYS 日 / 閾値 $STALE_DAYS 日"
+          if ! ASOF=$(TZ=Asia/Shanghai date -d "$ASOF_RAW" +%F 2>/dev/null); then
+            echo "::error::data/mf-holdings.json の asOf が日付として読めません: $ASOF_RAW"
+            exit 1
+          fi
+          TODAY=$(TZ=Asia/Shanghai date +%F)
+          # 日付どうしの差（両方とも UTC 0 時として epoch 化するので 86400 で割り切れる）
+          LAG=$(( ( $(date -u -d "$TODAY" +%s) - $(date -u -d "$ASOF" +%s) ) / 86400 ))
+          # 最終コミット日時（shallow checkout では git log が正しく取れないため API で取る・取れなくても判定は続ける）
+          LAST_COMMIT=$(gh api "repos/$REPO/commits?path=data/mf-holdings.json&per_page=1" \
+            --jq '.[0].commit.committer.date // empty' 2>/dev/null || true)
+          [ -n "$LAST_COMMIT" ] || LAST_COMMIT="取得できず"
+          {
+            echo "asof=$ASOF"
+            echo "today=$TODAY"
+            echo "lag=$LAG"
+            echo "last_commit=$LAST_COMMIT"
+          } >> "$GITHUB_OUTPUT"
+          echo "MF asOf=$ASOF / CST 当日=$TODAY / 遅れ $LAG 日 / 閾値 $STALE_DAYS 日 / 最終コミット $LAST_COMMIT"
 
       - name: Ensure stale-mf-holdings label exists
         env:
@@ -49,22 +70,32 @@ jobs:
       - name: Open / update / close stale issue (idempotent)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DAYS: ${{ steps.fresh.outputs.days }}
+          LAG: ${{ steps.fresh.outputs.lag }}
           ASOF: ${{ steps.fresh.outputs.asof }}
+          TODAY: ${{ steps.fresh.outputs.today }}
+          LAST_COMMIT: ${{ steps.fresh.outputs.last_commit }}
           REPO: ${{ github.repository }}
         run: |
+          # 既に開いている Issue があれば更新する（重複して起票しない）
           EXISTING=$(gh issue list --state open --label stale-mf-holdings --json number --jq '.[0].number // ""')
 
-          if [ "$DAYS" -ge "$STALE_DAYS" ]; then
-            TITLE="⚠ MF取り込みが ${DAYS} 日前です（再取り込み推奨）"
+          # LAG が負（時計のずれ）の場合も -ge が偽になり「問題なし」扱い
+          if [ "$LAG" -ge "$STALE_DAYS" ]; then
+            TITLE="MF取込が ${LAG} 日遅れ（asOf ${ASOF}）"
             BODY=$(cat <<EOF
-          MoneyForward 取り込み（\`data/mf-holdings.json\`）が古くなっています。
+          MoneyForward 取り込み（\`data/mf-holdings.json\`）が今日の分まで更新されていません。
 
           - **asOf**: ${ASOF}
-          - **経過日数**: ${DAYS} 日（閾値 ${STALE_DAYS} 日）
-          - **再取り込み手順**: [docs/routine_mf_snapshot.md](https://github.com/${REPO}/blob/main/docs/routine_mf_snapshot.md)（Claude for Chrome の実ブラウザセッションで実行）
+          - **CST の当日**: ${TODAY}
+          - **遅れ**: ${LAG} 日（閾値 ${STALE_DAYS} 日）
+          - **data/mf-holdings.json の最終コミット**: ${LAST_COMMIT}
 
-          > このIssueは \`MF Holdings Freshness\` ワークフローが自動管理しています（鮮度OKになると自動クローズ）。
+          ### 確認手順（Mac mini）
+          1. エラーログの末尾を見る: \`tail -n 50 ~/.mf-snapshot/err.log\`
+          2. 取込を再実行する: \`launchctl kickstart -k gui/\$(id -u)/com.toshio.mf-snapshot\`
+          3. 直らなければ [scripts/README-mf-snapshot.md](https://github.com/${REPO}/blob/main/scripts/README-mf-snapshot.md) のトラブルシュートを見る
+
+          > このIssueは \`MF Holdings Freshness\` ワークフロー（毎日 08:40 CST）が自動管理しています（取込が当日分まで戻ると自動クローズ）。
           EOF
           )
             if [ -n "$EXISTING" ]; then
@@ -77,9 +108,9 @@ jobs:
           else
             if [ -n "$EXISTING" ]; then
               gh issue close "$EXISTING" \
-                --comment "✅ MF取り込みが最新化されました（asOf ${ASOF} / 経過 ${DAYS} 日）。自動クローズします。"
+                --comment "MF取込が最新化されました（asOf ${ASOF} / CST 当日 ${TODAY} / 遅れ ${LAG} 日）。自動クローズします。"
               echo "Closed stale issue #$EXISTING"
             else
-              echo "鮮度OK（経過 ${DAYS} 日 < 閾値 ${STALE_DAYS} 日）・対応不要"
+              echo "鮮度OK（遅れ ${LAG} 日 < 閾値 ${STALE_DAYS} 日）・対応不要"
             fi
           fi
