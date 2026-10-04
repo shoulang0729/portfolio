@@ -4779,6 +4779,35 @@ function computeGap(symbol, currentPct) {
   const gapPct = targetPct != null ? currentPct - targetPct : null;
   return { symbol, currentPct, targetPct, gapPct };
 }
+var ORDER_STRATEGY_DEFAULTS = Object.freeze({
+  aiTech: Object.freeze({
+    themes: Object.freeze(["semiconductor", "megatech"]),
+    capPct: 29
+  }),
+  stress: Object.freeze({
+    tolerancePct: 20,
+    nonEquity: Object.freeze(["JPST", "GLDM", "SLV"]),
+    scenarios: Object.freeze([
+      Object.freeze({
+        id: "ai-crash",
+        label: "AI \u221240%\u30FB\u4ED6\u306E\u682A \u221215%",
+        shocks: Object.freeze([
+          Object.freeze({ group: "aiTech", pct: -40 }),
+          Object.freeze({ group: "otherEquity", pct: -15 })
+        ])
+      }),
+      Object.freeze({
+        id: "semi-crash",
+        label: "\u534A\u5C0E\u4F53 \u221250%",
+        shocks: Object.freeze([Object.freeze({ group: "theme:semiconductor", pct: -50 })])
+      })
+    ])
+  }),
+  orderSheet: Object.freeze({
+    cashFloorPct: 12,
+    rebaseMovePct: 5
+  })
+});
 
 // src/region-calc.js
 var REGION_LABELS = {
