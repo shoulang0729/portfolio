@@ -45,6 +45,14 @@
   - **例外（マージ前に Mac で確認）**：ログイン・取得処理、公開用の除去処理（`sanitize_for_public()`）、自動 commit/push 処理そのものを変える PR。PR に「Mac 実機確認要」と書く。
   - `fetch_mf.py run` は main 上での自動 commit/push を前提とするため、feature ブランチで実行しない。
 
+### Mac セッション（クラウドから Mac mini を動かす・2026-10-04〜）
+Mac mini で `claude remote-control`（環境 `shoulang-Mac-mini:portfolio`・作業ディレクトリ `~/GitHub/portfolio`）が動いている。PM（クラウドの親セッション）は Claude_Code_Remote の `create_session` でこの環境に指示を出し、上記の「Toshio が Mac で行う」作業を代行させてよい（Toshio がその都度依頼・了解したもの）。
+- **任せてよい作業**：Worker のデプロイ（`npx wrangler deploy`）と curl 検証・問題時の `npx wrangler rollback`、MF 取込の即時実行（`launchctl kickstart -k gui/$(id -u)/com.toshio.mf-snapshot`）と結果確認、別の作業ツリーでの `fetch_mf.py run --dry-run`、ログ（`~/.mf-snapshot/*.log`）の確認、`git pull --ff-only`。
+- **禁止**：`sudo`、リポのファイル編集・commit・push（取込バッチ自身の自動 commit は除く）、wrangler の secret / kv 操作、Secrets・PIN・ハッシュ・`.env`・Cookie の表示、feature ブランチでの `fetch_mf.py run`。
+- **prompt は自己完結で書く**：目的・コマンド・合否の基準・失敗時の戻し方・結果のコメント先（Issue/PR）・権限（してよいこと/禁止）を明記する。Mac 側はクラウドの文脈を知らない。
+- **結果は GitHub で受け取る**：Mac 側に `gh` で Issue/PR へコメントさせる。内容は件数・成否・HTTP ステータス・エラーの種類だけ（金額・口座名・秘密は書かない）。状態は `get_session` で見る。
+- **長い作業は分ける**：1つの結果を確かめてから次の `create_session` を出す。Mac 側で権限確認に止まったら、PM が勝手に権限を足さず Toshio に報告する。
+
 ### 公開リポの原則
 このリポは PUBLIC。個人の資産データ（物件・評価額・負債・ネットワース実額・口座情報）と秘密（APIキー・トークン・PIN/ハッシュ値）をコミットしない。テストデータは合成値にする。reviewer は差分ごとに検査する。
 
@@ -424,7 +432,7 @@ npm run build:watch  # ウォッチモード
 | バージョン更新 | `?v=YYYYMMDDX` のバージョン文字列を更新する |
 | Issue 管理 | Issue を作成・クローズする |
 | CI 軽微修正 | GitHub Actions のタイムアウト・トリガー条件など軽微な修正 |
-| Worker デプロイ | クラウド環境からは実行しない。マージ後に Toshio が Mac で deploy する（reviewer が報告） |
+| Worker デプロイ | クラウド環境からは実行しない。マージ後に Toshio が Mac で deploy する（reviewer が報告）。Toshio の依頼があれば Mac セッションに代行させてよい |
 
 **以下は確認してから実行（変更しない）**:
 - `git push --force` / `git reset --hard` / main ブランチ削除
