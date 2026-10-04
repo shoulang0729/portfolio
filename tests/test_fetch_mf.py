@@ -92,6 +92,11 @@ def _fixture_summary():
 IMPORTED_EXPECTED = (SUM_EQ - EXCL_HOLDING) + SUM_MF + (SUM_DEPO - EXCL_IC)
 
 
+def _without_institution(holdings):
+    """holdings の各行から institution を除いたコピー（#687: 公開コピーは institution だけ置換）。"""
+    return [{k: v for k, v in h.items() if k != "institution"} for h in holdings]
+
+
 class TestBuild(unittest.TestCase):
     def setUp(self):
         self.c = _load_config()
@@ -363,8 +368,9 @@ class TestSanitizeForPublic(unittest.TestCase):
             self.assertNotIn(k, pub["totals"])
 
     def test_keeps_v4_fields_and_holdings_unchanged(self):
+        # #687: institution だけは通し番号に置き換わる。それ以外の holdings の値は不変。
         pub = fetch_mf.sanitize_for_public(self.full_doc)
-        self.assertEqual(pub["holdings"], self.full_doc["holdings"])
+        self.assertEqual(_without_institution(pub["holdings"]), _without_institution(self.full_doc["holdings"]))
         self.assertEqual(pub["totals"]["imported"], self.full_doc["totals"]["imported"])
         self.assertEqual(pub["totals"]["mfNetWorth"], self.full_doc["totals"]["mfNetWorth"])
         self.assertEqual(pub["asOf"], self.full_doc["asOf"])
@@ -428,7 +434,7 @@ class TestQty(unittest.TestCase):
         by_name = {h["name"]: h for h in pub["holdings"]}
         self.assertEqual(by_name["テスト米国株"]["qty"], 81.0)
         self.assertNotIn("qty", by_name["テスト日本株"])
-        self.assertEqual(pub["holdings"], self.doc["holdings"])
+        self.assertEqual(_without_institution(pub["holdings"]), _without_institution(self.doc["holdings"]))
 
     def test_reference_fixture_qty_and_verify_still_passes(self):
         # 既存 fixture（shares あり/なし混在）でも qty が付き、チェックサムは従来どおり通る
@@ -437,6 +443,161 @@ class TestQty(unittest.TestCase):
         self.assertEqual(by_name["サンプル米国株"]["qty"], 100.0)
         self.assertNotIn("qty", by_name["普通預金"])
         fetch_mf.verify(self.c, doc, _fixture_rows(), _fixture_summary())  # SystemExit が出なければ通過
+
+
+# fixture の金融機関名（架空）。公開コピーに残ってはいけない文字列。
+_FIXTURE_INSTITUTIONS = ("サンプル証券", "サンプル投信会社", "テスト銀行", "サンプル暗号資産取引所")
+_FIXTURE_EXCLUDED = (TEST_EXCL_HOLDING_INST, TEST_EXCL_IC_INST)
+
+
+class TestSanitizeInstitution(unittest.TestCase):
+    """#687 PR1: 公開コピーから口座名・金融機関名を除く（Toshio 決定 Q2＝架空の通し番号）。
+    完全版（KV 送信用）は実名のまま。値はすべて合成値・架空名。"""
+
+    def setUp(self):
+        self.c = _load_config()
+        self.full_doc = fetch_mf.build(self.c, NET, _fixture_rows())
+        self.before = json.loads(json.dumps(self.full_doc))
+        self.pub = fetch_mf.sanitize_for_public(self.full_doc)
+
+    def test_excluded_accounts_emptied_key_kept(self):
+        self.assertIn("excludedAccounts", self.pub["totals"])
+        self.assertEqual(self.pub["totals"]["excludedAccounts"], [])
+
+    def test_institution_numbered_in_order_same_name_same_number(self):
+        # fixture の取込順: サンプル証券×2 → サンプル投信会社 → テスト銀行 → サンプル暗号資産取引所
+        self.assertEqual(
+            [h["institution"] for h in self.pub["holdings"]],
+            ["口座1", "口座1", "口座2", "口座3", "口座4"],
+        )
+
+    def test_institution_key_kept_on_every_row(self):
+        self.assertEqual(len(self.pub["holdings"]), len(self.full_doc["holdings"]))
+        for h in self.pub["holdings"]:
+            self.assertIn("institution", h)
+
+    def test_numbering_deterministic_within_run(self):
+        self.assertEqual(fetch_mf.sanitize_for_public(self.full_doc), self.pub)
+
+    def test_no_real_names_in_public_json(self):
+        s = json.dumps(self.pub, ensure_ascii=False)
+        for name in _FIXTURE_INSTITUTIONS + _FIXTURE_EXCLUDED:
+            self.assertNotIn(name, s)
+
+    def test_full_doc_unchanged(self):
+        # KV に送る完全版は実名のまま（institution・excludedAccounts とも）
+        self.assertEqual(self.full_doc, self.before)
+        self.assertEqual(set(self.full_doc["totals"]["excludedAccounts"]), set(_FIXTURE_EXCLUDED))
+        self.assertEqual(
+            {h["institution"] for h in self.full_doc["holdings"]}, set(_FIXTURE_INSTITUTIONS)
+        )
+
+    def test_imported_and_checksum_same_before_after(self):
+        self.assertEqual(self.pub["totals"]["imported"], self.full_doc["totals"]["imported"])
+        self.assertEqual(self.pub["totals"]["imported"], IMPORTED_EXPECTED)
+        self.assertEqual(self.pub["totals"]["mfNetWorth"], self.full_doc["totals"]["mfNetWorth"])
+        # チェックサムは institution を使わない＝公開コピーでも同じ結果で通る
+        fetch_mf.verify(self.c, self.full_doc, _fixture_rows(), _fixture_summary())
+        fetch_mf.verify(self.c, self.pub, _fixture_rows(), _fixture_summary())
+
+    def test_doc_without_excluded_or_holdings_is_safe(self):
+        pub = fetch_mf.sanitize_for_public({"asOf": "2026-10-04", "totals": {"imported": 0}})
+        self.assertNotIn("excludedAccounts", pub["totals"])
+        self.assertNotIn("holdings", pub)
+
+
+class TestDryRun(unittest.TestCase):
+    """#687 PR1: run --dry-run は取得→build→verify まで行い、書き出し・update_real_assets・
+    KV 送信・git・履歴取得を呼ばない。表示は件数と一致判定だけ（実名・金額なし）。"""
+
+    def setUp(self):
+        import tempfile
+        self.c = _load_config()
+        self.calls = []
+        self._orig = {}
+        for name in ("with_page", "update_real_assets", "push_networth_to_worker",
+                     "git_commit_push", "_run_history_script", "notify", "OUT"):
+            self._orig[name] = getattr(fetch_mf, name)
+        fetch_mf.with_page = lambda c, headless, fn: (NET, _fixture_rows(), _fixture_summary(), None, None)
+        for name in ("update_real_assets", "push_networth_to_worker", "git_commit_push", "_run_history_script"):
+            setattr(fetch_mf, name, (lambda n: lambda *a, **k: self.calls.append(n))(name))
+        fetch_mf.notify = lambda msg, *a, **k: self.calls.append("notify")
+        self.tmp = tempfile.TemporaryDirectory()
+        fetch_mf.OUT = os.path.join(self.tmp.name, "mf-holdings.json")
+
+    def tearDown(self):
+        for name, v in self._orig.items():
+            setattr(fetch_mf, name, v)
+        self.tmp.cleanup()
+
+    def _run(self):
+        import io
+        import contextlib
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            fetch_mf.do_run(self.c, dry_run=True)
+        return buf.getvalue()
+
+    def _write_prev(self, doc):
+        with open(fetch_mf.OUT, "w", encoding="utf-8") as f:
+            json.dump(doc, f, ensure_ascii=False)
+
+    def test_no_side_effects(self):
+        out = self._run()
+        self.assertEqual(self.calls, [])
+        self.assertFalse(os.path.exists(fetch_mf.OUT))  # 書き出していない
+        self.assertIn("[dry-run] OK", out)
+
+    def test_prev_output_not_rewritten(self):
+        prev = fetch_mf.build(self.c, NET, _fixture_rows())
+        self._write_prev(prev)
+        with open(fetch_mf.OUT, encoding="utf-8") as f:
+            before = f.read()
+        self._run()
+        with open(fetch_mf.OUT, encoding="utf-8") as f:
+            self.assertEqual(f.read(), before)
+        self.assertEqual(self.calls, [])
+
+    def test_output_has_no_names_or_amounts(self):
+        self._write_prev(fetch_mf.build(self.c, NET, _fixture_rows()))
+        out = self._run()
+        for name in _FIXTURE_INSTITUTIONS + _FIXTURE_EXCLUDED:
+            self.assertNotIn(name, out)
+        for amount in (IMPORTED_EXPECTED, NET, EXCL_HOLDING):
+            self.assertNotIn(str(amount), out)
+            self.assertNotIn(f"{amount:,}", out)
+
+    def test_matches_prev_with_real_names(self):
+        self._write_prev(fetch_mf.build(self.c, NET, _fixture_rows()))
+        out = self._run()
+        self.assertIn("holdings=5 excludedAccounts=2", out)
+        self.assertIn("取込対象の金融機関の集合: 一致", out)
+        self.assertIn("除外口座の集合: 一致", out)
+        self.assertIn("以内", out)
+        self.assertIn("→ OK", out)
+
+    def test_report_mismatch_and_numbered_prev(self):
+        doc = fetch_mf.build(self.c, NET, _fixture_rows())
+        pub = fetch_mf.sanitize_for_public(doc)
+        lines, ok = fetch_mf.dry_run_report(doc, pub, pub)  # 直近出力が通し番号化済み
+        self.assertTrue(ok)
+        self.assertTrue(any("比較不可" in l for l in lines))
+        self.assertTrue(any("除外口座の集合: 不一致" in l for l in lines))
+        prev = json.loads(json.dumps(doc))
+        prev["totals"]["imported"] = int(doc["totals"]["imported"] * 1.5)
+        prev["holdings"][0]["institution"] = "テスト別銀行"
+        lines, _ = fetch_mf.dry_run_report(doc, pub, prev)
+        self.assertTrue(any("取込対象の金融機関の集合: 不一致" in l for l in lines))
+        self.assertTrue(any("超" in l for l in lines))
+        lines, _ = fetch_mf.dry_run_report(doc, pub, None)
+        self.assertTrue(any("省略" in l for l in lines))
+
+    def test_report_ng_when_public_copy_leaks(self):
+        doc = fetch_mf.build(self.c, NET, _fixture_rows())
+        leaked = json.loads(json.dumps(doc))  # 未サニタイズ＝実名入り
+        lines, ok = fetch_mf.dry_run_report(doc, leaked, None)
+        self.assertFalse(ok)
+        self.assertIn("NG", lines[-1])
 
 
 class TestPushNetworthToWorker(unittest.TestCase):

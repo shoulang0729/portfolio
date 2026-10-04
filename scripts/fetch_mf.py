@@ -12,7 +12,7 @@
 使い方:
   python fetch_mf.py setup   # 初回: headful でブラウザを開く→手で MF ログイン(2FA)→プロファイル保存
   python fetch_mf.py run     # 定常: launchd が毎日叩く（無人）
-  python fetch_mf.py run --dry-run  # 試運転: 取得・検証まで。data/ 書き込み・commit/push・KV 送信をしない（#685）
+  python fetch_mf.py run --dry-run  # 確認用: 取得→build→verify のみ。書き出し・KV・commit/push なし（#687）
 
 ⚠ 資格情報（cookie・TG トークン等）はログ/コミットに出さない。
 ⚠ DOM 構造は data/mf-import-config.json の fetch.dom（資産種類別テーブル＋列インデックスマップ）。
@@ -665,14 +665,33 @@ def attach_liabilities(c, doc, liab_rows):
 _SANITIZE_TOTALS_FIELDS = ("liabilitiesTotal", "realAssetsTotal", "netWorthComputed")
 
 
+# #687: 公開コピーの holdings[].institution は架空の通し番号に置き換える（Toshio 決定 Q2）。
+_PUBLIC_INSTITUTION_PREFIX = "口座"
+
+
 def sanitize_for_public(doc):
     """機微フィールド（liabilities 配列 / totals の負債・実物資産・計算純資産）を
-    除いた deep copy を返す（v4 互換形）。引数 doc は変更しない。"""
+    除いた deep copy を返す（v4 互換形）。引数 doc は変更しない。
+
+    #687: 口座名・金融機関名も公開しない。キーと形は残し値だけ置き換える。
+    - totals.excludedAccounts → []
+    - holdings[].institution → 「口座1」「口座2」…（出現順。同じ金融機関は同じ番号。
+      1回の出力内でだけ決定的＝日をまたいだ一致は保証しない）
+    完全版 doc（KV 送信用）は実名のまま変更しない。"""
     public_doc = json.loads(json.dumps(doc))
     public_doc.pop("liabilities", None)
     totals = public_doc.get("totals", {})
     for k in _SANITIZE_TOTALS_FIELDS:
         totals.pop(k, None)
+    if "excludedAccounts" in totals:
+        totals["excludedAccounts"] = []
+    numbering = {}
+    for h in public_doc.get("holdings", []):
+        if "institution" in h:
+            inst = h["institution"]
+            if inst not in numbering:
+                numbering[inst] = f"{_PUBLIC_INSTITUTION_PREFIX}{len(numbering) + 1}"
+            h["institution"] = numbering[inst]
     return public_doc
 
 
@@ -926,12 +945,64 @@ def _scrape_all(page, c):
     return net, rows, summary, liab, re_vals
 
 
+_PUBLIC_INSTITUTION_RE = re.compile(r"^" + _PUBLIC_INSTITUTION_PREFIX + r"\d+$")
+
+
+def _load_previous_output(path=None):
+    """直近の本番出力（手元の data/mf-holdings.json）を読む。無い・壊れていれば None。"""
+    try:
+        with open(path or OUT, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return None
+
+
+def dry_run_report(doc, public_doc, prev, tol_pct=1.0):
+    """run --dry-run の表示行（件数と一致判定だけ）を返す。実名・金額は出さない（#687 §3.6）。
+
+    doc = 完全版（実名入り）、public_doc = sanitize_for_public(doc)、
+    prev = 直近の本番出力（None 可）。戻り値 (lines, ok)。ok は公開コピー検査の合否。"""
+    holdings = doc.get("holdings", [])
+    excluded = doc.get("totals", {}).get("excludedAccounts", [])
+    lines = [f"holdings={len(holdings)} excludedAccounts={len(excluded)}"]
+
+    if prev is None:
+        lines.append("直近出力との比較: 手元の mf-holdings.json が読めないため省略")
+    else:
+        prev_insts = {h.get("institution", "") for h in prev.get("holdings", [])}
+        prev_excl = set(prev.get("totals", {}).get("excludedAccounts", []))
+        if prev_insts and all(_PUBLIC_INSTITUTION_RE.match(i or "") for i in prev_insts):
+            lines.append("取込対象の金融機関の集合: 比較不可（直近出力が通し番号化済み）")
+        else:
+            same = {h.get("institution", "") for h in holdings} == prev_insts
+            lines.append(f"取込対象の金融機関の集合: {'一致' if same else '不一致'}")
+        lines.append(f"除外口座の集合: {'一致' if set(excluded) == prev_excl else '不一致'}")
+        prev_imp = prev.get("totals", {}).get("imported")
+        if isinstance(prev_imp, (int, float)):
+            within = _within(doc.get("totals", {}).get("imported", 0), prev_imp, tol_pct)
+            lines.append(f"imported: 直近出力の ±{tol_pct}% {'以内' if within else '超'}")
+        else:
+            lines.append("imported: 直近出力に値が無いため比較省略")
+
+    real_names = {h.get("institution", "") for h in holdings} - {""}
+    pub_holdings = public_doc.get("holdings", [])
+    not_numbered = sum(1 for h in pub_holdings if not _PUBLIC_INSTITUTION_RE.match(h.get("institution", "")))
+    real_left = sum(1 for h in pub_holdings if h.get("institution", "") in real_names)
+    pub_excl = len(public_doc.get("totals", {}).get("excludedAccounts", []))
+    has_liab = "liabilities" in public_doc
+    ok = not_numbered == 0 and real_left == 0 and pub_excl == 0 and not has_liab
+    lines.append(
+        f"公開コピー検査: 通し番号でない institution={not_numbered}行 実名の残る institution={real_left}行 "
+        f"excludedAccounts={pub_excl}件 liabilities={'あり' if has_liab else 'なし'} → {'OK' if ok else 'NG'}"
+    )
+    return lines, ok
+
+
 def do_run(c, dry_run=False):
     """無人 run。想定外例外も必ず notify して中止する（無音失敗を作らない・#479 H1）。
 
-    dry_run=True（`run --dry-run`・#685）は取得・検証までで止め、data/ への書き込み・
-    commit/push・KV 送信・履歴取得をしない。出力は件数と検証結果だけ（金額は出さない）。
-    """
+    dry_run=True（#687 `run --dry-run`）: 取得 → build → verify まで行い、ファイル書き出し・
+    update_real_assets・KV 送信・git・履歴取得をしない。件数と一致判定だけ表示する。"""
     try:
         net, rows, summary, liab, re_vals = fetch_with_retry(c)  # #685: 一時的な失敗だけ再試行
         if not rows:
@@ -940,7 +1011,11 @@ def do_run(c, dry_run=False):
         doc = build(c, net, rows)
         verify(c, doc, rows, summary)  # 失敗時 exit(>=2)＝コミットしない
         if dry_run:
-            _print_dry_run(doc, rows, liab, re_vals)
+            doc = attach_liabilities(c, doc, liab)  # 純関数（書き込みなし）。公開コピー検査用
+            lines, ok = dry_run_report(doc, sanitize_for_public(doc), _load_previous_output())
+            for line in lines:
+                print(f"[dry-run] {line}")
+            print(f"[dry-run] {'OK' if ok else 'NG'}（書き出し・KV 送信・commit/push はしていない）")
             return
         ra_updated = update_real_assets(c, re_vals)  # #580: attach より前＝当日 totals に新値を反映
         doc = attach_liabilities(c, doc, liab)  # verify 後＝資産チェックサムに影響しない（#577）＝完全版（KV送信用）
