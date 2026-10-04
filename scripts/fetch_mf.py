@@ -12,7 +12,8 @@
 使い方:
   python fetch_mf.py setup   # 初回: headful でブラウザを開く→手で MF ログイン(2FA)→プロファイル保存
   python fetch_mf.py run     # 定常: launchd が毎日叩く（無人）
-  python fetch_mf.py run --dry-run  # 確認用: 取得→build→verify のみ。書き出し・KV・commit/push なし（#687）
+  python fetch_mf.py run --dry-run  # 試運転: 取得（再試行込み）→build→verify と公開コピー検査まで。
+                                    # data/ 書き込み・commit/push・KV 送信・履歴取得をしない（#685・#687）
   （--dry-run 単独も同じ。未知の引数・打ち間違いは exit 2 で本番処理に入らない）
 
 ⚠ 資格情報（cookie・TG トークン等）はログ/コミットに出さない。
@@ -984,14 +985,21 @@ def _load_previous_output(path=None):
         return None
 
 
-def dry_run_report(doc, public_doc, prev, tol_pct=1.0):
+def dry_run_report(doc, public_doc, prev, tol_pct=1.0, fetch_counts=None):
     """run --dry-run の表示行（件数と一致判定だけ）を返す。実名・金額は出さない（#687 §3.6）。
 
     doc = 完全版（実名入り）、public_doc = sanitize_for_public(doc)、
-    prev = 直近の本番出力（None 可）。戻り値 (lines, ok)。ok は公開コピー検査の合否。"""
+    prev = 直近の本番出力（None 可）。fetch_counts = 取得件数 (rows, liab, re_vals)（#685・None 可）。
+    戻り値 (lines, ok)。ok は公開コピー検査の合否。"""
     holdings = doc.get("holdings", [])
     excluded = doc.get("totals", {}).get("excludedAccounts", [])
-    lines = [f"holdings={len(holdings)} excludedAccounts={len(excluded)}"]
+    first = f"holdings={len(holdings)} excludedAccounts={len(excluded)}"
+    if fetch_counts is not None:
+        rows, liab, re_vals = fetch_counts
+        liab_note = f"{len(liab)}" if liab is not None else "skipped"
+        re_note = f"{len(re_vals)}" if re_vals else "skipped"
+        first = f"verify=passed rows={len(rows)} {first} liabilities={liab_note} realEstate={re_note}"
+    lines = [first]
 
     if prev is None:
         lines.append("直近出力との比較: 手元の mf-holdings.json が読めないため省略")
@@ -1033,6 +1041,7 @@ def dry_run_report(doc, public_doc, prev, tol_pct=1.0):
 def do_run(c, dry_run=False):
     """無人 run。想定外例外も必ず notify して中止する（無音失敗を作らない・#479 H1）。
 
+    取得は fetch_with_retry（#685: 一時的な失敗だけ再試行）。
     dry_run=True（#687 `run --dry-run`）: 取得 → build → verify まで行い、ファイル書き出し・
     update_real_assets・KV 送信・git・履歴取得をしない。件数と一致判定だけ表示する。
     通知には先頭に [dry-run] を付ける。公開コピー検査が NG なら exit 4。"""
@@ -1048,7 +1057,9 @@ def do_run(c, dry_run=False):
         verify(c, doc, rows, summary)  # 失敗時 exit(>=2)＝コミットしない
         if dry_run:
             doc = attach_liabilities(c, doc, liab)  # 純関数（書き込みなし）。公開コピー検査用
-            lines, ok = dry_run_report(doc, sanitize_for_public(doc), _load_previous_output())
+            lines, ok = dry_run_report(
+                doc, sanitize_for_public(doc), _load_previous_output(), fetch_counts=(rows, liab, re_vals)
+            )
             for line in lines:
                 print(f"[dry-run] {line}")
             print(f"[dry-run] {'OK' if ok else 'NG'}（書き出し・KV 送信・commit/push はしていない）")
@@ -1076,17 +1087,6 @@ def do_run(c, dry_run=False):
         sys.exit(1)
     finally:
         _NOTIFY_PREFIX = ""
-
-
-def _print_dry_run(doc, rows, liab, re_vals):
-    """dry-run の結果を件数と検証結果だけで出す（金額・口座名は出さない）。"""
-    liab_note = f"{len(liab)}" if liab is not None else "skipped"
-    re_note = f"{len(re_vals)}" if re_vals else "skipped"
-    print(
-        f"DRY-RUN OK verify=passed rows={len(rows)} holdings={len(doc['holdings'])}"
-        f" liabilities={liab_note} realEstate={re_note}"
-        " (no write / no commit / no push / no KV)"
-    )
 
 
 def _run_history_script():

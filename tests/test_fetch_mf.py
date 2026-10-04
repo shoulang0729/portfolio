@@ -1210,7 +1210,7 @@ class TestFetchRetry(_RetryBase):
 
 
 _RUN_PATCHED = ("update_real_assets", "push_networth_to_worker", "git_commit_push", "_run_history_script", "OUT",
-                "_fetch_once")
+                "_fetch_once", "_load_previous_output")
 
 
 class _RunBase(_RetryBase):
@@ -1227,6 +1227,7 @@ class _RunBase(_RetryBase):
         fetch_mf.push_networth_to_worker = lambda doc: self.calls.append("push") or True
         fetch_mf.git_commit_push = lambda extra=(): self.calls.append("commit")
         fetch_mf._run_history_script = lambda: self.calls.append("history")
+        fetch_mf._load_previous_output = lambda path=None: None  # dry-run の直近出力比較は省略（#687）
 
     def tearDown(self):
         for name in _RUN_PATCHED:
@@ -1280,7 +1281,9 @@ class TestDoRunRetryScope(_RunBase):
         self.assertEqual(self.calls, ["fetch"])
 
 
-class TestDryRun(_RunBase):
+class TestDryRunRetryScope(_RunBase):
+    """#685: dry-run でも取得は再試行の経路を通り、検証まで行って副作用を呼ばない（表示は #687 形式）。"""
+
     def test_dry_run_skips_write_commit_kv_and_hides_amounts(self):
         self._set_fetch([self._good()])
         out = io.StringIO()
@@ -1289,8 +1292,9 @@ class TestDryRun(_RunBase):
         self.assertEqual(self.calls, ["fetch"])
         self.assertFalse(os.path.exists(self.out))
         text = out.getvalue()
-        self.assertIn("DRY-RUN OK", text)
-        self.assertIn("verify=passed", text)
+        self.assertIn("[dry-run] OK", text)
+        self.assertIn("[dry-run] verify=passed rows=7 holdings=5 excludedAccounts=2", text)
+        self.assertIn("liabilities=skipped realEstate=skipped", text)
         for amount in (NET, SUM_EQ, SUM_MF, SUM_DEPO):
             self.assertNotIn(f"{amount:,}", text)
             self.assertNotIn(str(amount), text)
