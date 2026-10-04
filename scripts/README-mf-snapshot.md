@@ -79,10 +79,10 @@
 
 | 症状 | 対処 |
 |---|---|
-| 「取得が 3 回とも一時的な失敗で中止」通知 | `err.log` の `attempt n/3 failed` 行で例外（TimeoutError / EAGAIN 等）を確認。Mac の再起動やプロキシ（UCSS）の状態を確認し、`launchctl kickstart -k gui/$(id -u)/com.toshio.mf-snapshot` で再実行 |
+| 「取得が 3 回とも一時的な失敗で中止」通知 | `err.log` の `attempt n/3 failed` 行で例外（TimeoutError / EAGAIN / net::ERR_* 等）を確認。表待ちのタイムアウトが続く場合は `fetch.dom` のセレクタずれの可能性。Mac の再起動やプロキシ（UCSS）の状態を確認し、`launchctl kickstart -k gui/$(id -u)/com.toshio.mf-snapshot` で再実行 |
 | 「ログイン切れ」通知 | `python3 scripts/fetch_mf.py setup` で再ログイン（MF がセッションを切った時だけ・稀） |
-| 「口座ズレ / 総額ズレ」通知 | 除外漏れ or セレクタずれ。`fetch.selectors` / `exclude.accounts` を確認。データは push されていない |
-| 「口座を1件も抽出できず」 | `fetch.selectors.accountSection` が実 DOM と不一致。DevTools で確認して修正 |
+| 「口座ズレ / 総額ズレ」通知 | 除外漏れ or セレクタずれ。`fetch.dom` / `exclude.accounts` を確認。データは push されていない |
+| 「口座を1件も抽出できず」 | `fetch.dom`（種類別テーブルのセレクタ/列マップ）が実 DOM と不一致。DevTools で確認して修正 |
 | MF が headless を弾く | `data/mf-import-config.json` の `fetch.headless` を `false` に（GUI セッションで headful 実行） |
 | ログ | `~/.mf-snapshot/out.log` / `err.log` |
 
