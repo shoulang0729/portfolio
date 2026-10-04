@@ -5,6 +5,7 @@ import { describe, it, expect } from 'vitest';
 
 import {
   validatePlan,
+  sanitizePlan,
   applyEvent,
   detectFills,
   normalizeYSymbol,
@@ -15,6 +16,9 @@ import {
   appendLog,
   OrderEventError,
   ORDER_LOG_MAX,
+  NOTE_MAX_LEN,
+  EVENT_LABEL_MAX_LEN,
+  STAGE_ID_MAX_LEN,
 } from '../worker/src/order-plan.js';
 
 const NOW = '2026-01-05T10:00:00Z';
@@ -611,5 +615,86 @@ describe('不正状態の plan への applyEvent（レビュー指摘）', () =>
     Object.assign(p.symbols.AAA.stages[0], { placedAt: '2026-10-03T14:00:00Z', orderedQty: 81, qtyAtPlace: 100 });
     p.symbols.AAA.stages[1].state = 'working';
     expect(detectFills(p, networth('2026-10-04', { AAA: 181 })).logs).toEqual([]);
+  });
+});
+
+describe('入力の上限・未知キーの除去（#686）', () => {
+  it('sanitizePlan: §3.1 に無いキーを各階層で取り除き、入力は変えない', () => {
+    const p = makePlan();
+    p.extra = 1;
+    p.funding.extra = 2;
+    p.funding.usdCashRows = [{ institution: 'I', name: 'N', extra: 3 }];
+    p.symbols.AAA.extra = 4;
+    p.symbols.AAA.stages[0].extra = 5;
+    const s = sanitizePlan(p);
+    expect(s).not.toHaveProperty('extra');
+    expect(s.funding).not.toHaveProperty('extra');
+    expect(s.funding.usdCashRows[0]).toEqual({ institution: 'I', name: 'N' });
+    expect(s.symbols.AAA).not.toHaveProperty('extra');
+    expect(s.symbols.AAA.stages[0]).not.toHaveProperty('extra');
+    expect(validatePlan(s).ok).toBe(true);
+    expect(p.extra).toBe(1);
+    expect(p.symbols.AAA.stages[0].extra).toBe(5);
+  });
+
+  it('sanitizePlan: 既知キーはそのまま（validatePlan の結果が変わらない）', () => {
+    const p = makePlan();
+    expect(sanitizePlan(p)).toEqual(p);
+  });
+
+  it('sanitizePlan: オブジェクトでない部分は残して検証でエラーにさせる', () => {
+    expect(sanitizePlan(null)).toBe(null);
+    expect(sanitizePlan([1])).toEqual([1]);
+    const p = makePlan();
+    p.symbols.AAA.stages = 'x';
+    expect(validatePlan(sanitizePlan(p)).ok).toBe(false);
+  });
+
+  it('sanitizePlan: __proto__ のシンボル名でプロトタイプを書き換えず、検証で弾く', () => {
+    const p = JSON.parse(
+      '{"schemaVersion":1,"funding":{"sweepSymbol":"CSH"},"symbols":{"__proto__":{"tier":"thick"}}}'
+    );
+    const s = sanitizePlan(p);
+    expect(Object.getPrototypeOf(s.symbols)).toBe(Object.prototype);
+    expect(Object.hasOwn(s.symbols, '__proto__')).toBe(true);
+    expect(validatePlan(s).ok).toBe(false);
+  });
+
+  it('validatePlan: note・baseEvent・段 id の長さ上限', () => {
+    const p = makePlan();
+    p.symbols.AAA.note = 'n'.repeat(NOTE_MAX_LEN);
+    p.symbols.AAA.baseEvent = 'e'.repeat(EVENT_LABEL_MAX_LEN);
+    expect(validatePlan(p).ok).toBe(true);
+    p.symbols.AAA.note = 'n'.repeat(NOTE_MAX_LEN + 1);
+    expect(validatePlan(p).errors.join()).toMatch(/note/);
+    p.symbols.AAA.note = '';
+    p.symbols.AAA.baseEvent = 'e'.repeat(EVENT_LABEL_MAX_LEN + 1);
+    expect(validatePlan(p).errors.join()).toMatch(/baseEvent/);
+    p.symbols.AAA.baseEvent = 'manual';
+    p.symbols.AAA.stages[0].id = 'i'.repeat(STAGE_ID_MAX_LEN + 1);
+    expect(validatePlan(p).errors.join()).toMatch(/id/);
+  });
+
+  it('applyEvent: review / rebase の event が長すぎると OrderEventError', () => {
+    const long = 'e'.repeat(EVENT_LABEL_MAX_LEN + 1);
+    expect(() => applyEvent(makePlan(), { type: 'review', event: long }, { now: NOW })).toThrow(OrderEventError);
+    expect(() =>
+      applyEvent(makePlan(), { type: 'rebase', symbol: 'AAA', basePrice: 300, event: long }, { now: NOW })
+    ).toThrow(OrderEventError);
+    const ok = applyEvent(makePlan(), { type: 'review', event: 'e'.repeat(EVENT_LABEL_MAX_LEN) }, { now: NOW });
+    expect(ok.log.event.length).toBe(EVENT_LABEL_MAX_LEN);
+  });
+
+  it('applyEvent: review の symbol は形が正しいものだけログに残す（不正は OrderEventError）', () => {
+    const ok = applyEvent(makePlan(), { type: 'review', event: 'CPI', symbol: 'AAA' }, { now: NOW });
+    expect(ok.log.symbol).toBe('AAA');
+    expect(() =>
+      applyEvent(makePlan(), { type: 'review', event: 'CPI', symbol: 'x'.repeat(1000) }, { now: NOW })
+    ).toThrow(OrderEventError);
+  });
+
+  it('applyEvent: 未知のキーはログに入らない', () => {
+    const { log } = applyEvent(makePlan(), { type: 'review', event: 'CPI', junk: 'y'.repeat(100) }, { now: NOW });
+    expect(log).not.toHaveProperty('junk');
   });
 });
