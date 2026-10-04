@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "funding": {
+    "sweepSymbol": "JPST",
+    "useUsdCash": true,
+    "usdCashRows": [{ "institution": "EXAMPLE証券", "name": "米ドル預り金" }]
+  },
+  "symbols": {
+    "AAA": {
+      "tier": "thick",
+      "targetUsd": 100000,
+      "lot": 1,
+      "basePrice": 400,
+      "baseAt": "2026-01-05T12:00:00Z",
+      "baseEvent": "manual",
+      "note": "合成値のサンプル（架空ティッカー）",
+      "stages": [
+        { "id": "s1", "side": "buy", "amountUsd": 29808, "dropPct": 8, "limit": 368, "qty": null, "state": "working", "placedAt": null, "orderedQty": null, "orderedLimit": null, "qtyAtPlace": null, "filledQty": 0, "filledAt": null, "fillSource": null },
+        { "id": "s2", "side": "buy", "amountUsd": 40000, "dropPct": 20, "limit": 320, "qty": null, "state": "waiting", "placedAt": null, "orderedQty": null, "orderedLimit": null, "qtyAtPlace": null, "filledQty": 0, "filledAt": null, "fillSource": null },
+        { "id": "s3", "side": "buy", "amountUsd": 30000, "dropPct": 30, "limit": null, "qty": null, "state": "waiting", "placedAt": null, "orderedQty": null, "orderedLimit": null, "qtyAtPlace": null, "filledQty": 0, "filledAt": null, "fillSource": null }
+      ]
+    },
+    "BBB": {
+      "tier": "thin",
+      "targetUsd": 50000,
+      "lot": 1,
+      "basePrice": 100,
+      "baseAt": "2026-01-05T12:00:00Z",
+      "baseEvent": "manual",
+      "note": "",
+      "stages": [
+        { "id": "s1", "side": "buy", "amountUsd": 9000, "dropPct": 10, "limit": 90, "qty": null, "state": "working", "placedAt": "2026-01-05T14:00:00Z", "orderedQty": 100, "orderedLimit": 90, "qtyAtPlace": 200, "filledQty": 0, "filledAt": null, "fillSource": null },
+        { "id": "s2", "side": "buy", "amountUsd": 8000, "dropPct": 20, "limit": 80, "qty": null, "state": "waiting", "placedAt": null, "orderedQty": null, "orderedLimit": null, "qtyAtPlace": null, "filledQty": 0, "filledAt": null, "fillSource": null }
+      ]
+    },
+    "CCC": {
+      "tier": "theme",
+      "targetUsd": null,
+      "lot": 1,
+      "basePrice": 250,
+      "baseAt": "2026-01-05T12:00:00Z",
+      "baseEvent": "manual",
+      "note": "",
+      "stages": [
+        { "id": "s1", "side": "buy", "amountUsd": 11500, "dropPct": 8, "limit": 230, "qty": null, "state": "working", "placedAt": null, "orderedQty": null, "orderedLimit": null, "qtyAtPlace": null, "filledQty": 0, "filledAt": null, "fillSource": null }
+      ]
+    },
+    "DDD": {
+      "tier": "exit",
+      "targetUsd": null,
+      "lot": 1,
+      "basePrice": null,
+      "baseAt": null,
+      "baseEvent": null,
+      "note": "売り切り（成行・全株）",
+      "stages": [
+        { "id": "s1", "side": "sell", "amountUsd": null, "dropPct": null, "limit": null, "qty": "all", "state": "working", "placedAt": null, "orderedQty": null, "orderedLimit": null, "qtyAtPlace": null, "filledQty": 0, "filledAt": null, "fillSource": null }
+      ]
+    }
+  }
+}

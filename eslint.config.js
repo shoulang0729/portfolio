@@ -7,7 +7,7 @@ export default [
     ignores: ['src/_disabled/**', 'tests/spec_validation.test.js', 'dist/**'],
   },
   {
-    files: ['src/**/*.js', 'worker/src/**/*.js'],
+    files: ['src/**/*.js', 'worker/src/**/*.js', 'scripts/**/*.mjs'],
     plugins: {
       import: importPlugin,
     },
@@ -43,6 +43,15 @@ export default [
       }],
       'import/no-duplicates': 'error',
       'import/newline-after-import': 'warn',
+    },
+  },
+  {
+    // Node で動く運用スクリプト（scripts/order-plan.mjs 等）
+    files: ['scripts/**/*.mjs'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
     },
   },
 ];

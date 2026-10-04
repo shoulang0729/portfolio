@@ -38,3 +38,7 @@ data/scheduler/edinet-config.json
 
 # Python bytecode（ローカルで scripts/tests の unittest 実行時に生成）
 __pycache__/
+
+# 注文表 plan の実値（リポ外に置く。誤コミット防止の保険・docs/order-sheet-ops.md・#675）
+*.order-plan.json
+private/
