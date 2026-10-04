@@ -52,6 +52,7 @@ import {
   detectFills,
   isUsdSymbol,
   isValidSymbolKey,
+  sanitizePlan,
   validatePlan,
 } from './order-plan.js';
 import { buildOrderSheet } from './order-sheet-calc.js';
@@ -1117,6 +1118,7 @@ const ORDER_PLAN_KEY = 'order:plan';
 const ORDER_LOG_KEY = 'order:log';
 const ORDER_STRATEGY_URL = 'https://raw.githubusercontent.com/shoulang0729/portfolio/main/data/target-allocation.json';
 const ORDER_PRICE_MAX_AGE_MS = 7 * 60 * 60 * 1000; // prices:cache は 7h 以内のみ採用（§6.1）
+const ORDER_BODY_MAX_BYTES = 256 * 1024; // PUT /order-sheet/plan・POST /order-sheet/events の body 上限（超過は 413・#686）
 
 /** 注文表ルートの応答に Cache-Control: no-store を付ける（既存の jsonRes/errRes は変えない） */
 function _noStore(res) {
@@ -1138,11 +1140,36 @@ async function _kvJson(env, key) {
   return raw ? JSON.parse(raw) : null;
 }
 
+/**
+ * 注文表ルートの JSON body を読む（ORDER_BODY_MAX_BYTES 超は tooLarge・#686）。
+ * Content-Length が上限超なら本文を読まずに tooLarge。無い・偽りの場合も読んだ後のバイト数で判定する。
+ * @returns {Promise<{ok: boolean, body: any, tooLarge?: boolean}>}
+ */
 async function _readJsonBody(request) {
+  const declared = Number(request.headers.get('Content-Length'));
+  if (Number.isFinite(declared) && declared > ORDER_BODY_MAX_BYTES) return { ok: false, body: null, tooLarge: true };
+  let text;
   try {
-    return { ok: true, body: await request.json() };
+    text = await request.text();
   } catch {
     return { ok: false, body: null };
+  }
+  if (new TextEncoder().encode(text).length > ORDER_BODY_MAX_BYTES) return { ok: false, body: null, tooLarge: true };
+  try {
+    return { ok: true, body: JSON.parse(text) };
+  } catch {
+    return { ok: false, body: null };
+  }
+}
+
+/** order:plan・order:log を書く。失敗は false（呼び出し側が 500。例外の内容は console に出さない） */
+async function _putOrderKv(env, entries, tag) {
+  try {
+    for (const [key, val] of entries) await env.KV.put(key, JSON.stringify(val));
+    return true;
+  } catch (e) {
+    console.warn(tag, 'KV 書き込み失敗', e?.name);
+    return false;
   }
 }
 
@@ -1313,8 +1340,10 @@ async function handleOrderSheetPlan(request, env, origin) {
   }
 
   if (request.method === 'PUT') {
-    const { ok, body } = await _readJsonBody(request);
+    const { ok, body: raw, tooLarge } = await _readJsonBody(request);
+    if (tooLarge) return _osErr('body が大きすぎます', 413, origin);
     if (!ok) return _osErr('JSON 不正', 400, origin);
+    const body = sanitizePlan(raw); // §3.1 に無いキーは保存しない（#686）
     const v = validatePlan(body);
     if (!v.ok) return _osErr('plan が不正です', 400, origin, { errors: v.errors });
 
@@ -1331,8 +1360,11 @@ async function handleOrderSheetPlan(request, env, origin) {
 
     const now = new Date().toISOString();
     const next = { ...body, rev: (current ? curRev : Number.isInteger(body.rev) ? body.rev : 0) + 1, updatedAt: now };
-    await env.KV.put(ORDER_PLAN_KEY, JSON.stringify(next));
-    await env.KV.put(ORDER_LOG_KEY, JSON.stringify(appendLog(log, [{ at: now, type: 'plan-put', rev: next.rev }])));
+    const written = await _putOrderKv(env, [
+      [ORDER_PLAN_KEY, next],
+      [ORDER_LOG_KEY, appendLog(log, [{ at: now, type: 'plan-put', rev: next.rev }])],
+    ], '[order-sheet/plan]');
+    if (!written) return _osErr('KV への保存に失敗しました', 500, origin);
     console.warn('[order-sheet/plan] plan-put');
     return _osJson({ ok: true, rev: next.rev, updatedAt: now }, 200, origin);
   }
@@ -1346,7 +1378,8 @@ async function handleOrderSheetEvents(request, env, origin) {
   if (authErr) return _noStore(authErr);
   if (request.method !== 'POST') return _osErr('POST のみ許可', 405, origin);
 
-  const { ok, body } = await _readJsonBody(request);
+  const { ok, body, tooLarge } = await _readJsonBody(request);
+  if (tooLarge) return _osErr('body が大きすぎます', 413, origin);
   if (!ok) return _osErr('JSON 不正', 400, origin);
   if (!body || typeof body !== 'object' || Array.isArray(body)) return _osErr('object が必要です', 400, origin);
   if (!Number.isInteger(body.rev)) return _osErr('rev（整数）が必要です', 400, origin);
@@ -1377,8 +1410,11 @@ async function handleOrderSheetEvents(request, env, origin) {
     return _osErr('イベントの適用に失敗しました', 500, origin);
   }
   const newLog = appendLog(log, [result.log]);
-  await env.KV.put(ORDER_PLAN_KEY, JSON.stringify(result.plan));
-  await env.KV.put(ORDER_LOG_KEY, JSON.stringify(newLog));
+  const written = await _putOrderKv(env, [
+    [ORDER_PLAN_KEY, result.plan],
+    [ORDER_LOG_KEY, newLog],
+  ], '[order-sheet/events]');
+  if (!written) return _osErr('KV への保存に失敗しました', 500, origin);
   console.warn('[order-sheet/events]', event.type, typeof event.symbol === 'string' ? event.symbol.slice(0, 12) : '');
 
   try {

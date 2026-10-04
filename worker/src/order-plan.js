@@ -189,6 +189,105 @@ export function hasQty(networth) {
   return rows.some((r) => isNum(r?.qty));
 }
 
+// ── 入力の上限・未知キーの除去（#686） ─────────────────────
+
+/** `symbols.<SYM>.note` の最大文字数（表示用の短文） */
+export const NOTE_MAX_LEN = 500;
+/** 見直しの契機（event の `event`・plan の `baseEvent`）の最大文字数 */
+export const EVENT_LABEL_MAX_LEN = 64;
+/** 段の `id` の最大文字数 */
+export const STAGE_ID_MAX_LEN = 32;
+/** `funding.usdCashRows[].institution` / `name` の最大文字数 */
+export const CASH_ROW_TEXT_MAX_LEN = 100;
+/** 時刻文字列（`updatedAt`・`baseAt`・`placedAt`・`filledAt`）の最大文字数 */
+export const TIME_TEXT_MAX_LEN = 40;
+
+const PLAN_KEYS = ['schemaVersion', 'rev', 'updatedAt', 'funding', 'symbols'];
+const FUNDING_KEYS = ['sweepSymbol', 'useUsdCash', 'usdCashRows'];
+const CASH_ROW_KEYS = ['institution', 'name'];
+const SYMBOL_KEYS = ['tier', 'targetUsd', 'lot', 'basePrice', 'baseAt', 'baseEvent', 'note', 'stages'];
+const STAGE_KEYS = [
+  'id',
+  'side',
+  'amountUsd',
+  'dropPct',
+  'limit',
+  'qty',
+  'state',
+  'placedAt',
+  'orderedQty',
+  'orderedLimit',
+  'qtyAtPlace',
+  'filledQty',
+  'filledAt',
+  'fillSource',
+];
+
+/**
+ * 自前のプロパティとして代入する（`__proto__` 等のキーでもプロトタイプを書き換えない）
+ * @param {Record<string, any>} o
+ * @param {string} k
+ * @param {any} v
+ */
+function defineOwn(o, k, v) {
+  Object.defineProperty(o, k, { value: v, enumerable: true, writable: true, configurable: true });
+}
+
+/**
+ * 許可したキーだけを残した複製（オブジェクトでなければそのまま返す＝検証側でエラーにする）
+ * @param {unknown} obj
+ * @param {string[]} keys
+ * @returns {any}
+ */
+function pickKeys(obj, keys) {
+  if (!isObj(obj)) return obj;
+  /** @type {Record<string, any>} */
+  const out = {};
+  for (const k of keys) {
+    if (Object.hasOwn(obj, k)) out[k] = obj[k];
+  }
+  return out;
+}
+
+/**
+ * plan から §3.1 に無いキーを取り除いた複製を返す（入力は変更しない）。
+ * 形の検証はしない（validatePlan の役目）。オブジェクトでない部分はそのまま残し、検証でエラーにさせる。
+ * symbols のキー（シンボル名）は除去しない（不正な名前は validatePlan が報告する）。
+ * @param {unknown} plan
+ * @returns {any}
+ */
+export function sanitizePlan(plan) {
+  if (!isObj(plan)) return plan;
+  const src = clonePlan(/** @type {any} */ (plan));
+  const out = pickKeys(src, PLAN_KEYS);
+  if (isObj(out.funding)) {
+    out.funding = pickKeys(out.funding, FUNDING_KEYS);
+    if (Array.isArray(out.funding.usdCashRows)) {
+      out.funding.usdCashRows = out.funding.usdCashRows.map((r) => pickKeys(r, CASH_ROW_KEYS));
+    }
+  }
+  if (isObj(out.symbols)) {
+    /** @type {Record<string, any>} */
+    const syms = {};
+    for (const [sym, cfg] of Object.entries(out.symbols)) {
+      const c = pickKeys(cfg, SYMBOL_KEYS);
+      if (isObj(c) && Array.isArray(c.stages)) c.stages = c.stages.map((st) => pickKeys(st, STAGE_KEYS));
+      defineOwn(syms, sym, c);
+    }
+    out.symbols = syms;
+  }
+  return out;
+}
+
+/**
+ * 文字列の長さ上限（null/undefined は対象外）
+ * @param {unknown} v
+ * @param {number} max
+ */
+function tooLong(v, max) {
+  return typeof v === 'string' && v.length > max;
+}
+
 // ── 検証（§3.1・§5.3） ──────────────────────────────────────
 
 /**
@@ -204,6 +303,7 @@ export function validatePlan(plan) {
 
   if (p.schemaVersion !== PLAN_SCHEMA_VERSION) errors.push(`schemaVersion は ${PLAN_SCHEMA_VERSION} であること`);
   if (p.rev != null && !(Number.isInteger(p.rev) && p.rev >= 0)) errors.push('rev は 0 以上の整数であること');
+  if (tooLong(p.updatedAt, TIME_TEXT_MAX_LEN)) errors.push(`updatedAt は ${TIME_TEXT_MAX_LEN} 文字以内であること`);
 
   // funding
   if (!isObj(p.funding)) {
@@ -230,6 +330,11 @@ export function validatePlan(plan) {
           const okInst = r.institution == null || typeof r.institution === 'string';
           const okName = r.name == null || typeof r.name === 'string';
           if (!okInst || !okName) errors.push(`funding.usdCashRows[${i}] の institution / name は文字列であること`);
+          if (tooLong(r.institution, CASH_ROW_TEXT_MAX_LEN) || tooLong(r.name, CASH_ROW_TEXT_MAX_LEN)) {
+            errors.push(
+              `funding.usdCashRows[${i}] の institution / name は ${CASH_ROW_TEXT_MAX_LEN} 文字以内であること`
+            );
+          }
           if (!r.institution && !r.name)
             errors.push(`funding.usdCashRows[${i}] は institution か name のどちらかが必要`);
         });
@@ -263,6 +368,11 @@ export function validatePlan(plan) {
     if (cfg.lot != null && !isPosInt(cfg.lot)) errors.push(`${at}.lot は正の整数であること`);
     if (cfg.basePrice != null && !isPosNum(cfg.basePrice)) errors.push(`${at}.basePrice は正の数か null であること`);
     if (cfg.note != null && typeof cfg.note !== 'string') errors.push(`${at}.note は文字列であること`);
+    if (tooLong(cfg.note, NOTE_MAX_LEN)) errors.push(`${at}.note は ${NOTE_MAX_LEN} 文字以内であること`);
+    if (tooLong(cfg.baseEvent, EVENT_LABEL_MAX_LEN)) {
+      errors.push(`${at}.baseEvent は ${EVENT_LABEL_MAX_LEN} 文字以内であること`);
+    }
+    if (tooLong(cfg.baseAt, TIME_TEXT_MAX_LEN)) errors.push(`${at}.baseAt は ${TIME_TEXT_MAX_LEN} 文字以内であること`);
     if (!Array.isArray(cfg.stages)) {
       errors.push(`${at}.stages は配列であること`);
       continue;
@@ -276,6 +386,7 @@ export function validatePlan(plan) {
         return;
       }
       if (typeof st.id !== 'string' || !st.id) errors.push(`${sat}.id は空でない文字列であること`);
+      else if (st.id.length > STAGE_ID_MAX_LEN) errors.push(`${sat}.id は ${STAGE_ID_MAX_LEN} 文字以内であること`);
       else if (ids.has(st.id)) errors.push(`${sat}.id が重複（${st.id}）`);
       else ids.add(st.id);
       if (!SIDES.includes(st.side)) errors.push(`${sat}.side は buy | sell`);
@@ -308,6 +419,9 @@ export function validatePlan(plan) {
       }
       if (st.fillSource != null && !FILL_SOURCES.includes(st.fillSource)) {
         errors.push(`${sat}.fillSource は ${FILL_SOURCES.join(' | ')} のいずれか`);
+      }
+      if (tooLong(st.placedAt, TIME_TEXT_MAX_LEN) || tooLong(st.filledAt, TIME_TEXT_MAX_LEN)) {
+        errors.push(`${sat}.placedAt / filledAt は ${TIME_TEXT_MAX_LEN} 文字以内であること`);
       }
       if (st.placedAt != null && st.state !== 'working' && st.state !== 'filled' && st.state !== 'cancelled') {
         errors.push(`${sat}: placedAt があるのに state=${st.state}`);
@@ -407,15 +521,24 @@ export function applyEvent(plan, event, ctx) {
   const needSymbol = () => {
     const sym = typeof event.symbol === 'string' ? event.symbol : '';
     const cfg = isValidSymbolKey(sym) ? ownGet(next.symbols, sym) : undefined;
-    if (!isObj(cfg)) throw new OrderEventError(`symbol が plan に無い: ${sym || '(空)'}`);
+    if (!isObj(cfg)) throw new OrderEventError(`symbol が plan に無い: ${sym.slice(0, 16) || '(空)'}`);
     log.symbol = sym;
     return { sym, cfg };
   };
   const needStage = (cfg) => {
     const st = Array.isArray(cfg.stages) ? cfg.stages.find((s) => s.id === event.stageId) : null;
-    if (!st) throw new OrderEventError(`stageId が無い: ${event.stageId ?? '(空)'}`);
+    if (!st)
+      throw new OrderEventError(
+        `stageId が無い: ${typeof event.stageId === 'string' && event.stageId ? event.stageId.slice(0, STAGE_ID_MAX_LEN) : '(空)'}`
+      );
     log.stageId = st.id;
     return st;
+  };
+  const needEventLabel = () => {
+    if (typeof event.event !== 'string' || !event.event) throw new OrderEventError('event（見直しの契機）が必要');
+    if (event.event.length > EVENT_LABEL_MAX_LEN) {
+      throw new OrderEventError(`event（見直しの契機）は ${EVENT_LABEL_MAX_LEN} 文字以内`);
+    }
   };
   const needWorking = (cfg, st) => {
     const first = cfg.stages.find(isOpenStage);
@@ -493,7 +616,7 @@ export function applyEvent(plan, event, ctx) {
     case 'rebase': {
       const { cfg } = needSymbol();
       if (!isPosNum(event.basePrice)) throw new OrderEventError('basePrice は正の数');
-      if (typeof event.event !== 'string' || !event.event) throw new OrderEventError('event（見直しの契機）が必要');
+      needEventLabel();
       cfg.basePrice = event.basePrice;
       cfg.baseAt = now;
       cfg.baseEvent = event.event;
@@ -514,9 +637,12 @@ export function applyEvent(plan, event, ctx) {
       break;
     }
     case 'review': {
-      if (typeof event.event !== 'string' || !event.event) throw new OrderEventError('event（見直しの契機）が必要');
+      needEventLabel();
       log.event = event.event;
-      if (typeof event.symbol === 'string' && event.symbol) log.symbol = event.symbol;
+      if (event.symbol != null && event.symbol !== '') {
+        if (!isValidSymbolKey(event.symbol)) throw new OrderEventError('symbol の形が不正');
+        log.symbol = event.symbol;
+      }
       break;
     }
     default:

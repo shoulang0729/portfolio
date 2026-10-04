@@ -162,6 +162,17 @@ describe('注文表ルート: PIN 必須・Cache-Control', () => {
     expect(env.KV.put).not.toHaveBeenCalled();
   });
 
+  it.each(ROUTES)('%s %s: 401 のとき認証前に auth:pin-hash 以外の KV.get をしない', async (path, method) => {
+    for (const pin of [null, 'wrong']) {
+      const env = makeEnv({ 'order:plan': makePlan(), networth: makeNetworth(), 'order:log': [] });
+      const res = await worker.fetch(req(path, { method, pin, body: method === 'GET' ? undefined : {} }), env);
+      expect(res.status).toBe(401);
+      const keys = env.KV.get.mock.calls.map((c) => c[0]);
+      expect(keys.every((k) => k === 'auth:pin-hash')).toBe(true);
+      expect(keys.length).toBeLessThanOrEqual(1);
+    }
+  });
+
   it('PIN 未設定サーバーでは 428（verifyPinHash の既存挙動）', async () => {
     const env = makeEnv();
     env.KV.store.delete('auth:pin-hash');
@@ -549,5 +560,104 @@ describe('console に値を出さない', () => {
       expect(out).not.toContain(v);
     }
     expect(out).toContain('AAA'); // シンボルと type は出してよい
+  });
+});
+
+describe('入力サイズの上限・未知キーの除去（#686）', () => {
+  const big = () => JSON.stringify({ ...makePlan({ rev: 3 }), pad: 'x'.repeat(256 * 1024) });
+
+  it('PUT /order-sheet/plan: body が 256KB 超は 413（KV に書かない・no-store）', async () => {
+    const env = makeEnv({ 'order:plan': makePlan() });
+    const res = await worker.fetch(req('/order-sheet/plan', { method: 'PUT', body: big() }), env);
+    expect(res.status).toBe(413);
+    expect(res.headers.get('Cache-Control')).toBe('no-store');
+    expect(env.KV.put).not.toHaveBeenCalled();
+  });
+
+  it('POST /order-sheet/events: body が 256KB 超は 413（KV に書かない）', async () => {
+    const env = makeEnv({ 'order:plan': makePlan(), networth: makeNetworth() });
+    const body = JSON.stringify({ rev: 3, type: 'review', event: 'x'.repeat(256 * 1024) });
+    const res = await worker.fetch(req('/order-sheet/events', { method: 'POST', body }), env);
+    expect(res.status).toBe(413);
+    expect(env.KV.put).not.toHaveBeenCalled();
+  });
+
+  it('マルチバイト文字はバイト数で数える（文字数は上限未満でも 413）', async () => {
+    const env = makeEnv();
+    const body = JSON.stringify({ ...makePlan(), pad: 'あ'.repeat(100 * 1024) }); // 約 300KB
+    const res = await worker.fetch(req('/order-sheet/plan', { method: 'PUT', body }), env);
+    expect(res.status).toBe(413);
+  });
+
+  it('401 は 413 より先（認証前に本文を評価しない）', async () => {
+    const env = makeEnv();
+    const res = await worker.fetch(req('/order-sheet/plan', { method: 'PUT', pin: null, body: big() }), env);
+    expect(res.status).toBe(401);
+  });
+
+  it('PUT: §3.1 に無いキーは保存しない', async () => {
+    const env = makeEnv({ 'order:plan': makePlan({ rev: 7 }) });
+    const next = makePlan({ rev: 7, extra: 'drop-me' });
+    next.funding.extra = 1;
+    next.funding.usdCashRows = [{ institution: 'Bank X', name: 'USD', extra: 2 }];
+    next.symbols.AAA.extra = 3;
+    next.symbols.AAA.stages[0].extra = 4;
+    const res = await worker.fetch(req('/order-sheet/plan', { method: 'PUT', body: next }), env);
+    expect(res.status).toBe(200);
+    const saved = JSON.parse(env.KV.store.get('order:plan'));
+    expect(saved).not.toHaveProperty('extra');
+    expect(saved.funding).not.toHaveProperty('extra');
+    expect(saved.funding.usdCashRows[0]).toEqual({ institution: 'Bank X', name: 'USD' });
+    expect(saved.symbols.AAA).not.toHaveProperty('extra');
+    expect(saved.symbols.AAA.stages[0]).not.toHaveProperty('extra');
+    expect(saved.symbols.AAA.stages[0]).toMatchObject({ id: 's1', side: 'buy', amountUsd: 30000 });
+  });
+
+  it('PUT: note が長すぎると 400（KV に書かない）', async () => {
+    const env = makeEnv({ 'order:plan': makePlan({ rev: 7 }) });
+    const next = makePlan({ rev: 7 });
+    next.symbols.AAA.note = 'n'.repeat(501);
+    const res = await worker.fetch(req('/order-sheet/plan', { method: 'PUT', body: next }), env);
+    expect(res.status).toBe(400);
+    expect(env.KV.put).not.toHaveBeenCalled();
+  });
+
+  it('events: review の event が長すぎると 400（KV に書かない）', async () => {
+    const env = makeEnv({ 'order:plan': makePlan(), networth: makeNetworth() });
+    const res = await worker.fetch(
+      req('/order-sheet/events', { method: 'POST', body: { rev: 3, type: 'review', event: 'e'.repeat(65) } }),
+      env
+    );
+    expect(res.status).toBe(400);
+    expect(env.KV.put).not.toHaveBeenCalled();
+  });
+});
+
+describe('KV.put の失敗（#686）', () => {
+  it('PUT /order-sheet/plan: KV.put が投げたら 500（CORS・no-store 付き・値を console に出さない）', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const env = makeEnv({ 'order:plan': makePlan({ rev: 7 }) });
+    env.KV.put.mockRejectedValue(new Error('kv down 98765'));
+    const next = makePlan({ rev: 7 });
+    const res = await worker.fetch(req('/order-sheet/plan', { method: 'PUT', body: next }), env);
+    expect(res.status).toBe(500);
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBeTruthy();
+    expect(res.headers.get('Cache-Control')).toBe('no-store');
+    expect((await res.json()).error).toBeTruthy();
+    expect(JSON.stringify(warn.mock.calls)).not.toContain('98765');
+    expect(JSON.stringify(warn.mock.calls)).not.toContain('100000');
+  });
+
+  it('POST /order-sheet/events: KV.put が投げたら 500（CORS・no-store 付き）', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const env = makeEnv({ 'order:plan': makePlan(), networth: makeNetworth() });
+    env.KV.put.mockRejectedValue(new Error('kv down'));
+    const res = await worker.fetch(
+      req('/order-sheet/events', { method: 'POST', body: { rev: 3, type: 'placed', symbol: 'AAA', stageId: 's1' } }),
+      env
+    );
+    expect(res.status).toBe(500);
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBeTruthy();
+    expect(res.headers.get('Cache-Control')).toBe('no-store');
   });
 });
