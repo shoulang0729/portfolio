@@ -723,5 +723,397 @@ class TestUpdateRealAssets(unittest.TestCase):
         self.assertEqual(fetch_mf.update_real_assets(self.c, None), 0)
 
 
+
+# ── #685 B2/B3: 再試行・待ち条件・dry-run（Playwright はモック・合成値のみ） ──────────
+import io  # noqa: E402
+import errno  # noqa: E402
+import tempfile  # noqa: E402
+import contextlib  # noqa: E402
+
+
+class _FakeCtx:
+    def __init__(self, log, close_raises=False):
+        self.log = log
+        self.pages = ["page"]
+        self.close_raises = close_raises
+
+    def close(self):
+        self.log.append("close")
+        if self.close_raises:
+            raise fetch_mf.PlaywrightError("close failed")
+
+
+class _FakePlaywright:
+    """sync_playwright() の代替。launch の振る舞いを試行ごとに台本で決める。"""
+
+    def __init__(self, launch_script, log, close_raises=False):
+        self.launch_script = launch_script
+        self.log = log
+        self.close_raises = close_raises
+        self.chromium = self
+
+    def __call__(self):
+        return self
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+    def launch_persistent_context(self, udd, headless=False):
+        self.log.append("launch")
+        action = self.launch_script.pop(0) if self.launch_script else None
+        if isinstance(action, BaseException):
+            raise action
+        return _FakeCtx(self.log, self.close_raises)
+
+
+class _RetryBase(unittest.TestCase):
+    def setUp(self):
+        self.c = _load_config()
+        self.tmp = tempfile.TemporaryDirectory()
+        self.c["fetch"]["userDataDir"] = os.path.join(self.tmp.name, "profile")
+        self.notified = []
+        self.sleeps = []
+        self.log = []
+        self._saved = {
+            "notify": fetch_mf.notify,
+            "sync_playwright": fetch_mf.sync_playwright,
+            "_scrape_all": fetch_mf._scrape_all,
+            "sleep": fetch_mf.time.sleep,
+        }
+        fetch_mf.notify = lambda msg, *a, **k: self.notified.append(msg)
+        fetch_mf.time.sleep = lambda sec: self.sleeps.append(sec)
+
+    def tearDown(self):
+        fetch_mf.notify = self._saved["notify"]
+        fetch_mf.sync_playwright = self._saved["sync_playwright"]
+        fetch_mf._scrape_all = self._saved["_scrape_all"]
+        fetch_mf.time.sleep = self._saved["sleep"]
+        self.tmp.cleanup()
+
+    def _install(self, launch_script=(), scrape_script=(), close_raises=False):
+        fetch_mf.sync_playwright = _FakePlaywright(list(launch_script), self.log, close_raises)
+        script = list(scrape_script)
+
+        def _fake_scrape_all(page, c):
+            self.log.append("scrape")
+            action = script.pop(0) if script else "ok"
+            if isinstance(action, BaseException):
+                raise action
+            if callable(action):
+                return action()
+            return ("NET", ["row"], {}, None, None)
+
+        fetch_mf._scrape_all = _fake_scrape_all
+
+    def _run_quiet(self, fn, *a, **k):
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            out = fn(*a, **k)
+        return out, err.getvalue()
+
+
+class TestFetchRetry(_RetryBase):
+    def test_constants(self):
+        self.assertEqual(fetch_mf.FETCH_ATTEMPTS, 3)
+        self.assertEqual(tuple(fetch_mf.FETCH_RETRY_WAITS), (30, 120))
+
+    def test_a_timeout_then_success_no_notify(self):
+        self._install(scrape_script=[fetch_mf.PlaywrightTimeoutError("Page.goto: Timeout 45000ms exceeded."), "ok"])
+        result, err = self._run_quiet(fetch_mf.fetch_with_retry, self.c)
+        self.assertEqual(result, ("NET", ["row"], {}, None, None))
+        self.assertEqual(self.log.count("launch"), 2)
+        self.assertEqual(self.sleeps, [30])
+        self.assertEqual(self.notified, [])
+        self.assertIn("attempt 1/3 failed: ", err)
+        self.assertIn("TimeoutError (Page.goto: Timeout 45000ms exceeded.)", err)
+        self.assertIn("retry in 30s", err)
+        self.assertIn("attempt 2/3 succeeded", err)
+
+    def test_first_try_success_is_silent(self):
+        self._install()
+        _, err = self._run_quiet(fetch_mf.fetch_with_retry, self.c)
+        self.assertEqual(err, "")
+        self.assertEqual(self.log, ["launch", "scrape", "close"])
+        self.assertEqual(self.notified, [])
+
+    def test_b_eagain_three_times_gives_up_with_one_notify(self):
+        self._install(launch_script=[OSError(errno.EAGAIN, "Resource temporarily unavailable")] * 3)
+        with self.assertRaises(SystemExit) as cm:
+            self._run_quiet(fetch_mf.fetch_with_retry, self.c)
+        self.assertEqual(cm.exception.code, 1)
+        self.assertEqual(self.log.count("launch"), 3)
+        self.assertEqual(self.sleeps, [30, 120])
+        self.assertEqual(len(self.notified), 1)
+        self.assertIn("3 回", self.notified[0])
+        # OSError(EAGAIN) は Python が BlockingIOError として生成する
+        self.assertIn("BlockingIOError", self.notified[0])
+
+    def test_b_blocking_io_error_is_transient(self):
+        self._install(launch_script=[BlockingIOError(errno.EAGAIN, "Resource temporarily unavailable"), None])
+        result, _ = self._run_quiet(fetch_mf.fetch_with_retry, self.c)
+        self.assertEqual(result[1], ["row"])
+        self.assertEqual(self.log.count("launch"), 2)
+
+    def test_b_playwright_launch_error_spawn_eagain_is_transient(self):
+        e = fetch_mf.PlaywrightError("BrowserType.launch_persistent_context: spawn EAGAIN")
+        self._install(launch_script=[e, None])
+        result, _ = self._run_quiet(fetch_mf.fetch_with_retry, self.c)
+        self.assertEqual(result[1], ["row"])
+        self.assertEqual(self.log.count("launch"), 2)
+        self.assertEqual(self.notified, [])
+
+    def test_target_closed_is_transient(self):
+        self._install(scrape_script=[fetch_mf.PlaywrightError("Target page, context or browser has been closed"), "ok"])
+        result, _ = self._run_quiet(fetch_mf.fetch_with_retry, self.c)
+        self.assertEqual(result[1], ["row"])
+
+    def test_c_login_expired_aborts_without_retry(self):
+        def _login_exit():
+            fetch_mf.notify("ログイン切れ。`python scripts/fetch_mf.py setup` で再ログインして。")
+            raise SystemExit(2)
+
+        self._install(scrape_script=[_login_exit])
+        with self.assertRaises(SystemExit) as cm:
+            self._run_quiet(fetch_mf.fetch_with_retry, self.c)
+        self.assertEqual(cm.exception.code, 2)
+        self.assertEqual(self.log, ["launch", "scrape", "close"])
+        self.assertEqual(self.sleeps, [])
+        self.assertEqual(len(self.notified), 1)
+        self.assertIn("ログイン切れ", self.notified[0])
+
+    def test_non_transient_errors_not_retried(self):
+        for exc in (
+            ValueError("boom"),
+            fetch_mf.PlaywrightError("locator.inner_text: Element is not attached"),
+            OSError(errno.ENOENT, "missing"),
+        ):
+            self.log.clear()
+            self._install(scrape_script=[exc])
+            with self.assertRaises(type(exc)):
+                self._run_quiet(fetch_mf.fetch_with_retry, self.c)
+            self.assertEqual(self.log.count("launch"), 1, repr(exc))
+        self.assertEqual(self.sleeps, [])
+        self.assertEqual(self.notified, [])
+
+    def test_e_close_called_after_each_attempt(self):
+        t = fetch_mf.PlaywrightTimeoutError("Timeout 45000ms exceeded.")
+        self._install(scrape_script=[t, t, t])
+        with self.assertRaises(SystemExit):
+            self._run_quiet(fetch_mf.fetch_with_retry, self.c)
+        self.assertEqual(self.log, ["launch", "scrape", "close"] * 3)
+
+    def test_e_close_failure_is_ignored_and_retry_continues(self):
+        self._install(scrape_script=[fetch_mf.PlaywrightTimeoutError("Timeout"), "ok"], close_raises=True)
+        result, _ = self._run_quiet(fetch_mf.fetch_with_retry, self.c)
+        self.assertEqual(result[1], ["row"])
+        self.assertEqual(self.log.count("close"), 2)
+
+
+_RUN_PATCHED = ("update_real_assets", "push_networth_to_worker", "git_commit_push", "_run_history_script", "OUT",
+                "_fetch_once")
+
+
+class _RunBase(_RetryBase):
+    """do_run の検証・書き込み・commit/push・KV 送信がループの外で 1 回だけであることを確かめる。"""
+
+    def setUp(self):
+        super().setUp()
+        self.calls = []
+        self.out = os.path.join(self.tmp.name, "mf-holdings.json")
+        for name in _RUN_PATCHED:
+            self._saved[name] = getattr(fetch_mf, name)
+        fetch_mf.OUT = self.out
+        fetch_mf.update_real_assets = lambda c, v: self.calls.append("update_real_assets") or 0
+        fetch_mf.push_networth_to_worker = lambda doc: self.calls.append("push") or True
+        fetch_mf.git_commit_push = lambda extra=(): self.calls.append("commit")
+        fetch_mf._run_history_script = lambda: self.calls.append("history")
+
+    def tearDown(self):
+        for name in _RUN_PATCHED:
+            setattr(fetch_mf, name, self._saved[name])
+        super().tearDown()
+
+    def _set_fetch(self, script):
+        script = list(script)
+
+        def _fake_fetch_once(c):
+            self.calls.append("fetch")
+            action = script.pop(0)
+            if isinstance(action, BaseException):
+                raise action
+            return action
+
+        fetch_mf._fetch_once = _fake_fetch_once
+
+    def _good(self):
+        return (NET, _fixture_rows(), _fixture_summary(), None, None)
+
+    def _bad_summary(self):
+        bad = _fixture_summary()
+        bad[fetch_mf._norm("投資信託")] = SUM_MF * 2
+        return bad
+
+
+class TestDoRunRetryScope(_RunBase):
+    def test_retry_then_side_effects_once(self):
+        self._set_fetch([fetch_mf.TransientFetchError("TimeoutError (x)"), self._good()])
+        with contextlib.redirect_stdout(io.StringIO()):
+            self._run_quiet(fetch_mf.do_run, self.c)
+        self.assertEqual(self.calls, ["fetch", "fetch", "update_real_assets", "push", "commit", "history"])
+        self.assertTrue(os.path.exists(self.out))
+        self.assertEqual(self.notified, [])
+
+    def test_d_checksum_mismatch_not_retried(self):
+        self._set_fetch([(NET, _fixture_rows(), self._bad_summary(), None, None)])
+        with self.assertRaises(SystemExit) as cm:
+            self._run_quiet(fetch_mf.do_run, self.c)
+        self.assertEqual(cm.exception.code, 3)
+        self.assertEqual(self.calls, ["fetch"])
+        self.assertFalse(os.path.exists(self.out))
+        self.assertEqual(len(self.notified), 1)
+
+    def test_zero_rows_not_retried(self):
+        self._set_fetch([(NET, [], _fixture_summary(), None, None)])
+        with self.assertRaises(SystemExit) as cm:
+            self._run_quiet(fetch_mf.do_run, self.c)
+        self.assertEqual(cm.exception.code, 3)
+        self.assertEqual(self.calls, ["fetch"])
+
+
+class TestDryRun(_RunBase):
+    def test_dry_run_skips_write_commit_kv_and_hides_amounts(self):
+        self._set_fetch([self._good()])
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self._run_quiet(fetch_mf.do_run, self.c, dry_run=True)
+        self.assertEqual(self.calls, ["fetch"])
+        self.assertFalse(os.path.exists(self.out))
+        text = out.getvalue()
+        self.assertIn("DRY-RUN OK", text)
+        self.assertIn("verify=passed", text)
+        for amount in (NET, SUM_EQ, SUM_MF, SUM_DEPO):
+            self.assertNotIn(f"{amount:,}", text)
+            self.assertNotIn(str(amount), text)
+        self.assertNotIn("サンプル証券", text)
+        self.assertEqual(self.notified, [])
+
+    def test_dry_run_still_verifies(self):
+        self._set_fetch([(NET, _fixture_rows(), self._bad_summary(), None, None)])
+        with self.assertRaises(SystemExit) as cm:
+            self._run_quiet(fetch_mf.do_run, self.c, dry_run=True)
+        self.assertEqual(cm.exception.code, 3)
+        self.assertEqual(self.calls, ["fetch"])
+
+
+class _EmptyLoc:
+    def count(self):
+        return 0
+
+    def inner_text(self):
+        return ""
+
+    def nth(self, i):
+        return self
+
+    def locator(self, sel):
+        return self
+
+
+class _WaitPage:
+    """scrape()/scrape_liabilities() の待ち条件だけを記録する合成ページ。"""
+
+    def __init__(self, url="https://example.invalid/bs/portfolio", selector_raises=None, redirect_on_wait=None):
+        self.url = url
+        self.calls = []
+        self.selector_raises = selector_raises
+        self.redirect_on_wait = redirect_on_wait
+
+    def goto(self, url, timeout=None, wait_until=None):
+        self.calls.append(("goto", url, timeout, wait_until))
+
+    def wait_for_selector(self, selector, timeout=None, state=None):
+        self.calls.append(("wait_for_selector", selector, timeout, state))
+        if self.redirect_on_wait:
+            self.url = self.redirect_on_wait
+        if self.selector_raises:
+            raise self.selector_raises
+
+    def wait_for_timeout(self, ms):
+        self.calls.append(("wait_for_timeout", ms))
+
+    def locator(self, sel):
+        return _EmptyLoc()
+
+
+class TestWaitCondition(unittest.TestCase):
+    """#685 B3: networkidle → domcontentloaded＋表の出現待ち（セレクタ・待ち時間は config）。"""
+
+    def setUp(self):
+        self.c = _load_config()
+        self.f = self.c["fetch"]
+        self.notified = []
+        self._orig_notify = fetch_mf.notify
+        fetch_mf.notify = lambda msg, *a, **k: self.notified.append(msg)
+
+    def tearDown(self):
+        fetch_mf.notify = self._orig_notify
+
+    def test_source_has_no_networkidle_wait(self):
+        with open(os.path.join(ROOT, "scripts", "fetch_mf.py"), encoding="utf-8") as fp:
+            self.assertNotIn('wait_until="networkidle"', fp.read())
+
+    def test_portfolio_waits_for_config_tables(self):
+        page = _WaitPage()
+        fetch_mf.scrape(page, self.c)
+        want_sel = ", ".join(t["selector"] for t in self.f["dom"]["tables"])
+        self.assertEqual(page.calls[0], ("goto", self.f["portfolioUrl"], self.f["timeoutMs"], "domcontentloaded"))
+        self.assertEqual(page.calls[1], ("wait_for_selector", want_sel, self.f["timeoutMs"], "attached"))
+        self.assertEqual(page.calls[2], ("wait_for_timeout", self.f["settleMs"]))
+
+    def test_selector_timeout_propagates_as_transient(self):
+        page = _WaitPage(selector_raises=fetch_mf.PlaywrightTimeoutError("Timeout 45000ms exceeded."))
+        with self.assertRaises(fetch_mf.PlaywrightTimeoutError) as cm:
+            fetch_mf.scrape(page, self.c)
+        self.assertTrue(fetch_mf._is_transient(cm.exception))
+
+    def test_login_redirect_before_wait_is_login_expired(self):
+        page = _WaitPage(url="https://example.invalid/sign_in")
+        with self.assertRaises(SystemExit) as cm:
+            fetch_mf.scrape(page, self.c)
+        self.assertEqual(cm.exception.code, 2)
+        self.assertNotIn("wait_for_selector", [x[0] for x in page.calls])
+        self.assertTrue(any("ログイン切れ" in m for m in self.notified))
+
+    def test_login_redirect_during_wait_is_login_expired(self):
+        page = _WaitPage(
+            selector_raises=fetch_mf.PlaywrightTimeoutError("Timeout"),
+            redirect_on_wait="https://example.invalid/sign_in",
+        )
+        with self.assertRaises(SystemExit) as cm:
+            fetch_mf.scrape(page, self.c)
+        self.assertEqual(cm.exception.code, 2)
+
+    def test_liabilities_waits_for_config_table(self):
+        lc = self.f.get("liabilities")
+        if not lc or not self.c.get("include", {}).get("liabilities", {}).get("enabled"):
+            self.skipTest("liabilities disabled in config")
+        page = _WaitPage()
+        self.assertIsNone(fetch_mf.scrape_liabilities(page, self.c))  # 0 行＝fail-soft
+        self.assertEqual(page.calls[0], ("goto", lc["url"], self.f["timeoutMs"], "domcontentloaded"))
+        self.assertEqual(page.calls[1], ("wait_for_selector", lc["table"]["selector"], self.f["timeoutMs"], "attached"))
+
+    def test_liabilities_timeout_stays_fail_soft(self):
+        lc = self.f.get("liabilities")
+        if not lc or not self.c.get("include", {}).get("liabilities", {}).get("enabled"):
+            self.skipTest("liabilities disabled in config")
+        page = _WaitPage(selector_raises=fetch_mf.PlaywrightTimeoutError("Timeout"))
+        self.assertIsNone(fetch_mf.scrape_liabilities(page, self.c))
+        self.assertEqual(len(self.notified), 1)
+        self.assertIn("負債", self.notified[0])
+
+
 if __name__ == "__main__":
     unittest.main()

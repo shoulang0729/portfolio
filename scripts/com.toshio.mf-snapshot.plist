@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
-  MF スナップショット自動取得（#460）。毎日 09:00 JST に scripts/fetch_mf.py run を実行。
+  MF スナップショット自動取得（#460）。毎日 05:00（Mac のローカル時刻＝CST）に scripts/fetch_mf.py run を実行。
+  StartCalendarInterval の Hour/Minute は Mac のローカル時刻で解釈される（#685）。
   ⚠ パスは実環境に合わせて要修正（README-mf-snapshot.md の手順参照）:
     - ProgramArguments の python3 は Playwright を入れた python（`which python3` / venv の python）。
     - fetch_mf.py の絶対パス・ログ出力先・リポジトリ位置を Mac mini の実パスに。
@@ -17,7 +18,7 @@
     <string>/Users/toshio/github/portfolio/scripts/fetch_mf.py</string>
     <string>run</string>
   </array>
-  <key>StartCalendarInterval</key><dict><key>Hour</key><integer>9</integer><key>Minute</key><integer>0</integer></dict>
+  <key>StartCalendarInterval</key><dict><key>Hour</key><integer>5</integer><key>Minute</key><integer>0</integer></dict>
   <key>StandardOutPath</key><string>/Users/toshio/.mf-snapshot/out.log</string>
   <key>StandardErrorPath</key><string>/Users/toshio/.mf-snapshot/err.log</string>
   <key>EnvironmentVariables</key><dict>

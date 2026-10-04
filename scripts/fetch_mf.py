@@ -6,10 +6,13 @@
   ＝プロンプトインジェクション穴が原理的に消える。mf-import-config.json は『コードが食うデータ』。
 - 永続プロファイルで認証（1回ログイン→持続）。residential IP（Mac mini）で cookie 失効回避。
 - ログイン切れ or チェックサム不一致だけ通知して中止（コミットしない）。成功時のみ無人 commit&push。
+- 起動失敗・EAGAIN・TimeoutError の一時的な失敗だけは取得を最大 3 回まで再試行し、
+  全回失敗したら通知して中止する（#685 B2）。
 
 使い方:
   python fetch_mf.py setup   # 初回: headful でブラウザを開く→手で MF ログイン(2FA)→プロファイル保存
   python fetch_mf.py run     # 定常: launchd が毎日叩く（無人）
+  python fetch_mf.py run --dry-run  # 試運転: 取得・検証まで。data/ 書き込み・commit/push・KV 送信をしない（#685）
 
 ⚠ 資格情報（cookie・TG トークン等）はログ/コミットに出さない。
 ⚠ DOM 構造は data/mf-import-config.json の fetch.dom（資産種類別テーブル＋列インデックスマップ）。
@@ -23,6 +26,7 @@
 """
 import os
 import re
+import errno
 import sys
 import json
 import time
@@ -34,8 +38,16 @@ import urllib.request
 
 try:
     from playwright.sync_api import sync_playwright
+    from playwright.sync_api import Error as PlaywrightError
+    from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 except ImportError:  # setup 前など Playwright 未導入時に親切なメッセージ
     sync_playwright = None
+
+    class PlaywrightError(Exception):
+        """Playwright 未導入時の代替（再試行の分類と単体テスト用）。"""
+
+    class PlaywrightTimeoutError(PlaywrightError):
+        """Playwright 未導入時の代替（再試行の分類と単体テスト用）。"""
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG = os.path.join(ROOT, "data", "mf-import-config.json")
@@ -139,11 +151,83 @@ def with_page(c, headless, fn):
     os.makedirs(udd, exist_ok=True)
     with sync_playwright() as p:
         ctx = p.chromium.launch_persistent_context(udd, headless=headless)
-        page = ctx.pages[0] if ctx.pages else ctx.new_page()
         try:
+            page = ctx.pages[0] if ctx.pages else ctx.new_page()
             return fn(page)
         finally:
-            ctx.close()
+            # 次の試行の起動を妨げないよう必ず閉じる。close 自体の失敗は無視（#685）。
+            # プロファイルのロックファイルは消さない（MF のセッションを壊すおそれ）。
+            try:
+                ctx.close()
+            except Exception as e:
+                print(f"mf-snapshot: context close failed (ignored): {type(e).__name__}", file=sys.stderr)
+
+
+# ── 一時的な失敗の再試行（#685 B2） ─────────────────────────────────────────
+# 範囲はブラウザ起動〜取得（with_page のブロック全体）だけ。検証・書き込み・commit/push・
+# KV 送信はループの外で 1 回だけ。ログイン切れ（exit 2）・抽出 0 件・チェックサム不一致・
+# その他の想定外の例外は再試行しない。
+FETCH_ATTEMPTS = 3  # 合計の試行回数（再試行 2 回）
+FETCH_RETRY_WAITS = (30, 120)  # 再試行前の待ち（秒）。i 回目の失敗の後に FETCH_RETRY_WAITS[i-1]
+_TRANSIENT_MSG = re.compile(
+    r"launch_persistent_context|Target closed|has been closed|EAGAIN|Resource temporarily unavailable",
+    re.I,
+)
+
+
+class TransientFetchError(Exception):
+    """再試行してよい一時的な失敗（起動失敗・EAGAIN・TimeoutError）を包む。"""
+
+
+def _is_transient(e):
+    """一時的な失敗か。Playwright の TimeoutError・errno EAGAIN の OSError・
+    ブラウザ起動失敗／Target closed 系の Playwright Error だけを True にする。"""
+    if isinstance(e, PlaywrightTimeoutError):
+        return True
+    if isinstance(e, OSError) and e.errno == errno.EAGAIN:
+        return True
+    if isinstance(e, PlaywrightError) and _TRANSIENT_MSG.search(str(e)):
+        return True
+    return False
+
+
+def _short(e):
+    """例外メッセージの 1 行目を短く（ログ・通知用）。"""
+    lines = str(e).strip().splitlines()
+    return _one_line(lines[0] if lines else "")[:160]
+
+
+def _fetch_once(c):
+    """ブラウザ起動〜取得を 1 回行う。一時的な失敗だけを TransientFetchError に包み直す。"""
+    try:
+        return with_page(c, headless=c["fetch"]["headless"], fn=lambda pg: _scrape_all(pg, c))
+    except Exception as e:
+        if _is_transient(e):
+            raise TransientFetchError(f"{type(e).__name__} ({_short(e)})") from e
+        raise
+
+
+def fetch_with_retry(c):
+    """_fetch_once を一時的な失敗のときだけ最大 FETCH_ATTEMPTS 回試す。
+
+    成功時は通知しない（再試行のうえで成功したら stderr に 1 行だけ）。
+    全回失敗したら notify を 1 回して exit(1)（想定外エラー時と同じ終了コード）。
+    """
+    for attempt in range(1, FETCH_ATTEMPTS + 1):
+        try:
+            result = _fetch_once(c)
+        except TransientFetchError as e:
+            if attempt >= FETCH_ATTEMPTS:
+                print(f"mf-snapshot: attempt {attempt}/{FETCH_ATTEMPTS} failed: {e} — giving up", file=sys.stderr)
+                notify(f"取得が {FETCH_ATTEMPTS} 回とも一時的な失敗で中止: {e}")
+                sys.exit(1)
+            wait = FETCH_RETRY_WAITS[min(attempt - 1, len(FETCH_RETRY_WAITS) - 1)]
+            print(f"mf-snapshot: attempt {attempt}/{FETCH_ATTEMPTS} failed: {e} — retry in {wait}s", file=sys.stderr)
+            time.sleep(wait)
+            continue
+        if attempt > 1:
+            print(f"mf-snapshot: attempt {attempt}/{FETCH_ATTEMPTS} succeeded", file=sys.stderr)
+        return result
 
 
 def do_setup(c):
@@ -223,8 +307,8 @@ def scrape(page, c):
     """
     f = c["fetch"]
     dom = f["dom"]
-    page.goto(f["portfolioUrl"], timeout=f["timeoutMs"], wait_until="networkidle")
-    page.wait_for_timeout(f.get("settleMs", 5000))  # SPA 描画待ち（headful 固定）
+    # #685 B3: networkidle をやめ、DOM 構築＋資産種類別テーブルの出現を待つ（セレクタは config）
+    _goto_and_wait(page, f["portfolioUrl"], ", ".join(t["selector"] for t in dom["tables"]), f)
 
     # ログイン切れ判定（sign_in へリダイレクト）→ 通知して中止
     if f["loginCheck"]["redirectContains"] in page.url:
@@ -239,6 +323,26 @@ def scrape(page, c):
     for t in dom["tables"]:
         rows.extend(_scrape_table(page, t))
     return net, rows, summary
+
+
+def _goto_and_wait(page, url, selector, f):
+    """goto(domcontentloaded) → 表（selector）の出現待ち → settleMs 待ち（#685 B3）。
+
+    待ち時間は config の fetch.timeoutMs / settleMs。ログイン画面へ飛ばされた場合は表を
+    待たずに戻る（ログイン切れの判定と通知は呼び出し側の既存処理が行う）。
+    表が timeoutMs 内に現れなければ Playwright の TimeoutError をそのまま投げる。
+    """
+    login = f["loginCheck"]["redirectContains"]
+    page.goto(url, timeout=f["timeoutMs"], wait_until="domcontentloaded")
+    if login in page.url:
+        return
+    try:
+        page.wait_for_selector(selector, timeout=f["timeoutMs"], state="attached")
+    except Exception:
+        if login in page.url:  # 待っている間にログイン画面へ遷移した
+            return
+        raise
+    page.wait_for_timeout(f.get("settleMs", 5000))  # SPA 描画待ち（headful 固定）
 
 
 def _txt_body(page):
@@ -265,8 +369,7 @@ def scrape_liabilities(page, c):
         return None
     try:
         f = c["fetch"]
-        page.goto(lc["url"], timeout=f["timeoutMs"], wait_until="networkidle")
-        page.wait_for_timeout(f.get("settleMs", 5000))
+        _goto_and_wait(page, lc["url"], lc["table"]["selector"], f)  # #685 B3
         if f["loginCheck"]["redirectContains"] in page.url:
             notify("負債: ログイン切れで /bs/liability を開けず。負債はスキップ。")
             return None
@@ -823,15 +926,22 @@ def _scrape_all(page, c):
     return net, rows, summary, liab, re_vals
 
 
-def do_run(c):
-    """無人 run。想定外例外も必ず notify して中止する（無音失敗を作らない・#479 H1）。"""
+def do_run(c, dry_run=False):
+    """無人 run。想定外例外も必ず notify して中止する（無音失敗を作らない・#479 H1）。
+
+    dry_run=True（`run --dry-run`・#685）は取得・検証までで止め、data/ への書き込み・
+    commit/push・KV 送信・履歴取得をしない。出力は件数と検証結果だけ（金額は出さない）。
+    """
     try:
-        net, rows, summary, liab, re_vals = with_page(c, headless=c["fetch"]["headless"], fn=lambda pg: _scrape_all(pg, c))
+        net, rows, summary, liab, re_vals = fetch_with_retry(c)  # #685: 一時的な失敗だけ再試行
         if not rows:
             notify("保有行を1件も抽出できず。fetch.dom（種類別テーブルのセレクタ/列マップ §7.1）を確認。")
             sys.exit(3)
         doc = build(c, net, rows)
         verify(c, doc, rows, summary)  # 失敗時 exit(>=2)＝コミットしない
+        if dry_run:
+            _print_dry_run(doc, rows, liab, re_vals)
+            return
         ra_updated = update_real_assets(c, re_vals)  # #580: attach より前＝当日 totals に新値を反映
         doc = attach_liabilities(c, doc, liab)  # verify 後＝資産チェックサムに影響しない（#577）＝完全版（KV送信用）
         pushed = push_networth_to_worker(doc)  # #589 Phase2: 完全版を Worker KV へ（fail-soft・失敗しても続行）
@@ -851,6 +961,17 @@ def do_run(c):
     except Exception as e:
         notify(f"想定外エラーで中止: {type(e).__name__}: {e}")
         sys.exit(1)
+
+
+def _print_dry_run(doc, rows, liab, re_vals):
+    """dry-run の結果を件数と検証結果だけで出す（金額・口座名は出さない）。"""
+    liab_note = f"{len(liab)}" if liab is not None else "skipped"
+    re_note = f"{len(re_vals)}" if re_vals else "skipped"
+    print(
+        f"DRY-RUN OK verify=passed rows={len(rows)} holdings={len(doc['holdings'])}"
+        f" liabilities={liab_note} realEstate={re_note}"
+        " (no write / no commit / no push / no KV)"
+    )
 
 
 def _run_history_script():
@@ -873,4 +994,7 @@ def _run_history_script():
 if __name__ == "__main__":
     conf = cfg()
     cmd = sys.argv[1] if len(sys.argv) > 1 else "run"
-    {"setup": do_setup, "run": do_run}.get(cmd, do_run)(conf)
+    if cmd == "setup":
+        do_setup(conf)
+    else:
+        do_run(conf, dry_run="--dry-run" in sys.argv[2:])
