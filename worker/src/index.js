@@ -19,6 +19,10 @@
 //   PUT  /positions                     保有銘柄保存（KV・PIN認証必須）
 //   GET  /networth                      ネットワース機微データ取得（KV・非公開・#589 Phase2）
 //   PUT  /networth                      ネットワース機微データ保存（KV・PIN認証必須・#589 Phase2）
+//   GET  /order-sheet                   注文表を計算して返す（KV・PIN認証必須・KV に書かない・#672）
+//   GET  /order-sheet/plan              注文表の設定 order:plan 取得（KV・PIN認証必須・#672）
+//   PUT  /order-sheet/plan              注文表の設定 order:plan 置換（KV・PIN認証必須・rev 楽観ロック・#672）
+//   POST /order-sheet/events            注文表の状態変更（KV・PIN認証必須・rev 楽観ロック・#672）
 //   GET  /auth/pin-hash                 PIN 設定状態確認（ハッシュ値は返さない）
 //   PUT  /auth/pin-hash                 PIN ハッシュ更新/端末復旧（KV）
 //   GET  /prices/cache                  Cron キャッシュ価格取得（KV）
@@ -33,6 +37,7 @@
 //   NOTION_API_KEY, NOTION_DB_ID, ALLOWED_ORIGIN
 //   KV: Cloudflare KV namespace binding
 // Cron: 0 */6 * * *  — 6時間ごとに全保有銘柄の価格を取得してキャッシュ
+//                     ＋注文表の約定（mf の株数の増減）を order:plan に確定（変化時のみ書く・#672）
 
 import {
   CONSTITUENTS_KV_PREFIX,
@@ -40,6 +45,16 @@ import {
   buildConstituentsResponse,
   fetchEtfConstituents,
 } from './etf-constituents.js';
+import {
+  OrderEventError,
+  appendLog,
+  applyEvent,
+  detectFills,
+  isUsdSymbol,
+  isValidSymbolKey,
+  validatePlan,
+} from './order-plan.js';
+import { buildOrderSheet } from './order-sheet-calc.js';
 
 const FINNHUB_BASE = 'https://finnhub.io/api/v1';
 const FMP_BASE = 'https://financialmodelingprep.com';
@@ -1085,6 +1100,330 @@ async function handleNetworth(request, env, origin) {
 }
 
 // ══════════════════════════════════════════════════════════════
+// 注文表（KV・非公開・PIN 必須）— docs/handoff/2026-10-03-order-sheet.md §4・§5・§6.1（#672）
+//
+//   GET  /order-sheet          注文表を計算して返す（KV に書かない。約定の自動検知はメモリ上で表示のみ）
+//   GET  /order-sheet/plan     KV `order:plan` をそのまま返す（未投入なら null）
+//   PUT  /order-sheet/plan     `order:plan` を丸ごと置換（validatePlan＋楽観ロック）
+//   POST /order-sheet/events   状態の変更（applyEvent＋楽観ロック）→ 新しい注文表を返す
+//
+// - 全ルート GET も PIN 必須（/networth と同じ理由: Origin を付けない curl をオリジン判定で弾けない）。
+// - 応答はすべて Cache-Control: no-store。GitHub へのミラーはしない。
+// - console にはシンボルと type 以外（価格・株数・金額・目標額）を出さない（wrangler tail で見えるため）。
+//   KV の JSON.parse 失敗のメッセージは入力の断片を含みうるので、例外は name だけ出す。
+// ══════════════════════════════════════════════════════════════
+
+const ORDER_PLAN_KEY = 'order:plan';
+const ORDER_LOG_KEY = 'order:log';
+const ORDER_STRATEGY_URL = 'https://raw.githubusercontent.com/shoulang0729/portfolio/main/data/target-allocation.json';
+const ORDER_PRICE_MAX_AGE_MS = 7 * 60 * 60 * 1000; // prices:cache は 7h 以内のみ採用（§6.1）
+
+/** 注文表ルートの応答に Cache-Control: no-store を付ける（既存の jsonRes/errRes は変えない） */
+function _noStore(res) {
+  res.headers.set('Cache-Control', 'no-store');
+  return res;
+}
+
+function _osJson(data, status, origin) {
+  return _noStore(jsonRes(data, status, origin));
+}
+
+function _osErr(msg, status, origin, extra) {
+  return _noStore(jsonRes({ error: msg, ...(extra || {}) }, status, origin));
+}
+
+/** KV の JSON を読む（無ければ null）。壊れた JSON は例外にする（呼び出し側で 500） */
+async function _kvJson(env, key) {
+  const raw = await env.KV.get(key);
+  return raw ? JSON.parse(raw) : null;
+}
+
+async function _readJsonBody(request) {
+  try {
+    return { ok: true, body: await request.json() };
+  } catch {
+    return { ok: false, body: null };
+  }
+}
+
+/** 公開の戦略設定（data/target-allocation.json）。失敗時は null（計算側が既定値＋warnings） */
+async function _fetchOrderStrategy() {
+  try {
+    const res = await fetch(ORDER_STRATEGY_URL, { cf: { cacheTtl: 300 } });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data && typeof data === 'object' ? data : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * USDJPY: KV `forex:USDJPY`（handleForex と同じキー）→ Yahoo（cf.cacheTtl: 300・KV に書かない）。
+ * 取れなければ null（計算側が warnings を出す）。
+ */
+async function _resolveOrderFx(env) {
+  try {
+    const cached = await _kvJson(env, 'forex:USDJPY');
+    if (cached && typeof cached.rate === 'number' && cached.rate > 0) {
+      return { usdJpy: cached.rate, asOf: cached.ts ? new Date(cached.ts).toISOString() : null };
+    }
+  } catch { /* 次の手段へ */ }
+  try {
+    const res = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/USDJPY%3DX', { cf: { cacheTtl: 300 } });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const rate = data?.chart?.result?.[0]?.meta?.regularMarketPrice ?? data?.chart?.result?.[0]?.regularMarketPrice;
+    if (typeof rate === 'number' && rate > 0) return { usdJpy: rate, asOf: new Date().toISOString() };
+  } catch { /* 取れなければ null */ }
+  return null;
+}
+
+/**
+ * 現在値（USD）: prices:cache（7h 以内）→ Finnhub /quote（cf.cacheTtl: 300・KV に書かない）。
+ * どちらも無い銘柄は入れない（計算側が mf の price÷USDJPY で概算し warnings を出す）。
+ * @param {object} env
+ * @param {string[]} symbols plan の USD 建てシンボル＋資金繰りの銘柄
+ * @param {number} nowMs
+ */
+async function _resolveOrderPrices(env, symbols, nowMs) {
+  /** @type {Record<string, number>} */
+  const out = {};
+  let cache = {};
+  try {
+    cache = (await _kvJson(env, 'prices:cache')) || {};
+  } catch { cache = {}; }
+  const missing = [];
+  for (const sym of symbols) {
+    const c = Object.prototype.hasOwnProperty.call(cache, sym) ? cache[sym] : null;
+    if (c && typeof c.price === 'number' && c.price > 0 && typeof c.ts === 'number' && nowMs - c.ts <= ORDER_PRICE_MAX_AGE_MS) {
+      out[sym] = c.price;
+    } else {
+      missing.push(sym);
+    }
+  }
+  if (missing.length && env.FINNHUB_API_KEY) {
+    await Promise.all(missing.map(async (sym) => {
+      try {
+        const res = await fetch(
+          `${FINNHUB_BASE}/quote?symbol=${encodeURIComponent(_workerToFinnhubSymbol(sym))}&token=${env.FINNHUB_API_KEY}`,
+          { cf: { cacheTtl: 300 } }
+        );
+        if (!res.ok) return;
+        const d = await res.json();
+        if (typeof d?.c === 'number' && d.c > 0) out[sym] = d.c;
+      } catch { /* 個別エラーは無視（計算側が概算にフォールバック） */ }
+    }));
+  }
+  return out;
+}
+
+/** tier=theme の銘柄について KV `constituents:<SYM>` の上位 1 銘柄を返す（取得しに行かない・§6.9） */
+async function _resolveOrderEtfTop(env, plan) {
+  /** @type {Record<string, {ticker: string, weight: number}>} */
+  const out = {};
+  const themeSyms = Object.entries(plan.symbols || {})
+    .filter(([sym, sc]) => isValidSymbolKey(sym) && sc && sc.tier === 'theme')
+    .map(([sym]) => sym);
+  await Promise.all(themeSyms.map(async (sym) => {
+    try {
+      const c = await env.KV.get(CONSTITUENTS_KV_PREFIX + sym, 'json');
+      const list = Array.isArray(c?.holdings) ? c.holdings : [];
+      let top = null;
+      for (const h of list) {
+        if (h && h.ticker && typeof h.weight === 'number' && (!top || h.weight > top.weight)) top = h;
+      }
+      if (top) out[sym] = { ticker: top.ticker, weight: top.weight };
+    } catch { /* キャッシュが無い・壊れている場合は出さない */ }
+  }));
+  return out;
+}
+
+/**
+ * 注文表を組み立てる（GET /order-sheet と POST /order-sheet/events の応答で共用）。KV には書かない。
+ * @param {object} env
+ * @param {any} plan
+ * @param {any} networth
+ * @param {any[]|null} log
+ */
+async function _computeOrderSheet(env, plan, networth, log) {
+  if (!plan || typeof plan !== 'object' || !plan.symbols) return null;
+  const now = new Date();
+  const symbols = Object.keys(plan.symbols).filter((s) => isValidSymbolKey(s) && isUsdSymbol(s));
+  const sweep = plan.funding?.sweepSymbol;
+  if (typeof sweep === 'string' && isValidSymbolKey(sweep) && isUsdSymbol(sweep) && !symbols.includes(sweep)) {
+    symbols.push(sweep);
+  }
+  const [strategy, fx, prices, etfTop] = await Promise.all([
+    _fetchOrderStrategy(),
+    _resolveOrderFx(env),
+    _resolveOrderPrices(env, symbols, now.getTime()),
+    _resolveOrderEtfTop(env, plan),
+  ]);
+  return buildOrderSheet({
+    plan,
+    strategy,
+    networth,
+    prices,
+    fx: fx || null,
+    etfTop,
+    now: now.toISOString(),
+    log: Array.isArray(log) ? log : [],
+  });
+}
+
+async function handleOrderSheet(request, env, origin) {
+  if (!env.KV) return _osErr('KV 未設定', 500, origin);
+  const authErr = await verifyPinHash(request, env, origin);
+  if (authErr) return _noStore(authErr);
+  if (request.method !== 'GET') return _osErr('GET のみ許可', 405, origin);
+
+  let plan, networth, log;
+  try {
+    [plan, networth, log] = await Promise.all([
+      _kvJson(env, ORDER_PLAN_KEY),
+      _kvJson(env, 'networth'),
+      _kvJson(env, ORDER_LOG_KEY),
+    ]);
+  } catch (e) {
+    console.warn('[order-sheet] KV 読み取り失敗', e?.name);
+    return _osErr('KV のデータを読めません', 500, origin);
+  }
+  try {
+    const sheet = await _computeOrderSheet(env, plan, networth, log);
+    return _osJson(sheet, 200, origin);
+  } catch (e) {
+    console.warn('[order-sheet] 計算失敗', e?.name);
+    return _osErr('注文表の計算に失敗しました', 500, origin);
+  }
+}
+
+async function handleOrderSheetPlan(request, env, origin) {
+  if (!env.KV) return _osErr('KV 未設定', 500, origin);
+  const authErr = await verifyPinHash(request, env, origin);
+  if (authErr) return _noStore(authErr);
+
+  if (request.method === 'GET') {
+    try {
+      return _osJson(await _kvJson(env, ORDER_PLAN_KEY), 200, origin);
+    } catch (e) {
+      console.warn('[order-sheet/plan] KV 読み取り失敗', e?.name);
+      return _osErr('KV のデータを読めません', 500, origin);
+    }
+  }
+
+  if (request.method === 'PUT') {
+    const { ok, body } = await _readJsonBody(request);
+    if (!ok) return _osErr('JSON 不正', 400, origin);
+    const v = validatePlan(body);
+    if (!v.ok) return _osErr('plan が不正です', 400, origin, { errors: v.errors });
+
+    let current, log;
+    try {
+      [current, log] = await Promise.all([_kvJson(env, ORDER_PLAN_KEY), _kvJson(env, ORDER_LOG_KEY)]);
+    } catch (e) {
+      console.warn('[order-sheet/plan] KV 読み取り失敗', e?.name);
+      return _osErr('KV のデータを読めません', 500, origin);
+    }
+    const curRev = current && Number.isInteger(current.rev) ? current.rev : 0;
+    // KV 未投入時の初回 PUT だけ rev 不要（§5.3）
+    if (current && body.rev !== curRev) return _osErr('rev 不一致（他で更新されました）', 409, origin, { rev: curRev });
+
+    const now = new Date().toISOString();
+    const next = { ...body, rev: (current ? curRev : Number.isInteger(body.rev) ? body.rev : 0) + 1, updatedAt: now };
+    await env.KV.put(ORDER_PLAN_KEY, JSON.stringify(next));
+    await env.KV.put(ORDER_LOG_KEY, JSON.stringify(appendLog(log, [{ at: now, type: 'plan-put', rev: next.rev }])));
+    console.warn('[order-sheet/plan] plan-put');
+    return _osJson({ ok: true, rev: next.rev, updatedAt: now }, 200, origin);
+  }
+
+  return _osErr('GET/PUT のみ許可', 405, origin);
+}
+
+async function handleOrderSheetEvents(request, env, origin) {
+  if (!env.KV) return _osErr('KV 未設定', 500, origin);
+  const authErr = await verifyPinHash(request, env, origin);
+  if (authErr) return _noStore(authErr);
+  if (request.method !== 'POST') return _osErr('POST のみ許可', 405, origin);
+
+  const { ok, body } = await _readJsonBody(request);
+  if (!ok) return _osErr('JSON 不正', 400, origin);
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return _osErr('object が必要です', 400, origin);
+  if (!Number.isInteger(body.rev)) return _osErr('rev（整数）が必要です', 400, origin);
+
+  let plan, networth, log;
+  try {
+    [plan, networth, log] = await Promise.all([
+      _kvJson(env, ORDER_PLAN_KEY),
+      _kvJson(env, 'networth'),
+      _kvJson(env, ORDER_LOG_KEY),
+    ]);
+  } catch (e) {
+    console.warn('[order-sheet/events] KV 読み取り失敗', e?.name);
+    return _osErr('KV のデータを読めません', 500, origin);
+  }
+  if (!plan) return _osErr('plan が未投入です', 400, origin);
+  const curRev = Number.isInteger(plan.rev) ? plan.rev : 0;
+  if (body.rev !== curRev) return _osErr('rev 不一致（他で更新されました）', 409, origin, { rev: curRev });
+
+  const event = { ...body };
+  delete event.rev;
+  let result;
+  try {
+    result = applyEvent(plan, event, { now: new Date().toISOString(), networth });
+  } catch (e) {
+    if (e instanceof OrderEventError) return _osErr(e.message, 400, origin);
+    console.warn('[order-sheet/events] 適用失敗', e?.name);
+    return _osErr('イベントの適用に失敗しました', 500, origin);
+  }
+  const newLog = appendLog(log, [result.log]);
+  await env.KV.put(ORDER_PLAN_KEY, JSON.stringify(result.plan));
+  await env.KV.put(ORDER_LOG_KEY, JSON.stringify(newLog));
+  console.warn('[order-sheet/events]', event.type, typeof event.symbol === 'string' ? event.symbol.slice(0, 12) : '');
+
+  try {
+    const sheet = await _computeOrderSheet(env, result.plan, networth, newLog);
+    return _osJson(sheet, 200, origin);
+  } catch (e) {
+    // 書き込みは成功している。注文表の計算だけ失敗した場合は rev を返して再取得を促す
+    console.warn('[order-sheet/events] 計算失敗', e?.name);
+    return _osErr('保存しましたが注文表の計算に失敗しました', 500, origin, { rev: result.plan.rev });
+  }
+}
+
+/**
+ * Cron: mf の株数による約定を KV に確定する（§5.2）。変化があるときだけ order:plan・order:log を書く。
+ * 書く直前に読み直し、rev が変わっていれば今回は書かない（次回に回す・§5.3）。
+ * @returns {Promise<{written: boolean, fills: number}>}
+ */
+async function _cronConfirmOrderFills(env) {
+  if (!env.KV) return { written: false, fills: 0 };
+  const [plan, networth] = await Promise.all([_kvJson(env, ORDER_PLAN_KEY), _kvJson(env, 'networth')]);
+  if (!plan || !networth) return { written: false, fills: 0 };
+  const now = new Date().toISOString();
+  const { plan: detected, logs } = detectFills(plan, networth, now);
+  if (!logs.length) return { written: false, fills: 0 };
+
+  const latest = await _kvJson(env, ORDER_PLAN_KEY);
+  const baseRev = Number.isInteger(plan.rev) ? plan.rev : 0;
+  if (!latest || (Number.isInteger(latest.rev) ? latest.rev : 0) !== baseRev) {
+    console.warn('[cron order-fills] rev が変わったため次回に回す');
+    return { written: false, fills: 0 };
+  }
+  const next = { ...detected, rev: baseRev + 1, updatedAt: now };
+  const v = validatePlan(next);
+  if (!v.ok) {
+    console.warn('[cron order-fills] 適用後の plan が不正のため書かない');
+    return { written: false, fills: 0 };
+  }
+  const log = await _kvJson(env, ORDER_LOG_KEY);
+  await env.KV.put(ORDER_PLAN_KEY, JSON.stringify(next));
+  await env.KV.put(ORDER_LOG_KEY, JSON.stringify(appendLog(log, logs)));
+  for (const l of logs) console.warn('[cron order-fills]', l.partial ? 'partial' : 'filled', l.symbol);
+  return { written: true, fills: logs.length };
+}
+
+// ══════════════════════════════════════════════════════════════
 // GitHub Contents API ミラー: KV に保存した positions を
 // shoulang0729/portfolio リポジトリの data/positions.json にも書き出す
 //
@@ -1289,7 +1628,8 @@ export default {
     if (path === '/')                return new Response('portfolio-proxy OK', { status: 200 });
     // レート制限: Workers ネイティブ ratelimit binding（#16・KV 不使用・rate-limit.md 参照）。
     // binding 未設定環境（テスト等）では素通し。判定失敗時も fail-open。
-    if (path === '/yahoo' || path === '/finnhub' || path === '/fmp' || path === '/edgar' || path === '/edinet-db' || path === '/etf/constituents') {
+    if (path === '/yahoo' || path === '/finnhub' || path === '/fmp' || path === '/edgar' || path === '/edinet-db' || path === '/etf/constituents'
+      || path === '/order-sheet' || path.startsWith('/order-sheet/')) {
       if (env.RATE_LIMITER) {
         try {
           const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
@@ -1311,6 +1651,9 @@ export default {
     if (path === '/watchlist')       return handleWatchlist(request, env, org);
     if (path === '/positions')       return handlePositions(request, env, org, ctx);
     if (path === '/networth')        return handleNetworth(request, env, org);
+    if (path === '/order-sheet')     return handleOrderSheet(request, env, org);
+    if (path === '/order-sheet/plan') return handleOrderSheetPlan(request, env, org);
+    if (path === '/order-sheet/events') return handleOrderSheetEvents(request, env, org);
     if (path === '/portfolio/snapshot') return handlePortfolioSnapshot(request, env, org, ctx);
     if (path === '/prices/cache')    return handlePricesCache(env, org);
     if (path === '/auth/pin-hash')   return handleAuthPinHash(request, env, org);
@@ -1324,6 +1667,13 @@ export default {
 
   // ── Cron: 6時間ごとに全保有銘柄の価格をキャッシュ ───────────
   async scheduled(event, env, ctx) {
+    // 注文表の約定確定（#672）。価格キャッシュの有無と独立に先に実行し、失敗しても既存処理は続ける
+    try {
+      await _cronConfirmOrderFills(env);
+    } catch (e) {
+      console.warn('[cron order-fills]', e?.name);
+    }
+
     if (!env.KV || !env.FINNHUB_API_KEY) return;
 
     const posVal = await env.KV.get('positions');
