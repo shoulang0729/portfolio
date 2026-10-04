@@ -16,7 +16,7 @@
 ### マージ前の確認（Toshio）
 次に触れる PR は reviewer がマージせず、`needs-toshio` を付けて Toshio の確認を待つ。それ以外は CI green ＋ reviewer 承認で自動マージしてよい。
 - **セキュリティ**: `src/auth-*.js`、`worker/**` の認証・レート制限・CORS、PIN/パスキー、Secrets
-- **資産データ**: `scripts/fetch_mf*.py`、`src/networth.js`・`src/wealth.js`、`data/real-assets/**`、KV の networth/positions、公開/非公開の境界
+- **資産データ**: `scripts/fetch_mf*.py`、`src/networth.js`・`src/wealth.js`、`data/real-assets/**`、KV の networth/positions/order:plan・order:log、`scripts/order-plan.mjs`、公開/非公開の境界
 - **データ構造**: `data/*.json` のキー・形状、`data/mf-import-config.json` の schema、KV のデータ形状
 - **開発体制**: `CLAUDE.md`、`.claude/**`、`.github/workflows/**`
 
@@ -29,6 +29,7 @@
 | `data/positions.json`・`data/portfolio-snapshot.json` | Worker（KV 同期・スナップショット） |
 | `data/valuations.json` の `quality`/`value`/`sectorMedian`/`staleFields`・`data/verdict-outcomes.json` | GitHub Actions `weekly-valuations.yml`（毎週日曜 02:00 UTC） |
 | `data/scheduler/fund-holdings.json` | GitHub Actions `fund-holdings-monthly.yml`（月次・毎月 1〜20 日 03:00 UTC） |
+| KV `order:plan`・`order:log`（注文表の設定＋状態・操作ログ。非公開・PIN 保護） | Worker のみ：`PUT /order-sheet/plan`（初回投入・編集＝`scripts/order-plan.mjs`）／`POST /order-sheet/events`（アプリの Order タブの申告・対話中の Claude・Mulmo）／Cron（mf の株数で約定を確定・変化時のみ）。`wrangler kv` で直接書かない（復旧時の削除のみ・手順は `docs/order-sheet-ops.md`）。KV なので main へのコミットは無い |
 
 - これらは自動で main に直接コミットされる。形状を変える場合は「データ構造」扱い（Toshio 確認）とし、書き手側の対応を設計書に明記する。
 - push 前の `git pull --rebase origin main` でこれらと衝突したら、**main 側を採用**する。
@@ -223,9 +224,15 @@ POST /notion/save                   AI相談結果をNotion DBに保存
 GET  /auth/challenge                パスキー認証チャレンジ生成
 POST /auth/register                 パスキー登録
 POST /auth/verify                   パスキー検証
+GET  /order-sheet                   注文表を計算して返す（KV order:plan・PIN認証必須・KV に書かない・#672）
+GET  /order-sheet/plan              注文表の設定 order:plan 取得（PIN認証必須・未投入なら null）
+PUT  /order-sheet/plan              order:plan を丸ごと置換（PIN認証必須・validatePlan＋rev 楽観ロック）
+POST /order-sheet/events            注文表の状態変更（発注/約定/取消/基準の取り直し/見直し・PIN認証必須・rev 楽観ロック）
 ```
 
-**Cron**: `0 */6 * * *` — 6時間ごとに全保有銘柄の価格を取得してKVキャッシュ
+**Cron**: `0 */6 * * *` — 6時間ごとに全保有銘柄の価格を取得してKVキャッシュ＋注文表の約定（mf の株数の増減）を `order:plan` に確定（変化時のみ書く）
+
+**注文表**: 運用手順（初回投入・約定の反映・見直し・壊れた `order:plan` の復旧）は [docs/order-sheet-ops.md](./docs/order-sheet-ops.md)、設計は `docs/handoff/2026-10-03-order-sheet.md`。plan の実値はリポに置かない（`scripts/order-plan.mjs` はリポ内のファイルを拒否）
 
 **Worker Secrets**: `FINNHUB_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`,
 `GROK_API_KEY`, `DEEPSEEK_API_KEY`, `ANTHROPIC_API_KEY`,
