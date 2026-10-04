@@ -40,10 +40,10 @@
    python3 scripts/fetch_mf.py setup
    ```
    開いたブラウザで MF にログイン（2FA 含む）→ ターミナルで Enter。`~/.mf-snapshot/profile` に保存される。
-4. **セレクタ確定（重要・TODO）**: `data/mf-import-config.json` の `fetch.selectors` は暫定値です。
+4. **セレクタ確定（重要・TODO）**: `data/mf-import-config.json` の `fetch.dom` は暫定値です。
    初回は `python3 scripts/fetch_mf.py run` を手動実行し、`data/mf-holdings.json` の中身と
    `python3 -c "import json;d=json.load(open('data/mf-holdings.json'));print(d['totals'])"` で
-   口座/金額が正しいか確認。ズレる場合は実画面の DevTools でセレクタを調べ `fetch.selectors` を修正
+   口座/金額が正しいか確認。ズレる場合は実画面の DevTools でセレクタを調べ `fetch.dom` を修正
    （MF の構造変更時もここだけ直せばよい）。チェックサム不一致時は通知＋中止するので壊れたデータは push されません。
 5. **（任意）Telegram 通知**: `~/Library/LaunchAgents/com.toshio.mf-snapshot.plist` の
    `TG_BOT_TOKEN`/`TG_CHAT` を設定（使わないなら `EnvironmentVariables` ブロックごと削除）。
