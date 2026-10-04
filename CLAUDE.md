@@ -16,7 +16,7 @@
 ### マージ前の確認（Toshio）
 次に触れる PR は reviewer がマージせず、`needs-toshio` を付けて Toshio の確認を待つ。それ以外は CI green ＋ reviewer 承認で自動マージしてよい。
 - **セキュリティ**: `src/auth-*.js`、`worker/**` の認証・レート制限・CORS、PIN/パスキー、Secrets
-- **資産データ**: `scripts/fetch_mf*.py`、`src/networth.js`・`src/wealth.js`、`data/real-assets/**`、KV の networth/positions、公開/非公開の境界
+- **資産データ**: `scripts/fetch_mf*.py`、`src/networth.js`・`src/wealth.js`、`data/real-assets/**`、KV の networth/positions/order:plan・order:log、`scripts/order-plan.mjs`、公開/非公開の境界
 - **データ構造**: `data/*.json` のキー・形状、`data/mf-import-config.json` の schema、KV のデータ形状
 - **開発体制**: `CLAUDE.md`、`.claude/**`、`.github/workflows/**`
 
