@@ -6,8 +6,8 @@
   ＝プロンプトインジェクション穴が原理的に消える。mf-import-config.json は『コードが食うデータ』。
 - 永続プロファイルで認証（1回ログイン→持続）。residential IP（Mac mini）で cookie 失効回避。
 - ログイン切れ or チェックサム不一致だけ通知して中止（コミットしない）。成功時のみ無人 commit&push。
-- 起動失敗・EAGAIN・TimeoutError の一時的な失敗だけは取得を最大 3 回まで再試行し、
-  全回失敗したら通知して中止する（#685 B2）。
+- 起動失敗・EAGAIN・TimeoutError・ネットワーク未復帰（net::ERR_* の一部）の一時的な失敗だけは
+  取得を最大 3 回まで再試行し、全回失敗したら通知して中止する（#685 B2）。
 
 使い方:
   python fetch_mf.py setup   # 初回: headful でブラウザを開く→手で MF ログイン(2FA)→プロファイル保存
@@ -177,18 +177,32 @@ def with_page(c, headless, fn):
 FETCH_ATTEMPTS = 3  # 合計の試行回数（再試行 2 回）
 FETCH_RETRY_WAITS = (30, 120)  # 再試行前の待ち（秒）。i 回目の失敗の後に FETCH_RETRY_WAITS[i-1]
 _TRANSIENT_MSG = re.compile(
-    r"launch_persistent_context|Target closed|has been closed|EAGAIN|Resource temporarily unavailable",
+    r"launch_persistent_context|Target closed|has been closed|EAGAIN|Resource temporarily unavailable"
+    # ネットワークがまだ戻っていない系（スリープ復帰直後・回線切替など・#685 フォローアップ）
+    r"|net::ERR_INTERNET_DISCONNECTED|net::ERR_NETWORK_CHANGED|net::ERR_NAME_NOT_RESOLVED"
+    r"|net::ERR_CONNECTION_RESET|net::ERR_CONNECTION_REFUSED|net::ERR_TIMED_OUT",
     re.I,
 )
+# 表（fetch.dom のセレクタ）の出現待ちで TimeoutError になった例外に付ける印（_goto_and_wait）
+_TABLE_WAIT_ATTR = "mf_table_wait_timeout"
+TABLE_WAIT_HINT = "表待ちのタイムアウトが続く場合は fetch.dom のセレクタずれの可能性"
 
 
 class TransientFetchError(Exception):
-    """再試行してよい一時的な失敗（起動失敗・EAGAIN・TimeoutError）を包む。"""
+    """再試行してよい一時的な失敗（起動失敗・EAGAIN・TimeoutError・ネットワーク未復帰）を包む。
+
+    table_wait: 元の例外が表の出現待ちのタイムアウトなら True（通知文にヒントを添える）。
+    """
+
+    def __init__(self, msg, table_wait=False):
+        super().__init__(msg)
+        self.table_wait = table_wait
 
 
 def _is_transient(e):
     """一時的な失敗か。Playwright の TimeoutError・errno EAGAIN の OSError・
-    ブラウザ起動失敗／Target closed 系の Playwright Error だけを True にする。"""
+    ブラウザ起動失敗／Target closed 系・ネットワーク未復帰系（net::ERR_* の一部）の
+    Playwright Error だけを True にする。"""
     if isinstance(e, PlaywrightTimeoutError):
         return True
     if isinstance(e, OSError) and e.errno == errno.EAGAIN:
@@ -210,7 +224,9 @@ def _fetch_once(c):
         return with_page(c, headless=c["fetch"]["headless"], fn=lambda pg: _scrape_all(pg, c))
     except Exception as e:
         if _is_transient(e):
-            raise TransientFetchError(f"{type(e).__name__} ({_short(e)})") from e
+            raise TransientFetchError(
+                f"{type(e).__name__} ({_short(e)})", table_wait=bool(getattr(e, _TABLE_WAIT_ATTR, False))
+            ) from e
         raise
 
 
@@ -226,7 +242,10 @@ def fetch_with_retry(c):
         except TransientFetchError as e:
             if attempt >= FETCH_ATTEMPTS:
                 print(f"mf-snapshot: attempt {attempt}/{FETCH_ATTEMPTS} failed: {e} — giving up", file=sys.stderr)
-                notify(f"取得が {FETCH_ATTEMPTS} 回とも一時的な失敗で中止: {e}")
+                msg = f"取得が {FETCH_ATTEMPTS} 回とも一時的な失敗で中止: {e}"
+                if getattr(e, "table_wait", False):
+                    msg += f"。{TABLE_WAIT_HINT}"
+                notify(msg)
                 sys.exit(1)
             wait = FETCH_RETRY_WAITS[min(attempt - 1, len(FETCH_RETRY_WAITS) - 1)]
             print(f"mf-snapshot: attempt {attempt}/{FETCH_ATTEMPTS} failed: {e} — retry in {wait}s", file=sys.stderr)
@@ -345,9 +364,14 @@ def _goto_and_wait(page, url, selector, f):
         return
     try:
         page.wait_for_selector(selector, timeout=f["timeoutMs"], state="attached")
-    except Exception:
+    except Exception as e:
         if login in page.url:  # 待っている間にログイン画面へ遷移した
             return
+        if isinstance(e, PlaywrightTimeoutError):
+            try:
+                setattr(e, _TABLE_WAIT_ATTR, True)  # 通知文のヒント用の印（#685 L1）
+            except Exception:
+                pass
         raise
     page.wait_for_timeout(f.get("settleMs", 5000))  # SPA 描画待ち（headful 固定）
 
