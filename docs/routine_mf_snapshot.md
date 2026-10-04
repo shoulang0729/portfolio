@@ -33,7 +33,8 @@
 - 通貨（→ `cur`）
 
 ### Step 2: 除外を適用
-- `exclude.accounts` のいずれかに**部分一致**する口座の資産は**すべて捨てる**。
+- 除外リスト（`exclude.accounts`）のいずれかに**部分一致**する口座の資産は**すべて捨てる**（`=` で始まる要素は完全一致）。
+  ※#687 以降、実名の除外リストは Mac mini の非公開設定（`~/.mf-snapshot/private-config.json`）が正本で、公開 config の `exclude.accounts` は常に空。
 - `exclude.holdings` に一致する銘柄も捨てる。
 - `include.categories` に無いカテゴリは最初から対象外。
 
@@ -78,11 +79,11 @@
 `https://github.com/shoulang0729/portfolio/blob/main/data/mf-holdings.json` を開く（無ければ `data/` 配下に新規作成）。鉛筆アイコンで編集に入り、**ファイル全体を Step 3 の JSON で置き換える**。コミットメッセージ `data: refresh MF holdings snapshot (YYYY-MM-DD)`、**Commit directly to the main branch** を選んでコミット。
 
 ### Step 6: 報告
-コミットの URL、`imported` 額、`mfNetWorth` との差、除外した口座名を1〜2行で報告する。
+コミットの URL、`imported` 額、`mfNetWorth` との差、除外した口座の件数を1〜2行で報告する（口座名は書かない）。
 
 ---
 
 ## 運用メモ
-- 口座を増減したら `mf-import-config.json` の `exclude.accounts` を見直す（必要なら `routine_mf_discovery.md` を再実行）。
+- 口座を増減したら Mac mini の非公開設定（`~/.mf-snapshot/private-config.json` の `exclude.accounts`）を見直す（中身はチャット・Issue・PR に貼らない。必要なら `routine_mf_discovery.md` を再実行）。
 - 桁ズレ・読み取り不能が頻発するカテゴリがあれば、そのカテゴリを `include.categories` から外して手動管理に回す。
 - 将来 ③（アプリ側に専用取り込み口＋自動マージ）へ発展させる場合も、この `mf-holdings.json` を入力にできる。

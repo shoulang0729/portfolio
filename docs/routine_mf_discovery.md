@@ -1,6 +1,6 @@
 # MF 口座棚卸し（初回のみ・Claude for Chrome）
 
-目的: MoneyForward の全口座を一覧化し、`data/mf-import-config.json` の `exclude.accounts` に何を入れるかを決めるための「棚卸し」。**コミットはしない。出力を Toshio に見せるだけ。**
+目的: MoneyForward の全口座を一覧化し、除外リスト（Mac mini の非公開設定 `~/.mf-snapshot/private-config.json` の `exclude.accounts`・#687）に何を入れるかを決めるための「棚卸し」。**コミットはしない。出力を Toshio に見せるだけ。**
 
 実行条件: Chrome で MoneyForward にログイン済みであること。
 
@@ -30,4 +30,4 @@
 
 ## 出力を受け取ったあと（Toshio → MulmoClaude）
 
-この口座一覧を MulmoClaude に貼れば、除外したい口座を選んで `mf-import-config.json` の `exclude.accounts` に反映する。これで定常運用（`routine_mf_snapshot.md`）の準備が完了する。
+除外したい口座を選び、Mac mini の非公開設定（`~/.mf-snapshot/private-config.json` の `exclude.accounts`）に反映する（公開 config には書かない。中身はチャット・Issue・PR に貼らない）。これで定常運用（`routine_mf_snapshot.md`）の準備が完了する。
