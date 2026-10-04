@@ -58,8 +58,19 @@
 7. **動作確認**: `python3 scripts/fetch_mf.py run` を手動実行 → `data/mf-holdings.json` 更新と
    `git log -1` の push を確認。
 8. **試運転（`--dry-run`）**: `python3 scripts/fetch_mf.py run --dry-run` は取得・検証までを行い、
-   `data/` への書き込み・commit/push・networth の KV 送信・履歴取得を**しない**。出力は件数と検証結果だけ
-   （例 `DRY-RUN OK verify=passed rows=N holdings=N liabilities=N realEstate=skipped …`。金額は出さない）。
+   `data/` への書き込み・commit/push・networth の KV 送信・履歴取得を**しない**。出力は件数と一致判定だけで、
+   金額・口座名は出さない（#687）。例:
+   ```text
+   [dry-run] verify=passed rows=N holdings=N excludedAccounts=N liabilities=N realEstate=skipped
+   [dry-run] 取込対象の金融機関の集合: 一致
+   [dry-run] 除外口座の集合: 一致
+   [dry-run] imported: 直近出力の ±1.0% 以内
+   [dry-run] 公開コピー検査: 通し番号でない institution=0行 実名の残る institution=0行 汎用ラベルでない現金・預金の name=0行 excludedAccounts=0件 liabilities=なし → OK
+   [dry-run] OK（書き出し・KV 送信・commit/push はしていない）
+   ```
+   比較の相手は同じ作業ツリーの `data/mf-holdings.json`（直近の本番出力）。それがすでに公開用の通し番号形式なら、
+   2 つの集合は「比較不可」と出る。公開コピー検査が NG なら exit 4。dry-run 中の通知には先頭に `[dry-run]` が付く。
+   `--dry-run` 単独でも同じ。未知の引数・打ち間違いは exit 2 で止まり、本番処理には入らない。
    feature ブランチの確認は main とは別の作業ツリーで、必ずこのモードで行う（`run` を feature ブランチで実行しない）。
 
 ---
