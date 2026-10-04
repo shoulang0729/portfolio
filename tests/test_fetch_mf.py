@@ -1208,6 +1208,78 @@ class TestFetchRetry(_RetryBase):
         self.assertEqual(result[1], ["row"])
         self.assertEqual(self.log.count("close"), 2)
 
+    # ── #685 フォローアップ: ネットワーク未復帰系の net::ERR と表待ちタイムアウトの通知ヒント ──
+    NETWORK_ERRS = (
+        "net::ERR_INTERNET_DISCONNECTED",
+        "net::ERR_NETWORK_CHANGED",
+        "net::ERR_NAME_NOT_RESOLVED",
+        "net::ERR_CONNECTION_RESET",
+        "net::ERR_CONNECTION_REFUSED",
+        "net::ERR_TIMED_OUT",
+    )
+
+    def test_network_not_back_errors_are_retried(self):
+        for code in self.NETWORK_ERRS:
+            self.log.clear()
+            self.sleeps.clear()
+            e = fetch_mf.PlaywrightError(f"Page.goto: {code} at https://example.invalid/bs/portfolio")
+            self.assertTrue(fetch_mf._is_transient(e), code)
+            self._install(scrape_script=[e, "ok"])
+            result, err = self._run_quiet(fetch_mf.fetch_with_retry, self.c)
+            self.assertEqual(result[1], ["row"], code)
+            self.assertEqual(self.log.count("launch"), 2, code)
+            self.assertEqual(self.sleeps, [30], code)
+            self.assertIn(code, err)
+        self.assertEqual(self.notified, [])
+
+    def test_other_net_err_not_retried(self):
+        e = fetch_mf.PlaywrightError("Page.goto: net::ERR_CERT_AUTHORITY_INVALID at https://example.invalid/")
+        self.assertFalse(fetch_mf._is_transient(e))
+        self._install(scrape_script=[e])
+        with self.assertRaises(fetch_mf.PlaywrightError):
+            self._run_quiet(fetch_mf.fetch_with_retry, self.c)
+        self.assertEqual(self.log.count("launch"), 1)
+        self.assertEqual(self.sleeps, [])
+        self.assertEqual(self.notified, [])
+
+    def test_network_err_three_times_notify_without_table_hint(self):
+        e = fetch_mf.PlaywrightError("Page.goto: net::ERR_INTERNET_DISCONNECTED at https://example.invalid/")
+        self._install(scrape_script=[e, e, e])
+        with self.assertRaises(SystemExit) as cm:
+            self._run_quiet(fetch_mf.fetch_with_retry, self.c)
+        self.assertEqual(cm.exception.code, 1)
+        self.assertEqual(len(self.notified), 1)
+        self.assertIn("net::ERR_INTERNET_DISCONNECTED", self.notified[0])
+        self.assertNotIn("fetch.dom", self.notified[0])
+
+    def _table_wait_timeout(self):
+        """_goto_and_wait が投げる表待ちタイムアウト（合成ページで実際に発生させる）。"""
+        page = _WaitPage(selector_raises=fetch_mf.PlaywrightTimeoutError("Page.wait_for_selector: Timeout 45000ms exceeded."))
+
+        def _raise():
+            fetch_mf.scrape(page, self.c)
+
+        return _raise
+
+    def test_last_failure_table_wait_timeout_adds_hint(self):
+        goto_timeout = fetch_mf.PlaywrightTimeoutError("Page.goto: Timeout 45000ms exceeded.")
+        self._install(scrape_script=[goto_timeout, goto_timeout, self._table_wait_timeout()])
+        with self.assertRaises(SystemExit) as cm:
+            self._run_quiet(fetch_mf.fetch_with_retry, self.c)
+        self.assertEqual(cm.exception.code, 1)
+        self.assertEqual(len(self.notified), 1)
+        self.assertIn("3 回", self.notified[0])
+        self.assertIn(fetch_mf.TABLE_WAIT_HINT, self.notified[0])
+        self.assertIn("表待ちのタイムアウトが続く場合は fetch.dom のセレクタずれの可能性", self.notified[0])
+
+    def test_last_failure_goto_timeout_no_hint(self):
+        goto_timeout = fetch_mf.PlaywrightTimeoutError("Page.goto: Timeout 45000ms exceeded.")
+        self._install(scrape_script=[self._table_wait_timeout(), self._table_wait_timeout(), goto_timeout])
+        with self.assertRaises(SystemExit):
+            self._run_quiet(fetch_mf.fetch_with_retry, self.c)
+        self.assertEqual(len(self.notified), 1)
+        self.assertNotIn("fetch.dom", self.notified[0])
+
 
 _RUN_PATCHED = ("update_real_assets", "push_networth_to_worker", "git_commit_push", "_run_history_script", "OUT",
                 "_fetch_once", "_load_previous_output")
