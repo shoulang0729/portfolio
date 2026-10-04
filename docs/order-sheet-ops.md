@@ -37,9 +37,10 @@ plan の実ファイルは**リポの外**（例 `~/private/`）に置く。`.gi
 - レート制限は IP 単位 120 回/60 秒（`RATE_LIMITER`）。ループで叩かない。
 - 応答は `Cache-Control: no-store`。
 
-curl を使うときは毎回この形（値はシェル変数のまま渡し、展開結果を表示しない）:
+curl を使うときは毎回この形（値はシェル変数のまま渡し、展開結果を表示しない）。保存先 `~/private/` は先に本人だけが読める権限で作っておく:
 
 ```bash
+mkdir -p ~/private && chmod 700 ~/private
 : "${WORKER_URL:=https://portfolio-proxy.shoulang.workers.dev}"
 curl -sS -H "X-Pin-Hash: $MF_PIN_HASH" "$WORKER_URL/order-sheet/plan" -o ~/private/plan-now.json -w '%{http_code}\n'
 ```

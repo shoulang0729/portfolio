@@ -70,7 +70,9 @@ function resolveReal(p) {
  */
 export function isInsideDir(child, dir) {
   const rel = path.relative(dir, child);
-  return rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel));
+  if (rel === '') return true;
+  const outside = rel === '..' || rel.startsWith(`..${path.sep}`) || path.isAbsolute(rel);
+  return !outside;
 }
 
 /**
@@ -168,6 +170,7 @@ function workerEnv(env) {
   const pin = env.MF_PIN_HASH;
   if (!pin) throw new UsageError('環境変数 MF_PIN_HASH が未設定です');
   const base = (env.WORKER_URL || DEFAULT_WORKER_URL).replace(/\/+$/, '');
+  if (!/^https:\/\//.test(base)) throw new UsageError('WORKER_URL は https:// で始まる URL にしてください');
   return { pin, base };
 }
 
@@ -226,12 +229,26 @@ async function cmdGet(file, env, fetchImpl, log) {
     headers: { 'X-Pin-Hash': pin, 'User-Agent': USER_AGENT },
   });
   if (!res.ok) throw new Error(`GET に失敗: ${await describeError(res)}`);
-  const plan = await res.json();
+  let plan;
+  try {
+    plan = await res.json();
+  } catch {
+    // 応答本文の断片を出さない
+    throw new Error(`応答を JSON として読めません（HTTP ${res.status}）`);
+  }
   if (plan == null) {
     log('order:plan は未投入です（ファイルは作りません）');
     return;
   }
-  writeFileSync(real, `${JSON.stringify(plan, null, 2)}\n`, { mode: 0o600 });
+  try {
+    // flag 'wx': 既存ファイル・壊れたシンボリックリンクがあれば作らない（リンク先＝リポ内へ書く余地を消す）
+    writeFileSync(real, `${JSON.stringify(plan, null, 2)}\n`, { mode: 0o600, flag: 'wx' });
+  } catch (e) {
+    if (e && e.code === 'EEXIST') {
+      throw new UsageError('出力先が既にあります（上書きしません）。別のファイル名を指定してください');
+    }
+    throw e;
+  }
   log(`GET OK: ${fmtSummary(summarizePlan(plan))} を保存しました`);
 }
 

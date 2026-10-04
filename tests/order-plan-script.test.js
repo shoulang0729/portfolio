@@ -1,13 +1,20 @@
 // scripts/order-plan.mjs（注文表 plan の投入スクリプト・#675）と合成サンプルのテスト。
 // 値はすべて合成値（docs/order-sheet/plan.example.json・架空ティッカー）。
-import { mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync, existsSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { validatePlan } from '../worker/src/order-plan.js';
-import { UsageError, assertOutsideRepo, isInsideDir, main, summarizePlan } from '../scripts/order-plan.mjs';
+import {
+  UsageError,
+  assertOutsideRepo,
+  isInsideDir,
+  loadValidatePlan,
+  main,
+  summarizePlan,
+} from '../scripts/order-plan.mjs';
 
 const REPO_ROOT = path.resolve(import.meta.dirname, '..');
 const EXAMPLE_PATH = path.join(REPO_ROOT, 'docs', 'order-sheet', 'plan.example.json');
@@ -39,12 +46,28 @@ describe('plan.example.json（合成サンプル）', () => {
   });
 });
 
+describe('loadValidatePlan（data: URL で worker/src/order-plan.js を読む）', () => {
+  it('order-plan.js は import を持たない（data: URL で読める前提）', () => {
+    const src = readFileSync(path.join(REPO_ROOT, 'worker', 'src', 'order-plan.js'), 'utf8');
+    expect(src).not.toMatch(/^import /m);
+  });
+
+  it('読み込んだ validatePlan でサンプルが ok になる', async () => {
+    const vp = await loadValidatePlan();
+    expect(vp(example)).toEqual({ ok: true, errors: [] });
+    expect(vp({ ...example, schemaVersion: 99 }).ok).toBe(false);
+  });
+});
+
 describe('isInsideDir / assertOutsideRepo', () => {
   it('配下と同一は内側・兄弟や親は外側', () => {
     expect(isInsideDir('/a/b/c.json', '/a/b')).toBe(true);
     expect(isInsideDir('/a/b', '/a/b')).toBe(true);
     expect(isInsideDir('/a/bc/x.json', '/a/b')).toBe(false);
     expect(isInsideDir('/a/x.json', '/a/b')).toBe(false);
+    expect(isInsideDir('/a', '/a/b')).toBe(false);
+    // 「..」で始まる名前のファイル・ディレクトリは配下として扱う
+    expect(isInsideDir('/a/b/..foo/x.json', '/a/b')).toBe(true);
   });
 
   it('リポ内のファイルを拒否する', () => {
@@ -168,6 +191,42 @@ describe('main（tmp ディレクトリ・fetch はモック）', () => {
     expectNoValues();
 
     await expect(main(['get', file], { env, fetchImpl, log })).rejects.toThrow(/上書きしません/);
+  });
+
+  it('get: 壊れたシンボリックリンクの先には書かない（flag wx・EEXIST は UsageError）', async () => {
+    const target = path.join(dir, 'target-dir-missing', 'leak.json');
+    const link = path.join(dir, 'link.order-plan.json');
+    symlinkSync(target, link);
+    const fetchImpl = vi.fn(async () => jsonResponse({ ...example, rev: 4 }));
+    const err = await main(['get', link], { env, fetchImpl, log }).catch((e) => e);
+    expect(err).toBeInstanceOf(UsageError);
+    expect(err.message).toMatch(/上書きしません/);
+    expect(existsSync(target)).toBe(false);
+  });
+
+  it('get: 応答が JSON でなければ本文の断片を出さない', async () => {
+    const file = path.join(dir, 'html.order-plan.json');
+    const fetchImpl = vi.fn(async () => new Response('<html>29808 secret-body</html>', { status: 200 }));
+    const err = await main(['get', file], { env, fetchImpl, log }).catch((e) => e);
+    expect(err.message).toBe('応答を JSON として読めません（HTTP 200）');
+    expect(existsSync(file)).toBe(false);
+  });
+
+  it('WORKER_URL が https:// でなければ送らない', async () => {
+    const file = path.join(dir, 'a.order-plan.json');
+    writeFileSync(file, JSON.stringify(example));
+    const fetchImpl = vi.fn();
+    for (const url of ['http://worker.example.test', 'worker.example.test', 'file:///tmp/x']) {
+      const err = await main(['put', file], {
+        env: { MF_PIN_HASH: SECRET_PIN, WORKER_URL: url },
+        fetchImpl,
+        log,
+        validatePlan,
+      }).catch((e) => e);
+      expect(err).toBeInstanceOf(UsageError);
+      expect(err.message).toMatch(/https:\/\//);
+    }
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 
   it('get: 未投入（null）ならファイルを作らない', async () => {
