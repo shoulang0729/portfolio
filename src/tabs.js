@@ -15,10 +15,11 @@ import { renderRiskCharts } from './risk-charts.js';
 import { renderBriefing } from './briefing.js';
 import { renderValuationTab } from './valuation-tab.js';
 import { renderWealthTab } from './wealth.js';
+import { renderOrderTab } from './order-sheet.js';
 
 /**
  * Switch to a different tab and render its content
- * @param {'heatmap' | 'list' | 'watchlist' | 'risk' | 'value' | 'wealth' | 'briefing' | 'ai'} name - Tab name
+ * @param {'heatmap' | 'list' | 'watchlist' | 'risk' | 'value' | 'wealth' | 'briefing' | 'order' | 'ai'} name - Tab name
  * @returns {void}
  */
 export function switchTab(name) {
@@ -36,6 +37,7 @@ export function switchTab(name) {
   const panelValue = document.getElementById('panel-value');
   const panelWealth = document.getElementById('panel-wealth');
   const panelBriefing = document.getElementById('panel-briefing');
+  const panelOrder = document.getElementById('panel-order');
   const panelAi = document.getElementById('panel-ai');
   if (panelHeatmap) panelHeatmap.hidden = name !== 'heatmap';
   if (panelList) panelList.hidden = name !== 'list';
@@ -43,6 +45,7 @@ export function switchTab(name) {
   if (panelValue) panelValue.hidden = name !== 'value';
   if (panelWealth) panelWealth.hidden = name !== 'wealth';
   if (panelBriefing) panelBriefing.hidden = name !== 'briefing';
+  if (panelOrder) panelOrder.hidden = name !== 'order';
   if (panelAi) panelAi.hidden = name !== 'ai';
 
   document.querySelectorAll('.tab-btn[data-tab]').forEach((b) => {
@@ -82,4 +85,6 @@ export function switchTab(name) {
   if (name === 'wealth') renderWealthTab();
 
   if (name === 'briefing') renderBriefing();
+
+  if (name === 'order') renderOrderTab();
 }
