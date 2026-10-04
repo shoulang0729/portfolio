@@ -506,7 +506,7 @@ var state = {
   slDetailVisible: false,
   // 詳細列の表示状態（起動時はデフォルト非表示）
   activeTab: "heatmap",
-  // 'heatmap' | 'list' | 'risk' | 'value' | 'briefing'
+  // 'heatmap' | 'list' | 'risk' | 'value' | 'briefing' | 'order'
   lastUpdateText: null,
   // refreshPrices 成功時のステータス文字列（履歴取得後に復元用）
   // ウォッチリスト
@@ -534,7 +534,9 @@ var state = {
   providerHealth: {
     finnhub: { ok: true, lastOk: null, errCount: 0, lastErr: null },
     yahoo: { ok: true, lastOk: null, errCount: 0, lastErr: null }
-  }
+  },
+  // Order タブ（注文表・#674）。GET /order-sheet の応答を保持（PIN 保護データ・永続化しない）
+  orderSheet: { status: "idle", data: null, error: null, busy: false }
 };
 
 // src/auth-pin.js
@@ -1424,8 +1426,8 @@ function _showChangePinButton() {
     "manage-positions-btn",
     "snapshot-btn"
   ]) {
-    const btn = document.getElementById(id);
-    if (btn) btn.style.display = "";
+    const btn2 = document.getElementById(id);
+    if (btn2) btn2.style.display = "";
   }
 }
 (function initAuth() {
@@ -2346,9 +2348,9 @@ function updateSlColStyle() {
 function slToggleDetail() {
   state.slDetailVisible = !state.slDetailVisible;
   updateSlColStyle();
-  const btn = document.getElementById("sl-eye-btn");
-  if (btn) {
-    btn.classList.toggle("hidden", !state.slDetailVisible);
+  const btn2 = document.getElementById("sl-eye-btn");
+  if (btn2) {
+    btn2.classList.toggle("hidden", !state.slDetailVisible);
     const slash = document.getElementById("sl-eye-slash");
     if (slash) slash.style.display = state.slDetailVisible ? "none" : "";
   }
@@ -6935,11 +6937,11 @@ async function renderValuationTab() {
   const sorted = sortedRows(rows);
   const rowsHTML = sorted.map((r) => rowHTML(r.p, r.currentPct, r.targetPct, r.verdict, r.val, r.trig, r.conviction)).join("");
   wrap.innerHTML = `${VAL_BANNER_SPRITE}${statsHTML}${lensHTML}<div class="val-list">${rowsHTML}</div><div id="val-glossary">${glossaryHTML("value")}</div>`;
-  wrap.querySelectorAll(".val-seg[data-lens]").forEach((btn) => {
-    btn.addEventListener("click", () => {
+  wrap.querySelectorAll(".val-seg[data-lens]").forEach((btn2) => {
+    btn2.addEventListener("click", () => {
       const nextLens = (
         /** @type {HTMLElement} */
-        btn.dataset.lens
+        btn2.dataset.lens
       );
       if (!nextLens || nextLens === _lens) return;
       _lens = nextLens;
@@ -7235,6 +7237,446 @@ function drawCashChart(view) {
   g.append("g").attr("class", "we-axis").attr("transform", `translate(0,${ih})`).call(d3.axisBottom(x).ticks(Math.min(6, pts.length)).tickSizeOuter(0));
 }
 
+// src/order-sheet-view.js
+function isNum(v) {
+  return typeof v === "number" && Number.isFinite(v);
+}
+function fmtLimit(x) {
+  if (!isNum(x)) return "\u6210\u884C";
+  return x >= 20 ? `$${Math.round(x)}` : `$${x.toFixed(2)}`;
+}
+function fmtUsd(x, masked) {
+  if (!isNum(x)) return "\u2014";
+  const s = `${x < 0 ? "\u2212" : ""}$${Math.abs(Math.round(x)).toLocaleString("en-US")}`;
+  return masked ? maskAmount(s) : s;
+}
+function fmtPct2(x) {
+  return isNum(x) ? `${x.toFixed(1)}%` : "\u2014";
+}
+function fmtQty(q) {
+  if (!isNum(q)) return "?";
+  return Number.isInteger(q) ? q.toLocaleString("en-US") : String(q);
+}
+function maskDollarText(text, masked) {
+  const s = String(text ?? "");
+  return masked ? s.replace(/\$[0-9][0-9,.]*/g, (m) => maskAmount(m)) : s;
+}
+var STATUS_LABEL = {
+  toPlace: "\u8981\u767A\u6CE8",
+  placed: "\u767A\u6CE8\u4E2D",
+  partial: "\u4E00\u90E8\u7D04\u5B9A",
+  waiting: "\u5F85\u6A5F",
+  filled: "\u7D04\u5B9A\u6E08",
+  cancelled: "\u53D6\u6D88"
+};
+var SUPPRESSED_LABEL = {
+  targetReached: "\u505C\u6B62\uFF08\u76EE\u6A19\u5230\u9054\uFF09",
+  themeCapReached: "\u505C\u6B62\uFF08\u30C6\u30FC\u30DE\u4E0A\u9650\uFF09",
+  cashFloor: "\u505C\u6B62\uFF08\u73FE\u91D1\u30AC\u30FC\u30C9\uFF09"
+};
+var HOLD_CANCEL_NOTE = "\u76EE\u6A19\u5230\u9054\u30FB\u53D6\u6D88\u3092\u691C\u8A0E";
+function buildOrderRows(sheet) {
+  const orders = Array.isArray(sheet?.orders) ? sheet.orders : [];
+  const rows = orders.map((o) => ({ ...o, kind: o?.role === "funding" ? "funding" : "order" }));
+  const ladders = Array.isArray(sheet?.ladders) ? sheet.ladders : [];
+  const holdRows = [];
+  for (const l of ladders) {
+    if (!l || l.hold !== "targetReached") continue;
+    const stages = Array.isArray(l.stages) ? l.stages : [];
+    const st = stages.find((s) => s && s.state === "working");
+    if (!st || st.side !== "buy") continue;
+    if (st.display !== "placed" && st.display !== "partial") continue;
+    if (rows.some((r) => r.symbol === l.symbol && r.stageId === st.id)) continue;
+    holdRows.push({
+      kind: "holdCancel",
+      symbol: l.symbol,
+      side: "buy",
+      tier: l.tier,
+      stageId: st.id,
+      status: st.display,
+      limit: st.limit,
+      qty: st.qty,
+      filledQty: isNum(st.filledQty) ? st.filledQty : 0,
+      amountUsd: st.amountUsd,
+      curUsd: l.curUsd,
+      curPct: l.curPct,
+      afterUsd: null,
+      afterPct: null,
+      targetUsd: l.targetUsd,
+      targetPct: l.targetPct,
+      next: null,
+      flags: ["holdCancel"],
+      notes: [HOLD_CANCEL_NOTE]
+    });
+  }
+  const fundingRows = rows.filter((r) => r.kind === "funding");
+  const orderRows = rows.filter((r) => r.kind !== "funding");
+  return [...orderRows, ...holdRows, ...fundingRows];
+}
+function summarizeRows(rows) {
+  let toPlace = 0;
+  let placed = 0;
+  let holdCancel = 0;
+  for (const r of rows) {
+    if (r.kind === "holdCancel") holdCancel++;
+    else if (r.kind === "order" && r.status === "toPlace") toPlace++;
+    else if (r.kind === "order") placed++;
+  }
+  return { toPlace, placed, holdCancel };
+}
+function btn(action, symbol, stageId, label, primary = false) {
+  const arg = `${symbol}:${stageId}`;
+  return `<button type="button" class="os-btn${primary ? " os-btn--primary" : ""}" data-action="${action}" data-arg="${escapeHTML(arg)}">${escapeHTML(label)}</button>`;
+}
+function statusPill(r) {
+  if (r.kind === "funding") return '<span class="os-pill os-pill--funding">\u8CC7\u91D1\u7E70\u308A</span>';
+  if (r.kind === "holdCancel") return `<span class="os-pill os-pill--warn">${escapeHTML(HOLD_CANCEL_NOTE)}</span>`;
+  const label = STATUS_LABEL[r.status] || String(r.status ?? "");
+  const extra = r.status === "partial" ? ` ${fmtQty(r.filledQty)}/${fmtQty(r.qty)}` : "";
+  const cls = r.status === "toPlace" ? "os-pill--place" : "os-pill--working";
+  return `<span class="os-pill ${cls}">${escapeHTML(label + extra)}</span>`;
+}
+function rowButtons(r) {
+  if (r.kind === "funding") return "";
+  const sym = String(r.symbol ?? "");
+  const sid = String(r.stageId ?? "");
+  if (r.status === "toPlace") {
+    return btn("orderPlaced", sym, sid, "\u767A\u6CE8\u3057\u305F", true) + btn("orderFilled", sym, sid, "\u7D04\u5B9A\u3057\u305F");
+  }
+  return btn("orderFilled", sym, sid, "\u7D04\u5B9A\u3057\u305F", true) + btn("orderUnplace", sym, sid, "\u767A\u6CE8\u3092\u53D6\u308A\u6D88\u3057\u305F");
+}
+function renderOrdersTable(rows, masked) {
+  if (!rows.length) return '<div class="os-empty">\u4ECA\u51FA\u3059\u6CE8\u6587\u306F\u3042\u308A\u307E\u305B\u3093</div>';
+  const head = '<tr><th class="os-sym">\u9298\u67C4</th><th>\u58F2\u8CB7</th><th class="os-num">\u6307\u5024</th><th class="os-num">\u682A\u6570</th><th class="os-num">\u91D1\u984D</th><th class="os-num">\u7D04\u5B9A\u5F8C</th><th class="os-num">\u76EE\u6A19</th><th>\u72B6\u614B</th></tr>';
+  const body = rows.map((r) => {
+    const side = r.side === "sell" ? "\u58F2" : "\u8CB7";
+    const sideCls = r.side === "sell" ? "os-side--sell" : "os-side--buy";
+    const isFunding = r.kind === "funding";
+    const after = isFunding || r.afterUsd == null ? "\u2014" : `${fmtUsd(r.afterUsd, masked)} <span class="os-sub">${fmtPct2(r.afterPct)}</span>`;
+    const target = r.targetUsd == null ? "\u2014" : `${fmtUsd(r.targetUsd, masked)} <span class="os-sub">${fmtPct2(r.targetPct)}</span>`;
+    const itm = r.inTheMoney === true && !isFunding && r.limit != null ? ' <span class="os-tag">\u6307\u5024\u5230\u9054</span>' : "";
+    const main = `<tr class="os-row${r.kind === "holdCancel" ? " os-row--hold" : ""}"><td class="os-sym">${escapeHTML(String(r.symbol ?? ""))}</td><td class="${sideCls}">${side}</td><td class="os-num">${escapeHTML(fmtLimit(r.limit))}${itm}</td><td class="os-num">${escapeHTML(fmtQty(r.qty))}</td><td class="os-num">${escapeHTML(fmtUsd(r.amountUsd, masked))}</td><td class="os-num">${after}</td><td class="os-num">${target}</td><td>${statusPill(r)}</td></tr>`;
+    const parts = [];
+    if (isFunding) {
+      parts.push(
+        `<span class="os-next">${escapeHTML(maskDollarText(r.text || "\u7C73\u30C9\u30EB\u8CB7\u3044\u306E\u4E0D\u8DB3\u5206\u3092\u5145\u5F53", masked))}</span>`
+      );
+    } else if (r.next && r.next.text) {
+      parts.push(`<span class="os-next">\u2514 ${escapeHTML(String(r.next.text))}</span>`);
+    }
+    const notes = Array.isArray(r.notes) ? r.notes.filter((n) => n && n !== HOLD_CANCEL_NOTE) : [];
+    for (const n of notes) parts.push(`<span class="os-flag">${escapeHTML(maskDollarText(n, masked))}</span>`);
+    if (r.kind === "holdCancel")
+      parts.push(`<span class="os-flag os-flag--warn">${escapeHTML(HOLD_CANCEL_NOTE)}</span>`);
+    const buttons = rowButtons(r);
+    const actions = buttons ? `<div class="os-actions">${buttons}</div>` : "";
+    const subCls = `os-subrow${r.kind === "holdCancel" ? " os-row--hold" : ""}`;
+    const sub = `<tr class="${subCls}"><td colspan="8"><div class="os-subrow-inner"><div class="os-subrow-text">${parts.join("")}</div>${actions}</div></td></tr>`;
+    return main + sub;
+  }).join("");
+  return `<div class="os-scroll"><table class="os-table"><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
+}
+function renderGuardPills(sheet) {
+  const cash = sheet?.cash || {};
+  const ai = sheet?.aiTech || {};
+  const cashCls = cash.guardActive ? "os-gpill os-gpill--warn" : "os-gpill";
+  const cashText = `\u73FE\u91D1 ${fmtPct2(cash.pct)} / \u4E0B\u9650 ${fmtPct2(cash.floorPct)}`;
+  const guardNote = cash.guardActive ? '<div class="os-warn">\u73FE\u91D1\u304C\u4E0B\u9650\u3092\u5272\u3063\u3066\u3044\u308B\u305F\u3081\u3001\u5404\u9298\u67C4\u306E\u6700\u6DF1\u6BB5\u3092\u505C\u6B62\u3057\u3066\u3044\u307E\u3059</div>' : "";
+  const aiCls = ai.over ? "os-gpill os-gpill--warn" : "os-gpill";
+  const aiText = `AI/\u30C6\u30C3\u30AF ${fmtPct2(ai.now)}\u2192${fmtPct2(ai.afterWorking)}\u2192${fmtPct2(ai.final)} / \u4E0A\u9650 ${fmtPct2(ai.capPct)}`;
+  return `<div class="os-gpills"><span class="${cashCls}">${escapeHTML(cashText)}</span><span class="${aiCls}">${escapeHTML(aiText)}</span></div>${guardNote}`;
+}
+function renderFunding(sheet, masked) {
+  const u = sheet?.funding?.usd || {};
+  const a = sheet?.funding?.allStages || {};
+  const sym = escapeHTML(String(u.sweepSymbol || "JPST"));
+  let sweep;
+  if (u.sweepQty == null) sweep = `<span class="os-warn-text">${sym} \u306E\u58F2\u5374\u682A\u6570\u3092\u8A08\u7B97\u3067\u304D\u307E\u305B\u3093</span>`;
+  else if (u.sweepQty > 0)
+    sweep = `${sym} \u58F2 <b>${escapeHTML(fmtQty(u.sweepQty))} \u682A</b>\uFF08${escapeHTML(fmtUsd(u.sweepUsd, masked))}\uFF09`;
+  else sweep = `${sym} \u306E\u58F2\u5374\u306F\u4E0D\u8981`;
+  const capped = u.sweepCapped ? `<div class="os-warn">${sym} \u306E\u4FDD\u6709\u682A\u6570\u307E\u3067\u58F2\u3063\u3066\u3082 ${escapeHTML(fmtUsd(u.sweepShortUsd, masked))} \u4E0D\u8DB3</div>` : "";
+  const short = isNum(a.shortfallUsd) && a.shortfallUsd > 0 ? `<div class="os-warn">\u5168\u6BB5\u306E\u5408\u8A08\u306B\u5BFE\u3057\u8CC7\u91D1\u304C ${escapeHTML(fmtUsd(a.shortfallUsd, masked))} \u4E0D\u8DB3</div>` : '<div class="os-ok">\u5168\u6BB5\u306E\u5408\u8A08\u306B\u5BFE\u3057\u8CC7\u91D1\u306F\u8DB3\u308A\u3066\u3044\u307E\u3059</div>';
+  const kv = (k, v) => `<div class="os-kv"><span>${k}</span><span>${v}</span></div>`;
+  return [
+    '<div class="os-card"><div class="os-card-title">\u8CC7\u91D1\u7E70\u308A\uFF08\u7C73\u30C9\u30EB\uFF09</div>',
+    kv("\u4ECA\u306E\u6CE8\u6587\u306E\u8CB7\u3044", escapeHTML(fmtUsd(u.buyWorking, masked))),
+    kv("\u4ECA\u306E\u6CE8\u6587\u306E\u58F2\u308A", escapeHTML(fmtUsd(u.sellWorking, masked))),
+    kv("\u7C73\u30C9\u30EB\u9810\u308A\u91D1", escapeHTML(fmtUsd(u.usdCash, masked))),
+    kv("\u4E0D\u8DB3\u5206\u306E\u5145\u5F53", sweep),
+    capped,
+    kv("\u5168\u6BB5\u306E\u8CB7\u3044\u5408\u8A08", escapeHTML(fmtUsd(a.buyTotal, masked))),
+    kv("\u5168\u6BB5\u306E\u58F2\u308A\uFF0B\u5145\u5F53\u53EF\u80FD", escapeHTML(fmtUsd(a.available, masked))),
+    short,
+    "</div>"
+  ].join("");
+}
+function pctCell(v, over) {
+  return `<td class="os-num${over ? " os-over" : ""}">${fmtPct2(v)}</td>`;
+}
+function renderAiTech(sheet) {
+  const ai = sheet?.aiTech;
+  if (!ai) return "";
+  const cap = ai.capPct;
+  const overOf = (v, c) => isNum(v) && isNum(c) && v > c;
+  const rows = [
+    `<tr><td>AI/\u30C6\u30C3\u30AF\u5408\u8A08</td>${pctCell(ai.now, overOf(ai.now, cap))}${pctCell(ai.afterWorking, overOf(ai.afterWorking, cap))}${pctCell(ai.final, overOf(ai.final, cap))}<td class="os-num">${fmtPct2(cap)}</td></tr>`
+  ];
+  for (const t of Array.isArray(ai.themes) ? ai.themes : []) {
+    rows.push(
+      `<tr><td class="os-indent">${escapeHTML(String(t?.theme ?? ""))}</td>${pctCell(t?.now, overOf(t?.now, t?.cap))}${pctCell(t?.afterWorking, overOf(t?.afterWorking, t?.cap))}${pctCell(t?.final, overOf(t?.final, t?.cap))}<td class="os-num">${fmtPct2(t?.cap)}</td></tr>`
+    );
+  }
+  return `<div class="os-card"><div class="os-card-title">AI/\u30C6\u30C3\u30AF\uFF08\u7DCF\u8CC7\u7523\u6BD4\uFF09</div><div class="os-scroll"><table class="os-table os-table--mini"><thead><tr><th></th><th class="os-num">\u73FE\u5728</th><th class="os-num">\u4ECA\u306E\u6CE8\u6587\u5F8C</th><th class="os-num">\u5168\u6BB5\u7D04\u5B9A\u5F8C</th><th class="os-num">\u4E0A\u9650</th></tr></thead><tbody>${rows.join("")}</tbody></table></div></div>`;
+}
+function renderStress(sheet) {
+  const s = sheet?.stress;
+  if (!s) return "";
+  const rows = (Array.isArray(s.scenarios) ? s.scenarios : []).map(
+    (sc) => `<tr><td>${escapeHTML(String(sc?.label ?? sc?.id ?? ""))}</td>${pctCell(sc?.now, !!sc?.overNow)}${pctCell(sc?.afterWorking, !!sc?.overAfterWorking)}${pctCell(sc?.final, !!sc?.overFinal)}</tr>`
+  );
+  const eq = s.equityPct || {};
+  rows.push(
+    `<tr><td>\u682A\u306E\u6BD4\u7387</td>${pctCell(eq.now, false)}${pctCell(eq.afterWorking, false)}${pctCell(eq.final, false)}</tr>`
+  );
+  return `<div class="os-card"><div class="os-card-title">\u30B9\u30C8\u30EC\u30B9\uFF08\u8A31\u5BB9 ${fmtPct2(s.tolerancePct)}\uFF09</div><div class="os-scroll"><table class="os-table os-table--mini"><thead><tr><th></th><th class="os-num">\u73FE\u5728</th><th class="os-num">\u4ECA\u306E\u6CE8\u6587\u5F8C</th><th class="os-num">\u5168\u6BB5\u7D04\u5B9A\u5F8C</th></tr></thead><tbody>${rows.join("")}</tbody></table></div></div>`;
+}
+function renderLadders(sheet, masked) {
+  const ladders = Array.isArray(sheet?.ladders) ? sheet.ladders : [];
+  if (!ladders.length) return "";
+  const items = ladders.map((l) => {
+    const sym = String(l?.symbol ?? "");
+    const target = l?.targetUsd == null ? "\u2014" : `${fmtUsd(l.targetUsd, masked)}(${fmtPct2(l.targetPct)})`;
+    const base = isNum(l?.basePrice) ? `${fmtLimit(l.basePrice)}${l.baseEvent ? ` (${l.baseEvent})` : ""}` : "\u2014";
+    const hold = l?.hold === "targetReached" ? '<span class="os-pill os-pill--hold">\u76EE\u6A19\u5230\u9054\u30FBHOLD</span>' : l?.hold === "themeCapReached" ? '<span class="os-pill os-pill--hold">\u30C6\u30FC\u30DE\u4E0A\u9650\u30FBHOLD</span>' : "";
+    const head = `<div class="os-lad-head"><b>${escapeHTML(sym)}</b> <span class="os-sub">${escapeHTML(String(l?.tier ?? ""))}</span> ${hold}</div><div class="os-lad-meta">\u76EE\u6A19 ${escapeHTML(target)} \u30FB \u73FE\u5728 ${escapeHTML(fmtUsd(l?.curUsd, masked))}(${fmtPct2(l?.curPct)}) \u30FB \u57FA\u6E96 ${escapeHTML(base)}</div>`;
+    const note = l?.note ? `<div class="os-lad-meta">${escapeHTML(String(l.note))}</div>` : "";
+    const notes = (Array.isArray(l?.notes) ? l.notes : []).filter((n) => n && n !== "\u76EE\u6A19\u5230\u9054\u30FBHOLD").map((n) => `<div class="os-flag">${escapeHTML(maskDollarText(n, masked))}</div>`).join("");
+    const stages = (Array.isArray(l?.stages) ? l.stages : []).map((st) => {
+      const side = st?.side === "sell" ? "\u58F2 " : "";
+      const label = st?.suppressed ? SUPPRESSED_LABEL[st.suppressed] || "\u505C\u6B62" : STATUS_LABEL[st?.display] || String(st?.display ?? "");
+      const muted = st?.suppressed || st?.display === "filled" || st?.display === "cancelled" || st?.display === "waiting";
+      const auto = st?.autoDetected ? ' <span class="os-tag">\u81EA\u52D5\u691C\u77E5</span>' : "";
+      let actions = "";
+      if (st?.state === "working") {
+        const sid = String(st.id ?? "");
+        if (st.display === "placed" || st.display === "partial")
+          actions += btn("orderUnplace", sym, sid, "\u767A\u6CE8\u3092\u53D6\u308A\u6D88\u3057\u305F");
+        actions += btn("orderCancelled", sym, sid, "\u53D6\u6D88");
+      }
+      return `<li class="os-stage${muted ? " os-stage--muted" : ""}"><span class="os-stage-txt">${escapeHTML(String(st?.id ?? ""))} ${side}${escapeHTML(fmtLimit(st?.limit))}\xD7${escapeHTML(fmtQty(st?.qty))} <span class="os-sub">${escapeHTML(label)}</span>${auto}</span>${actions ? `<span class="os-actions">${actions}</span>` : ""}</li>`;
+    }).join("");
+    return `<div class="os-lad">${head}${note}${notes}<ul class="os-stages">${stages}</ul></div>`;
+  }).join("");
+  return `<details class="os-card os-ladders"><summary class="os-card-title">\u306F\u3057\u3054\u5168\u4F53\uFF08${ladders.length} \u9298\u67C4\uFF09</summary>${items}</details>`;
+}
+function fmtDateTime(iso) {
+  if (!iso) return "\u2014";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return String(iso);
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function renderOrderSheetHTML(sheet, opts) {
+  const masked = !!opts?.masked;
+  const meta = sheet?.meta || {};
+  const rows = buildOrderRows(sheet);
+  const sum = summarizeRows(rows);
+  const sumParts = [`\u8981\u767A\u6CE8 ${sum.toPlace}`, `\u767A\u6CE8\u4E2D ${sum.placed}`];
+  if (sum.holdCancel) sumParts.push(`\u53D6\u6D88\u3092\u691C\u8A0E ${sum.holdCancel}`);
+  const warnings = Array.isArray(meta.warnings) ? meta.warnings : [];
+  const warnHtml = warnings.length ? `<details class="os-warnings"><summary>\u6CE8\u610F ${warnings.length} \u4EF6</summary><ul>${warnings.map((w) => `<li>${escapeHTML(maskDollarText(String(w), masked))}</li>`).join("")}</ul></details>` : "";
+  const review = sheet?.review?.lastEvent ? `<div class="os-foot">\u6700\u7D42\u898B\u76F4\u3057: ${escapeHTML(String(sheet.review.lastEvent))} \u30FB ${escapeHTML(fmtDateTime(sheet.review.lastAt))}</div>` : "";
+  const lagNote = String(meta.holdingsLagNote || "MF \u306E\u540C\u671F\u306F\u5BC4\u4ED8\u524D\u306E\u305F\u3081\u3001\u76F4\u8FD1\u306E\u7D04\u5B9A\u306F\u672A\u53CD\u6620\u306E\u53EF\u80FD\u6027\u304C\u3042\u308A\u307E\u3059");
+  return [
+    `<div class="os-wrap${opts?.busy ? " os-busy" : ""}">`,
+    '<div class="os-head">',
+    `<div class="os-title">\u6CE8\u6587\u8868 <span class="os-sub">${escapeHTML(sumParts.join(" \u30FB "))}</span></div>`,
+    '<button type="button" class="os-btn" data-action="orderReload">\u518D\u8AAD\u307F\u8FBC\u307F</button></div>',
+    `<div class="os-asof">MF ${escapeHTML(String(meta.holdingsAsOf ?? "\u2014"))} \u540C\u671F \u30FB \u8A08\u7B97 ${escapeHTML(fmtDateTime(sheet?.asOf))} \u30FB rev ${escapeHTML(String(meta.planRev ?? "\u2014"))}</div>`,
+    `<div class="os-note">\u24D8 ${escapeHTML(lagNote)}</div>`,
+    renderGuardPills(sheet),
+    warnHtml,
+    '<div class="os-section-title">\u4ECA\u51FA\u3059\u6CE8\u6587</div>',
+    renderOrdersTable(rows, masked),
+    renderFunding(sheet, masked),
+    renderAiTech(sheet),
+    renderStress(sheet),
+    renderLadders(sheet, masked),
+    review,
+    "</div>"
+  ].join("");
+}
+function renderOrderSheetMessage(kind, detail) {
+  const text = {
+    nologin: "PIN \u3067\u30ED\u30B0\u30A4\u30F3\u3059\u308B\u3068\u6CE8\u6587\u8868\u3092\u8868\u793A\u3057\u307E\u3059\u3002",
+    empty: "\u6CE8\u6587\u8868\u306E\u8A2D\u5B9A\uFF08plan\uFF09\u304C\u307E\u3060\u6295\u5165\u3055\u308C\u3066\u3044\u307E\u305B\u3093\u3002",
+    loading: "\u6CE8\u6587\u8868\u3092\u8AAD\u307F\u8FBC\u307F\u4E2D\u2026",
+    error: "\u6CE8\u6587\u8868\u3092\u53D6\u5F97\u3067\u304D\u307E\u305B\u3093\u3067\u3057\u305F\u3002"
+  }[kind];
+  const d = detail ? `<div class="os-sub">${escapeHTML(detail)}</div>` : "";
+  const reload = kind === "error" ? '<button type="button" class="os-btn" data-action="orderReload">\u518D\u8AAD\u307F\u8FBC\u307F</button>' : "";
+  return `<div class="os-msg${kind === "error" ? " os-msg--err" : ""}">${escapeHTML(text)}${d}${reload}</div>`;
+}
+function parseStageArg(arg) {
+  if (typeof arg !== "string") return null;
+  const i = arg.indexOf(":");
+  if (i <= 0 || i === arg.length - 1) return null;
+  return { symbol: arg.slice(0, i), stageId: arg.slice(i + 1) };
+}
+function findStage(sheet, symbol, stageId) {
+  const o = (Array.isArray(sheet?.orders) ? sheet.orders : []).find(
+    (x) => x && x.symbol === symbol && x.stageId === stageId
+  );
+  if (o) return { side: o.side, limit: o.limit ?? null, qty: o.qty ?? null };
+  const l = (Array.isArray(sheet?.ladders) ? sheet.ladders : []).find((x) => x && x.symbol === symbol);
+  const st = l && Array.isArray(l.stages) ? l.stages.find((s) => s && s.id === stageId) : null;
+  if (st) return { side: st.side, limit: st.limit ?? null, qty: st.qty ?? null };
+  return null;
+}
+var EVENT_VERB = {
+  placed: "\u767A\u6CE8\u6E08\u307F\u306B\u3057\u307E\u3059",
+  filled: "\u7D04\u5B9A\u306B\u3057\u307E\u3059",
+  cancelled: "\u53D6\u6D88\uFF08\u3053\u306E\u6BB5\u3092\u30B9\u30AD\u30C3\u30D7\uFF09\u306B\u3057\u307E\u3059",
+  unplace: "\u8981\u767A\u6CE8\u306B\u623B\u3057\u307E\u3059\uFF08\u8A3C\u5238\u4F1A\u793E\u3067\u6CE8\u6587\u3092\u53D6\u308A\u6D88\u3057\u305F\uFF09"
+};
+function confirmMessage(sheet, type, symbol, stageId) {
+  const st = findStage(sheet, symbol, stageId);
+  const desc = st ? `${st.side === "sell" ? "\u58F2" : "\u8CB7"} ${fmtLimit(st.limit)}\xD7${fmtQty(st.qty)}` : stageId;
+  return `${symbol} ${desc} \u3092${EVENT_VERB[type] || type}`;
+}
+
+// src/order-sheet.js
+var FETCH_TIMEOUT_MS = 15e3;
+function _wrap() {
+  return document.getElementById("order-wrap");
+}
+function rerenderOrderTab() {
+  const wrap = _wrap();
+  if (!wrap) return;
+  const os = state.orderSheet;
+  if (os.status === "ok" && os.data) {
+    wrap.innerHTML = renderOrderSheetHTML(os.data, { masked: state.statsMasked, busy: os.busy });
+    return;
+  }
+  if (os.status === "nologin" || os.status === "empty" || os.status === "error") {
+    wrap.innerHTML = renderOrderSheetMessage(os.status, os.error || void 0);
+    return;
+  }
+  wrap.innerHTML = renderOrderSheetMessage("loading");
+}
+async function _json(r) {
+  try {
+    return await r.json();
+  } catch {
+    return null;
+  }
+}
+async function renderOrderTab() {
+  const pinHash = _getActivePinHash();
+  if (!pinHash) {
+    state.orderSheet = { status: "nologin", data: null, error: null, busy: false };
+    rerenderOrderTab();
+    return;
+  }
+  if (state.orderSheet.status !== "ok") state.orderSheet = { ...state.orderSheet, status: "loading", error: null };
+  rerenderOrderTab();
+  try {
+    const r = await fetchWithTimeout(`${WORKER_URL}/order-sheet`, FETCH_TIMEOUT_MS, {
+      headers: { "X-Pin-Hash": pinHash },
+      cache: "no-store"
+    });
+    if (r.status === 401) throw new Error("PIN \u8A8D\u8A3C\u306B\u5931\u6557\u3057\u307E\u3057\u305F\uFF08401\uFF09");
+    if (!r.ok) throw new Error(`\u53D6\u5F97\u5931\u6557\uFF08HTTP ${r.status}\uFF09`);
+    const sheet = await _json(r);
+    if (sheet == null) {
+      state.orderSheet = { status: "empty", data: null, error: null, busy: false };
+    } else if (typeof sheet !== "object" || !sheet.meta) {
+      throw new Error("\u5FDC\u7B54\u306E\u5F62\u304C\u4E0D\u6B63\u3067\u3059");
+    } else {
+      state.orderSheet = { status: "ok", data: sheet, error: null, busy: false };
+    }
+  } catch (e) {
+    console.warn("[order-sheet] \u53D6\u5F97\u5931\u6557", e?.name || "Error");
+    state.orderSheet = {
+      status: "error",
+      data: null,
+      error: e instanceof Error && e.name !== "AbortError" ? e.message : "\u30BF\u30A4\u30E0\u30A2\u30A6\u30C8\u3057\u307E\u3057\u305F",
+      busy: false
+    };
+  }
+  if (state.activeTab === "order") rerenderOrderTab();
+}
+async function _sendEvent(type, arg) {
+  const target = parseStageArg(arg);
+  const os = state.orderSheet;
+  if (!target || os.status !== "ok" || !os.data || os.busy) return;
+  const pinHash = _getActivePinHash();
+  if (!pinHash) {
+    await showAlert({ title: "\u6CE8\u6587\u8868", message: "PIN \u3067\u30ED\u30B0\u30A4\u30F3\u3057\u3066\u304B\u3089\u64CD\u4F5C\u3057\u3066\u304F\u3060\u3055\u3044\u3002" });
+    return;
+  }
+  const ok = await showConfirm({
+    title: "\u6CE8\u6587\u8868\u306E\u7533\u544A",
+    message: confirmMessage(os.data, type, target.symbol, target.stageId),
+    okLabel: "\u7533\u544A\u3059\u308B"
+  });
+  if (!ok) return;
+  const rev = os.data.meta?.planRev;
+  state.orderSheet = { ...state.orderSheet, busy: true };
+  rerenderOrderTab();
+  const body = { type, symbol: target.symbol, stageId: target.stageId, rev };
+  if (type === "filled") body.source = "self";
+  try {
+    const r = await fetchWithTimeout(`${WORKER_URL}/order-sheet/events`, FETCH_TIMEOUT_MS, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Pin-Hash": pinHash },
+      body: JSON.stringify(body)
+    });
+    if (r.status === 409) {
+      state.orderSheet = { ...state.orderSheet, busy: false };
+      await showAlert({ title: "\u6CE8\u6587\u8868", message: "\u4ED6\u3067\u66F4\u65B0\u3055\u308C\u307E\u3057\u305F\u3002\u518D\u8AAD\u307F\u8FBC\u307F\u3057\u307E\u3059\u3002" });
+      await renderOrderTab();
+      return;
+    }
+    const res = await _json(r);
+    if (!r.ok) {
+      state.orderSheet = { ...state.orderSheet, busy: false };
+      const msg = res && typeof res.error === "string" ? res.error : `HTTP ${r.status}`;
+      await showAlert({ title: "\u6CE8\u6587\u8868", message: `\u7533\u544A\u3067\u304D\u307E\u305B\u3093\u3067\u3057\u305F: ${msg}` });
+      await renderOrderTab();
+      return;
+    }
+    if (res && typeof res === "object" && res.meta) {
+      state.orderSheet = { status: "ok", data: res, error: null, busy: false };
+      if (state.activeTab === "order") rerenderOrderTab();
+    } else {
+      state.orderSheet = { ...state.orderSheet, busy: false };
+      await renderOrderTab();
+    }
+  } catch (e) {
+    console.warn("[order-sheet] \u7533\u544A\u5931\u6557", e?.name || "Error");
+    state.orderSheet = { ...state.orderSheet, busy: false };
+    rerenderOrderTab();
+    await showAlert({ title: "\u6CE8\u6587\u8868", message: "\u901A\u4FE1\u306B\u5931\u6557\u3057\u307E\u3057\u305F\u3002\u518D\u8AAD\u307F\u8FBC\u307F\u3057\u3066\u72B6\u614B\u3092\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044\u3002" });
+  }
+}
+function orderPlaced(arg) {
+  return _sendEvent("placed", arg);
+}
+function orderFilled(arg) {
+  return _sendEvent("filled", arg);
+}
+function orderCancelled(arg) {
+  return _sendEvent("cancelled", arg);
+}
+function orderUnplace(arg) {
+  return _sendEvent("unplace", arg);
+}
+function orderReload() {
+  return renderOrderTab();
+}
+
 // src/tabs.js
 function switchTab(name) {
   if (name === "watchlist") name = "list";
@@ -7250,6 +7692,7 @@ function switchTab(name) {
   const panelValue = document.getElementById("panel-value");
   const panelWealth = document.getElementById("panel-wealth");
   const panelBriefing = document.getElementById("panel-briefing");
+  const panelOrder = document.getElementById("panel-order");
   const panelAi = document.getElementById("panel-ai");
   if (panelHeatmap) panelHeatmap.hidden = name !== "heatmap";
   if (panelList) panelList.hidden = name !== "list";
@@ -7257,6 +7700,7 @@ function switchTab(name) {
   if (panelValue) panelValue.hidden = name !== "value";
   if (panelWealth) panelWealth.hidden = name !== "wealth";
   if (panelBriefing) panelBriefing.hidden = name !== "briefing";
+  if (panelOrder) panelOrder.hidden = name !== "order";
   if (panelAi) panelAi.hidden = name !== "ai";
   document.querySelectorAll(".tab-btn[data-tab]").forEach((b) => {
     const isActive = b.dataset.tab === name;
@@ -7284,6 +7728,7 @@ function switchTab(name) {
   if (name === "value") renderValuationTab();
   if (name === "wealth") renderWealthTab();
   if (name === "briefing") renderBriefing();
+  if (name === "order") renderOrderTab();
 }
 
 // src/holdings-from-mf.js
@@ -8231,22 +8676,22 @@ function escapeHTML2(s) {
 // src/menu.js
 function toggleHmMenu() {
   const dropdown = document.getElementById("hm-menu-dropdown");
-  const btn = document.getElementById("hm-menu-btn");
+  const btn2 = document.getElementById("hm-menu-btn");
   if (!dropdown) return;
   const isOpen = dropdown.classList.toggle("open");
-  if (btn) {
-    btn.classList.toggle("open", isOpen);
-    btn.setAttribute("aria-expanded", String(isOpen));
+  if (btn2) {
+    btn2.classList.toggle("open", isOpen);
+    btn2.setAttribute("aria-expanded", String(isOpen));
   }
 }
 function closeHmMenu() {
   const dropdown = document.getElementById("hm-menu-dropdown");
-  const btn = document.getElementById("hm-menu-btn");
+  const btn2 = document.getElementById("hm-menu-btn");
   if (!dropdown) return;
   dropdown.classList.remove("open");
-  if (btn) {
-    btn.classList.remove("open");
-    btn.setAttribute("aria-expanded", "false");
+  if (btn2) {
+    btn2.classList.remove("open");
+    btn2.setAttribute("aria-expanded", "false");
   }
 }
 
@@ -8646,6 +9091,7 @@ function toggleStats() {
   } catch {
   }
   renderStats();
+  if (state.activeTab === "order") rerenderOrderTab();
   const eye = document.getElementById("stats-eye");
   if (eye) eye.classList.toggle("hidden", state.statsMasked);
   const eyeSlash = document.getElementById("eye-slash");
@@ -8896,6 +9342,12 @@ var ACTION_MAP = {
   triggerPortfolioSnapshot,
   // briefing.js
   reloadBriefing,
+  // order-sheet.js（Order タブ・#674）
+  orderPlaced,
+  orderFilled,
+  orderCancelled,
+  orderUnplace,
+  orderReload,
   // auth-ui.js
   authKeyPress,
   authBackspace,
@@ -8967,11 +9419,13 @@ function init() {
   const panelWatchlist = document.getElementById("panel-watchlist");
   const panelRisk = document.getElementById("panel-risk");
   const panelBriefing = document.getElementById("panel-briefing");
+  const panelOrder = document.getElementById("panel-order");
   const panelAi = document.getElementById("panel-ai");
   if (panelList) panelList.hidden = true;
   if (panelWatchlist) panelWatchlist.hidden = true;
   if (panelRisk) panelRisk.hidden = true;
   if (panelBriefing) panelBriefing.hidden = true;
+  if (panelOrder) panelOrder.hidden = true;
   if (panelAi) panelAi.hidden = true;
   renderStats();
   const mfHoldingsPromise = loadMfHoldings().then((mf) => {
