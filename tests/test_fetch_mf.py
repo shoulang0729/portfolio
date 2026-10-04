@@ -1715,6 +1715,18 @@ class TestPrivateConfigAbort(_EnvRestore):
                 self._use(data)
                 self._assert_aborts(reason="exclude.accounts")
 
+    def test_accounts_with_edge_whitespace(self):
+        for bad in (" テスト交通系IC", "テスト交通系IC ", "テスト交通系IC　", "= テスト暗号口座", "=テスト暗号口座 "):
+            with self.subTest(bad=bad):
+                self._use({"exclude": {"accounts": ["テスト社員持株会", bad, "テスト銀行A"]}})
+                msg = self._assert_aborts(reason="前後の空白がある要素が 1 件")
+                self.assertNotIn(bad.strip(" =　"), msg)
+
+    def test_inner_whitespace_is_allowed(self):
+        path = _write_private(self.tmp.name, {"exclude": {"accounts": ["テスト 交通系IC", "=テスト 暗号口座"]}})
+        c = fetch_mf.load_config(private_path=path)
+        self.assertEqual(c["_privateConfig"]["accounts"], 2)
+
     def test_bad_liability_map(self):
         for m in (["テスト銀行A"], {"テスト銀行A": 1}):
             with self.subTest(m=m):

@@ -114,7 +114,7 @@
   続けて `python3 scripts/fetch_mf.py run --dry-run` で件数と `imported` を確かめる。
 - バックアップ: パスワード管理ツールなど**リポ外**に置く。Mac mini を作り直したら同じ形で作り直す。
 - **中止する条件**（どれか1つでブラウザを起動せず exit 6・通知。書き出し・KV 送信・commit はしない）:
-  ファイルが無い／JSON として読めない／許可外のキーがある／`exclude.accounts` が無い・空・文字列以外・`=` だけの要素がある／
+  ファイルが無い／JSON として読めない／許可外のキーがある／`exclude.accounts` が無い・空・文字列以外・`=` だけの要素・前後に空白のある要素がある／
   `liabilityAccountMap` が object でない・値が文字列でない／**公開 config の `exclude.accounts` が空でない**（実名が公開側に戻った退行）。
   通知には実名を出さない（パスの種類・件数・落ちた条件だけ）。対処は Mac mini で非公開設定を作成・修正して再実行
   （`check-config` → `launchctl kickstart -k gui/$(id -u)/com.toshio.mf-snapshot`）。公開側には何も書かれていないので revert は不要。

@@ -113,6 +113,16 @@ def private_config_path(private_path=None):
 _PATH_KIND_LABEL = {"arg": "指定パス", "env": f"環境変数 {PRIVATE_CONFIG_ENV}", "default": "既定パス"}
 
 
+def _has_edge_space(a):
+    """要素（'=' 始まりなら '=' の後ろ）に前後の空白があるか。照合が黙って外れるのを防ぐ。"""
+    if a != a.strip():
+        return True
+    if a.startswith(EXACT_MATCH_PREFIX):
+        rest = a[len(EXACT_MATCH_PREFIX):]
+        return rest != rest.strip()
+    return False
+
+
 def _validate_private(priv):
     """§3.3 の 3〜5（許可外キー・exclude.accounts・liabilityAccountMap）。不備は PrivateConfigError。"""
     if not isinstance(priv, dict):
@@ -134,6 +144,9 @@ def _validate_private(priv):
         raise PrivateConfigError("非公開設定の exclude.accounts に文字列以外の要素がある")
     if any(a.strip() in ("", EXACT_MATCH_PREFIX) for a in accounts):
         raise PrivateConfigError("非公開設定の exclude.accounts に空文字または '=' だけの要素がある")
+    padded = sum(1 for a in accounts if _has_edge_space(a))
+    if padded:
+        raise PrivateConfigError(f"非公開設定の exclude.accounts に前後の空白がある要素が {padded} 件ある")
     if "liabilityAccountMap" in priv:
         m = priv["liabilityAccountMap"]
         if not isinstance(m, dict):

@@ -90,7 +90,7 @@
   "checksum": {
     "enabled": true,
     "tolerancePct": 1.0,
-    "rule": "(1) totals.imported == Σ(holdings.value) を厳密一致で確認。(2) 取込対象の各口座ごとに Σ(その口座のholdings.value) ≈ MFのその口座の合計表示 を ±1% で確認。(3) mfNetWorth − Σ(除外口座のMF表示額) ≈ imported を ±1% で確認。資産変動で動く)。大きく外れたら除外漏れ/読み取りミスを疑う。",
+    "rule": "(1) totals.imported == Σ(holdings.value) を厳密一致で確認。(2) 取込対象の各口座ごとに Σ(その口座のholdings.value) ≈ MFのその口座の合計表示 を ±1% で確認。(3) mfNetWorth − Σ(除外口座のMF表示額) ≈ imported を ±1% で確認。大きく外れたら除外漏れ/読み取りミスを疑う。",
     "onMismatch": "data/mf-holdings.json をコミットせず中止し、どの口座で何円ズレたかを報告する。"
   },
   "commit": {
