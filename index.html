@@ -24,10 +24,10 @@
 
 <!-- スタイルシート -->
 
-<link rel="stylesheet" href="assets/01-base.css?v=20261004a">
-<link rel="stylesheet" href="assets/02-tables.css?v=20261004a">
-<link rel="stylesheet" href="assets/03-misc.css?v=20261004a">
-<link rel="stylesheet" href="assets/04-auth.css?v=20261004a">
+<link rel="stylesheet" href="assets/01-base.css?v=20261004b">
+<link rel="stylesheet" href="assets/02-tables.css?v=20261004b">
+<link rel="stylesheet" href="assets/03-misc.css?v=20261004b">
+<link rel="stylesheet" href="assets/04-auth.css?v=20261004b">
 
 <!-- assets/05-ai-tab.css は src/_disabled/05-ai-tab.css に移動（AIタブ無効化中）-->
 <!-- 銘柄リスト列表示制御（JS が動的に書き込む） -->
@@ -197,6 +197,8 @@
             data-action="switchTab" data-arg="wealth" title="資産推移（MF実データ）">Wealth</button>
     <button class="tab-btn" data-tab="briefing" role="tab" aria-selected="false"
             data-action="switchTab" data-arg="briefing" title="週次 Briefing（相場観・保有・アクション）">Briefing</button>
+    <button class="tab-btn" data-tab="order" role="tab" aria-selected="false"
+            data-action="switchTab" data-arg="order" title="注文表（指値×株数・PIN ログイン後に表示）">Order</button>
     <!-- AI相談タブは現在無効化中（必要になったら戻す） -->
   </div>
   <!-- タブ別サブコントロール（sticky-top 内に置くことで両タブのテーブル開始位置・高さを統一） -->
@@ -294,6 +296,9 @@
 
 <section id="panel-briefing" class="tab-panel" hidden></section>
 
+<!-- 注文表パネル（Order タブ・#674。Worker GET /order-sheet を PIN 付きで取得） -->
+<section id="panel-order" class="tab-panel" hidden><div id="order-wrap"></div></section>
+
 <!-- AI相談パネルは現在無効化中（タブも非表示） -->
 <section id="panel-ai" class="tab-panel" hidden></section>
 
@@ -343,14 +348,14 @@
 
 <!-- ES Module エントリーポイント（全ファイルを import する単一スクリプト） -->
 
-<script type="module" src="dist/app.js?v=20261004a"></script>
+<script type="module" src="dist/app.js?v=20261004b"></script>
 
 
 <!-- PWA Service Worker 登録 -->
 <script>
 if ('serviceWorker' in navigator) {
 
-navigator.serviceWorker.register('./sw.js?v=20261004a').catch(() => {});
+navigator.serviceWorker.register('./sw.js?v=20261004b').catch(() => {});
 
 }
 </script>

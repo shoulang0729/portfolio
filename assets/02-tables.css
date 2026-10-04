@@ -1191,3 +1191,75 @@ table.t td { font-size: var(--fs-sm); font-weight: 700; border-bottom: 1px solid
 /* KPI 期間増減の色（増＝赤／減＝緑・日本市場慣例。2026-07 資産総額カード置換） */
 .we-kpi .we-delta.up { color: var(--pos); }
 .we-kpi .we-delta.down { color: var(--neg); }
+/* ── Order タブ（注文表・#674）。色は CSS 変数のみ ── */
+#panel-order { padding: 12px 12px 24px; }
+.os-wrap { display: flex; flex-direction: column; gap: 10px; }
+.os-wrap.os-busy { opacity: 0.6; pointer-events: none; }
+.os-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.os-title { font-size: var(--fs-md); font-weight: 700; color: var(--text); }
+.os-sub { font-size: var(--fs-sm); font-weight: 400; color: var(--text2); }
+.os-asof { font-size: var(--fs-sm); color: var(--text2); }
+.os-note { font-size: var(--fs-sm); color: var(--text2); padding: 6px 10px; border-radius: var(--r-chip); background: var(--surface2); }
+.os-msg { padding: 32px 16px; text-align: center; color: var(--text2); font-size: var(--fs-md); display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.os-msg--err { color: var(--danger); }
+.os-empty { font-size: var(--fs-base); color: var(--text2); padding: 8px 0; }
+.os-section-title { font-size: var(--fs-base); font-weight: 700; color: var(--text); margin-top: 4px; }
+.os-gpills { display: flex; flex-wrap: wrap; gap: 6px; }
+.os-gpill { font-size: var(--fs-sm); padding: 3px 10px; border-radius: var(--r-pill); border: 1px solid var(--border); color: var(--text); background: var(--surface); }
+.os-gpill--warn { border-color: var(--tone-warn); color: var(--tone-warn); background: color-mix(in srgb, var(--tone-warn) 12%, transparent); }
+.os-warn { font-size: var(--fs-sm); color: var(--tone-warn); padding: 4px 0; }
+.os-warn-text { color: var(--tone-warn); }
+.os-ok { font-size: var(--fs-sm); color: var(--text2); padding: 4px 0; }
+.os-warnings { font-size: var(--fs-sm); color: var(--text2); }
+.os-warnings summary { cursor: pointer; color: var(--tone-warn); }
+.os-warnings ul { margin: 4px 0 0; padding-left: 18px; }
+/* 表は横スクロール（スマホ幅）。銘柄列は左端に固定 */
+.os-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.os-table { width: 100%; border-collapse: collapse; font-size: var(--fs-base); color: var(--text); }
+.os-table th { font-size: var(--fs-sm); font-weight: 600; color: var(--text2); text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.os-table td { padding: 6px 8px; white-space: nowrap; vertical-align: middle; }
+.os-table th.os-num, .os-table td.os-num { text-align: right; font-variant-numeric: tabular-nums; }
+.os-table .os-sym { position: sticky; left: 0; background: var(--bg); font-weight: 700; z-index: 1; }
+.os-table--mini td:first-child { white-space: normal; }
+.os-table .os-indent { padding-left: 20px; color: var(--text2); }
+.os-row td { border-top: 1px solid var(--border2); }
+.os-row--hold td { color: var(--text2); }
+.os-side--buy { color: var(--accent); font-weight: 600; }
+.os-side--sell { color: var(--text); font-weight: 600; }
+.os-subrow td { padding: 0 8px 8px; white-space: normal; }
+/* 2 行目（次の段・注記・ボタン）は横スクロールしても画面内に残す */
+.os-subrow-inner {
+  position: sticky; left: 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px;
+  max-width: calc(100vw - 48px); box-sizing: border-box;
+}
+.os-subrow-text { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: var(--fs-sm); color: var(--text2); }
+.os-flag { font-size: var(--fs-sm); color: var(--text2); }
+.os-flag--warn { color: var(--tone-warn); font-weight: 600; }
+.os-tag { font-size: var(--fs-xs); padding: 1px 6px; border-radius: var(--r-pill); border: 1px solid var(--border); color: var(--text2); }
+.os-over { color: var(--tone-warn); font-weight: 700; }
+.os-pill { display: inline-block; font-size: var(--fs-sm); padding: 2px 8px; border-radius: var(--r-pill); border: 1px solid var(--border); white-space: nowrap; }
+.os-pill--place { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.os-pill--working { color: var(--text2); }
+.os-pill--hold { color: var(--text3); }
+.os-pill--funding { color: var(--text2); }
+.os-pill--warn { border-color: var(--tone-warn); color: var(--tone-warn); background: color-mix(in srgb, var(--tone-warn) 12%, transparent); }
+.os-actions { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.os-btn {
+  font-size: var(--fs-sm); padding: 6px 10px; min-height: 32px; border-radius: var(--r-chip);
+  border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; white-space: nowrap;
+}
+.os-btn:hover { background: var(--surface2); }
+.os-btn--primary { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.os-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card); padding: 10px 12px; box-shadow: var(--shadow-card); }
+.os-card-title { font-size: var(--fs-base); font-weight: 700; color: var(--text); margin-bottom: 6px; }
+.os-kv { display: flex; justify-content: space-between; gap: 12px; font-size: var(--fs-base); padding: 3px 0; color: var(--text); }
+.os-kv span:first-child { color: var(--text2); }
+.os-ladders summary { cursor: pointer; margin-bottom: 0; }
+.os-ladders[open] summary { margin-bottom: 6px; }
+.os-lad { padding: 8px 0; border-top: 1px solid var(--border2); }
+.os-lad-head { font-size: var(--fs-base); color: var(--text); }
+.os-lad-meta { font-size: var(--fs-sm); color: var(--text2); margin-top: 2px; }
+.os-stages { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.os-stage { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; font-size: var(--fs-base); color: var(--text); }
+.os-stage--muted { color: var(--text3); }
+.os-foot { font-size: var(--fs-sm); color: var(--text2); }

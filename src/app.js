@@ -17,6 +17,7 @@ import { renderHeatmap } from './heatmap.js';
 import { loadChart, setRange, closeModal, handleOverlayClick } from './chart.js';
 import { switchTab } from './tabs.js';
 import { reloadBriefing } from './briefing.js';
+import { rerenderOrderTab, orderPlaced, orderFilled, orderCancelled, orderUnplace, orderReload } from './order-sheet.js';
 import { loadMfHoldings } from './networth.js';
 import { buildPositionsFromMf } from './holdings-from-mf.js';
 import { FUND_DEFS } from './funds.js';
@@ -69,6 +70,7 @@ function toggleStats() {
   state.statsMasked = !state.statsMasked;
   try { localStorage.setItem('hm-stats-masked', state.statsMasked ? '1' : '0'); } catch { /* quota 超過は無視 */ }
   renderStats();  // マスク状態を反映して金額セルを再描画
+  if (state.activeTab === 'order') rerenderOrderTab();  // 注文表の金額もマスクに従う（#674）
   const eye = document.getElementById('stats-eye');
   if (eye) eye.classList.toggle('hidden', state.statsMasked);
   const eyeSlash = document.getElementById('eye-slash');
@@ -399,6 +401,8 @@ const ACTION_MAP = {
   switchTab, triggerPortfolioSnapshot,
   // briefing.js
   reloadBriefing,
+  // order-sheet.js（Order タブ・#674）
+  orderPlaced, orderFilled, orderCancelled, orderUnplace, orderReload,
   // auth-ui.js
   authKeyPress, authBackspace, pcKeyPress, pcBackspace,
   openPinChange, closePinChange,
@@ -470,11 +474,13 @@ function init() {
   const panelWatchlist = document.getElementById('panel-watchlist');
   const panelRisk      = document.getElementById('panel-risk');
   const panelBriefing  = document.getElementById('panel-briefing');
+  const panelOrder     = document.getElementById('panel-order');
   const panelAi        = document.getElementById('panel-ai');
   if (panelList)      panelList.hidden      = true;
   if (panelWatchlist) panelWatchlist.hidden = true;
   if (panelRisk)      panelRisk.hidden      = true;
   if (panelBriefing)  panelBriefing.hidden  = true;
+  if (panelOrder)     panelOrder.hidden     = true;
   if (panelAi)        panelAi.hidden        = true;
 
   renderStats();

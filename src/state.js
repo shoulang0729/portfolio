@@ -49,6 +49,7 @@
  * @property {Record<string, {sector: Record<string, number>, asOf: string}>} liveTopHoldings
  * @property {Record<string, {holdings: Array<{ticker?: string, name?: string, weight: number, currency?: string, country?: string, sector?: string, assetClass?: string}>, asOf?: string, source?: string}>} liveConstituents
  * @property {Record<'finnhub'|'yahoo', ProviderHealth>} providerHealth
+ * @property {{status: 'idle'|'loading'|'ok'|'empty'|'nologin'|'error', data: any, error: string|null, busy: boolean}} orderSheet
  */
 
 // ── レイアウト・フォント定数 ──
@@ -118,7 +119,7 @@ const state = {
   heatSortCol:      '1d',       // 統合タブのデフォルトソート列
   heatSortDir:      'desc',
   slDetailVisible:  false,      // 詳細列の表示状態（起動時はデフォルト非表示）
-  activeTab:        'heatmap',  // 'heatmap' | 'list' | 'risk' | 'value' | 'briefing'
+  activeTab:        'heatmap',  // 'heatmap' | 'list' | 'risk' | 'value' | 'briefing' | 'order'
   lastUpdateText:   null,       // refreshPrices 成功時のステータス文字列（履歴取得後に復元用）
   // ウォッチリスト
   watchlist:        (() => {
@@ -140,6 +141,8 @@ const state = {
     finnhub: { ok: true, lastOk: null, errCount: 0, lastErr: null },
     yahoo:   { ok: true, lastOk: null, errCount: 0, lastErr: null },
   },
+  // Order タブ（注文表・#674）。GET /order-sheet の応答を保持（PIN 保護データ・永続化しない）
+  orderSheet: { status: 'idle', data: null, error: null, busy: false },
 };
 
 export { C, CHART_RANGES, SL_DETAIL_COLS, state };
