@@ -3,16 +3,11 @@
   "totals": {
     "mfNetWorth": 574335299,
     "imported": 529229099,
-    "excludedAccounts": [
-      "相対契約",
-      "ようたのSuica",
-      "こうたのSuica",
-      "モバイルPASMO"
-    ]
+    "excludedAccounts": []
   },
   "holdings": [
     {
-      "institution": "マネックス証券",
+      "institution": "口座1",
       "cat": "日本株・ETF",
       "name": "NEXT FUNDS TOPIX連動型上場投信",
       "value": 25941060,
@@ -24,7 +19,7 @@
       "qty": 60300.0
     },
     {
-      "institution": "マネックス証券",
+      "institution": "口座1",
       "cat": "日本株・ETF",
       "name": "NEXT FUNDS 東証銀行業株価指数連動型上場投信",
       "value": 28970550,
@@ -36,7 +31,7 @@
       "qty": 37870.0
     },
     {
-      "institution": "マネックス証券",
+      "institution": "口座1",
       "cat": "日本株・ETF",
       "name": "NEXT FUNDS 商社・卸売(TOPIX-17)上場投信",
       "value": 23642500,
@@ -48,7 +43,7 @@
       "qty": 87500.0
     },
     {
-      "institution": "マネックス証券",
+      "institution": "口座1",
       "cat": "米国株・ETF",
       "name": "NEXT FUNDS 日経半導体株指数連動型上場投信",
       "value": 28666620,
@@ -60,7 +55,7 @@
       "qty": 6030.0
     },
     {
-      "institution": "マネックス証券",
+      "institution": "口座1",
       "cat": "日本株・ETF",
       "name": "小松製作所",
       "value": 2250000,
@@ -72,7 +67,7 @@
       "qty": 300.0
     },
     {
-      "institution": "マネックス証券",
+      "institution": "口座1",
       "cat": "日本株・ETF",
       "name": "セイコーグループ",
       "value": 20920000,
@@ -84,7 +79,7 @@
       "qty": 2000.0
     },
     {
-      "institution": "マネックス証券",
+      "institution": "口座1",
       "cat": "日本株・ETF",
       "name": "ファーストリテイリング",
       "value": 14354000,
@@ -96,7 +91,7 @@
       "qty": 200.0
     },
     {
-      "institution": "マネックス証券",
+      "institution": "口座1",
       "cat": "米国株・ETF",
       "name": "ファーストトラスト ナスダック サイバーセキュリティETF",
       "value": 3634535,
@@ -108,7 +103,7 @@
       "qty": 220.0
     },
     {
-      "institution": "マネックス証券",
+      "institution": "口座1",
       "cat": "米国株・ETF",
       "name": "グローバルX 銅ビジネス ETF",
       "value": 4066722,
@@ -120,7 +115,7 @@
       "qty": 300.0
     },
     {
-      "institution": "マネックス証券",
+      "institution": "口座1",
       "cat": "米国株・ETF",
       "name": "グローバルXデータセンターリート&デジタルインフラETF",
       "value": 6239254,
@@ -132,7 +127,7 @@
       "qty": 1450.0
     },
     {
-      "institution": "マネックス証券",
+      "institution": "口座1",
       "cat": "米国株・ETF",
       "name": "SPDR ゴールド・ミニシェアーズ・トラスト",
       "value": 32327227,
@@ -144,7 +139,7 @@
       "qty": 2500.0
     },
     {
-      "institution": "マネックス証券",
+      "institution": "口座1",
       "cat": "米国株・ETF",
       "name": "ファーストトラスト ナスダック クリーンエッジ スマートグリッド インフラ指数ファンド",
       "value": 3174751,
@@ -156,7 +151,7 @@
       "qty": 110.0
     },
     {
-      "institution": "マネックス証券",
+      "institution": "口座1",
       "cat": "米国株・ETF",
       "name": "iシェアーズ ラテンアメリカ 40 ETF",
       "value": 5519495,
@@ -168,7 +163,7 @@
       "qty": 1000.0
     },
     {
-      "institution": "マネックス証券",
+      "institution": "口座1",
       "cat": "米国株・ETF",
       "name": "JPモルガン・ウルトラショート・インカムETF",
       "value": 40112371,
@@ -180,7 +175,7 @@
       "qty": 5062.0
     },
     {
-      "institution": "マネックス証券",
+      "institution": "口座1",
       "cat": "米国株・ETF",
       "name": "ヴァンエック・ウラニウム・アンド原子力ETF",
       "value": 5797600,
@@ -192,7 +187,7 @@
       "qty": 355.0
     },
     {
-      "institution": "マネックス証券",
+      "institution": "口座1",
       "cat": "米国株・ETF",
       "name": "ヴァンエック・レアアース・アンド戦略的金属ETF",
       "value": 4986953,
@@ -204,7 +199,7 @@
       "qty": 500.0
     },
     {
-      "institution": "マネックス証券",
+      "institution": "口座1",
       "cat": "米国株・ETF",
       "name": "iシェアーズ シルバー・トラスト",
       "value": 6892268,
@@ -216,7 +211,7 @@
       "qty": 800.0
     },
     {
-      "institution": "マネックス証券",
+      "institution": "口座1",
       "cat": "米国株・ETF",
       "name": "ヴァンエック半導体ETF",
       "value": 26368130,
@@ -228,7 +223,7 @@
       "qty": 265.0
     },
     {
-      "institution": "マネックス証券",
+      "institution": "口座1",
       "cat": "米国株・ETF",
       "name": "ステート・ストリート エネルギー・セレクト・セクター SPDR ETF",
       "value": 8425513,
@@ -240,7 +235,7 @@
       "qty": 850.0
     },
     {
-      "institution": "マネックス証券",
+      "institution": "口座1",
       "cat": "米国株・ETF",
       "name": "アップル",
       "value": 8682269,
@@ -252,7 +247,7 @@
       "qty": 165.0
     },
     {
-      "institution": "マネックス証券",
+      "institution": "口座1",
       "cat": "米国株・ETF",
       "name": "アマゾン・ドットコム",
       "value": 7939047,
@@ -264,7 +259,7 @@
       "qty": 200.0
     },
     {
-      "institution": "マネックス証券",
+      "institution": "口座1",
       "cat": "米国株・ETF",
       "name": "セレブラス・システムズ",
       "value": 1319440,
@@ -276,7 +271,7 @@
       "qty": 50.0
     },
     {
-      "institution": "マネックス証券",
+      "institution": "口座1",
       "cat": "米国株・ETF",
       "name": "アルファベット クラスA",
       "value": 8130130,
@@ -288,7 +283,7 @@
       "qty": 150.0
     },
     {
-      "institution": "マネックス証券",
+      "institution": "口座1",
       "cat": "米国株・ETF",
       "name": "MPマテリアルズ",
       "value": 1482280,
@@ -300,7 +295,7 @@
       "qty": 200.0
     },
     {
-      "institution": "マネックス証券",
+      "institution": "口座1",
       "cat": "米国株・ETF",
       "name": "マイクロソフト",
       "value": 16090959,
@@ -312,7 +307,7 @@
       "qty": 197.0
     },
     {
-      "institution": "マネックス証券",
+      "institution": "口座1",
       "cat": "米国株・ETF",
       "name": "パランティア・テクノロジーズ",
       "value": 11262694,
@@ -324,7 +319,7 @@
       "qty": 378.0
     },
     {
-      "institution": "マネックス証券",
+      "institution": "口座1",
       "cat": "米国株・ETF",
       "name": "スペースX(スペース・エクスプロレーション・テクノロジーズ・コーポレーション)",
       "value": 4765937,
@@ -336,7 +331,7 @@
       "qty": 190.0
     },
     {
-      "institution": "マネックス証券",
+      "institution": "口座1",
       "cat": "米国株・ETF",
       "name": "テスラ",
       "value": 7315145,
@@ -348,7 +343,7 @@
       "qty": 125.0
     },
     {
-      "institution": "陽太子どもNISA",
+      "institution": "口座2",
       "cat": "投資信託",
       "name": "ひふみ投信",
       "value": 5971085,
@@ -359,7 +354,7 @@
       "qty": 1.0
     },
     {
-      "institution": "恒太子どもNISA",
+      "institution": "口座3",
       "cat": "投資信託",
       "name": "ひふみ投信",
       "value": 5971085,
@@ -370,7 +365,7 @@
       "qty": 1.0
     },
     {
-      "institution": "SMBC信託銀行プレスティア(旧シティバンク)",
+      "institution": "口座4",
       "cat": "投資信託",
       "name": "合計評価額",
       "value": 3995666,
@@ -381,7 +376,7 @@
       "qty": 1.0
     },
     {
-      "institution": "マネックス証券",
+      "institution": "口座1",
       "cat": "投資信託",
       "name": "eMAXIS Slim 全世界株式(オール・カントリー)",
       "value": 63757563,
@@ -392,7 +387,7 @@
       "qty": 16855041.0
     },
     {
-      "institution": "ひふみ投信",
+      "institution": "口座5",
       "cat": "投資信託",
       "name": "ひふみ投信",
       "value": 28710790,
@@ -403,7 +398,7 @@
       "qty": 2972470.0
     },
     {
-      "institution": "ひふみ投信",
+      "institution": "口座5",
       "cat": "投資信託",
       "name": "ひふみ投信",
       "value": 28618905,
@@ -414,7 +409,7 @@
       "qty": 2962957.0
     },
     {
-      "institution": "ひふみ投信",
+      "institution": "口座5",
       "cat": "投資信託",
       "name": "ひふみマイクロスコープpro",
       "value": 1056342,
@@ -425,7 +420,7 @@
       "qty": 796218.0
     },
     {
-      "institution": "ひふみ投信",
+      "institution": "口座5",
       "cat": "投資信託",
       "name": "ひふみマイクロスコープpro",
       "value": 1056342,
@@ -436,7 +431,7 @@
       "qty": 796218.0
     },
     {
-      "institution": "ひふみ投信",
+      "institution": "口座5",
       "cat": "投資信託",
       "name": "ひふみクロスオーバーpro",
       "value": 960804,
@@ -447,7 +442,7 @@
       "qty": 687812.0
     },
     {
-      "institution": "ひふみ投信",
+      "institution": "口座5",
       "cat": "投資信託",
       "name": "ひふみクロスオーバーpro",
       "value": 960804,
@@ -458,119 +453,119 @@
       "qty": 687812.0
     },
     {
-      "institution": "SMBC信託銀行プレスティア(旧シティバンク)",
+      "institution": "口座4",
       "cat": "現金・預金",
-      "name": "円普通預金 JPY",
+      "name": "現金・預金1",
       "value": 247,
       "cur": "JPY",
       "asOf": "2026-10-04"
     },
     {
-      "institution": "岐阜信用金庫",
+      "institution": "口座6",
       "cat": "現金・預金",
-      "name": "各務原駅前支店 普通",
+      "name": "現金・預金2",
       "value": 265203,
       "cur": "JPY",
       "asOf": "2026-10-04"
     },
     {
-      "institution": "十六銀行",
+      "institution": "口座7",
       "cat": "現金・預金",
-      "name": "普通預金残高",
+      "name": "現金・預金3",
       "value": 879247,
       "cur": "JPY",
       "asOf": "2026-10-04"
     },
     {
-      "institution": "三井住友銀行",
+      "institution": "口座8",
       "cat": "現金・預金",
-      "name": "残高別普通(総合)預金残高",
+      "name": "現金・預金4",
       "value": 596523,
       "cur": "JPY",
       "asOf": "2026-10-04"
     },
     {
-      "institution": "三井住友銀行",
+      "institution": "口座8",
       "cat": "現金・預金",
-      "name": "残高別普通預金残高",
+      "name": "現金・預金5",
       "value": 50104,
       "cur": "JPY",
       "asOf": "2026-10-04"
     },
     {
-      "institution": "三井住友銀行",
+      "institution": "口座8",
       "cat": "現金・預金",
-      "name": "残高別普通(総合)預金残高",
+      "name": "現金・預金6",
       "value": 1900008,
       "cur": "JPY",
       "asOf": "2026-10-04"
     },
     {
-      "institution": "三井住友銀行",
+      "institution": "口座8",
       "cat": "現金・預金",
-      "name": "残高別普通(総合)預金残高",
+      "name": "現金・預金7",
       "value": 1900315,
       "cur": "JPY",
       "asOf": "2026-10-04"
     },
     {
-      "institution": "三菱UFJ銀行",
+      "institution": "口座9",
       "cat": "現金・預金",
-      "name": "普通",
+      "name": "現金・預金8",
       "value": 37659,
       "cur": "JPY",
       "asOf": "2026-10-04"
     },
     {
-      "institution": "SMBC信託銀行プレスティア(旧シティバンク)",
+      "institution": "口座4",
       "cat": "現金・預金",
-      "name": "プレスティア マルチマネー口座外貨普通預金 USD",
+      "name": "現金・預金9",
       "value": 3680925,
       "cur": "JPY",
       "asOf": "2026-10-04"
     },
     {
-      "institution": "SMBC信託銀行プレスティア(旧シティバンク)",
+      "institution": "口座4",
       "cat": "現金・預金",
-      "name": "プレスティア マルチマネー口座外貨普通預金 EUR",
+      "name": "現金・預金10",
       "value": 965880,
       "cur": "JPY",
       "asOf": "2026-10-04"
     },
     {
-      "institution": "SMBC信託銀行プレスティア(旧シティバンク)",
+      "institution": "口座4",
       "cat": "現金・預金",
-      "name": "プレスティア マルチマネー口座外貨普通預金 CNY",
+      "name": "現金・預金11",
       "value": 61962,
       "cur": "JPY",
       "asOf": "2026-10-04"
     },
     {
-      "institution": "マネックス証券",
+      "institution": "口座1",
       "cat": "現金・預金",
-      "name": "お預り金・MRF・保証金",
+      "name": "現金・預金12",
       "value": 922434,
       "cur": "JPY",
       "asOf": "2026-10-04"
     },
     {
-      "institution": "マネックス証券",
+      "institution": "口座1",
       "cat": "現金・預金",
-      "name": "米ドル",
+      "name": "現金・預金13",
       "value": 13525582,
       "cur": "JPY",
       "asOf": "2026-10-04"
     },
     {
-      "institution": "bitFlyer",
+      "institution": "口座10",
       "cat": "現金・預金",
-      "name": "円残高",
+      "name": "現金・預金14",
       "value": 62,
       "cur": "JPY",
       "asOf": "2026-10-04"
     },
     {
-      "institution": "bitFlyer",
+      "institution": "口座10",
       "cat": "暗号資産",
       "name": "ビットコイン残高",
       "value": 2007584,
@@ -578,7 +573,7 @@
       "asOf": "2026-10-04"
     },
     {
-      "institution": "bitFlyer",
+      "institution": "口座10",
       "cat": "暗号資産",
       "name": "イーサリアム残高",
       "value": 2098528,
