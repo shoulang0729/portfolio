@@ -18,7 +18,7 @@ MulmoClaude を頭脳とした投資運用システムの設計。本リポジ�
 - 出力: `data/mf-holdings.json` = 履歴なしフラット配列（毎回まるごと上書き安全）。
 - `portfolio-snapshot.json` は **直接編集しない**（`performance` 履歴が壊れる）。
 - 手順書: `docs/routine_mf_discovery.md`（初回口座棚卸し）/ `docs/routine_mf_snapshot.md`（定常）。
-- 取込対象4口座（2026/06）: SMBC信託 / マネックス証券 / 非公開21 / ひふみ投信。
+- 取込対象・除外対象の口座/金融機関の一覧は公開リポに書かない（Mac mini のローカル非公開設定が正本・`docs/handoff/2026-10-04-mf-private-config.md`）。
 
 ### mf-holdings.json スキーマ（例）
 ```json
