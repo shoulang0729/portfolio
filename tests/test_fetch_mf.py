@@ -711,7 +711,9 @@ class TestMainArgs(unittest.TestCase):
     def setUp(self):
         self.calls = []
         self._orig = {n: getattr(fetch_mf, n) for n in ("do_run", "do_setup", "cfg", "load_config_or_abort")}
-        fetch_mf.do_run = lambda c, dry_run=False: self.calls.append(("run", dry_run))
+        fetch_mf.do_run = lambda c, dry_run=False, diag_liabilities=False: self.calls.append(
+            ("run", dry_run, "diag") if diag_liabilities else ("run", dry_run)
+        )
         fetch_mf.do_setup = lambda c: self.calls.append(("setup",))
         fetch_mf.cfg = lambda: {}
         fetch_mf.load_config_or_abort = lambda *a, **k: {
@@ -1786,6 +1788,266 @@ class TestPrivateConfigAbort(_EnvRestore):
         c = fetch_mf_history._load_cfg()
         self.assertIn("userDataDir", c["fetch"])
         self.assertEqual(c["exclude"]["accounts"], [])
+
+
+# ── #696: run --dry-run --diag-liabilities（負債ページの件数と比だけの診断） ─────────────
+# 合成ページ（架空名・合成値）。表示に金額・名前・金融機関名が出ないことも確かめる。
+_DIAG_TOTAL = 100_000_000
+_DIAG_TABLES = [
+    [
+        ["住宅ローン", "40,000,000円", "テスト銀行A"],  # 採用
+        ["", "5,000,000円", "テスト銀行X"],  # name 空
+        ["テストカードローン", "0円", "テスト銀行Y"],  # 残高 0
+        ["テストローン残", "---", "テスト信販"],  # 残高が読めない
+    ],
+    [
+        ["テストリボ払い", "20,000,000円", "テスト信販Z"],  # 対象リスト外
+        ["テスト事業借入", "22,000,000円", "テスト銀行B"],  # 採用
+    ],
+]
+_DIAG_SECRETS = (
+    "住宅ローン", "テスト銀行", "テスト信販", "テストリボ払い", "テスト事業借入", "テストカードローン",
+    "40,000,000", "40000000", "22,000,000", "20,000,000", "5,000,000", "62,000,000", "62000000",
+    "100,000,000", "100000000",
+)
+
+
+class _DiagTrs:
+    def __init__(self, rows):
+        self.rows = rows
+
+    def count(self):
+        return len(self.rows)
+
+    def nth(self, j):
+        return _FakeTr({"th, td": self.rows[j]})
+
+
+class _DiagTable:
+    def __init__(self, rows):
+        self.rows = rows
+
+    def locator(self, sel):
+        assert sel == "tbody tr"
+        return _DiagTrs(self.rows)
+
+
+class _DiagTables:
+    def __init__(self, tables):
+        self.tables = tables
+
+    def count(self):
+        return len(self.tables)
+
+    def nth(self, i):
+        return _DiagTable(self.tables[i])
+
+
+class _DiagBody:
+    def __init__(self, text):
+        self.text = text
+
+    def inner_text(self):
+        return self.text
+
+
+class _LiabPage(_WaitPage):
+    """/bs/liability の合成ページ（body の負債総額＋負債表）。"""
+
+    def __init__(self, tables, body, table_selector):
+        super().__init__(url="https://example.invalid/bs/liability")
+        self.tables = tables
+        self.body = body
+        self.table_selector = table_selector
+
+    def locator(self, sel):
+        if sel == "body":
+            return _DiagBody(self.body)
+        if sel == self.table_selector:
+            return _DiagTables(self.tables)
+        return _EmptyLoc()
+
+
+class TestLiabilityDiag(unittest.TestCase):
+    def setUp(self):
+        self.c = _load_config()
+        self.lc = self.c["fetch"]["liabilities"]
+        self.c["include"]["liabilities"]["enabled"] = True
+        self.c["include"]["liabilities"]["categories"] = ["住宅ローン", "ローン", "借入"]
+        self.notified = []
+        self._orig = {n: getattr(fetch_mf, n) for n in ("notify", "_LIAB_DIAG")}
+        fetch_mf.notify = lambda msg, *a, **k: self.notified.append(msg)
+
+    def tearDown(self):
+        for n, v in self._orig.items():
+            setattr(fetch_mf, n, v)
+
+    def _page(self, tables=_DIAG_TABLES, total=_DIAG_TOTAL):
+        body = f"負債総額：{total:,}円" if total else "負債の一覧"
+        return _LiabPage(tables, body, self.lc["table"]["selector"])
+
+    def _scan(self, page, diag=True):
+        fetch_mf._LIAB_DIAG = {} if diag else None
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            rows = fetch_mf.scrape_liabilities(page, self.c)
+        return rows, fetch_mf._LIAB_DIAG
+
+    def _assert_no_secrets(self, text):
+        for s in _DIAG_SECRETS:
+            self.assertNotIn(s, text)
+
+    def test_counts_and_ratios_on_mismatch(self):
+        rows, d = self._scan(self._page())
+        self.assertIsNone(rows)  # 採用 62% → チェックサム不一致（従来どおり None）
+        line = fetch_mf.liab_diag_report(d)
+        self.assertEqual(
+            line,
+            "liab-diag: result=mismatch tables=2 tbodyRows=[4,2] totalRead=yes "
+            "noName=1(ratio=0.050) nonPositive=2(ratio=0.000) notInCategories=1(ratio=0.200) "
+            "adopted=2(ratio=0.620)",
+        )
+        self._assert_no_secrets(line)
+
+    def test_diag_does_not_change_result_or_notify(self):
+        rows_off, _ = self._scan(self._page(), diag=False)
+        notified_off = list(self.notified)
+        self.notified.clear()
+        rows_on, _ = self._scan(self._page(), diag=True)
+        self.assertEqual(rows_off, rows_on)
+        self.assertEqual(notified_off, self.notified)
+        # 総額が行合計と一致するページでは診断の有無にかかわらず同じ行を返す
+        ok_off, _ = self._scan(self._page(total=62_000_000), diag=False)
+        ok_on, d = self._scan(self._page(total=62_000_000), diag=True)
+        self.assertEqual(ok_off, ok_on)
+        self.assertEqual(len(ok_on), 2)
+        self.assertEqual(d["result"], "ok")
+        self.assertIn("adopted=2(ratio=1.000)", fetch_mf.liab_diag_report(d))
+
+    def test_total_unreadable_ratios_na(self):
+        rows, d = self._scan(self._page(total=0))
+        self.assertEqual(len(rows), 2)  # 総額なし＝照合スキップで採用（従来どおり）
+        line = fetch_mf.liab_diag_report(d)
+        self.assertIn("result=ok", line)
+        self.assertIn("totalRead=no", line)
+        self.assertIn("adopted=2(ratio=n/a)", line)
+        self.assertNotIn("0.", line)
+        self._assert_no_secrets(line)
+
+    def test_no_rows_and_no_tables(self):
+        _, d = self._scan(self._page(tables=[]))
+        self.assertEqual(
+            fetch_mf.liab_diag_report(d),
+            "liab-diag: result=noRows tables=0 tbodyRows=[-] totalRead=yes "
+            "noName=0(ratio=0.000) nonPositive=0(ratio=0.000) notInCategories=0(ratio=0.000) "
+            "adopted=0(ratio=0.000)",
+        )
+
+    def test_disabled_error_and_not_scanned(self):
+        self.c["include"]["liabilities"]["enabled"] = False
+        _, d = self._scan(self._page())
+        self.assertEqual(fetch_mf.liab_diag_report(d), "liab-diag: result=disabled")
+        self.c["include"]["liabilities"]["enabled"] = True
+        page = self._page()
+        page.selector_raises = RuntimeError("テスト銀行A 40,000,000")
+        _, d = self._scan(page)
+        line = fetch_mf.liab_diag_report(d)
+        self.assertEqual(line, "liab-diag: result=error:RuntimeError")
+        self._assert_no_secrets(line)
+        self.assertIn("走査していない", fetch_mf.liab_diag_report({}))
+
+    def test_diag_off_leaves_no_state(self):
+        _, d = self._scan(self._page(), diag=False)
+        self.assertIsNone(d)
+
+
+class TestLiabilityDiagRun(unittest.TestCase):
+    """#696: do_run(dry_run=True, diag_liabilities=True) は診断 1 行を足すだけで副作用なし。
+    （TestDryRun の setUp/tearDown を流用。継承すると TestDryRun のテストが二重に走るため明示呼び出し）"""
+
+    def tearDown(self):
+        TestDryRun.tearDown(self)
+
+    def setUp(self):
+        TestDryRun.setUp(self)
+        self.c["include"]["liabilities"]["enabled"] = True
+        self.c["include"]["liabilities"]["categories"] = ["住宅ローン", "ローン", "借入"]
+        sel = self.c["fetch"]["liabilities"]["table"]["selector"]
+        page = _LiabPage(_DIAG_TABLES, f"負債総額：{_DIAG_TOTAL:,}円", sel)
+        self._orig["_scrape_all"] = fetch_mf._scrape_all
+        self._orig["_load_previous_output"] = fetch_mf._load_previous_output
+        self.seen_diag = []
+
+        def _fake_scrape_all(pg, c):
+            self.seen_diag.append(fetch_mf._LIAB_DIAG)
+            return NET, _fixture_rows(), _fixture_summary(), fetch_mf.scrape_liabilities(page, c), None
+
+        fetch_mf._scrape_all = _fake_scrape_all
+        fetch_mf.with_page = lambda c, headless, fn: fn("page")
+        fetch_mf._load_previous_output = lambda path=None: None
+
+    def _run_diag(self, **kw):
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(io.StringIO()):
+            fetch_mf.do_run(self.c, **kw)
+        return buf.getvalue()
+
+    def test_dry_run_diag_prints_counts_only(self):
+        text = self._run_diag(dry_run=True, diag_liabilities=True)
+        self.assertIn(
+            "[dry-run] liab-diag: result=mismatch tables=2 tbodyRows=[4,2] totalRead=yes "
+            "noName=1(ratio=0.050) nonPositive=2(ratio=0.000) notInCategories=1(ratio=0.200) "
+            "adopted=2(ratio=0.620)",
+            text,
+        )
+        self.assertIn("[dry-run] OK", text)
+        self.assertIn("liabilities=skipped", text)
+        self._assert_clean(text)
+        self.assertEqual([x for x in self.calls if x != "notify"], [])  # 書き出し・KV・git・履歴なし
+        self.assertFalse(os.path.exists(fetch_mf.OUT))
+        self.assertIsNone(fetch_mf._LIAB_DIAG)  # 後始末される
+
+    def _assert_clean(self, text):
+        for s in _DIAG_SECRETS:
+            self.assertNotIn(s, text)
+        for amount in (NET, SUM_EQ, SUM_MF, SUM_DEPO):
+            self.assertNotIn(f"{amount:,}", text)
+            self.assertNotIn(str(amount), text)
+
+    def test_dry_run_without_diag_unchanged(self):
+        text = self._run_diag(dry_run=True)
+        self.assertNotIn("liab-diag", text)
+        self.assertEqual(self.seen_diag, [None])  # 診断なしでは集計先を作らない
+
+    def test_diag_requires_dry_run(self):
+        with self.assertRaises(ValueError):
+            fetch_mf.do_run(self.c, diag_liabilities=True)
+        self.assertEqual(self.calls, [])
+        self.assertIsNone(fetch_mf._LIAB_DIAG)
+
+    def test_main_args(self):
+        calls = []
+        orig = {n: getattr(fetch_mf, n) for n in ("do_run", "load_config_or_abort")}
+        fetch_mf.do_run = lambda c, dry_run=False, diag_liabilities=False: calls.append((dry_run, diag_liabilities))
+        fetch_mf.load_config_or_abort = lambda *a, **k: {}
+        try:
+            fetch_mf.main(["fetch_mf.py", "run", "--dry-run", "--diag-liabilities"])
+            fetch_mf.main(["fetch_mf.py", "--diag-liabilities", "--dry-run"])
+            self.assertEqual(calls, [(True, True), (True, True)])
+            bad = [
+                ("--diag-liabilities",), ("run", "--diag-liabilities"), ("setup", "--dry-run", "--diag-liabilities"),
+                ("check-config", "--diag-liabilities"), ("run", "--dry-run", "--diag-liabilities", "--diag-liabilities"),
+                ("run", "--dry-run", "--diag-liability"), ("run", "--dry-run", "--diag"),
+            ]
+            for args in bad:
+                with self.subTest(args=args):
+                    with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as cm:
+                        fetch_mf.main(["fetch_mf.py", *args])
+                    self.assertEqual(cm.exception.code, 2)
+            self.assertEqual(len(calls), 2)
+        finally:
+            for n, v in orig.items():
+                setattr(fetch_mf, n, v)
 
 
 if __name__ == "__main__":

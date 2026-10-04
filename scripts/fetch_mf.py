@@ -14,6 +14,8 @@
   python fetch_mf.py run     # 定常: launchd が毎日叩く（無人）
   python fetch_mf.py run --dry-run  # 試運転: 取得（再試行込み）→build→verify と公開コピー検査まで。
                                     # data/ 書き込み・commit/push・KV 送信・履歴取得をしない（#685・#687）
+  python fetch_mf.py run --dry-run --diag-liabilities  # 上に加え、負債ページの件数と比だけの診断を
+                                    # 1 行表示（#696）。金額・名前は出さない。--dry-run なしは exit 2
   （--dry-run 単独も同じ。未知の引数・打ち間違いは exit 2 で本番処理に入らない）
   python fetch_mf.py check-config   # 非公開設定を重ねた結果の件数だけ表示（ブラウザ・通信なし・#687）
 
@@ -563,6 +565,10 @@ def scrape_liabilities(page, c):
     commit は止めない（呼び出し側は None なら v4 互換形のまま出力する）。
     DOM は実機未確認（2026-07-19）＝セレクタ/列は config だけで調整できる。
     """
+    d = _LIAB_DIAG  # #696: run --dry-run --diag-liabilities のときだけ dict（件数・残高の集計先）
+    if d is not None:
+        d.clear()
+        d["result"] = "disabled"
     lc = c.get("fetch", {}).get("liabilities")
     inc = c.get("include", {}).get("liabilities", {})
     if not lc or not inc.get("enabled"):
@@ -571,6 +577,8 @@ def scrape_liabilities(page, c):
         f = c["fetch"]
         _goto_and_wait(page, lc["url"], lc["table"]["selector"], f)  # #685 B3
         if f["loginCheck"]["redirectContains"] in page.url:
+            if d is not None:
+                d["result"] = "login"
             notify("負債: ログイン切れで /bs/liability を開けず。負債はスキップ。")
             return None
         total = _net_from_text(_txt_body(page), lc["totalRegex"])
@@ -578,32 +586,84 @@ def scrape_liabilities(page, c):
         cols = lc["table"]["cols"]
         rows = []
         tables = page.locator(lc["table"]["selector"])
+        if d is not None:
+            d.update(result="scanning", total=total, tables=tables.count(), rowsPerTable=[])
+            for k in _LIAB_DIAG_REASONS:
+                d[k] = [0, 0]  # [行数, 残高合計]
         for i in range(tables.count()):
             trs = tables.nth(i).locator("tbody tr")
+            if d is not None:
+                d["rowsPerTable"].append(trs.count())
             for j in range(trs.count()):
                 cells = _cells(trs.nth(j))
                 name = _at(cells, cols.get("name"))
                 bal = parse_amount(_at(cells, cols.get("balance")))
                 inst = _at(cells, cols.get("institution"))
                 if not name or bal <= 0:
+                    _liab_diag_add(d, "noName" if not name else "nonPositive", bal)
                     continue  # 空行/見出し/完済(0円)をスキップ
                 if cats and not any(k in name or k in inst for k in cats):
+                    _liab_diag_add(d, "notInCategories", bal)
                     continue  # 負債側 allowlist（部分一致・config include.liabilities）
+                _liab_diag_add(d, "adopted", bal)
                 rows.append({"institution": inst, "name": name, "balance": bal})
         if not rows:
+            if d is not None:
+                d["result"] = "noRows"
             notify("負債: 行を1件も抽出できず。fetch.liabilities.table（セレクタ/列マップ）の実機確認を。負債はスキップ。")
             return None
         s = sum(r["balance"] for r in rows)
         tol = lc.get("checksum", {}).get("tolerancePct", 1.0)
         if total and not _within(s, total, tol):
+            if d is not None:
+                d["result"] = "mismatch"
             notify(f"負債: チェックサム不一致 Σ{s:,} vs 負債総額{total:,}（±{tol}%超）。負債はスキップ。")
             return None
         if not total:
             print("[liab] 負債総額が本文から読めず。行合計をそのまま採用（照合スキップ）", file=sys.stderr)
+        if d is not None:
+            d["result"] = "ok"
         return rows
     except Exception as e:  # 負債は資産を巻き込まない（fail-soft）
+        if d is not None:
+            d["result"] = f"error:{type(e).__name__}"
         notify(f"負債: 取得中に例外 {type(e).__name__}: {e}。負債はスキップ。")
         return None
+
+
+# ── 負債の診断（#696・run --dry-run --diag-liabilities 専用・件数と比だけ） ──────────
+# scrape_liabilities の判定はそのまま、捨てた理由ごとの行数・残高合計を _LIAB_DIAG に数える。
+# 表示は liab_diag_report() の 1 行だけ。金額・名前・金融機関名は出さない（比は小数 3 桁）。
+# 理由: noName=name 列が空 / nonPositive=残高 0 以下・読めず / notInCategories=対象リスト外 / adopted=採用
+_LIAB_DIAG = None
+_LIAB_DIAG_REASONS = ("noName", "nonPositive", "notInCategories", "adopted")
+
+
+def _liab_diag_add(d, reason, bal):
+    """診断中（d が dict）だけ理由ごとの [行数, 残高合計] を足す。"""
+    if d is not None:
+        d[reason][0] += 1
+        d[reason][1] += bal
+
+
+def liab_diag_report(d):
+    """診断 dict → 表示 1 行（件数と「残高合計 ÷ 負債総額」の比だけ。総額が読めなければ比は n/a）。"""
+    if not d:
+        return "liab-diag: 負債ページを走査していない（取得前に中止）"
+    head = f"liab-diag: result={d.get('result')}"
+    if "tables" not in d:
+        return head
+    total = d.get("total") or 0
+
+    def ratio(v):
+        return f"{v / total:.3f}" if total else "n/a"
+
+    per_table = ",".join(str(n) for n in d["rowsPerTable"]) or "-"
+    parts = [head, f"tables={d['tables']}", f"tbodyRows=[{per_table}]", f"totalRead={'yes' if total else 'no'}"]
+    for k in _LIAB_DIAG_REASONS:
+        n, bal_sum = d[k]
+        parts.append(f"{k}={n}(ratio={ratio(bal_sum)})")
+    return " ".join(parts)
 
 
 # ── 整形（除外/分類/シンボル/レコード化）→ v4 スキーマ ──────────────────────────
@@ -1232,18 +1292,26 @@ def dry_run_report(doc, public_doc, prev, tol_pct=1.0, fetch_counts=None):
     return lines, ok
 
 
-def do_run(c, dry_run=False):
+def do_run(c, dry_run=False, diag_liabilities=False):
     """無人 run。想定外例外も必ず notify して中止する（無音失敗を作らない・#479 H1）。
 
     取得は fetch_with_retry（#685: 一時的な失敗だけ再試行）。
     dry_run=True（#687 `run --dry-run`）: 取得 → build → verify まで行い、ファイル書き出し・
     update_real_assets・KV 送信・git・履歴取得をしない。件数と一致判定だけ表示する。
-    通知には先頭に [dry-run] を付ける。公開コピー検査が NG なら exit 4。"""
-    global _NOTIFY_PREFIX
+    通知には先頭に [dry-run] を付ける。公開コピー検査が NG なら exit 4。
+    diag_liabilities=True（#696・dry_run 専用）: 負債ページの件数と比だけの診断 1 行を取得直後に表示する
+    （資産の verify で止まっても診断は出る）。"""
+    global _NOTIFY_PREFIX, _LIAB_DIAG
+    if diag_liabilities and not dry_run:
+        raise ValueError("diag_liabilities は dry_run 専用")
     if dry_run:
         _NOTIFY_PREFIX = "[dry-run] "
+    if diag_liabilities:
+        _LIAB_DIAG = {}
     try:
         net, rows, summary, liab, re_vals = fetch_with_retry(c)  # #685: 一時的な失敗だけ再試行
+        if diag_liabilities:
+            print(f"[dry-run] {liab_diag_report(_LIAB_DIAG)}")
         if not rows:
             notify("保有行を1件も抽出できず。fetch.dom（種類別テーブルのセレクタ/列マップ §7.1）を確認。")
             sys.exit(3)
@@ -1281,6 +1349,7 @@ def do_run(c, dry_run=False):
         sys.exit(1)
     finally:
         _NOTIFY_PREFIX = ""
+        _LIAB_DIAG = None
 
 
 def _run_history_script():
@@ -1300,24 +1369,28 @@ def _run_history_script():
         print(f"[history] fetch_mf_history.py の起動に失敗（無視）: {e}", file=sys.stderr)
 
 
-_USAGE = "使い方: fetch_mf.py [setup | run [--dry-run] | check-config]（引数なしは run）"
+_USAGE = "使い方: fetch_mf.py [setup | run [--dry-run [--diag-liabilities]] | check-config]（引数なしは run）"
 
 
 def parse_args(args):
-    """コマンドライン引数（sys.argv[1:]）を (cmd, dry_run) にする。不正なら None。
+    """コマンドライン引数（sys.argv[1:]）を (cmd, dry_run, diag_liabilities) にする。不正なら None。
 
     #687: 打ち間違いや未知のオプションで本番 run（書き出し・KV・commit/push）に入らないよう、
     認識できない引数はすべて不正扱い。`--dry-run` 単独は `run --dry-run` と同じ。
-    `check-config`（#687 PR2）は非公開設定の重ね合わせ結果の件数だけを表示する（--dry-run は付けない）。"""
+    `check-config`（#687 PR2）は非公開設定の重ね合わせ結果の件数だけを表示する（--dry-run は付けない）。
+    `--diag-liabilities`（#696）は負債ページの件数と比だけの診断。--dry-run と一緒のときだけ有効。"""
     dry_run = "--dry-run" in args
+    diag = "--diag-liabilities" in args
     opts = [a for a in args if a.startswith("-")]
     positional = [a for a in args if not a.startswith("-")]
-    if any(o != "--dry-run" for o in opts) or len(positional) > 1:
+    if any(o not in ("--dry-run", "--diag-liabilities") for o in opts) or len(positional) > 1:
+        return None
+    if diag and (not dry_run or opts.count("--diag-liabilities") > 1):
         return None
     cmd = positional[0] if positional else "run"
     if cmd not in ("setup", "run", "check-config") or (cmd != "run" and dry_run):
         return None
-    return cmd, dry_run
+    return cmd, dry_run, diag
 
 
 def main(argv):
@@ -1325,7 +1398,7 @@ def main(argv):
     if parsed is None:
         print(f"不明な引数のため中止（本番処理はしていない）。{_USAGE}", file=sys.stderr)
         sys.exit(2)
-    cmd, dry_run = parsed
+    cmd, dry_run, diag = parsed
     if cmd == "setup":
         do_setup(cfg())  # ログインだけ＝公開 config だけで動く（非公開設定は不要）
         return
@@ -1336,7 +1409,10 @@ def main(argv):
         return
     # run / run --dry-run: ブラウザを起動する前に非公開設定を重ねる。不備なら通知して exit 6
     conf = load_config_or_abort(notify_prefix="[dry-run] " if dry_run else "")
-    do_run(conf, dry_run=dry_run)
+    if diag:
+        do_run(conf, dry_run=True, diag_liabilities=True)  # #696: dry-run 専用の負債診断
+    else:
+        do_run(conf, dry_run=dry_run)
 
 
 if __name__ == "__main__":
