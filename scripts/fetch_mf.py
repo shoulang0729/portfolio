@@ -571,6 +571,22 @@ _SANITIZE_TOTALS_FIELDS = ("liabilitiesTotal", "realAssetsTotal", "netWorthCompu
 
 # #687: 公開コピーの holdings[].institution は架空の通し番号に置き換える（Toshio 決定 Q2）。
 _PUBLIC_INSTITUTION_PREFIX = "口座"
+# #687: 公開コピーで name を汎用ラベル（cat の値）に置き換える区分（預金名に口座名が入るため）。
+_PUBLIC_GENERIC_NAME_CATS = ("現金・預金",)
+
+
+def _public_generic_names(holdings):
+    """汎用ラベルに置き換える行の name を返す {行 index: ラベル}。
+    ラベルはその行の cat。同じラベルが複数なら出現順に「現金・預金1」「現金・預金2」…。"""
+    by_cat = {}
+    for i, h in enumerate(holdings):
+        if h.get("cat") in _PUBLIC_GENERIC_NAME_CATS:
+            by_cat.setdefault(h["cat"], []).append(i)
+    out = {}
+    for cat, idxs in by_cat.items():
+        for n, i in enumerate(idxs, 1):
+            out[i] = cat if len(idxs) == 1 else f"{cat}{n}"
+    return out
 
 
 def sanitize_for_public(doc):
@@ -581,6 +597,8 @@ def sanitize_for_public(doc):
     - totals.excludedAccounts → []
     - holdings[].institution → 「口座1」「口座2」…（出現順。同じ金融機関は同じ番号。
       1回の出力内でだけ決定的＝日をまたいだ一致は保証しない）
+    - 現金・預金の行の name → 汎用ラベル（cat の値。複数なら「現金・預金1」…・出現順）。
+      株・ETF・投信の商品名はそのまま（アプリが ySymbol/FUND_DEFS の解決に使う）
     完全版 doc（KV 送信用）は実名のまま変更しない。"""
     public_doc = json.loads(json.dumps(doc))
     public_doc.pop("liabilities", None)
@@ -589,8 +607,11 @@ def sanitize_for_public(doc):
         totals.pop(k, None)
     if "excludedAccounts" in totals:
         totals["excludedAccounts"] = []
+    holdings = public_doc.get("holdings", [])
+    for i, label in _public_generic_names(holdings).items():
+        holdings[i]["name"] = label
     numbering = {}
-    for h in public_doc.get("holdings", []):
+    for h in holdings:
         if "institution" in h:
             inst = h["institution"]
             if inst not in numbering:
@@ -896,9 +917,12 @@ def dry_run_report(doc, public_doc, prev, tol_pct=1.0):
     real_left = sum(1 for h in pub_holdings if h.get("institution", "") in real_names)
     pub_excl = len(public_doc.get("totals", {}).get("excludedAccounts", []))
     has_liab = "liabilities" in public_doc
-    ok = not_numbered == 0 and real_left == 0 and pub_excl == 0 and not has_liab
+    want_names = _public_generic_names(pub_holdings)
+    cash_not_generic = sum(1 for i, label in want_names.items() if pub_holdings[i].get("name") != label)
+    ok = not_numbered == 0 and real_left == 0 and pub_excl == 0 and not has_liab and cash_not_generic == 0
     lines.append(
         f"公開コピー検査: 通し番号でない institution={not_numbered}行 実名の残る institution={real_left}行 "
+        f"汎用ラベルでない現金・預金の name={cash_not_generic}行 "
         f"excludedAccounts={pub_excl}件 liabilities={'あり' if has_liab else 'なし'} → {'OK' if ok else 'NG'}"
     )
     return lines, ok

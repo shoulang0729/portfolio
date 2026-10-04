@@ -92,9 +92,12 @@ def _fixture_summary():
 IMPORTED_EXPECTED = (SUM_EQ - EXCL_HOLDING) + SUM_MF + (SUM_DEPO - EXCL_IC)
 
 
-def _without_institution(holdings):
-    """holdings の各行から institution を除いたコピー（#687: 公開コピーは institution だけ置換）。"""
-    return [{k: v for k, v in h.items() if k != "institution"} for h in holdings]
+def _without_masked(holdings):
+    """公開コピーで置き換わる値（institution・現金・預金の行の name）を除いたコピー（#687）。"""
+    return [
+        {k: v for k, v in h.items() if k != "institution" and not (k == "name" and h.get("cat") == "現金・預金")}
+        for h in holdings
+    ]
 
 
 class TestBuild(unittest.TestCase):
@@ -370,7 +373,7 @@ class TestSanitizeForPublic(unittest.TestCase):
     def test_keeps_v4_fields_and_holdings_unchanged(self):
         # #687: institution だけは通し番号に置き換わる。それ以外の holdings の値は不変。
         pub = fetch_mf.sanitize_for_public(self.full_doc)
-        self.assertEqual(_without_institution(pub["holdings"]), _without_institution(self.full_doc["holdings"]))
+        self.assertEqual(_without_masked(pub["holdings"]), _without_masked(self.full_doc["holdings"]))
         self.assertEqual(pub["totals"]["imported"], self.full_doc["totals"]["imported"])
         self.assertEqual(pub["totals"]["mfNetWorth"], self.full_doc["totals"]["mfNetWorth"])
         self.assertEqual(pub["asOf"], self.full_doc["asOf"])
@@ -434,7 +437,7 @@ class TestQty(unittest.TestCase):
         by_name = {h["name"]: h for h in pub["holdings"]}
         self.assertEqual(by_name["テスト米国株"]["qty"], 81.0)
         self.assertNotIn("qty", by_name["テスト日本株"])
-        self.assertEqual(_without_institution(pub["holdings"]), _without_institution(self.doc["holdings"]))
+        self.assertEqual(_without_masked(pub["holdings"]), _without_masked(self.doc["holdings"]))
 
     def test_reference_fixture_qty_and_verify_still_passes(self):
         # 既存 fixture（shares あり/なし混在）でも qty が付き、チェックサムは従来どおり通る
@@ -499,6 +502,50 @@ class TestSanitizeInstitution(unittest.TestCase):
         # チェックサムは institution を使わない＝公開コピーでも同じ結果で通る
         fetch_mf.verify(self.c, self.full_doc, _fixture_rows(), _fixture_summary())
         fetch_mf.verify(self.c, self.pub, _fixture_rows(), _fixture_summary())
+
+    def test_single_cash_row_name_is_cat_label(self):
+        by_inst = {h["institution"]: h for h in self.pub["holdings"]}
+        self.assertEqual(by_inst["口座3"]["cat"], "現金・預金")
+        self.assertEqual(by_inst["口座3"]["name"], "現金・預金")  # 1行だけなら番号なし
+        self.assertNotIn("普通預金", json.dumps(self.pub, ensure_ascii=False))
+
+    def test_multiple_cash_rows_numbered_others_kept(self):
+        # 合成値・架空名。現金・預金が3行（うち1行は USD）＋投信の行は name が institution と同じ
+        doc = {
+            "asOf": "2026-10-04",
+            "totals": {"mfNetWorth": 100, "imported": 60, "excludedAccounts": []},
+            "holdings": [
+                {"institution": "テスト銀行A", "cat": "現金・預金", "name": "テスト銀行A 普通", "value": 10, "cur": "JPY"},
+                {"institution": "テスト投信口座", "cat": "投資信託", "name": "テスト投信口座", "value": 20, "cur": "JPY"},
+                {"institution": "テスト銀行B", "cat": "現金・預金", "name": "外貨預金（テスト）", "value": 10, "cur": "USD"},
+                {"institution": "テスト証券", "cat": "日本株・ETF", "name": "テスト日本株", "value": 10, "cur": "JPY",
+                 "ySymbol": "1306.T"},
+                {"institution": "テスト銀行A", "cat": "現金・預金", "name": "テスト銀行A 定期", "value": 10, "cur": "JPY"},
+            ],
+        }
+        before = json.loads(json.dumps(doc))
+        pub = fetch_mf.sanitize_for_public(doc)
+        self.assertEqual(
+            [h["name"] for h in pub["holdings"]],
+            ["現金・預金1", "テスト投信口座", "現金・預金2", "テスト日本株", "現金・預金3"],
+        )
+        # cat / cur / value は不変（アプリの集計キー）
+        for a, b in zip(pub["holdings"], doc["holdings"]):
+            for k in ("cat", "cur", "value"):
+                self.assertEqual(a[k], b[k])
+        self.assertEqual(doc, before)  # KV 完全版は変わらない
+        lines, ok = fetch_mf.dry_run_report(doc, pub, None)
+        self.assertTrue(ok)
+        self.assertIn("汎用ラベルでない現金・預金の name=0行", lines[-1])
+
+    def test_dry_run_ng_when_cash_name_left(self):
+        leaked = json.loads(json.dumps(self.pub))
+        for h in leaked["holdings"]:
+            if h["cat"] == "現金・預金":
+                h["name"] = "普通預金"
+        lines, ok = fetch_mf.dry_run_report(self.full_doc, leaked, None)
+        self.assertFalse(ok)
+        self.assertIn("汎用ラベルでない現金・預金の name=1行", lines[-1])
 
     def test_doc_without_excluded_or_holdings_is_safe(self):
         pub = fetch_mf.sanitize_for_public({"asOf": "2026-10-04", "totals": {"imported": 0}})
