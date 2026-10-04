@@ -18,7 +18,7 @@
           "type": "concentration",
           "theme": "semiconductor",
           "capPct": 17,
-          "action": "半導体13%超なら二段目5〜10%トリム"
+          "action": "半導体17%超なら二段目5〜10%トリム"
         }
       ]
     },
