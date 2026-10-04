@@ -11,6 +11,7 @@
   python fetch_mf.py setup   # 初回: headful でブラウザを開く→手で MF ログイン(2FA)→プロファイル保存
   python fetch_mf.py run     # 定常: launchd が毎日叩く（無人）
   python fetch_mf.py run --dry-run  # 確認用: 取得→build→verify のみ。書き出し・KV・commit/push なし（#687）
+  （--dry-run 単独も同じ。未知の引数・打ち間違いは exit 2 で本番処理に入らない）
 
 ⚠ 資格情報（cookie・TG トークン等）はログ/コミットに出さない。
 ⚠ DOM 構造は data/mf-import-config.json の fetch.dom（資産種類別テーブル＋列インデックスマップ）。
@@ -52,8 +53,13 @@ def cfg():
         return json.load(f)
 
 
+# run --dry-run 中は通知の先頭に付ける（本番 run の通知と見分けるため・#687）。
+_NOTIFY_PREFIX = ""
+
+
 def notify(msg):
     """失敗時のみ呼ぶ。Telegram(env TG_BOT_TOKEN/TG_CHAT)があれば送る。無ければ stderr＋macOS 通知。"""
+    msg = f"{_NOTIFY_PREFIX}{msg}"
     tok, chat = os.environ.get("TG_BOT_TOKEN"), os.environ.get("TG_CHAT")
     if tok and chat:
         try:
@@ -870,11 +876,13 @@ def dry_run_report(doc, public_doc, prev, tol_pct=1.0):
         prev_insts = {h.get("institution", "") for h in prev.get("holdings", [])}
         prev_excl = set(prev.get("totals", {}).get("excludedAccounts", []))
         if prev_insts and all(_PUBLIC_INSTITUTION_RE.match(i or "") for i in prev_insts):
+            # 通し番号化済みの出力は excludedAccounts も空＝どちらの集合も比べられない
             lines.append("取込対象の金融機関の集合: 比較不可（直近出力が通し番号化済み）")
+            lines.append("除外口座の集合: 比較不可（直近出力が通し番号化済み）")
         else:
             same = {h.get("institution", "") for h in holdings} == prev_insts
             lines.append(f"取込対象の金融機関の集合: {'一致' if same else '不一致'}")
-        lines.append(f"除外口座の集合: {'一致' if set(excluded) == prev_excl else '不一致'}")
+            lines.append(f"除外口座の集合: {'一致' if set(excluded) == prev_excl else '不一致'}")
         prev_imp = prev.get("totals", {}).get("imported")
         if isinstance(prev_imp, (int, float)):
             within = _within(doc.get("totals", {}).get("imported", 0), prev_imp, tol_pct)
@@ -900,7 +908,11 @@ def do_run(c, dry_run=False):
     """無人 run。想定外例外も必ず notify して中止する（無音失敗を作らない・#479 H1）。
 
     dry_run=True（#687 `run --dry-run`）: 取得 → build → verify まで行い、ファイル書き出し・
-    update_real_assets・KV 送信・git・履歴取得をしない。件数と一致判定だけ表示する。"""
+    update_real_assets・KV 送信・git・履歴取得をしない。件数と一致判定だけ表示する。
+    通知には先頭に [dry-run] を付ける。公開コピー検査が NG なら exit 4。"""
+    global _NOTIFY_PREFIX
+    if dry_run:
+        _NOTIFY_PREFIX = "[dry-run] "
     try:
         net, rows, summary, liab, re_vals = with_page(c, headless=c["fetch"]["headless"], fn=lambda pg: _scrape_all(pg, c))
         if not rows:
@@ -914,6 +926,8 @@ def do_run(c, dry_run=False):
             for line in lines:
                 print(f"[dry-run] {line}")
             print(f"[dry-run] {'OK' if ok else 'NG'}（書き出し・KV 送信・commit/push はしていない）")
+            if not ok:
+                sys.exit(4)
             return
         ra_updated = update_real_assets(c, re_vals)  # #580: attach より前＝当日 totals に新値を反映
         doc = attach_liabilities(c, doc, liab)  # verify 後＝資産チェックサムに影響しない（#577）＝完全版（KV送信用）
@@ -934,6 +948,8 @@ def do_run(c, dry_run=False):
     except Exception as e:
         notify(f"想定外エラーで中止: {type(e).__name__}: {e}")
         sys.exit(1)
+    finally:
+        _NOTIFY_PREFIX = ""
 
 
 def _run_history_script():
@@ -953,10 +969,37 @@ def _run_history_script():
         print(f"[history] fetch_mf_history.py の起動に失敗（無視）: {e}", file=sys.stderr)
 
 
-if __name__ == "__main__":
+_USAGE = "使い方: fetch_mf.py [setup | run [--dry-run]]（引数なしは run）"
+
+
+def parse_args(args):
+    """コマンドライン引数（sys.argv[1:]）を (cmd, dry_run) にする。不正なら None。
+
+    #687: 打ち間違いや未知のオプションで本番 run（書き出し・KV・commit/push）に入らないよう、
+    認識できない引数はすべて不正扱い。`--dry-run` 単独は `run --dry-run` と同じ。"""
+    dry_run = "--dry-run" in args
+    opts = [a for a in args if a.startswith("-")]
+    positional = [a for a in args if not a.startswith("-")]
+    if any(o != "--dry-run" for o in opts) or len(positional) > 1:
+        return None
+    cmd = positional[0] if positional else "run"
+    if cmd not in ("setup", "run") or (cmd == "setup" and dry_run):
+        return None
+    return cmd, dry_run
+
+
+def main(argv):
+    parsed = parse_args(argv[1:])
+    if parsed is None:
+        print(f"不明な引数のため中止（本番処理はしていない）。{_USAGE}", file=sys.stderr)
+        sys.exit(2)
+    cmd, dry_run = parsed
     conf = cfg()
-    cmd = sys.argv[1] if len(sys.argv) > 1 else "run"
     if cmd == "setup":
         do_setup(conf)
     else:
-        do_run(conf, dry_run="--dry-run" in sys.argv[2:])
+        do_run(conf, dry_run=dry_run)
+
+
+if __name__ == "__main__":
+    main(sys.argv)
