@@ -28,6 +28,8 @@ import json
 import time
 import subprocess
 import datetime
+import urllib.error
+import urllib.parse
 import urllib.request
 
 try:
@@ -38,6 +40,10 @@ except ImportError:  # setup 前など Playwright 未導入時に親切なメッ
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG = os.path.join(ROOT, "data", "mf-import-config.json")
 OUT = os.path.join(ROOT, "data", "mf-holdings.json")
+# Worker（PUT /networth）向けの User-Agent。urllib 既定の Python-urllib/x.y は
+# Cloudflare エッジで error 1010 として遮断されるため明示する（#684）。
+# MF にアクセスする Playwright 側の UA には使わない。
+WORKER_USER_AGENT = "portfolio-mf-snapshot/1 (+https://github.com/shoulang0729/portfolio)"
 
 
 def cfg():
@@ -664,22 +670,95 @@ def push_networth_to_worker(doc):
     if not worker_url or not pin_hash:
         notify("networth: MF_WORKER_URL/MF_PIN_HASH が未設定のため Worker 送信をスキップ（公開 commit は継続）。")
         return False
+    target = _networth_target(worker_url)
     try:
         body = json.dumps(doc).encode("utf-8")
         req = urllib.request.Request(
             f"{worker_url.rstrip('/')}/networth",
             data=body,
             method="PUT",
-            headers={"Content-Type": "application/json", "X-Pin-Hash": pin_hash},
+            headers={
+                "Content-Type": "application/json",
+                "X-Pin-Hash": pin_hash,
+                "User-Agent": WORKER_USER_AGENT,
+            },
         )
         with urllib.request.urlopen(req, timeout=15) as res:
             if res.status != 200:
                 notify(f"networth: Worker PUT /networth が HTTP {res.status} を返却。")
                 return False
         return True
+    except urllib.error.HTTPError as e:
+        msg = f"networth KV 送信失敗: {_describe_http_error(e)} host={target}"
+        print(msg, file=sys.stderr)
+        notify(msg)
+        return False
+    except urllib.error.URLError as e:
+        msg = f"networth KV 送信失敗: {type(e).__name__} reason={e.reason} host={target}"
+        print(msg, file=sys.stderr)
+        notify(msg)
+        return False
     except Exception as e:
         notify(f"networth: Worker PUT /networth 送信失敗 {type(e).__name__}: {e}。公開 commit は継続。")
         return False
+
+
+def _networth_target(worker_url):
+    """ログ用の送信先表示（ホスト名とパスだけ・userinfo/クエリは出さない・#684）。"""
+    try:
+        parts = urllib.parse.urlsplit(f"{worker_url.rstrip('/')}/networth")
+        host = parts.hostname or "?"
+        if parts.port:
+            host = f"{host}:{parts.port}"
+        return f"{host}{parts.path}"
+    except ValueError:
+        return "?/networth"
+
+
+DIAG_BODY_BYTES = 512  # 診断用に読むレスポンス本文の上限
+DIAG_BODY_CHARS = 160  # 診断ログに載せる本文の文字数上限
+
+
+def _describe_http_error(e):
+    """HTTPError を 1 行の診断文字列にする（#684）。
+
+    出すのはレスポンス側の情報だけ: status・reason・server・cf-ray・cf-mitigated・
+    content-type・本文の先頭（HTML なら error code と title だけ）。
+    リクエストヘッダ（X-Pin-Hash）・リクエスト本文・URL は出さない。
+    """
+    headers = e.headers if e.headers is not None else {}
+    reason = str(e.reason or "").strip()
+    parts = [f"HTTP {e.code}{' ' + reason if reason else ''}"]
+    for name in ("server", "cf-ray", "cf-mitigated", "content-type"):
+        val = headers.get(name)
+        if val:
+            parts.append(f"{name}={_one_line(str(val))}")
+    snippet = _body_snippet(e, str(headers.get("content-type") or ""))
+    if snippet:
+        parts.append(f'body="{snippet}"')
+    return " ".join(parts)
+
+
+def _one_line(text):
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def _body_snippet(e, content_type):
+    try:
+        raw = e.read(DIAG_BODY_BYTES) or b""
+    except Exception:
+        return ""
+    text = raw.decode("utf-8", errors="replace")
+    if "html" in content_type.lower():
+        found = []
+        code = re.search(r"error code:?\s*(\d+)", text, re.I)
+        if code:
+            found.append(f"error code: {code.group(1)}")
+        title = re.search(r"<title[^>]*>(.*?)</title>", text, re.I | re.S)
+        if title:
+            found.append(f"title: {_one_line(title.group(1))}")
+        text = " / ".join(found)
+    return _one_line(text)[:DIAG_BODY_CHARS].replace('"', "'")
 
 
 # ── 出力＆無人 commit/push（成功時のみ・承認不要） ─────────────────────────────
