@@ -8,6 +8,7 @@ import { resyncWatchlistFromMain } from '../worker/src/routes-kv.js';
 
 const SHA = '0123456789abcdef0123456789abcdef01234567';
 const SHA_URL = 'https://api.github.com/repos/shoulang0729/portfolio/commits/main';
+const REF_URL = 'https://api.github.com/repos/shoulang0729/portfolio/git/ref/heads/main';
 const RAW_URL = `https://raw.githubusercontent.com/shoulang0729/portfolio/${SHA}/data/valuations.json`;
 const TOKEN = 'synthetic-token-not-real';
 
@@ -38,16 +39,22 @@ function doc(valuations = { AAA: VAL_A, BBB: VAL_B }) {
 }
 
 /**
- * @param {{sha?: Array<Response|Error>, raw?: Array<Response|Error>}} plan URL ごとの応答の列
+ * @param {{sha?: Array<Response|Error>, raw?: Array<Response|Error>, ref?: Array<Response|Error>}} plan URL ごとの応答の列
  */
-function mockFetch({ sha = [new Response(SHA)], raw = [new Response(doc())] } = {}) {
+function mockFetch({
+  sha = [new Response(SHA)],
+  raw = [new Response(doc())],
+  ref = [new Response('', { status: 503 })],
+} = {}) {
   let si = 0;
   let ri = 0;
+  let fi = 0;
   const fn = vi.fn(async (url) => {
     const u = String(url);
     const pick = (arr, k) => arr[Math.min(k, arr.length - 1)];
     let r;
     if (u === SHA_URL) r = pick(sha, si++);
+    else if (u === REF_URL) r = pick(ref, fi++);
     else if (u.startsWith('https://raw.githubusercontent.com/')) r = pick(raw, ri++);
     else throw new Error(`unexpected url ${u}`);
     if (r instanceof Error) throw r;
@@ -76,7 +83,7 @@ afterEach(() => {
 const run = (env) => resyncWatchlistFromMain(env, { sleep });
 
 describe('SHA の取得', () => {
-  it('ヘッダ（sha 形式・UA・API バージョン・トークン）と no-store で読む', async () => {
+  it('ヘッダ（sha 形式・UA・API バージョン・トークン）で読む・cache 指定なし', async () => {
     const f = mockFetch();
     await run({ KV: makeKv([null]), GH_DISPATCH_TOKEN: TOKEN, GITHUB_TOKEN: 'other-synthetic' });
     const [url, init] = f.mock.calls[0];
@@ -87,7 +94,7 @@ describe('SHA の取得', () => {
       'X-GitHub-Api-Version': '2022-11-28',
       Authorization: `Bearer ${TOKEN}`,
     });
-    expect(init.cache).toBe('no-store');
+    expect(init.cache).toBeUndefined();
     expect(init.cf).toBeUndefined();
   });
 
@@ -113,7 +120,9 @@ describe('SHA の取得', () => {
     const kv = makeKv([[item('AAA')]]);
     const r = await run({ KV: kv });
     expect(r).toMatchObject({ ok: false, status: 502, stage: 'sha', http: 429 });
-    expect(f).toHaveBeenCalledTimes(3);
+    expect(f.mock.calls.filter(([u]) => u === SHA_URL)).toHaveLength(3);
+    expect(f.mock.calls.filter(([u]) => u === REF_URL)).toHaveLength(1);
+    expect(f).toHaveBeenCalledTimes(4);
     expect(kv.get).not.toHaveBeenCalled();
     expect(kv.put).not.toHaveBeenCalled();
   });
@@ -121,9 +130,87 @@ describe('SHA の取得', () => {
   it('404 は再試行しない・40 桁の 16 進でなければ 502 stage=sha', async () => {
     let f = mockFetch({ sha: [new Response('', { status: 404 })] });
     expect(await run({ KV: makeKv([null]) })).toMatchObject({ ok: false, status: 502, stage: 'sha' });
-    expect(f).toHaveBeenCalledTimes(1);
+    expect(f.mock.calls.filter(([u]) => u === SHA_URL)).toHaveLength(1);
     f = mockFetch({ sha: [new Response('ABCDEF' + '0'.repeat(34))] });
     expect(await run({ KV: makeKv([null]) })).toMatchObject({ ok: false, status: 502, stage: 'sha' });
+  });
+});
+
+describe('SHA の取得: トークン拒否と予備経路（#748 の本番 502 の対策）', () => {
+  it.each([401, 403])('トークン付きで %i → トークンなしで読み直して成功', async (code) => {
+    const f = mockFetch({ sha: [new Response('', { status: code }), new Response(SHA)] });
+    const r = await run({ KV: makeKv([[item('AAA')]]), GH_DISPATCH_TOKEN: TOKEN });
+    expect(r).toMatchObject({ ok: true, stage: 'resynced', sha: SHA });
+    const shaCalls = f.mock.calls.filter(([u]) => u === SHA_URL);
+    expect(shaCalls).toHaveLength(2);
+    expect(shaCalls[0][1].headers.Authorization).toBe(`Bearer ${TOKEN}`);
+    expect(shaCalls[1][1].headers.Authorization).toBeUndefined();
+    expect(f.mock.calls.some(([u]) => u === REF_URL)).toBe(false);
+    expect(logs).toContain(`[watchlist-resync] sha auth fallback http=${code}`);
+    expect(logs.join('\n')).not.toContain(TOKEN);
+  });
+
+  it('トークンなしで 401 → 読み直さず 502 stage=sha http=401', async () => {
+    const f = mockFetch({ sha: [new Response('', { status: 401 })] });
+    const r = await run({ KV: makeKv([[item('AAA')]]) });
+    expect(r).toMatchObject({ ok: false, status: 502, stage: 'sha', http: 401 });
+    expect(f.mock.calls.filter(([u]) => u === SHA_URL)).toHaveLength(1);
+    expect(logs.some((l) => l.includes('auth fallback'))).toBe(false);
+  });
+
+  it('トークンなしの読み直しも 401 なら 502 http=401（最後の上流ステータス）', async () => {
+    const f = mockFetch({ sha: [new Response('', { status: 401 })] });
+    const r = await run({ KV: makeKv([[item('AAA')]]), GH_DISPATCH_TOKEN: TOKEN });
+    expect(r).toMatchObject({ ok: false, status: 502, stage: 'sha', http: 401 });
+    expect(f.mock.calls.filter(([u]) => u === SHA_URL)).toHaveLength(2);
+  });
+
+  it('commits/main が取れなければ git/ref/heads/main（object.sha）をトークンなしで 1 回だけ使う', async () => {
+    const f = mockFetch({
+      sha: [new Response('', { status: 404 })],
+      ref: [new Response(JSON.stringify({ ref: 'refs/heads/main', object: { sha: SHA, type: 'commit' } }))],
+    });
+    const r = await run({ KV: makeKv([[item('AAA')]]), GH_DISPATCH_TOKEN: TOKEN });
+    expect(r).toMatchObject({ ok: true, stage: 'resynced', sha: SHA });
+    const refCalls = f.mock.calls.filter(([u]) => u === REF_URL);
+    expect(refCalls).toHaveLength(1);
+    expect(refCalls[0][1].headers.Authorization).toBeUndefined();
+    expect(f.mock.calls.map(([u]) => u)).toContain(RAW_URL);
+  });
+
+  it('予備経路も失敗（再試行しない）なら 502 stage=sha・http は commits/main のステータス', async () => {
+    const f = mockFetch({ sha: [new Response('', { status: 404 })], ref: [new Response('', { status: 503 })] });
+    const r = await run({ KV: makeKv([[item('AAA')]]) });
+    expect(r).toMatchObject({ ok: false, status: 502, stage: 'sha', http: 404 });
+    expect(f.mock.calls.filter(([u]) => u === REF_URL)).toHaveLength(1);
+    expect(sleep).not.toHaveBeenCalled();
+  });
+
+  it('予備経路の object.sha が不正なら使わない', async () => {
+    mockFetch({ sha: [new Response('', { status: 404 })], ref: [new Response('{"object":{"sha":"xyz"}}')] });
+    const r = await run({ KV: makeKv([[item('AAA')]]) });
+    expect(r).toMatchObject({ ok: false, status: 502, stage: 'sha', http: 404 });
+  });
+
+  it('ネットワークエラーで終われば http=0', async () => {
+    mockFetch({ sha: [new TypeError('net')], ref: [new TypeError('net')] });
+    const r = await run({ KV: makeKv([[item('AAA')]]) });
+    expect(r).toMatchObject({ ok: false, status: 502, stage: 'sha', http: 0 });
+  });
+
+  it('ルートの 502 応答に http（数値）が入り、トークンは出ない', async () => {
+    const { default: worker } = await import('../worker/src/index.js');
+    mockFetch({ sha: [new Response('', { status: 401 })] });
+    const res = await worker.fetch(
+      new Request('https://worker.example/watchlist/resync', { method: 'POST' }),
+      { KV: makeKv([[item('AAA')]]), GH_DISPATCH_TOKEN: TOKEN },
+      { waitUntil() {} }
+    );
+    expect(res.status).toBe(502);
+    const text = await res.text();
+    expect(JSON.parse(text)).toEqual({ error: expect.any(String), stage: 'sha', http: 401 });
+    expect([text, ...logs].join('\n')).not.toContain(TOKEN);
+    expect(logs).toContain('[watchlist-resync] fail stage=sha http=401');
   });
 });
 
