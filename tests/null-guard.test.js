@@ -271,3 +271,79 @@ describe('writeGuardedBlocks（一時ファイル）', () => {
     expect(guardMsgs).toEqual(['  [null-guard] AAA quality.roic: null → 既存値を保持（stale since 2026-10-04）']);
   });
 });
+
+// #665：ガード後のブロックが null のときは書かない（Toshio 決定 (a)）。writeback.mjs は変えない。
+describe('writeGuardedBlocks：null ブロックを作らない（#665）', () => {
+  // EEE：quality ブロック無し・後続に value ブロックあり（Issue の再現条件）。FFF：既存の null ブロック。
+  const REPRO = `{
+  "valuations": {
+    "EEE": {
+      "perCurrent": 12,
+      "value": {
+        "perTrail": 14.2,
+        "targetGapPct": -3
+      }
+    },
+    "FFF": {
+      "perCurrent": 9,
+      "quality": null,
+      "value": {
+        "perTrail": 8.8
+      }
+    }
+  }
+}
+`;
+
+  it('1. 既存ブロック無し＋新ブロック null → "quality": null を書かない（ファイル不変・0 件）', () => {
+    const before = read();
+    expect(writeGuardedBlocks(path, { BBB: null }, 'quality', { today: T1 })).toBe(0);
+    expect(read()).toBe(before);
+    const e = doc().valuations.BBB;
+    expect('quality' in e).toBe(false);
+    expect(e.staleFields).toBeUndefined();
+  });
+
+  it('2. 再現：null の次の実行で同じキーにオブジェクトを書いても後続の value ブロックは不変', () => {
+    writeFileSync(path, REPRO, 'utf8');
+    writeGuardedBlocks(path, { EEE: null }, 'quality', { today: T1 });
+    expect('quality' in doc().valuations.EEE).toBe(false);
+
+    const n = writeGuardedBlocks(path, { EEE: { roic: 4.1, qScore: 2 } }, 'quality', { today: T2 });
+    expect(n).toBe(1);
+    const e = doc().valuations.EEE;
+    expect(e.quality).toEqual({ roic: 4.1, qScore: 2 });
+    expect(e.value).toEqual({ perTrail: 14.2, targetGapPct: -3 });
+    expect(e.perCurrent).toBe(12);
+    expect(e.staleFields).toBeUndefined();
+    // 隣の銘柄も不変
+    expect(doc().valuations.FFF.quality).toBeNull();
+    expect(doc().valuations.FFF.value).toEqual({ perTrail: 8.8 });
+  });
+
+  it('既存の null ブロック＋新ブロック null → そのまま残す（ファイル不変・後続ブロック不変）', () => {
+    writeFileSync(path, REPRO, 'utf8');
+    expect(writeGuardedBlocks(path, { FFF: null }, 'quality', { today: T1 })).toBe(0);
+    expect(read()).toBe(REPRO);
+  });
+
+  it('3. 通常のオブジェクト書き込みは writeBlocks と同じ出力（形は変えない）', () => {
+    const blocks = {
+      AAA: { roic: 6.5, intCoverage: 81, grossProf: null, qScore: 4 },
+      BBB: { roic: 3, qScore: 1 },
+    };
+    expect(writeGuardedBlocks(path, blocks, 'quality', { today: T1 })).toBe(2);
+    const guardedRaw = read();
+    writeFileSync(path, FIXTURE, 'utf8');
+    writeBlocks(path, blocks, 'quality');
+    expect(guardedRaw).toBe(read());
+  });
+
+  it('null とオブジェクトが混在 → null の銘柄だけ書かない', () => {
+    const n = writeGuardedBlocks(path, { BBB: null, AAA: { roic: 7, qScore: 5 } }, 'quality', { today: T1 });
+    expect(n).toBe(1);
+    expect('quality' in doc().valuations.BBB).toBe(false);
+    expect(doc().valuations.AAA.quality).toEqual({ roic: 7, qScore: 5 });
+    expect(doc().valuations.AAA.value).toEqual({ perTrail: 12.3, targetGapPct: 4 });
+  });
+});
