@@ -6,6 +6,8 @@
 // - runMode(): 開始時刻が 20:55〜22:30 UTC なら計算のみ（§2.6）。
 // - isPushBlocked(): 21:00〜22:30 UTC は push しない（§2.3）。
 // - findDisallowedChanges(): valuations.json の変更が §6.3 の許可フィールドだけかを検査する。
+// - isAlreadyWritten(): 20:00 UTC 以降に当日分のコミットが main にあるか（#708・2026-10-05-per-daily-dispatch.md §3.1）。
+// - isOnTimeStart(): 開始が 20:00〜20:54 UTC（Mulmo に間に合う時間帯）か（#708）。
 
 import { FUND_SOURCE } from './per-calc.mjs';
 
@@ -58,6 +60,43 @@ export function runMode(start) {
 export function isPushBlocked(now) {
   const t = utcHHMM(now);
   return t >= 2100 && t <= 2230;
+}
+
+/** 当日分の書き込みとして数える下限の時刻（UTC・米国の夏時間の引け）。 */
+const WRITTEN_SINCE_UTC = 'T20:00:00Z';
+/** 書き込みコミットの author 名（Mulmo の判定と同じ条件）。 */
+export const BOT_AUTHOR = 'github-actions[bot]';
+
+/**
+ * 20:00 UTC（米国の夏時間の引け）以降に書かれた当日分のコミットがあるか（#708）。
+ * 次をすべて満たすコミットが 1 つでもあれば true:
+ * - author が `github-actions[bot]`
+ * - 件名が `dailyPerCommitMessage(D)` に完全一致（D＝now の UTC 日付）
+ * - `D T20:00:00Z <= committedAt <= now`
+ * @param {Array<{author: string, subject: string, committedAt: string}>} commits
+ * @param {Date} now
+ * @returns {boolean}
+ */
+export function isAlreadyWritten(commits, now) {
+  const d = now.toISOString().slice(0, 10);
+  const msg = dailyPerCommitMessage(d);
+  const since = Date.parse(`${d}${WRITTEN_SINCE_UTC}`);
+  const until = now.getTime();
+  return (commits || []).some((c) => {
+    if (!c || c.author !== BOT_AUTHOR || c.subject !== msg) return false;
+    const t = Date.parse(c.committedAt);
+    return !Number.isNaN(t) && t >= since && t <= until;
+  });
+}
+
+/**
+ * 開始が 20:00〜20:54 UTC（Mulmo に間に合う時間帯）か（#708）。
+ * @param {Date} start
+ * @returns {boolean}
+ */
+export function isOnTimeStart(start) {
+  const t = utcHHMM(start);
+  return t >= 2000 && t <= 2054;
 }
 
 /**

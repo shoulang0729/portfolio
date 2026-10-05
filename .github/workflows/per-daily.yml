@@ -8,12 +8,20 @@ name: PER Daily
 # - Worker 中継口 /yahoo /watchlist を叩くだけ。API キー・Secrets は使わない（GITHUB_TOKEN は push と Issue 管理のみ）。
 # - 公開リポのログ・サマリ・Issue に出すのは銘柄シンボル・PER・%タイル・status・件数のみ（HTTP 本文・KV 本文は出さない）。
 # - PR2 の突き合わせ（compare ジョブ・01:30 UTC）は PR3 で廃止。
+# - 起動は Worker Cron 20:20 UTC の workflow_dispatch が本番、schedule 20:15 は予備。
+#   20:00 UTC 以降に当日分を書き込み済みなら何もしない（#708・docs/handoff/2026-10-05-per-daily-dispatch.md）。
+#   予備の schedule が定刻（20:00〜20:54 UTC）外に書いた日は per-daily-late Issue を開く（定刻内の書き込みで閉じる）。
 # - 設計書: docs/handoff/2026-10-03-phase15-data-migration.md §2.3・§2.6・§6
 
 on:
   schedule:
-    - cron: '15 20 * * *'   # 毎日 20:15 UTC（書き込み＋kv-resync）
+    - cron: '15 20 * * *'   # 毎日 20:15 UTC（予備。書き込み＋kv-resync）
   workflow_dispatch:
+    inputs:
+      force:
+        description: '当日分が書き込み済みでも実行する（手動の再実行用）'
+        type: boolean
+        default: false
 
 concurrency:
   group: portfolio-data-batch
@@ -43,13 +51,43 @@ jobs:
           START=$(date -u +%FT%TZ)
           MODE=$(node data/scheduler/per-daily-gate.mjs mode --now "$START")
           echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          echo "start=$START" >> "$GITHUB_OUTPUT"
           echo "start=${START} mode=${MODE}"
           if [ "$MODE" = "compute-only" ]; then
             echo "::warning::開始 ${START} が 20:55〜22:30 UTC のため計算のみ（書き込み・コミットしない）。当日の PER は前日値のままです"
           fi
 
+      - name: Check already written (20:00 UTC 以降の当日分)
+        id: already
+        env:
+          START: ${{ steps.mode.outputs.start }}
+          FORCE: ${{ inputs.force == true }}
+        run: |
+          # 20:00 UTC 以降に github-actions[bot] の「data: daily PER <D>」（完全一致）が main にあれば何もしない（#708）。
+          # already-written の exit 6 だけが「書き込み済み」。それ以外の非 0 は判定の異常＝失敗にする。
+          if [ "$FORCE" = "true" ]; then
+            echo "already=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::force=true のため、書き込み済みの確認をせずに実行します"
+            exit 0
+          fi
+          set +e
+          node data/scheduler/per-daily-gate.mjs already-written --now "$START"
+          CODE=$?
+          set -e
+          if [ "$CODE" -eq 6 ]; then
+            D="${START%%T*}"
+            echo "already=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::当日分（data: daily PER ${D}）は 20:00 UTC 以降に書き込み済みのため何もしません"
+          elif [ "$CODE" -eq 0 ]; then
+            echo "already=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::書き込み済みの判定に失敗しました（per-daily-gate already-written exit ${CODE}）"
+            exit 1
+          fi
+
       - name: Compute PER
         id: run
+        if: steps.already.outputs.already != 'true'
         env:
           MODE: ${{ steps.mode.outputs.mode }}
         run: |
@@ -101,6 +139,7 @@ jobs:
 
       - name: Guard — only allowed fields of data/valuations.json changed
         id: guard
+        if: steps.already.outputs.already != 'true'
         env:
           MODE: ${{ steps.mode.outputs.mode }}
         run: |
@@ -124,7 +163,7 @@ jobs:
 
       - name: Commit and push
         id: push
-        if: steps.mode.outputs.mode == 'write'
+        if: steps.mode.outputs.mode == 'write' && steps.already.outputs.already != 'true'
         env:
           DATE: ${{ steps.run.outputs.date }}
         run: |
@@ -272,28 +311,37 @@ jobs:
           PUSHED: ${{ steps.push.outputs.pushed }}
           PUSH_SKIPPED: ${{ steps.push.outputs.skipped }}
           KV_OUTCOME: ${{ steps.kv.outcome }}
+          ALREADY: ${{ steps.already.outputs.already }}
+          ALREADY_OUTCOME: ${{ steps.already.outcome }}
+          EVENT: ${{ github.event_name }}
         run: |
-          # result: write = 書き込みが main に入った / skipped = 計算のみ・push 禁止時間帯 /
+          # result: write = 書き込みが main に入った / skipped = 計算のみ・push 禁止時間帯・当日分が書き込み済み /
           #         failure = 計算・検査・push の失敗（kv-resync の失敗は kv-resync-failed Issue で別管理）
           REASONS=""
-          if [ "$MODE_OUTCOME" != "success" ]; then REASONS="${REASONS} mode=${MODE_OUTCOME}"; fi
-          if [ "$NO_UPDATES" = "true" ]; then
-            REASONS="${REASONS} watch-updated=0"
-          elif [ "$RUN_OUTCOME" != "success" ]; then
-            REASONS="${REASONS} compute=${RUN_OUTCOME}"
-          fi
-          if [ "$GUARD_OUTCOME" = "failure" ]; then REASONS="${REASONS} guard=failure"; fi
-          if [ "$PUSH_OUTCOME" = "failure" ]; then REASONS="${REASONS} push=failure"; fi
-          REASONS=$(echo "$REASONS" | xargs)
-          if [ -n "$REASONS" ]; then
-            RESULT=failure
-          elif [ "$PUSHED" = "true" ]; then
-            RESULT=write
-          elif [ "$MODE" = "compute-only" ] || [ "$PUSH_SKIPPED" = "push-window" ]; then
+          if [ "$ALREADY" = "true" ]; then
+            # 当日分が書き込み済み（#708）。compute 等の outcome は skipped なので、残りの判定は行わない。
             RESULT=skipped
           else
-            RESULT=failure
-            REASONS="unknown"
+            if [ "$MODE_OUTCOME" != "success" ]; then REASONS="${REASONS} mode=${MODE_OUTCOME}"; fi
+            if [ "$ALREADY_OUTCOME" = "failure" ]; then REASONS="${REASONS} already-check=failure"; fi
+            if [ "$NO_UPDATES" = "true" ]; then
+              REASONS="${REASONS} watch-updated=0"
+            elif [ "$RUN_OUTCOME" != "success" ]; then
+              REASONS="${REASONS} compute=${RUN_OUTCOME}"
+            fi
+            if [ "$GUARD_OUTCOME" = "failure" ]; then REASONS="${REASONS} guard=failure"; fi
+            if [ "$PUSH_OUTCOME" = "failure" ]; then REASONS="${REASONS} push=failure"; fi
+            REASONS=$(echo "$REASONS" | xargs)
+            if [ -n "$REASONS" ]; then
+              RESULT=failure
+            elif [ "$PUSHED" = "true" ]; then
+              RESULT=write
+            elif [ "$MODE" = "compute-only" ] || [ "$PUSH_SKIPPED" = "push-window" ]; then
+              RESULT=skipped
+            else
+              RESULT=failure
+              REASONS="unknown"
+            fi
           fi
           KV="${KV_OUTCOME:-skipped}"
           COMMIT="—"
@@ -308,6 +356,8 @@ jobs:
             echo "|---|---|"
             echo "| result | ${RESULT} |"
             echo "| mode | ${MODE:-unknown} |"
+            echo "| event | ${EVENT} |"
+            echo "| already-written | ${ALREADY:-false} |"
             echo "| pushed | ${PUSHED:-false} |"
             echo "| commit | ${COMMIT} |"
             echo "| kv-resync | ${KV} |"
@@ -359,6 +409,70 @@ jobs:
             fi
           else
             echo "計算のみ／push 禁止時間帯（Issue は変更しない）"
+          fi
+
+      - name: Open / update / close per-daily-late issue (idempotent)
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RESULT: ${{ steps.result.outputs.result }}
+          EVENT: ${{ github.event_name }}
+          START: ${{ steps.mode.outputs.start }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          # #708: 予備の schedule が定刻（20:00〜20:54 UTC）外に書いた日＝Worker 起動で当日分が書けなかった日に開く。
+          # 定刻内の書き込み（起動経路は問わない）で閉じる。skipped・failure・朝の手動の write は何もしない。
+          if [ "$RESULT" != "write" ]; then
+            echo "result=${RESULT:-unknown}（per-daily-late Issue は変更しない）"
+            exit 0
+          fi
+          # on-time の exit 7 だけが「定刻外」。それ以外の非 0 は判定の異常＝失敗にする。
+          set +e
+          node data/scheduler/per-daily-gate.mjs on-time --now "$START"
+          CODE=$?
+          set -e
+          if [ "$CODE" -ne 0 ] && [ "$CODE" -ne 7 ]; then
+            echo "::error::定刻の判定に失敗しました（per-daily-gate on-time exit ${CODE}）"
+            exit 1
+          fi
+          gh label create per-daily-late \
+            --color FBCA04 \
+            --description "Worker 起動の当日 PER が Mulmo に間に合わなかった（自動管理）" 2>/dev/null || true
+          EXISTING=$(gh issue list --state open --label per-daily-late --json number --jq '.[0].number // ""')
+
+          if [ "$CODE" -eq 0 ]; then
+            if [ -n "$EXISTING" ]; then
+              gh issue close "$EXISTING" \
+                --comment "✅ 定刻（20:00〜20:54 UTC）の書き込みが成功しました（${RUN_URL}）。自動クローズします。"
+              echo "Closed late issue #$EXISTING"
+            else
+              echo "定刻の書き込み・対応不要"
+            fi
+          elif [ "$EVENT" = "schedule" ]; then
+            TITLE="⚠ 当日の PER が Mulmo（21:00 UTC）に間に合いませんでした（予備の schedule が書き込み）"
+            BODY=$(cat <<EOF
+          20:20 UTC の Worker 起動（workflow_dispatch）で当日分が書けず、予備の schedule が定刻（20:00〜20:54 UTC）外に書き込みました。Mulmo の日次バッチ（21:00 UTC）は前日の PER を使っています。
+
+          - **開始時刻（UTC）**: ${START:-不明}
+          - **Run**: ${RUN_URL}
+
+          確認先:
+          - Cloudflare ダッシュボード → Worker \`portfolio-proxy\` → Cron イベントの履歴（20:20 UTC の dispatch が失敗していないか）
+          - Actions の PER Daily に 20:20 UTC ごろの \`workflow_dispatch\` の run があるか（計算のみに落ちていないか）
+          - \`per-daily-failed\` Issue
+
+          > このIssueは \`PER Daily\` ワークフローが自動管理しています（定刻の書き込みが成功すると自動クローズ）。
+          EOF
+          )
+            if [ -n "$EXISTING" ]; then
+              gh issue edit "$EXISTING" --title "$TITLE" --body "$BODY"
+              echo "Updated late issue #$EXISTING"
+            else
+              gh issue create --title "$TITLE" --body "$BODY" --label per-daily-late
+              echo "Created late issue"
+            fi
+          else
+            echo "定刻外の手動の書き込み（per-daily-late Issue は変更しない）"
           fi
 
       - name: Fail job on failure

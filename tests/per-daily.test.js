@@ -12,6 +12,8 @@ import {
   deepEqual,
   countWatchlistUpdated,
   hasWatchlistUpdates,
+  isAlreadyWritten,
+  isOnTimeStart,
 } from '../data/scheduler/lib/per-daily.mjs';
 import { score, FUND_SOURCE } from '../data/scheduler/lib/per-calc.mjs';
 import { detectFormat, stringifyLike } from '../data/scheduler/lib/json-format.mjs';
@@ -315,5 +317,125 @@ describe('per-daily.yml（PR3 の切り替え）', () => {
   it('Secrets は GITHUB_TOKEN のみ', () => {
     const secrets = [...WORKFLOW.matchAll(/secrets\.([A-Z_]+)/g)].map((m) => m[1]);
     expect(new Set(secrets)).toEqual(new Set(['GITHUB_TOKEN']));
+  });
+});
+
+describe('isAlreadyWritten（20:00 UTC 以降の当日分・#708 §3.1(a) の 7 例）', () => {
+  const bot = 'github-actions[bot]';
+  const c = (subject, committedAt, author = bot) => ({ author, subject, committedAt });
+  const now = (iso) => new Date(iso);
+
+  it.each([
+    [
+      '1. 予備の schedule（23:02）・bot が 20:21 に書き込み済み → スキップ',
+      '2026-10-05T23:02:00Z',
+      [c('data: daily PER 2026-10-05', '2026-10-05T20:21:00Z')],
+      true,
+    ],
+    ['2. Worker の起動（20:20）・当日コミットなし → 書く', '2026-10-05T20:20:00Z', [], false],
+    [
+      '3. Worker の起動（20:21）・schedule が 20:16 に定刻で書いた → スキップ',
+      '2026-10-05T20:21:00Z',
+      [c('data: daily PER 2026-10-05', '2026-10-05T20:16:00Z')],
+      true,
+    ],
+    [
+      '4. 20:20・朝 08:30 の手動テストのコミットは数えない → 書く',
+      '2026-10-05T20:20:00Z',
+      [c('data: daily PER 2026-10-05', '2026-10-05T08:30:00Z')],
+      false,
+    ],
+    [
+      '5. 予備の schedule が日付をまたいだ（10-06 00:30）・前日 20:21 のコミット → 書く',
+      '2026-10-06T00:30:00Z',
+      [c('data: daily PER 2026-10-05', '2026-10-05T20:21:00Z')],
+      false,
+    ],
+    [
+      '6. author が人（20:30）→ 書く（bot だけを数える）',
+      '2026-10-05T23:02:00Z',
+      [c('data: daily PER 2026-10-05', '2026-10-05T20:30:00Z', 'Synthetic Person')],
+      false,
+    ],
+    [
+      '7. 件名が完全一致しない（retry）→ 書く',
+      '2026-10-05T23:02:00Z',
+      [c('data: daily PER 2026-10-05 (retry)', '2026-10-05T20:30:00Z')],
+      false,
+    ],
+  ])('%s', (_label, nowIso, commits, expected) => {
+    expect(isAlreadyWritten(commits, now(nowIso))).toBe(expected);
+  });
+
+  it('例 5 の翌日 20:20 の Worker 起動はスキップされない（D＝10-06 の 20:00 以降のコミットが無い）', () => {
+    const commits = [
+      c('data: daily PER 2026-10-05', '2026-10-05T20:21:00Z'),
+      c('data: daily PER 2026-10-06', '2026-10-06T00:31:00Z'),
+    ];
+    expect(isAlreadyWritten(commits, now('2026-10-06T20:20:00Z'))).toBe(false);
+  });
+
+  it('境界: 20:00:00 ちょうどと now ちょうどは数える・19:59:59 と now より後は数えない', () => {
+    const n = now('2026-10-05T23:00:00Z');
+    expect(isAlreadyWritten([c('data: daily PER 2026-10-05', '2026-10-05T20:00:00Z')], n)).toBe(true);
+    expect(isAlreadyWritten([c('data: daily PER 2026-10-05', '2026-10-05T19:59:59Z')], n)).toBe(false);
+    expect(isAlreadyWritten([c('data: daily PER 2026-10-05', '2026-10-05T23:00:01Z')], n)).toBe(false);
+    expect(isAlreadyWritten([c('data: daily PER 2026-10-05', '2026-10-05T23:00:00Z')], n)).toBe(true);
+  });
+
+  it('git の %cI 形式（+00:00 オフセット）を受け付け、不正な日時は数えない', () => {
+    const n = now('2026-10-05T23:00:00Z');
+    expect(isAlreadyWritten([c('data: daily PER 2026-10-05', '2026-10-05T20:21:00+00:00')], n)).toBe(true);
+    expect(isAlreadyWritten([c('data: daily PER 2026-10-05', 'not-a-date')], n)).toBe(false);
+    expect(isAlreadyWritten([], n)).toBe(false);
+    expect(isAlreadyWritten(null, n)).toBe(false);
+  });
+});
+
+describe('isOnTimeStart（開始が 20:00〜20:54 UTC・#708）', () => {
+  it.each([
+    ['19:59', false],
+    ['20:00', true],
+    ['20:20', true],
+    ['20:54', true],
+    ['20:55', false],
+    ['23:02', false],
+    ['08:30', false],
+  ])('%s → %s', (hhmm, expected) => {
+    expect(isOnTimeStart(at(hhmm))).toBe(expected);
+  });
+});
+
+describe('per-daily.yml（#708 PR1 書き込み済みチェック・per-daily-late）', () => {
+  it('workflow_dispatch に force（boolean・既定 false）がある', () => {
+    expect(WORKFLOW).toMatch(/workflow_dispatch:\n\s+inputs:\n\s+force:[\s\S]*?type: boolean[\s\S]*?default: false/);
+  });
+  it('already ステップが already-written を呼び、exit 6 だけを書き込み済みとして扱う', () => {
+    expect(WORKFLOW).toMatch(/id: already/);
+    expect(WORKFLOW).toMatch(/per-daily-gate\.mjs already-written --now "\$START"/);
+    expect(WORKFLOW).toMatch(/if \[ "\$CODE" -eq 6 \]; then[\s\S]*?already=true/);
+    expect(WORKFLOW).toMatch(/書き込み済みの判定に失敗しました[^\n]*\n\s*exit 1/);
+  });
+  it('Compute・Guard・Commit and push は書き込み済みならスキップする', () => {
+    const cond = /if: [^\n]*steps\.already\.outputs\.already != 'true'/g;
+    expect([...WORKFLOW.matchAll(cond)]).toHaveLength(3);
+    expect(WORKFLOW).toMatch(/if: steps\.mode\.outputs\.mode == 'write' && steps\.already\.outputs\.already != 'true'/);
+  });
+  it('書き込み済みなら result=skipped を最初に決め、already-check の失敗は failure の理由になる', () => {
+    expect(WORKFLOW).toMatch(/if \[ "\$ALREADY" = "true" \]; then[\s\S]*?RESULT=skipped\n\s+else/);
+    expect(WORKFLOW).toMatch(/already-check=failure/);
+    expect(WORKFLOW).toMatch(/\| already-written \|/);
+    expect(WORKFLOW).toMatch(/\| event \|/);
+  });
+  it('per-daily-late Issue を on-time の判定で開閉する（schedule の定刻外で開く）', () => {
+    expect(WORKFLOW).toMatch(/per-daily-late/);
+    expect(WORKFLOW).toMatch(/--color FBCA04/);
+    expect(WORKFLOW).toMatch(/per-daily-gate\.mjs on-time --now "\$START"/);
+    expect(WORKFLOW).toMatch(/elif \[ "\$EVENT" = "schedule" \]; then/);
+    expect(WORKFLOW).not.toMatch(/node -e/);
+  });
+  it('concurrency group と予備の schedule は変えない', () => {
+    expect(WORKFLOW).toMatch(/group: portfolio-data-batch\n\s+cancel-in-progress: false/);
+    expect(WORKFLOW).toMatch(/cron: '15 20 \* \* \*'/);
   });
 });
