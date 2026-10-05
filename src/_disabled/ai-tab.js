@@ -12,18 +12,38 @@
 // AI モデル設定
 // ══════════════════════════════════════════════
 const AI_MODELS = [
-  { id: 'gpt',      name: 'ChatGPT',  color: '#10A37F', textColor: '#fff',
-    versions: ['gpt-5.4-mini', 'gpt-4o', 'gpt-4o-mini', 'o3', 'o4-mini'] },
-  { id: 'gemini',   name: 'Gemini',   color: '#4285F4', textColor: '#fff',
-    versions: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.5-flash-lite', 'gemini-3.1-flash-lite'] },
-  { id: 'grok',     name: 'Grok',     color: '#1A1A1A', textColor: '#fff',
-    versions: ['grok-4.3', 'grok-4.20-0309-reasoning', 'grok-4.20-0309-non-reasoning', 'grok-4.20-multi-agent-0309'] },
+  {
+    id: 'gpt',
+    name: 'ChatGPT',
+    color: '#10A37F',
+    textColor: '#fff',
+    versions: ['gpt-5.4-mini', 'gpt-4o', 'gpt-4o-mini', 'o3', 'o4-mini'],
+  },
+  {
+    id: 'gemini',
+    name: 'Gemini',
+    color: '#4285F4',
+    textColor: '#fff',
+    versions: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.5-flash-lite', 'gemini-3.1-flash-lite'],
+  },
+  {
+    id: 'grok',
+    name: 'Grok',
+    color: '#1A1A1A',
+    textColor: '#fff',
+    versions: ['grok-4.3', 'grok-4.20-0309-reasoning', 'grok-4.20-0309-non-reasoning', 'grok-4.20-multi-agent-0309'],
+  },
   // DeepSeek は残高不足で利用不可のため一時無効化（再開する場合は下の行のコメントを外す）
   // { id: 'deepseek', name: 'DeepSeek', color: '#1C5EFF', textColor: '#fff',
   //   versions: ['deepseek-chat', 'deepseek-reasoner'] },
-  { id: 'claude',   name: 'Claude',   color: '#CC785C', textColor: '#fff',
+  {
+    id: 'claude',
+    name: 'Claude',
+    color: '#CC785C',
+    textColor: '#fff',
     versions: ['claude-sonnet-4-6', 'claude-opus-4-7', 'claude-haiku-4-5-20251001'],
-    isSynthesizer: true },
+    isSynthesizer: true,
+  },
 ];
 
 // ── 質問テンプレート ──
@@ -35,7 +55,7 @@ const AI_QUESTION_TEMPLATES = [
     categories: ['news'],
     buildPrompt(markets) {
       const names = { japan: '日本', us: '米国', hk: '香港' };
-      const mkt = (markets.length ? markets : ['japan', 'us']).map(m => names[m]).join('・');
+      const mkt = (markets.length ? markets : ['japan', 'us']).map((m) => names[m]).join('・');
       return `${mkt}市場の今日の主要ニュースと、株式市場・保有銘柄への影響を教えてください。`;
     },
   },
@@ -89,7 +109,9 @@ const AI_QUESTION_TEMPLATES = [
     label: 'カスタム',
     isCustom: true,
     categories: [], // 質問文から動的推定（inferCategoriesFromQuestion）
-    buildPrompt(markets, customText) { return customText; },
+    buildPrompt(markets, customText) {
+      return customText;
+    },
   },
 ];
 
@@ -100,11 +122,11 @@ const SYMBOL_BOUND_CATEGORIES = ['news', 'fundamentals', 'earnings', 'recommenda
 function inferCategoriesFromQuestion(q) {
   const c = [];
   if (!q) return c;
-  if (/ニュース|news|報道|発表/i.test(q))                       c.push('news');
+  if (/ニュース|news|報道|発表/i.test(q)) c.push('news');
   if (/PER|PBR|EPS|ROE|割安|割高|バリュエーション|ファンダ/i.test(q)) c.push('fundamentals');
-  if (/決算|earnings|業績|サプライズ/i.test(q))                 c.push('earnings');
+  if (/決算|earnings|業績|サプライズ/i.test(q)) c.push('earnings');
   if (/レーティング|アナリスト|目標株価|recommendation/i.test(q)) c.push('recommendation');
-  if (/インサイダー|insider/i.test(q))                          c.push('insider');
+  if (/インサイダー|insider/i.test(q)) c.push('insider');
   return c;
 }
 
@@ -164,11 +186,11 @@ NYタイムを検索する必要はなく、上記算術で確定すること。
 
 // ── 状態 ──
 const AI_HISTORY_LS_KEY = 'hm-ai-history-v1';
-const AI_HISTORY_MAX    = 30; // 件数上限（古いものから捨てる）
+const AI_HISTORY_MAX = 30; // 件数上限（古いものから捨てる）
 
 const aiState = {
-  running:     false,
-  results:     {}, // { id: { status: 'idle|loading|done|error', text: '' } }
+  running: false,
+  results: {}, // { id: { status: 'idle|loading|done|error', text: '' } }
   chatHistory: _loadAiHistory(), // [{ question, responses: {gpt,...,claude}, timestamp }]
 };
 
@@ -177,7 +199,9 @@ function _loadAiHistory() {
     const raw = localStorage.getItem(AI_HISTORY_LS_KEY);
     const arr = raw ? JSON.parse(raw) : [];
     return Array.isArray(arr) ? arr : [];
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 
 function _saveAiHistory() {
@@ -187,7 +211,9 @@ function _saveAiHistory() {
       aiState.chatHistory = aiState.chatHistory.slice(-AI_HISTORY_MAX);
     }
     localStorage.setItem(AI_HISTORY_LS_KEY, JSON.stringify(aiState.chatHistory));
-  } catch (e) { console.warn('[ai-tab] history save failed:', e); }
+  } catch (e) {
+    console.warn('[ai-tab] history save failed:', e);
+  }
 }
 
 // ══════════════════════════════════════════════
@@ -199,12 +225,16 @@ function _saveAiHistory() {
 function buildWatchlistContext() {
   const wl = state.watchlist;
   if (!wl || wl.length === 0) return null;
-  const rows = wl.map(item => {
-    const price = state.watchlistPrices?.[item.ySymbol || item.symbol];
-    const priceStr = price?.price ? `現在値 ${item.cur === 'USD' ? '$' : '¥'}${price.price.toLocaleString()}` : '価格未取得';
-    const dayStr   = price?.dayPct != null ? ` / 当日 ${price.dayPct.toFixed(2)}%` : '';
-    return `・${item.symbol}（${item.name || item.symbol}）: ${priceStr}${dayStr}`;
-  }).join('\n');
+  const rows = wl
+    .map((item) => {
+      const price = state.watchlistPrices?.[item.ySymbol || item.symbol];
+      const priceStr = price?.price
+        ? `現在値 ${item.cur === 'USD' ? '$' : '¥'}${price.price.toLocaleString()}`
+        : '価格未取得';
+      const dayStr = price?.dayPct != null ? ` / 当日 ${price.dayPct.toFixed(2)}%` : '';
+      return `・${item.symbol}（${item.name || item.symbol}）: ${priceStr}${dayStr}`;
+    })
+    .join('\n');
 
   return `【ウォッチリスト（注目銘柄・未保有）】
 以下は保有していないが注目している銘柄です。保有ポートフォリオとは別に参照してください:
@@ -227,7 +257,9 @@ function buildSystemPrompt(withPortfolio, withWatchlist) {
     const wlCtx = buildWatchlistContext();
     if (wlCtx) {
       parts.push(wlCtx);
-      parts.push('ウォッチリスト銘柄については、保有ポートフォリオとは独立して分析し、「注目銘柄として検討すべきか」という観点でコメントしてください。');
+      parts.push(
+        'ウォッチリスト銘柄については、保有ポートフォリオとは独立して分析し、「注目銘柄として検討すべきか」という観点でコメントしてください。'
+      );
     }
   }
 
@@ -237,15 +269,17 @@ function buildSystemPrompt(withPortfolio, withWatchlist) {
 // ポートフォリオ部分のみを生成（ペルソナ部分は分離）
 function _buildPortfolioBlock() {
   const totalValue = positions.reduce((s, p) => s + p.value, 0);
-  const rows = positions.map(p => {
-    const pct = (p.value / totalValue * 100).toFixed(1);
-    const pnl = p.pnlPct != null ? `（損益率 ${p.pnlPct.toFixed(1)}%）` : '';
-    const cur = p.cur === 'USD' ? `$${p.price.toFixed(2)}` : `¥${Math.round(p.price).toLocaleString()}`;
-    return `・${p.symbol}（${p.name}）: 評価額 ${Math.round(p.value).toLocaleString()}円 / ポートフォリオ比 ${pct}% / 現在値 ${cur}${pnl}`;
-  }).join('\n');
+  const rows = positions
+    .map((p) => {
+      const pct = ((p.value / totalValue) * 100).toFixed(1);
+      const pnl = p.pnlPct != null ? `（損益率 ${p.pnlPct.toFixed(1)}%）` : '';
+      const cur = p.cur === 'USD' ? `$${p.price.toFixed(2)}` : `¥${Math.round(p.price).toLocaleString()}`;
+      return `・${p.symbol}（${p.name}）: 評価額 ${Math.round(p.value).toLocaleString()}円 / ポートフォリオ比 ${pct}% / 現在値 ${cur}${pnl}`;
+    })
+    .join('\n');
 
   return `# ポートフォリオ（positions）
-合計評価額: ${Math.round(totalValue / 100000000 * 100) / 100}億円
+合計評価額: ${Math.round((totalValue / 100000000) * 100) / 100}億円
 
 ${rows}`;
 }
@@ -255,7 +289,7 @@ ${rows}`;
 // ══════════════════════════════════════════════
 
 function buildQuestionFromSelections() {
-  const markets = [...document.querySelectorAll('.ai-market-check:checked')].map(el => el.value);
+  const markets = [...document.querySelectorAll('.ai-market-check:checked')].map((el) => el.value);
   const parts = [];
 
   for (const tpl of AI_QUESTION_TEMPLATES) {
@@ -279,8 +313,8 @@ function _buildMessages(currentQuestion) {
   const msgs = [];
   for (const item of aiState.chatHistory) {
     msgs.push({ role: 'user', content: item.question });
-    const canonicalReply = item.responses?.claude || item.responses?.gpt
-      || Object.values(item.responses || {}).find(v => v) || '';
+    const canonicalReply =
+      item.responses?.claude || item.responses?.gpt || Object.values(item.responses || {}).find((v) => v) || '';
     if (canonicalReply) msgs.push({ role: 'assistant', content: canonicalReply });
   }
   msgs.push({ role: 'user', content: currentQuestion });
@@ -295,7 +329,7 @@ async function _callOpenAI(messages, systemPrompt, model = 'gpt-4o') {
     messages: [{ role: 'system', content: systemPrompt }, ...messages],
   };
   if (useCompletionTokens) body.max_completion_tokens = 4000;
-  else                     body.max_tokens = 4000;
+  else body.max_tokens = 4000;
 
   const res = await fetch(`${WORKER_URL}/ai/openai`, {
     method: 'POST',
@@ -305,7 +339,12 @@ async function _callOpenAI(messages, systemPrompt, model = 'gpt-4o') {
   if (!res.ok) {
     const raw = await res.text().catch(() => '');
     let detail = '';
-    try { const j = JSON.parse(raw); detail = j?.error?.message || raw; } catch { detail = raw; }
+    try {
+      const j = JSON.parse(raw);
+      detail = j?.error?.message || raw;
+    } catch {
+      detail = raw;
+    }
     throw new Error(`openai HTTP ${res.status}: ${detail.slice(0, 300)}`);
   }
   const d = await res.json();
@@ -313,7 +352,7 @@ async function _callOpenAI(messages, systemPrompt, model = 'gpt-4o') {
 }
 
 async function _callGemini(messages, systemPrompt, model = 'gemini-2.0-flash') {
-  const contents = messages.map(m => ({
+  const contents = messages.map((m) => ({
     role: m.role === 'assistant' ? 'model' : 'user',
     parts: [{ text: m.content }],
   }));
@@ -327,7 +366,10 @@ async function _callGemini(messages, systemPrompt, model = 'gemini-2.0-flash') {
       generationConfig: { maxOutputTokens: 4000 },
     }),
   });
-  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e?.error?.message || `HTTP ${res.status}`); }
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    throw new Error(e?.error?.message || `HTTP ${res.status}`);
+  }
   const d = await res.json();
   return d.candidates?.[0]?.content?.parts?.[0]?.text ?? '(回答なし)';
 }
@@ -349,7 +391,9 @@ async function _callOpenAICompat(provider, model, messages, systemPrompt) {
     try {
       const j = JSON.parse(raw);
       detail = j?.error?.message || j?.error?.code || j?.message || raw;
-    } catch { detail = raw; }
+    } catch {
+      detail = raw;
+    }
     console.error(`[${provider}] HTTP ${res.status}:`, raw);
     throw new Error(`${provider} HTTP ${res.status}: ${detail.slice(0, 300)}`);
   }
@@ -363,24 +407,32 @@ async function _callClaude(messages, systemPrompt, bodyEl, model = 'claude-sonne
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ model, max_tokens: 4000, system: systemPrompt, messages }),
   });
-  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e?.error?.message || `HTTP ${res.status}`); }
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    throw new Error(e?.error?.message || `HTTP ${res.status}`);
+  }
   const d = await res.json();
   const text = d.content?.[0]?.text ?? '(回答なし)';
   const html = text
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n/g, '<br>');
   if (bodyEl) bodyEl.innerHTML = `<div class="ai-text">${html}</div>`;
   return text;
 }
 
 // ── 統合システムプロンプト（Claude の総括用）──
 function buildSynthesisPrompt(systemPrompt, question, responses, nonClaudeIds) {
-  const parts = nonClaudeIds.map(id => {
-    const m = AI_MODELS.find(m => m.id === id);
-    const r = responses[id];
-    const text = (r?.status === 'done') ? r.text : '（取得失敗）';
-    return `【${m.name}の回答】\n${text}`;
-  }).join('\n\n');
+  const parts = nonClaudeIds
+    .map((id) => {
+      const m = AI_MODELS.find((m) => m.id === id);
+      const r = responses[id];
+      const text = r?.status === 'done' ? r.text : '（取得失敗）';
+      return `【${m.name}の回答】\n${text}`;
+    })
+    .join('\n\n');
 
   const refSection = parts
     ? `━━━ 他の AI の回答（参考）━━━\n\n${parts}\n\n━━━━━━━━━━━━━━━━━━━━━━━━\n\n上記を踏まえた総括回答をお願いします:`
@@ -418,8 +470,11 @@ function _setCardState(modelId, status, text) {
     body.innerHTML = '<div class="ai-loading"><span class="ai-spinner"></span>回答中...</div>';
   } else if (status === 'done') {
     const html = text
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\n/g, '<br>');
     body.innerHTML = `<div class="ai-text">${html}</div>`;
   } else if (status === 'error') {
     body.innerHTML = `<div class="ai-error">⚠ ${text}</div>`;
@@ -427,8 +482,7 @@ function _setCardState(modelId, status, text) {
 }
 
 function _getSelectedVersion(id) {
-  return document.getElementById(`ai-ver-${id}`)?.value
-    || AI_MODELS.find(m => m.id === id)?.versions[0];
+  return document.getElementById(`ai-ver-${id}`)?.value || AI_MODELS.find((m) => m.id === id)?.versions[0];
 }
 
 // 最新ターン内に結果カード群を append する（turn-based 表示）
@@ -436,7 +490,7 @@ function _getSelectedVersion(id) {
 function _renderResultCards(nonClaudeIds, showClaude) {
   const turn = _currentTurn();
   if (!turn) return;
-  const claudeModel = AI_MODELS.find(m => m.isSynthesizer);
+  const claudeModel = AI_MODELS.find((m) => m.isSynthesizer);
 
   const headerStyle = (m) => {
     const fg = m.textColor || '#fff';
@@ -446,7 +500,7 @@ function _renderResultCards(nonClaudeIds, showClaude) {
   };
 
   const cardHtml = (id, isClaude = false) => {
-    const m = isClaude ? claudeModel : AI_MODELS.find(m => m.id === id);
+    const m = isClaude ? claudeModel : AI_MODELS.find((m) => m.id === id);
     const ver = _getSelectedVersion(id);
     const cls = isClaude ? 'ai-card ai-card-claude' : 'ai-card';
     const badge = isClaude ? '<span class="ai-card-badge">統合 · 総括</span>' : '';
@@ -463,7 +517,7 @@ function _renderResultCards(nonClaudeIds, showClaude) {
 
   let html = '';
   if (nonClaudeIds.length > 0) {
-    html += `<div class="ai-grid">${nonClaudeIds.map(id => cardHtml(id)).join('')}</div>`;
+    html += `<div class="ai-grid">${nonClaudeIds.map((id) => cardHtml(id)).join('')}</div>`;
   }
   if (showClaude) {
     html += cardHtml('claude', true);
@@ -479,10 +533,8 @@ function _renderResultCards(nonClaudeIds, showClaude) {
 
 async function _prefetchContext(question) {
   // 1. 選択テンプレから categories を集約
-  const checkedTemplates = AI_QUESTION_TEMPLATES.filter(tpl =>
-    document.getElementById(`ai-tpl-${tpl.id}`)?.checked
-  );
-  let categories = [...new Set(checkedTemplates.flatMap(t => t.categories || []))];
+  const checkedTemplates = AI_QUESTION_TEMPLATES.filter((tpl) => document.getElementById(`ai-tpl-${tpl.id}`)?.checked);
+  let categories = [...new Set(checkedTemplates.flatMap((t) => t.categories || []))];
 
   // 2. カスタムが選ばれていて categories が他テンプレから取れていなければ質問文から推定
   const customChecked = document.getElementById('ai-tpl-custom')?.checked;
@@ -495,10 +547,8 @@ async function _prefetchContext(question) {
   if (categories.length === 0) return '';
 
   // 3. 銘柄系カテゴリがあれば保有銘柄全件を対象（macro等の銘柄非依存カテゴリは [] でOK）
-  const needsSymbols = categories.some(c => SYMBOL_BOUND_CATEGORIES.includes(c));
-  const targetSymbols = needsSymbols
-    ? positions.map(p => p.ySymbol).filter(Boolean)
-    : [];
+  const needsSymbols = categories.some((c) => SYMBOL_BOUND_CATEGORIES.includes(c));
+  const targetSymbols = needsSymbols ? positions.map((p) => p.ySymbol).filter(Boolean) : [];
 
   // 4. Worker にプリフェッチ依頼（失敗してもメイン処理は続ける）
   try {
@@ -512,7 +562,11 @@ async function _prefetchContext(question) {
       return '';
     }
     const data = await res.json();
-    console.log('[ai-tab] prefetched context:', { categories, symbols: targetSymbols.length, size: data.contextSection?.length || 0 });
+    console.log('[ai-tab] prefetched context:', {
+      categories,
+      symbols: targetSymbols.length,
+      size: data.contextSection?.length || 0,
+    });
     return data.contextSection || '';
   } catch (e) {
     console.warn('[ai-tab] prefetch failed:', e);
@@ -534,12 +588,10 @@ async function aiAskAll() {
   }
 
   // 選択モデルを読み取り
-  const enabledIds = [...document.querySelectorAll('.ai-model-check:checked')].map(el => el.dataset.model);
-  const claudeModel = AI_MODELS.find(m => m.isSynthesizer);
+  const enabledIds = [...document.querySelectorAll('.ai-model-check:checked')].map((el) => el.dataset.model);
+  const claudeModel = AI_MODELS.find((m) => m.isSynthesizer);
   const claudeEnabled = enabledIds.includes(claudeModel.id);
-  const nonClaudeIds = AI_MODELS
-    .filter(m => !m.isSynthesizer && enabledIds.includes(m.id))
-    .map(m => m.id);
+  const nonClaudeIds = AI_MODELS.filter((m) => !m.isSynthesizer && enabledIds.includes(m.id)).map((m) => m.id);
 
   if (nonClaudeIds.length === 0 && !claudeEnabled) {
     alert('LLMを1つ以上選択してください');
@@ -560,8 +612,8 @@ async function aiAskAll() {
   // ── プリフェッチ：選択テンプレ → categories → Worker /ai/context ──
   const contextSection = await _prefetchContext(question);
 
-  const systemPrompt = buildSystemPrompt(withPortfolio, withWatchlist)
-    + (contextSection ? '\n\n---\n\n' + contextSection : '');
+  const systemPrompt =
+    buildSystemPrompt(withPortfolio, withWatchlist) + (contextSection ? '\n\n---\n\n' + contextSection : '');
 
   const messages = _buildMessages(question);
 
@@ -571,9 +623,9 @@ async function aiAskAll() {
     try {
       const ver = _getSelectedVersion(modelId);
       let text;
-      if      (modelId === 'gpt')    text = await _callOpenAI(messages, systemPrompt, ver);
+      if (modelId === 'gpt') text = await _callOpenAI(messages, systemPrompt, ver);
       else if (modelId === 'gemini') text = await _callGemini(messages, systemPrompt, ver);
-      else                           text = await _callOpenAICompat(modelId, ver, messages, systemPrompt);
+      else text = await _callOpenAICompat(modelId, ver, messages, systemPrompt);
       _setCardState(modelId, 'done', text);
     } catch (e) {
       _setCardState(modelId, 'error', e.message);
@@ -590,14 +642,12 @@ async function aiAskAll() {
     if (claudeBody) claudeBody.innerHTML = '<div class="ai-loading"><span class="ai-spinner"></span>統合中...</div>';
     try {
       const synthesisPrompt = buildSynthesisPrompt(systemPrompt, question, aiState.results, nonClaudeIds);
-      const synMessages = [
-        ...messages.slice(0, -1),
-        { role: 'user', content: synthesisPrompt + '\n\n' + question },
-      ];
+      const synMessages = [...messages.slice(0, -1), { role: 'user', content: synthesisPrompt + '\n\n' + question }];
       claudeText = await _callClaude(
-        synMessages, systemPrompt,
+        synMessages,
+        systemPrompt,
         claudeBody || document.createElement('div'),
-        _getSelectedVersion('claude'),
+        _getSelectedVersion('claude')
       );
       if (!claudeBody) _setCardState('claude', 'done', claudeText);
     } catch (e) {
@@ -635,8 +685,11 @@ function _saveToNotion(question, responses) {
   const now = new Date();
   const jstStr = now.toLocaleString('ja-JP', {
     timeZone: 'Asia/Tokyo',
-    year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
   });
   fetch(`${WORKER_URL}/notion/save`, {
     method: 'POST',
@@ -649,9 +702,9 @@ function _saveToNotion(question, responses) {
 function aiRunRoutine(type) {
   const q = type === 'japan' ? ROUTINE_JAPAN_PROMPT : ROUTINE_US_PROMPT;
   // 全テンプレートのチェックを外してカスタムのみにする
-  AI_QUESTION_TEMPLATES.forEach(tpl => {
+  AI_QUESTION_TEMPLATES.forEach((tpl) => {
     const cb = document.getElementById(`ai-tpl-${tpl.id}`);
-    if (cb) cb.checked = (tpl.id === 'custom');
+    if (cb) cb.checked = tpl.id === 'custom';
   });
   const customArea = document.getElementById('ai-custom-area');
   if (customArea) customArea.classList.add('visible');
@@ -664,7 +717,7 @@ function aiRunRoutine(type) {
 function _appendChatQuestion(text) {
   const log = document.getElementById('ai-chat-log');
   if (!log) return;
-  const escaped = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+  const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
   const turn = document.createElement('div');
   turn.className = 'ai-turn';
   turn.innerHTML = `<div class="ai-chat-q">${escaped}</div>`;
@@ -698,26 +751,34 @@ function renderAiTab() {
   panel.dataset.initialized = 'true';
 
   // 質問テンプレート HTML
-  const questionsHtml = AI_QUESTION_TEMPLATES.map(tpl => {
+  const questionsHtml = AI_QUESTION_TEMPLATES.map((tpl) => {
     const isDefault = tpl.id === 'custom';
     return `
       <label class="ai-check-row">
         <input type="checkbox" id="ai-tpl-${tpl.id}" ${isDefault ? 'checked' : ''}
-          ${tpl.isCustom ? `onchange="
+          ${
+            tpl.isCustom
+              ? `onchange="
             document.getElementById('ai-custom-area').classList.toggle('visible', this.checked);
-          "` : ''}>
+          "`
+              : ''
+          }>
         <span>${tpl.label}</span>
       </label>
-      ${tpl.isCustom ? `
+      ${
+        tpl.isCustom
+          ? `
         <div class="ai-custom-area visible" id="ai-custom-area">
           <textarea class="ai-custom-textarea" id="ai-custom-text"
             placeholder="例: ポートフォリオのリスク分散は十分ですか？半導体セクターへの集中を減らすべきですか？"
             rows="2" onkeydown="if(event.ctrlKey&&event.key==='Enter')aiAskAll()"></textarea>
-        </div>` : ''}`;
+        </div>`
+          : ''
+      }`;
   }).join('');
 
   // LLM モデル行 HTML
-  const modelsHtml = AI_MODELS.map(m => {
+  const modelsHtml = AI_MODELS.map((m) => {
     const versionsHtml = m.versions
       .map((v, i) => `<option value="${v}"${i === 0 ? ' selected' : ''}>${v}</option>`)
       .join('');
@@ -812,14 +873,17 @@ function renderAiTab() {
     </div>`;
 
   // モデルチェックボックス切り替え → バージョンセレクトのdisabled同期
-  document.querySelectorAll('.ai-model-check').forEach(cb => {
+  document.querySelectorAll('.ai-model-check').forEach((cb) => {
     const sel = document.getElementById(`ai-ver-${cb.dataset.model}`);
-    if (sel) cb.addEventListener('change', () => { sel.disabled = !cb.checked; });
+    if (sel)
+      cb.addEventListener('change', () => {
+        sel.disabled = !cb.checked;
+      });
   });
 
   // ウォッチリストが空のときはチェックボックスを無効化
   const wlRow = document.getElementById('ai-with-watchlist-row');
-  const wlCb  = document.getElementById('ai-with-watchlist');
+  const wlCb = document.getElementById('ai-with-watchlist');
   if (wlRow && wlCb && (!state.watchlist || state.watchlist.length === 0)) {
     wlRow.classList.add('disabled');
     wlCb.disabled = true;
@@ -840,30 +904,33 @@ function _restoreAiHistory() {
   log.innerHTML = '';
   if (!aiState.chatHistory.length) return;
 
-  const claudeModel = AI_MODELS.find(m => m.isSynthesizer);
+  const claudeModel = AI_MODELS.find((m) => m.isSynthesizer);
   const headerStyle = (m) => {
     const fg = m.textColor || '#fff';
     const subFg = m.borderColor ? m.textColor : 'rgba(255,255,255,0.75)';
     const border = m.borderColor ? `box-shadow:inset 0 0 0 1px ${m.borderColor};` : '';
     return `background:${m.color};color:${fg};--ai-sub-fg:${subFg};${border}`;
   };
-  const fmtText = (t) => (t || '')
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
-  const fmtQ = (t) => (t || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+  const fmtText = (t) =>
+    (t || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\n/g, '<br>');
+  const fmtQ = (t) =>
+    (t || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
 
   for (const turn of aiState.chatHistory) {
     const responses = turn.responses || {};
-    const nonClaudeIds = AI_MODELS.filter(m => !m.isSynthesizer && responses[m.id] !== undefined).map(m => m.id);
+    const nonClaudeIds = AI_MODELS.filter((m) => !m.isSynthesizer && responses[m.id] !== undefined).map((m) => m.id);
     const claudeText = responses['claude'];
 
     const cardHtml = (id, isClaude = false) => {
-      const m = isClaude ? claudeModel : AI_MODELS.find(m => m.id === id);
+      const m = isClaude ? claudeModel : AI_MODELS.find((m) => m.id === id);
       if (!m) return '';
       const txt = responses[id];
-      const body = txt
-        ? `<div class="ai-text">${fmtText(txt)}</div>`
-        : '<div class="ai-error">⚠ 回答なし</div>';
+      const body = txt ? `<div class="ai-text">${fmtText(txt)}</div>` : '<div class="ai-error">⚠ 回答なし</div>';
       const cls = isClaude ? 'ai-card ai-card-claude' : 'ai-card';
       const badge = isClaude ? '<span class="ai-card-badge">統合 · 総括</span>' : '';
       return `
@@ -878,7 +945,7 @@ function _restoreAiHistory() {
 
     let inner = `<div class="ai-chat-q">${fmtQ(turn.question)}</div>`;
     if (nonClaudeIds.length > 0) {
-      inner += `<div class="ai-grid">${nonClaudeIds.map(id => cardHtml(id)).join('')}</div>`;
+      inner += `<div class="ai-grid">${nonClaudeIds.map((id) => cardHtml(id)).join('')}</div>`;
     }
     if (claudeText) inner += cardHtml('claude', true);
 
@@ -899,7 +966,10 @@ function _restoreAiHistory() {
 async function _refreshModelVersionsFromWorker() {
   try {
     const res = await fetch(`${WORKER_URL}/ai/models`);
-    if (!res.ok) { console.warn('[ai-tab] /ai/models HTTP', res.status); return; }
+    if (!res.ok) {
+      console.warn('[ai-tab] /ai/models HTTP', res.status);
+      return;
+    }
     const data = await res.json();
     const map = { gpt: data.openai, gemini: data.gemini, grok: data.grok, claude: data.claude };
     for (const m of AI_MODELS) {
@@ -907,17 +977,18 @@ async function _refreshModelVersionsFromWorker() {
       if (!Array.isArray(dynamic) || dynamic.length === 0) continue;
       // preferred = ハードコードの versions[0]。動的リストに含まれていれば先頭に置く
       const preferred = m.versions[0];
-      const ordered = dynamic.includes(preferred)
-        ? [preferred, ...dynamic.filter(v => v !== preferred)]
-        : dynamic;
+      const ordered = dynamic.includes(preferred) ? [preferred, ...dynamic.filter((v) => v !== preferred)] : dynamic;
       m.versions = ordered;
       // DOM 上の select も差し替え（現在の選択値を維持できれば維持）
       const sel = document.getElementById(`ai-ver-${m.id}`);
       if (!sel) continue;
       const prevSelected = sel.value;
-      sel.innerHTML = ordered.map((v, i) =>
-        `<option value="${v}"${(v === prevSelected || (i === 0 && !ordered.includes(prevSelected))) ? ' selected' : ''}>${v}</option>`
-      ).join('');
+      sel.innerHTML = ordered
+        .map(
+          (v, i) =>
+            `<option value="${v}"${v === prevSelected || (i === 0 && !ordered.includes(prevSelected)) ? ' selected' : ''}>${v}</option>`
+        )
+        .join('');
     }
     console.log('[ai-tab] モデル一覧を Worker から更新');
   } catch (e) {

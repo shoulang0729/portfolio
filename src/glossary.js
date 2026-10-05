@@ -35,9 +35,7 @@ export function glossaryHTML(tab) {
 
   const catsHTML = cats
     .map((cat) => {
-      const termsHTML = cat.terms
-        .map((t) => `<p><b>${escapeHTML(t.term)}</b>：${escapeHTML(t.desc)}</p>`)
-        .join('');
+      const termsHTML = cat.terms.map((t) => `<p><b>${escapeHTML(t.term)}</b>：${escapeHTML(t.desc)}</p>`).join('');
       return `<details class="gloss-cat">
       <summary>${escapeHTML(cat.title)}</summary>
       <div class="gloss-cat-body">${termsHTML}</div>

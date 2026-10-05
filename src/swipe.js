@@ -12,16 +12,16 @@
 import { switchTab } from './tabs.js';
 import { state } from './state.js';
 
-const DIST_THRESHOLD = 60;   // 横移動量の下限(px)
-const RATIO          = 1.6;  // 横優位の判定（|dx| > |dy| * RATIO）
-const TIME_LIMIT     = 600;  // これより遅いドラッグは無視(ms)
-const EDGE_IGNORE    = 20;   // 端からの開始は無視(px・iOS 戻るジェスチャ回避)
+const DIST_THRESHOLD = 60; // 横移動量の下限(px)
+const RATIO = 1.6; // 横優位の判定（|dx| > |dy| * RATIO）
+const TIME_LIMIT = 600; // これより遅いドラッグは無視(ms)
+const EDGE_IGNORE = 20; // 端からの開始は無視(px・iOS 戻るジェスチャ回避)
 
 /** 表示中タブの並びを DOM から取得 */
 function tabOrder() {
   return /** @type {string[]} */ (
     [...document.querySelectorAll('.tab-btn[data-tab]')]
-      .map(b => /** @type {HTMLElement} */ (b).dataset.tab)
+      .map((b) => /** @type {HTMLElement} */ (b).dataset.tab)
       .filter(Boolean)
   );
 }
@@ -49,7 +49,7 @@ function inHScrollable(target, dx) {
       if (ox === 'auto' || ox === 'scroll') {
         const max = el.scrollWidth - el.clientWidth;
         if (dx < 0 && el.scrollLeft < max - 1) return true; // 右側にまだ送れる
-        if (dx > 0 && el.scrollLeft > 1) return true;        // 左側にまだ送れる
+        if (dx > 0 && el.scrollLeft > 1) return true; // 左側にまだ送れる
       }
     }
     el = el.parentElement;
@@ -67,34 +67,49 @@ export function setupSwipeNav() {
   let startTarget = /** @type {EventTarget|null} */ (null);
   let tracking = false;
 
-  document.addEventListener('touchstart', e => {
-    if (e.touches.length !== 1) { tracking = false; return; }
-    const t = e.touches[0];
-    if (t.clientX <= EDGE_IGNORE || t.clientX >= window.innerWidth - EDGE_IGNORE) {
-      tracking = false; return;
-    }
-    startX = t.clientX; startY = t.clientY; startT = Date.now();
-    startTarget = e.target; tracking = true;
-  }, { passive: true });
+  document.addEventListener(
+    'touchstart',
+    (e) => {
+      if (e.touches.length !== 1) {
+        tracking = false;
+        return;
+      }
+      const t = e.touches[0];
+      if (t.clientX <= EDGE_IGNORE || t.clientX >= window.innerWidth - EDGE_IGNORE) {
+        tracking = false;
+        return;
+      }
+      startX = t.clientX;
+      startY = t.clientY;
+      startT = Date.now();
+      startTarget = e.target;
+      tracking = true;
+    },
+    { passive: true }
+  );
 
-  document.addEventListener('touchend', e => {
-    if (!tracking) return;
-    tracking = false;
-    if (overlayOpen()) return;
+  document.addEventListener(
+    'touchend',
+    (e) => {
+      if (!tracking) return;
+      tracking = false;
+      if (overlayOpen()) return;
 
-    const t = e.changedTouches[0];
-    const dx = t.clientX - startX;
-    const dy = t.clientY - startY;
-    if (Date.now() - startT > TIME_LIMIT) return;
-    if (Math.abs(dx) < DIST_THRESHOLD) return;
-    if (Math.abs(dx) < Math.abs(dy) * RATIO) return;   // 縦優位 → スクロール
-    if (inHScrollable(startTarget, dx)) return;         // 横スクロール優先
+      const t = e.changedTouches[0];
+      const dx = t.clientX - startX;
+      const dy = t.clientY - startY;
+      if (Date.now() - startT > TIME_LIMIT) return;
+      if (Math.abs(dx) < DIST_THRESHOLD) return;
+      if (Math.abs(dx) < Math.abs(dy) * RATIO) return; // 縦優位 → スクロール
+      if (inHScrollable(startTarget, dx)) return; // 横スクロール優先
 
-    const order = tabOrder();
-    const cur = order.indexOf(state.activeTab);
-    if (cur === -1) return;
-    const next = dx < 0 ? cur + 1 : cur - 1;            // 左スワイプ=次 / 右=前
-    if (next < 0 || next >= order.length) return;
-    switchTab(/** @type {any} */ (order[next]));
-  }, { passive: true });
+      const order = tabOrder();
+      const cur = order.indexOf(state.activeTab);
+      if (cur === -1) return;
+      const next = dx < 0 ? cur + 1 : cur - 1; // 左スワイプ=次 / 右=前
+      if (next < 0 || next >= order.length) return;
+      switchTab(/** @type {any} */ (order[next]));
+    },
+    { passive: true }
+  );
 }

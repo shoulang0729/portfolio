@@ -70,14 +70,10 @@ function rowToFundamentals(row, priorRow, opts = {}) {
   const isUsgaap = row.accounting_standard === 'USGAAP';
 
   // EBIT: operating_income（営業利益）優先。USGAAP では null になりやすいため ordinary_income で代替。
-  const ebit = num(row.operating_income)
-    ? row.operating_income
-    : num(row.ordinary_income)
-      ? row.ordinary_income
-      : null;
+  const ebit = num(row.operating_income) ? row.operating_income : num(row.ordinary_income) ? row.ordinary_income : null;
 
   // gross_profit: USGAAP 企業では EDINET DB のマッピングが不正確（異常に高い値）→ null。
-  const grossProfit = isUsgaap ? null : (num(row.gross_profit) ? row.gross_profit : null);
+  const grossProfit = isUsgaap ? null : num(row.gross_profit) ? row.gross_profit : null;
 
   // 自己資本: shareholders_equity 優先、なければ net_assets（純資産≒自己資本 for 単体）。
   const totalEquity = num(row.shareholders_equity)
@@ -90,19 +86,22 @@ function rowToFundamentals(row, priorRow, opts = {}) {
   // 無ければ long_term_loans + short_term_loans + bonds_payable で代替。
   let totalDebt = null;
   if (num(row.ibd_current) || num(row.ibd_noncurrent)) {
-    totalDebt = (num(row.ibd_current) ? row.ibd_current : 0) +
-                (num(row.ibd_noncurrent) ? row.ibd_noncurrent : 0);
+    totalDebt = (num(row.ibd_current) ? row.ibd_current : 0) + (num(row.ibd_noncurrent) ? row.ibd_noncurrent : 0);
   } else if (num(row.long_term_loans) || num(row.short_term_loans) || num(row.bonds_payable)) {
-    totalDebt = (num(row.long_term_loans) ? row.long_term_loans : 0) +
-                (num(row.short_term_loans) ? row.short_term_loans : 0) +
-                (num(row.bonds_payable) ? row.bonds_payable : 0);
+    totalDebt =
+      (num(row.long_term_loans) ? row.long_term_loans : 0) +
+      (num(row.short_term_loans) ? row.short_term_loans : 0) +
+      (num(row.bonds_payable) ? row.bonds_payable : 0);
   }
 
   // 実効税率（NOPAT 経由の ROIC 計算用）
   const taxRate = (() => {
     const tax = num(row.income_taxes) ? row.income_taxes : null;
-    const pre = num(row.profit_before_tax) ? row.profit_before_tax
-      : num(row.ordinary_income) ? row.ordinary_income : null;
+    const pre = num(row.profit_before_tax)
+      ? row.profit_before_tax
+      : num(row.ordinary_income)
+        ? row.ordinary_income
+        : null;
     if (tax != null && pre != null && pre !== 0) return tax / pre;
     return null;
   })();
@@ -168,8 +167,6 @@ export function resolveEdinetCode(searchResponse, ticker4) {
   if (!searchResponse || !Array.isArray(searchResponse.data)) return null;
   const sec5 = `${ticker4}0`; // 5桁 sec_code 変換
   // sec_code が完全一致する最初の企業を返す
-  const match = searchResponse.data.find(
-    (c) => c.sec_code === sec5 && c.listing_status === 'listed',
-  );
+  const match = searchResponse.data.find((c) => c.sec_code === sec5 && c.listing_status === 'listed');
   return match ? match.edinet_code : null;
 }

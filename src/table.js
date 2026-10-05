@@ -15,7 +15,7 @@ function makeTh(label, col, align, activeSortCol, sortDir, sortFnName) {
   const alignCls = align === 'center' ? 'sl-th-center' : '';
   const cls = [sortCls, alignCls].filter(Boolean).join(' ');
   const dataCol = col ? `data-col="${col}"` : '';
-  const click = (col && sortFnName) ? `data-action="${sortFnName}" data-arg="${col}"` : '';
+  const click = col && sortFnName ? `data-action="${sortFnName}" data-arg="${col}"` : '';
   return `<th class="${cls}" ${dataCol} ${click}>${label}</th>`;
 }
 
@@ -27,9 +27,7 @@ function makePctCell(pct, scale, dataCol = '') {
     const fetching = !!(range && state.fetchingRanges?.has?.(range));
     const attempted = !!(range && state.historicalAttempted?.[range] === true);
     const loading = fetching || (range && !attempted);
-    const placeholder = loading
-      ? '<span class="sl-pct-loading">\u2026</span>'
-      : '\u2013';
+    const placeholder = loading ? '<span class="sl-pct-loading">\u2026</span>' : '\u2013';
     return `<td ${dataAttr}class="sl-pct-cell">${placeholder}</td>`;
   }
   const bg = getColor(pct, 'change', scale);
@@ -47,19 +45,15 @@ function _tableSort(colKey, dirKey, col, defaultAscCols = []) {
 }
 
 function makePeriodCells(getPct) {
-  return PERIOD_COLS
-    .map(pc => {
-      const pct = getPct(pc.id);
-      const scale = PERIOD_MAP[pc.id]?.scale ?? 25;
-      return makePctCell(pct, scale, pc.id);
-    })
-    .join('');
+  return PERIOD_COLS.map((pc) => {
+    const pct = getPct(pc.id);
+    const scale = PERIOD_MAP[pc.id]?.scale ?? 25;
+    return makePctCell(pct, scale, pc.id);
+  }).join('');
 }
 
 function makePeriodHeaderCells(activeSortCol, sortDir, sortFnName) {
-  return PERIOD_COLS
-    .map(pc => makeTh(pc.label, pc.id, 'center', activeSortCol, sortDir, sortFnName))
-    .join('');
+  return PERIOD_COLS.map((pc) => makeTh(pc.label, pc.id, 'center', activeSortCol, sortDir, sortFnName)).join('');
 }
 
 export { makeTh, makePctCell, _tableSort, makePeriodCells, makePeriodHeaderCells };

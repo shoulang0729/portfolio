@@ -18,7 +18,7 @@
 import { openDb, idbPut, idbClear, idbGetAllEntries } from './idb.js';
 import { state } from './state.js';
 
-const DB_NAME    = 'hm-constituents';
+const DB_NAME = 'hm-constituents';
 const DB_VERSION = 1;
 const STORE_NAME = 'constituents';
 
@@ -34,7 +34,7 @@ function getDb() {
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         db.createObjectStore(STORE_NAME);
       }
-    }).catch(e => {
+    }).catch((e) => {
       _dbPromise = null;
       throw e;
     });
@@ -53,7 +53,7 @@ export function isStale(asOf, days = STALE_DAYS) {
   if (!asOf) return true;
   const t = Date.parse(asOf);
   if (Number.isNaN(t)) return true;
-  return (Date.now() - t) > days * 24 * 60 * 60 * 1000;
+  return Date.now() - t > days * 24 * 60 * 60 * 1000;
 }
 
 /**

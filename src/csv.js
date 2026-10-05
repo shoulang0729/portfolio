@@ -11,9 +11,10 @@ import { fundSymbolFromName } from './funds.js';
 
 /** 全角英数字・記号 → 半角変換 ＋ 全角スペース → 半角 ＋ trim */
 function normalizeStr(s) {
-  return s.replace(/[！-～]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
-          .replace(/　/g, ' ')
-          .trim();
+  return s
+    .replace(/[！-～]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0))
+    .replace(/　/g, ' ')
+    .trim();
 }
 
 /** CSV テキスト → [[cell, ...], ...] （引用符内カンマ・改行対応） */
@@ -23,17 +24,22 @@ function parseCsvText(text) {
   for (const line of lines) {
     if (!line.trim()) continue;
     const row = [];
-    let cur = '', inQ = false;
+    let cur = '',
+      inQ = false;
     for (let i = 0; i < line.length; i++) {
       const c = line[i];
       if (inQ) {
-        if (c === '"' && line[i + 1] === '"') { cur += '"'; i++; }
-        else if (c === '"') inQ = false;
+        if (c === '"' && line[i + 1] === '"') {
+          cur += '"';
+          i++;
+        } else if (c === '"') inQ = false;
         else cur += c;
       } else {
         if (c === '"') inQ = true;
-        else if (c === ',') { row.push(cur); cur = ''; }
-        else cur += c;
+        else if (c === ',') {
+          row.push(cur);
+          cur = '';
+        } else cur += c;
       }
     }
     row.push(cur);
@@ -51,10 +57,10 @@ function parseNum(s) {
 
 /** CSV ヘッダ行からCSV種別を判定する */
 function detectCsvType(headerRow) {
-  const h = headerRow.map(c => c.trim());
-  if (h.includes('銘柄コード'))              return 'jp';
-  if (h.some(c => c.includes('保有数[株]'))) return 'us';
-  if (h.includes('基準価額'))                return 'fund';
+  const h = headerRow.map((c) => c.trim());
+  if (h.includes('銘柄コード')) return 'jp';
+  if (h.some((c) => c.includes('保有数[株]'))) return 'us';
+  if (h.includes('基準価額')) return 'fund';
   return null;
 }
 
@@ -66,10 +72,12 @@ function parseJpRow(row) {
   const symbol = row[3]?.trim();
   if (!symbol) return null;
   const avgCost = parseNum(row[8]);
-  const shares  = parseNum(row[9]);
-  const pnl     = parseNum(row[13]);
-  const pnlPct  = (avgCost != null && shares != null && avgCost > 0 && shares > 0 && pnl != null)
-    ? pnl / (avgCost * shares) * 100 : null;
+  const shares = parseNum(row[9]);
+  const pnl = parseNum(row[13]);
+  const pnlPct =
+    avgCost != null && shares != null && avgCost > 0 && shares > 0 && pnl != null
+      ? (pnl / (avgCost * shares)) * 100
+      : null;
   return { symbol, price: parseNum(row[7]), avgCost, shares, value: parseNum(row[12]), pnl, pnlPct };
 }
 
@@ -80,12 +88,20 @@ function parseJpRow(row) {
 function parseUsRow(row) {
   const ticker = row[1]?.trim();
   if (!ticker) return null;
-  const value  = parseNum(row[16]);
-  const pnl    = parseNum(row[18]);
-  const pnlPct = (value != null && pnl != null && value - pnl !== 0)
-    ? (pnl / (value - pnl)) * 100 : null;
-  return { ticker, shares: parseNum(row[4]), avgCost: parseNum(row[7]), price: parseNum(row[10]),
-           value, dayCh: null, dayPct: null, pnl, pnlPct };
+  const value = parseNum(row[16]);
+  const pnl = parseNum(row[18]);
+  const pnlPct = value != null && pnl != null && value - pnl !== 0 ? (pnl / (value - pnl)) * 100 : null;
+  return {
+    ticker,
+    shares: parseNum(row[4]),
+    avgCost: parseNum(row[7]),
+    price: parseNum(row[10]),
+    value,
+    dayCh: null,
+    dayPct: null,
+    pnl,
+    pnlPct,
+  };
 }
 
 /**
@@ -95,17 +111,16 @@ function parseUsRow(row) {
 function parseFundRow(row) {
   const rawName = row[2]?.trim();
   if (!rawName) return null;
-  const name   = normalizeStr(rawName);
+  const name = normalizeStr(rawName);
   const symbol = fundSymbolFromName(name);
   if (!symbol) return null;
   const value = parseNum(row[12]);
-  const pnl   = parseNum(row[13]);
-  const cost   = (value != null && pnl != null) ? value - pnl : null;
-  const pnlPct = (cost != null && cost !== 0) ? pnl / cost * 100 : null;
+  const pnl = parseNum(row[13]);
+  const cost = value != null && pnl != null ? value - pnl : null;
+  const pnlPct = cost != null && cost !== 0 ? (pnl / cost) * 100 : null;
   const sharesRaw = parseNum(row[7]);
-  const shares = sharesRaw != null ? Math.round(sharesRaw / 10000 * 10000) / 10000 : null;
-  return { symbol, price: parseNum(row[5]), shares,
-           avgCost: parseNum(row[11]), value, pnl, pnlPct };
+  const shares = sharesRaw != null ? Math.round((sharesRaw / 10000) * 10000) / 10000 : null;
+  return { symbol, price: parseNum(row[5]), shares, avgCost: parseNum(row[11]), value, pnl, pnlPct };
 }
 
 export { normalizeStr, parseCsvText, parseNum, detectCsvType, parseJpRow, parseUsRow, parseFundRow };

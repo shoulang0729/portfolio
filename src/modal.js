@@ -56,13 +56,21 @@ export async function showConfirm({ title, message, okLabel = 'OK', cancelLabel 
 
     const cancelBtn = document.createElement('button');
     cancelBtn.textContent = cancelLabel;
-    cancelBtn.style.cssText = 'padding: 8px 12px; border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500;';
-    cancelBtn.onclick = () => { cleanup(); resolve(false); };
+    cancelBtn.style.cssText =
+      'padding: 8px 12px; border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500;';
+    cancelBtn.onclick = () => {
+      cleanup();
+      resolve(false);
+    };
 
     const okBtn = document.createElement('button');
     okBtn.textContent = okLabel;
-    okBtn.style.cssText = 'padding: 8px 12px; border: none; background: var(--accent); color: white; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500;';
-    okBtn.onclick = () => { cleanup(); resolve(true); };
+    okBtn.style.cssText =
+      'padding: 8px 12px; border: none; background: var(--accent); color: white; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500;';
+    okBtn.onclick = () => {
+      cleanup();
+      resolve(true);
+    };
 
     footer.appendChild(cancelBtn);
     footer.appendChild(okBtn);
@@ -78,16 +86,27 @@ export async function showConfirm({ title, message, okLabel = 'OK', cancelLabel 
       // .modal-overlay には CSS transition が無く transitionend が発火しないため、
       // setTimeout フォールバックで確実に除去する（#274）。
       let removed = false;
-      const doRemove = () => { if (!removed) { removed = true; overlay.remove(); } };
+      const doRemove = () => {
+        if (!removed) {
+          removed = true;
+          overlay.remove();
+        }
+      };
       overlay.addEventListener('transitionend', doRemove, { once: true });
       setTimeout(doRemove, 300);
     };
 
     const handleEsc = (e) => {
-      if (e.key === 'Escape') { cleanup(); resolve(false); }
+      if (e.key === 'Escape') {
+        cleanup();
+        resolve(false);
+      }
     };
     const handleOverlay = (e) => {
-      if (e.target === overlay) { cleanup(); resolve(false); }
+      if (e.target === overlay) {
+        cleanup();
+        resolve(false);
+      }
     };
 
     document.body.appendChild(overlay);
@@ -141,8 +160,12 @@ export async function showAlert({ title, message, okLabel = 'OK' }) {
 
     const okBtn = document.createElement('button');
     okBtn.textContent = okLabel;
-    okBtn.style.cssText = 'padding: 8px 12px; border: none; background: var(--accent); color: white; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500;';
-    okBtn.onclick = () => { cleanup(); resolve(); };
+    okBtn.style.cssText =
+      'padding: 8px 12px; border: none; background: var(--accent); color: white; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500;';
+    okBtn.onclick = () => {
+      cleanup();
+      resolve();
+    };
 
     footer.appendChild(okBtn);
     body.appendChild(footer);
@@ -157,16 +180,27 @@ export async function showAlert({ title, message, okLabel = 'OK' }) {
       // .modal-overlay には CSS transition が無く transitionend が発火しないため、
       // setTimeout フォールバックで確実に除去する（#274）。
       let removed = false;
-      const doRemove = () => { if (!removed) { removed = true; overlay.remove(); } };
+      const doRemove = () => {
+        if (!removed) {
+          removed = true;
+          overlay.remove();
+        }
+      };
       overlay.addEventListener('transitionend', doRemove, { once: true });
       setTimeout(doRemove, 300);
     };
 
     const handleEsc = (e) => {
-      if (e.key === 'Escape') { cleanup(); resolve(); }
+      if (e.key === 'Escape') {
+        cleanup();
+        resolve();
+      }
     };
     const handleOverlay = (e) => {
-      if (e.target === overlay) { cleanup(); resolve(); }
+      if (e.target === overlay) {
+        cleanup();
+        resolve();
+      }
     };
 
     document.body.appendChild(overlay);

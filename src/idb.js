@@ -22,7 +22,7 @@ export function openDb(dbName, version, upgradeCb) {
       settled = true;
       reject(new Error(`IndexedDB open timeout: ${dbName}`));
     }, 3000);
-    const finish = cb => {
+    const finish = (cb) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);

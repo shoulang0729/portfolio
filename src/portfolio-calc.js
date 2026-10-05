@@ -29,7 +29,10 @@ function getHistoricalChangePct(symbol, periodId) {
     const targetDate = new Date(lastMs - cfg.days * 86400000);
     startPoint = null;
     for (let i = data.length - 2; i >= 0; i--) {
-      if (data[i].date <= targetDate) { startPoint = data[i]; break; }
+      if (data[i].date <= targetDate) {
+        startPoint = data[i];
+        break;
+      }
     }
     if (!startPoint) startPoint = data[0];
   }
@@ -46,8 +49,9 @@ function getDisplayPct(p) {
 }
 
 function calcPortfolioPeriodPct(periodId) {
-  let weightedSum = 0, totalWeight = 0;
-  positions.forEach(p => {
+  let weightedSum = 0,
+    totalWeight = 0;
+  positions.forEach((p) => {
     let pct = null;
     if (periodId === '1d' && p.dayPct != null) {
       pct = p.dayPct;
@@ -70,13 +74,16 @@ function calcPortfolioPeriodPct(periodId) {
  * @returns {number}
  */
 function trackedSymbolCount(positionsList, watchlist) {
-  const norm = s => String(s || '').trim().toUpperCase();
+  const norm = (s) =>
+    String(s || '')
+      .trim()
+      .toUpperCase();
   const set = new Set();
-  (positionsList || []).forEach(p => {
+  (positionsList || []).forEach((p) => {
     const key = norm(p.ySymbol || p.symbol);
     if (key) set.add(key);
   });
-  (watchlist || []).forEach(w => {
+  (watchlist || []).forEach((w) => {
     const key = norm(w.symbol);
     if (key) set.add(key);
   });

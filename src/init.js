@@ -34,7 +34,10 @@ export function setupEventListeners(applyThemeFn) {
     if (_resizeRaf) cancelAnimationFrame(_resizeRaf);
     _resizeRaf = requestAnimationFrame(() => {
       _resizeRaf = null;
-      renderHeatmap(); renderHeatmapList(); applyStockBars(); updateListHeight();
+      renderHeatmap();
+      renderHeatmapList();
+      applyStockBars();
+      updateListHeight();
     });
   });
 

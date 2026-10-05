@@ -7,7 +7,22 @@
 // 注: authenticatePasskey は window に登録されるため直接 import しない（循環回避）
 // ══════════════════════════════════════════════════════════════
 
-import { _auth, AUTH_PIN_LEN, AUTH_MAX_FAIL, AUTH_LOCK_SEC, AUTH_SESSION_KEY, AUTH_LS_HASH_KEY, AUTH_FAILS_KEY, _getActivePinHash, _hashPin, _isLocked, _lockRemain, _formatLockRemain, _saveLockout, isAuthenticated } from './auth-pin.js';
+import {
+  _auth,
+  AUTH_PIN_LEN,
+  AUTH_MAX_FAIL,
+  AUTH_LOCK_SEC,
+  AUTH_SESSION_KEY,
+  AUTH_LS_HASH_KEY,
+  AUTH_FAILS_KEY,
+  _getActivePinHash,
+  _hashPin,
+  _isLocked,
+  _lockRemain,
+  _formatLockRemain,
+  _saveLockout,
+  isAuthenticated,
+} from './auth-pin.js';
 import { _deriveEncKey, _restoreEncKey } from './auth-crypto.js';
 import { WORKER_URL } from './config.js';
 
@@ -15,8 +30,9 @@ import { WORKER_URL } from './config.js';
 function _trapFocus(container) {
   const focusable = container.querySelectorAll('button:not([disabled])');
   if (!focusable.length) return;
-  const first = focusable[0], last = focusable[focusable.length - 1];
-  container.addEventListener('keydown', e => {
+  const first = focusable[0],
+    last = focusable[focusable.length - 1];
+  container.addEventListener('keydown', (e) => {
     if (e.key !== 'Tab') return;
     if (e.shiftKey ? document.activeElement === first : document.activeElement === last) {
       e.preventDefault();
@@ -28,23 +44,32 @@ function _trapFocus(container) {
 
 // ── キーパッド制御 ──
 function _setKeypadEnabled(on) {
-  document.querySelectorAll('#pin-overlay .pin-key').forEach(b => { b.disabled = !on; });
+  document.querySelectorAll('#pin-overlay .pin-key').forEach((b) => {
+    b.disabled = !on;
+  });
 }
 
 // ── ドット更新 ──
 function _updateDots() {
-  document.querySelectorAll('#pin-overlay .pin-dot').forEach((d, i) =>
-    d.classList.toggle('filled', i < _auth.input.length));
+  document
+    .querySelectorAll('#pin-overlay .pin-dot')
+    .forEach((d, i) => d.classList.toggle('filled', i < _auth.input.length));
 }
 
 // ── エラー ──
 function _showError(msg) {
   const el = document.getElementById('pin-error');
-  if (el) { el.textContent = msg; el.classList.add('visible'); }
+  if (el) {
+    el.textContent = msg;
+    el.classList.add('visible');
+  }
 }
 function _hideError() {
   const el = document.getElementById('pin-error');
-  if (el) { el.textContent = ''; el.classList.remove('visible'); }
+  if (el) {
+    el.textContent = '';
+    el.classList.remove('visible');
+  }
 }
 function _lockRemainMessage(seconds = _lockRemain()) {
   return `${_formatLockRemain(seconds)}後に再試行できます`;
@@ -76,7 +101,10 @@ function _queueAuthSubmit() {
 
 function authKeyPress(n) {
   if (_authSubmitTimer) return;
-  if (_isLocked()) { _showError(_lockRemainMessage()); return; }
+  if (_isLocked()) {
+    _showError(_lockRemainMessage());
+    return;
+  }
   if (_auth.input.length >= AUTH_PIN_LEN) return;
   _auth.input += n;
   _updateDots();
@@ -113,17 +141,19 @@ async function _submitPin() {
     sessionStorage.setItem(AUTH_SESSION_KEY, '1');
     await _deriveEncKey(_auth.input);
     _shake('success');
-    document.querySelectorAll('#pin-overlay .pin-dot').forEach(d => d.classList.add('filled'));
+    document.querySelectorAll('#pin-overlay .pin-dot').forEach((d) => d.classList.add('filled'));
 
     setTimeout(() => {
       _showChangePinButton();
       const ov = document.getElementById('pin-overlay');
       if (ov) {
         ov.style.opacity = '0';
-        setTimeout(() => { ov.remove(); document.body.style.overflow = ''; }, 380);
+        setTimeout(() => {
+          ov.remove();
+          document.body.style.overflow = '';
+        }, 380);
       }
     }, 350);
-
   } else {
     _auth.fails++;
     localStorage.setItem(AUTH_FAILS_KEY, String(_auth.fails));
@@ -138,10 +168,14 @@ async function _submitPin() {
       const _t = setInterval(() => {
         if (!_isLocked()) {
           clearInterval(_t);
-          _auth.fails = 0; _auth.lockedUntil = null;
+          _auth.fails = 0;
+          _auth.lockedUntil = null;
           _saveLockout();
-          _setKeypadEnabled(true); _hideError();
-        } else { _showError(_lockRemainMessage()); }
+          _setKeypadEnabled(true);
+          _hideError();
+        } else {
+          _showError(_lockRemainMessage());
+        }
       }, 1000);
     } else {
       _showError(`PINが違います（残り${AUTH_MAX_FAIL - _auth.fails}回）`);
@@ -151,7 +185,7 @@ async function _submitPin() {
 }
 
 // ── キーボード入力（ログイン画面） ──
-document.addEventListener('keydown', e => {
+document.addEventListener('keydown', (e) => {
   if (document.getElementById('pin-overlay')) {
     if (e.key >= '0' && e.key <= '9') authKeyPress(e.key);
     else if (e.key === 'Backspace') authBackspace();
@@ -202,9 +236,10 @@ function _buildPinScreen() {
 // ── 共有キーパッド HTML ──
 function _pinKeypadHTML(pressAction, backAction) {
   return `<div class="pin-keypad">
-    ${'123456789'.split('').map(n =>
-      `<button class="pin-key" data-action="${pressAction}" data-arg="${n}">${n}</button>`
-    ).join('')}
+    ${'123456789'
+      .split('')
+      .map((n) => `<button class="pin-key" data-action="${pressAction}" data-arg="${n}">${n}</button>`)
+      .join('')}
     <span class="pin-key-empty"></span>
     <button class="pin-key" data-action="${pressAction}" data-arg="0">0</button>
     <button class="pin-key pin-key-back" data-action="${backAction}" aria-label="削除">
@@ -222,17 +257,17 @@ function _pinKeypadHTML(pressAction, backAction) {
 // ══════════════════════════════════════════════
 
 const _pc = {
-  step:    0,   // 1=現在PIN確認 2=新PIN入力 3=新PIN確認
-  input:   '',
-  newPin:  '',
+  step: 0, // 1=現在PIN確認 2=新PIN入力 3=新PIN確認
+  input: '',
+  newPin: '',
   submitTimer: null,
   mode: 'change', // change | setup | recover
 };
 
 const _pcStepLabel = ['', '現在のPIN', '新しいPIN（6桁）', '新しいPIN（確認）'];
-const _pcStepHint  = ['', '認証のため現在のPINを入力', '新しい6桁のPINを入力', '同じPINをもう一度入力'];
+const _pcStepHint = ['', '認証のため現在のPINを入力', '新しい6桁のPINを入力', '同じPINをもう一度入力'];
 const _pcRecoverStepLabel = ['', '現在のPIN', '既存PIN（6桁）', '既存PIN（確認）'];
-const _pcRecoverStepHint  = ['', '認証のため現在のPINを入力', 'サーバーに保存済みのPINを入力', '同じPINをもう一度入力'];
+const _pcRecoverStepHint = ['', '認証のため現在のPINを入力', 'サーバーに保存済みのPINを入力', '同じPINをもう一度入力'];
 
 function _pcLabelForStep(step) {
   return (_pc.mode === 'recover' ? _pcRecoverStepLabel : _pcStepLabel)[step];
@@ -243,33 +278,42 @@ function _pcHintForStep(step) {
 }
 
 function _pcUpdateDots() {
-  document.querySelectorAll('#pc-dots .pin-dot').forEach((d, i) =>
-    d.classList.toggle('filled', i < _pc.input.length));
+  document.querySelectorAll('#pc-dots .pin-dot').forEach((d, i) => d.classList.toggle('filled', i < _pc.input.length));
 }
 function _pcSetTitle() {
-  const lbl  = document.getElementById('pc-step-label');
+  const lbl = document.getElementById('pc-step-label');
   const hint = document.getElementById('pc-step-hint');
   const prog = document.querySelectorAll('#pc-progress .pc-prog-dot');
-  if (lbl)  lbl.textContent  = _pcLabelForStep(_pc.step);
+  if (lbl) lbl.textContent = _pcLabelForStep(_pc.step);
   if (hint) hint.textContent = _pcHintForStep(_pc.step);
   prog.forEach((d, i) => d.classList.toggle('active', i < _pc.step));
 }
 function _pcShowError(msg) {
   const el = document.getElementById('pc-error');
-  if (el) { el.textContent = msg; el.classList.add('visible'); }
+  if (el) {
+    el.textContent = msg;
+    el.classList.add('visible');
+  }
 }
 function _pcHideError() {
   const el = document.getElementById('pc-error');
-  if (el) { el.textContent = ''; el.classList.remove('visible'); }
+  if (el) {
+    el.textContent = '';
+    el.classList.remove('visible');
+  }
 }
 function _pcShake() {
   const el = document.getElementById('pc-dots');
   if (!el) return;
-  el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake');
+  el.classList.remove('shake');
+  void el.offsetWidth;
+  el.classList.add('shake');
   setTimeout(() => el.classList.remove('shake'), 500);
 }
 function _pcSetKeypadEnabled(on) {
-  document.querySelectorAll('#pc-overlay .pin-key').forEach(b => { b.disabled = !on; });
+  document.querySelectorAll('#pc-overlay .pin-key').forEach((b) => {
+    b.disabled = !on;
+  });
 }
 function _pcQueueSubmit() {
   if (_pc.submitTimer) return;
@@ -281,12 +325,14 @@ function _pcQueueSubmit() {
 }
 function _pcSuccess() {
   const el = document.getElementById('pc-dots');
-  if (el) { el.classList.add('success'); }
-  const lbl  = document.getElementById('pc-step-label');
+  if (el) {
+    el.classList.add('success');
+  }
+  const lbl = document.getElementById('pc-step-label');
   const hint = document.getElementById('pc-step-hint');
-  if (lbl)  lbl.textContent  = '✅ 変更完了';
+  if (lbl) lbl.textContent = '✅ 変更完了';
   if (hint) hint.textContent = _pc.mode === 'recover' ? '既存PINでログインしました' : '新しいPINが保存されました';
-  document.querySelectorAll('#pc-dots .pin-dot').forEach(d => d.classList.add('filled'));
+  document.querySelectorAll('#pc-dots .pin-dot').forEach((d) => d.classList.add('filled'));
   _pcSetKeypadEnabled(false);
   setTimeout(() => closePinChange(), 1800);
 }
@@ -353,24 +399,32 @@ async function _pcSubmit() {
 
   if (_pc.step === 1) {
     if (hash !== _getActivePinHash()) {
-      _pc.input = ''; _pcUpdateDots(); _pcShake();
+      _pc.input = '';
+      _pcUpdateDots();
+      _pcShake();
       _pcShowError('PINが違います');
       _pcSetKeypadEnabled(true);
       return;
     }
-    _pc.step = 2; _pc.input = '';
-    _pcUpdateDots(); _pcSetTitle(); _pcHideError();
+    _pc.step = 2;
+    _pc.input = '';
+    _pcUpdateDots();
+    _pcSetTitle();
+    _pcHideError();
     _pcSetKeypadEnabled(true);
-
   } else if (_pc.step === 2) {
     _pc.newPin = _pc.input;
-    _pc.step = 3; _pc.input = '';
-    _pcUpdateDots(); _pcSetTitle(); _pcHideError();
+    _pc.step = 3;
+    _pc.input = '';
+    _pcUpdateDots();
+    _pcSetTitle();
+    _pcHideError();
     _pcSetKeypadEnabled(true);
-
   } else if (_pc.step === 3) {
     if (_pc.input !== _pc.newPin) {
-      _pc.input = ''; _pcUpdateDots(); _pcShake();
+      _pc.input = '';
+      _pcUpdateDots();
+      _pcShake();
       _pcShowError('PINが一致しません');
       _pcSetKeypadEnabled(true);
       return;
@@ -400,8 +454,14 @@ async function _pcSubmit() {
 
 function openInitialPinSetup() {
   if (document.getElementById('pc-overlay')) return;
-  if (_pc.submitTimer) { clearTimeout(_pc.submitTimer); _pc.submitTimer = null; }
-  _pc.mode = 'setup'; _pc.step = 2; _pc.input = ''; _pc.newPin = '';
+  if (_pc.submitTimer) {
+    clearTimeout(_pc.submitTimer);
+    _pc.submitTimer = null;
+  }
+  _pc.mode = 'setup';
+  _pc.step = 2;
+  _pc.input = '';
+  _pc.newPin = '';
 
   const ov = document.createElement('div');
   ov.id = 'pc-overlay';
@@ -433,20 +493,35 @@ function openInitialPinSetup() {
 
   const ac = new AbortController();
   ov._kbAbort = ac;
-  document.addEventListener('keydown', e => {
-    if (e.key >= '0' && e.key <= '9') pcKeyPress(e.key);
-    else if (e.key === 'Backspace') pcBackspace();
-  }, { signal: ac.signal });
+  document.addEventListener(
+    'keydown',
+    (e) => {
+      if (e.key >= '0' && e.key <= '9') pcKeyPress(e.key);
+      else if (e.key === 'Backspace') pcBackspace();
+    },
+    { signal: ac.signal }
+  );
 
-  requestAnimationFrame(() => requestAnimationFrame(() => { ov.style.opacity = '1'; _trapFocus(ov); }));
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => {
+      ov.style.opacity = '1';
+      _trapFocus(ov);
+    })
+  );
   _initInitialPinMode();
 }
 
 // ── PIN 変更ダイアログを開く ──
 function openPinChange() {
   if (document.getElementById('pc-overlay')) return;
-  if (_pc.submitTimer) { clearTimeout(_pc.submitTimer); _pc.submitTimer = null; }
-  _pc.mode = 'change'; _pc.step = 1; _pc.input = ''; _pc.newPin = '';
+  if (_pc.submitTimer) {
+    clearTimeout(_pc.submitTimer);
+    _pc.submitTimer = null;
+  }
+  _pc.mode = 'change';
+  _pc.step = 1;
+  _pc.input = '';
+  _pc.newPin = '';
 
   const ov = document.createElement('div');
   ov.id = 'pc-overlay';
@@ -481,19 +556,30 @@ function openPinChange() {
 
   const ac = new AbortController();
   ov._kbAbort = ac;
-  document.addEventListener('keydown', e => {
-    if (e.key >= '0' && e.key <= '9') pcKeyPress(e.key);
-    else if (e.key === 'Backspace') pcBackspace();
-    else if (e.key === 'Escape') closePinChange();
-  }, { signal: ac.signal });
+  document.addEventListener(
+    'keydown',
+    (e) => {
+      if (e.key >= '0' && e.key <= '9') pcKeyPress(e.key);
+      else if (e.key === 'Backspace') pcBackspace();
+      else if (e.key === 'Escape') closePinChange();
+    },
+    { signal: ac.signal }
+  );
 
-  requestAnimationFrame(() => requestAnimationFrame(() => { ov.style.opacity = '1'; }));
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => {
+      ov.style.opacity = '1';
+    })
+  );
 }
 
 function closePinChange() {
   const ov = document.getElementById('pc-overlay');
   if (!ov) return;
-  if (_pc.submitTimer) { clearTimeout(_pc.submitTimer); _pc.submitTimer = null; }
+  if (_pc.submitTimer) {
+    clearTimeout(_pc.submitTimer);
+    _pc.submitTimer = null;
+  }
   if (ov._kbAbort) ov._kbAbort.abort();
   ov.style.opacity = '0';
   setTimeout(() => ov.remove(), 350);
@@ -503,9 +589,13 @@ function closePinChange() {
 // 認証後にメニューボタンを表示
 // ══════════════════════════════════════════════
 function _showChangePinButton() {
-  for (const id of ['pin-change-btn', 'passkey-register-btn',
-                    'import-manex-btn',
-                    'manage-positions-btn', 'snapshot-btn']) {
+  for (const id of [
+    'pin-change-btn',
+    'passkey-register-btn',
+    'import-manex-btn',
+    'manage-positions-btn',
+    'snapshot-btn',
+  ]) {
     const btn = document.getElementById(id);
     if (btn) btn.style.display = '';
   }
@@ -534,10 +624,12 @@ function _showChangePinButton() {
   document.body.style.overflow = 'hidden';
   const ov = _buildPinScreen();
   document.body.appendChild(ov);
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    ov.style.opacity = '1';
-    _trapFocus(ov);
-  }));
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => {
+      ov.style.opacity = '1';
+      _trapFocus(ov);
+    })
+  );
 
   // ── パスキー画面を自動起動（WebAuthn 対応端末・ローカルにフラグありの場合のみ）
   //    PIN を打ち始める前に Face ID/Touch ID シートを開いてユーザーを混乱させない。
@@ -547,6 +639,6 @@ function _showChangePinButton() {
       if (typeof window.authenticatePasskey === 'function') window.authenticatePasskey();
     }, 250);
   }
-}());
+})();
 
 export { authKeyPress, authBackspace, pcKeyPress, pcBackspace, openPinChange, closePinChange, _showChangePinButton };

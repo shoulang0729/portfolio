@@ -4,13 +4,12 @@
 
 if ('ontouchstart' in window) {
   const THRESHOLD = 72;
-  let startY  = 0;
+  let startY = 0;
   let pulling = false;
   let indicator = null;
-  let arrow    = null;
+  let arrow = null;
 
-  const atTop = () =>
-    (window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0) <= 0;
+  const atTop = () => (window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0) <= 0;
 
   // タッチ開始位置が内側スクロールコンテナ（overflow-y:auto/scroll で実際に溢れている要素）の
   // 中にある場合は PTR を発動させない。
@@ -32,10 +31,19 @@ if ('ontouchstart' in window) {
     indicator = document.createElement('div');
     indicator.id = 'ptr-indicator';
     indicator.style.cssText = [
-      'position:fixed', 'top:0', 'left:0', 'right:0', 'z-index:99999',
-      'display:flex', 'align-items:center', 'justify-content:center',
-      'height:0', 'overflow:hidden', 'transition:none',
-      'background:var(--surface)', 'pointer-events:none',
+      'position:fixed',
+      'top:0',
+      'left:0',
+      'right:0',
+      'z-index:99999',
+      'display:flex',
+      'align-items:center',
+      'justify-content:center',
+      'height:0',
+      'overflow:hidden',
+      'transition:none',
+      'background:var(--surface)',
+      'pointer-events:none',
     ].join(';');
 
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -67,52 +75,68 @@ if ('ontouchstart' in window) {
     indicator.style.height = '0';
     if (arrow) {
       arrow.style.transition = 'none';
-      arrow.style.animation  = 'none';
-      arrow.style.transform  = 'rotate(0deg)';
+      arrow.style.animation = 'none';
+      arrow.style.transform = 'rotate(0deg)';
     }
   }
 
-  document.addEventListener('touchstart', e => {
-    pulling = atTop() && !touchInScrollable(e.target);
-    startY  = e.touches[0].clientY;
-  }, { passive: true });
+  document.addEventListener(
+    'touchstart',
+    (e) => {
+      pulling = atTop() && !touchInScrollable(e.target);
+      startY = e.touches[0].clientY;
+    },
+    { passive: true }
+  );
 
-  document.addEventListener('touchmove', e => {
-    if (!pulling) return;
-    const delta = e.touches[0].clientY - startY;
-    if (delta <= 0) return;
-    const ind = getIndicator();
-    ind.style.transition = 'none';
-    ind.style.height = `${Math.min(delta * 0.55, 56)  }px`;
-    const progress = Math.min(delta / THRESHOLD, 1);
-    if (arrow) {
-      arrow.style.transition = 'none';
-      arrow.style.animation  = 'none';
-      arrow.style.transform  = `rotate(${Math.round(progress * 360)}deg)`;
-      arrow.style.opacity    = 0.4 + progress * 0.6;
-      arrow.style.color      = progress >= 1 ? 'var(--accent)' : 'var(--text2)';
-    }
-  }, { passive: true });
-
-  document.addEventListener('touchend', e => {
-    if (!pulling) return;
-    const delta = e.changedTouches[0].clientY - startY;
-    pulling = false;
-    if (delta >= THRESHOLD) {
+  document.addEventListener(
+    'touchmove',
+    (e) => {
+      if (!pulling) return;
+      const delta = e.touches[0].clientY - startY;
+      if (delta <= 0) return;
+      const ind = getIndicator();
+      ind.style.transition = 'none';
+      ind.style.height = `${Math.min(delta * 0.55, 56)}px`;
+      const progress = Math.min(delta / THRESHOLD, 1);
       if (arrow) {
         arrow.style.transition = 'none';
-        arrow.style.animation  = 'ptr-spin 0.5s linear infinite';
-        arrow.style.opacity    = '1';
-        arrow.style.color      = 'var(--accent)';
+        arrow.style.animation = 'none';
+        arrow.style.transform = `rotate(${Math.round(progress * 360)}deg)`;
+        arrow.style.opacity = 0.4 + progress * 0.6;
+        arrow.style.color = progress >= 1 ? 'var(--accent)' : 'var(--text2)';
       }
-      setTimeout(() => location.reload(), 650);
-    } else {
-      collapseIndicator();
-    }
-  }, { passive: true });
+    },
+    { passive: true }
+  );
 
-  document.addEventListener('touchcancel', () => {
-    pulling = false;
-    collapseIndicator();
-  }, { passive: true });
+  document.addEventListener(
+    'touchend',
+    (e) => {
+      if (!pulling) return;
+      const delta = e.changedTouches[0].clientY - startY;
+      pulling = false;
+      if (delta >= THRESHOLD) {
+        if (arrow) {
+          arrow.style.transition = 'none';
+          arrow.style.animation = 'ptr-spin 0.5s linear infinite';
+          arrow.style.opacity = '1';
+          arrow.style.color = 'var(--accent)';
+        }
+        setTimeout(() => location.reload(), 650);
+      } else {
+        collapseIndicator();
+      }
+    },
+    { passive: true }
+  );
+
+  document.addEventListener(
+    'touchcancel',
+    () => {
+      pulling = false;
+      collapseIndicator();
+    },
+    { passive: true }
+  );
 }

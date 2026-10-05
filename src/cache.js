@@ -20,8 +20,8 @@ export function loadCacheFromSession() {
       if (!obj[range]) continue;
       for (const [sym, entries] of Object.entries(obj[range])) {
         // Restore ISO string → Date
-        state.historicalCache[range][sym] = entries.map(e => ({
-          date:  new Date(e.date),
+        state.historicalCache[range][sym] = entries.map((e) => ({
+          date: new Date(e.date),
           close: e.close,
         }));
       }
@@ -45,8 +45,8 @@ export function saveCacheToSession() {
       obj[range] = {};
       for (const [sym, entries] of Object.entries(state.historicalCache[range] || {})) {
         // Date → ISO string (JSON serializable)
-        obj[range][sym] = entries.map(e => ({
-          date:  e.date instanceof Date ? e.date.toISOString() : e.date,
+        obj[range][sym] = entries.map((e) => ({
+          date: e.date instanceof Date ? e.date.toISOString() : e.date,
           close: e.close,
         }));
       }

@@ -10,13 +10,13 @@
 
 // 旧4桁デフォルトハッシュ（SHA-256 of "1234"）: 6桁移行時に自動クリアするため保持
 const _AUTH_PIN_HASH_4DIG = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
-const AUTH_SESSION_KEY  = 'hm-auth-v1';
-const AUTH_LS_HASH_KEY  = 'hm-pin-hash';    // localStorage キー
-const AUTH_LOCKOUT_KEY  = 'hm-lockout';     // ロックアウト時刻 localStorage キー
-const AUTH_FAILS_KEY    = 'hm-pin-fails';   // 失敗回数 localStorage キー
-const AUTH_PIN_LEN      = 6;
-const AUTH_MAX_FAIL     = 5;
-const AUTH_LOCK_SEC     = 300;
+const AUTH_SESSION_KEY = 'hm-auth-v1';
+const AUTH_LS_HASH_KEY = 'hm-pin-hash'; // localStorage キー
+const AUTH_LOCKOUT_KEY = 'hm-lockout'; // ロックアウト時刻 localStorage キー
+const AUTH_FAILS_KEY = 'hm-pin-fails'; // 失敗回数 localStorage キー
+const AUTH_PIN_LEN = 6;
+const AUTH_MAX_FAIL = 5;
+const AUTH_LOCK_SEC = 300;
 
 // ── 4桁→6桁マイグレーション: 旧デフォルトハッシュが残っていたら削除 ──
 (function _migratePinLen() {
@@ -24,7 +24,7 @@ const AUTH_LOCK_SEC     = 300;
     const stored = localStorage.getItem(AUTH_LS_HASH_KEY);
     if (stored === _AUTH_PIN_HASH_4DIG) localStorage.removeItem(AUTH_LS_HASH_KEY);
   } catch {}
-}());
+})();
 
 // ── 有効な PIN ハッシュ（localStorage 優先） ──
 function _getActivePinHash() {
@@ -33,10 +33,10 @@ function _getActivePinHash() {
 
 // ── 共有 internal state（auth-crypto / auth-passkey / auth-ui から参照） ──
 const _auth = {
-  input:       '',
-  fails:       0,
-  lockedUntil: null,  // ロックアウト解除時刻 ms（旧 lockedAt から変更）
-  encKey:      null,  // AES-GCM key（auth-crypto.js が _deriveEncKey でセット）
+  input: '',
+  fails: 0,
+  lockedUntil: null, // ロックアウト解除時刻 ms（旧 lockedAt から変更）
+  encKey: null, // AES-GCM key（auth-crypto.js が _deriveEncKey でセット）
 };
 
 // ── セッション確認（app.js からも参照） ──
@@ -47,12 +47,18 @@ function isAuthenticated() {
 // ── PIN ハッシュ計算 ──
 async function _hashPin(pin) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
 }
 
 // ── ロックアウト ──
-function _isLocked()   { return _auth.lockedUntil != null && Date.now() < _auth.lockedUntil; }
-function _lockRemain() { return Math.ceil((_auth.lockedUntil - Date.now()) / 1000); }
+function _isLocked() {
+  return _auth.lockedUntil != null && Date.now() < _auth.lockedUntil;
+}
+function _lockRemain() {
+  return Math.ceil((_auth.lockedUntil - Date.now()) / 1000);
+}
 function _formatLockRemain(seconds) {
   const remain = Math.max(0, Math.ceil(seconds));
   if (remain >= 60) {
@@ -84,7 +90,10 @@ function _saveLockout() {
   }
   if (!stored) return;
   const until = parseInt(stored, 10);
-  if (isNaN(until)) { localStorage.removeItem(AUTH_LOCKOUT_KEY); return; }
+  if (isNaN(until)) {
+    localStorage.removeItem(AUTH_LOCKOUT_KEY);
+    return;
+  }
   if (Date.now() < until) {
     _auth.lockedUntil = until;
   } else {
@@ -92,6 +101,22 @@ function _saveLockout() {
     localStorage.removeItem(AUTH_FAILS_KEY);
     _auth.fails = 0;
   }
-}());
+})();
 
-export { AUTH_SESSION_KEY, AUTH_LS_HASH_KEY, AUTH_LOCKOUT_KEY, AUTH_FAILS_KEY, AUTH_PIN_LEN, AUTH_MAX_FAIL, AUTH_LOCK_SEC, _auth, _getActivePinHash, _hashPin, _isLocked, _lockRemain, _formatLockRemain, _saveLockout, isAuthenticated };
+export {
+  AUTH_SESSION_KEY,
+  AUTH_LS_HASH_KEY,
+  AUTH_LOCKOUT_KEY,
+  AUTH_FAILS_KEY,
+  AUTH_PIN_LEN,
+  AUTH_MAX_FAIL,
+  AUTH_LOCK_SEC,
+  _auth,
+  _getActivePinHash,
+  _hashPin,
+  _isLocked,
+  _lockRemain,
+  _formatLockRemain,
+  _saveLockout,
+  isAuthenticated,
+};

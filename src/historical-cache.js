@@ -10,7 +10,7 @@ import { openDb, idbGet, idbPut, idbClear, idbGetAllEntries } from './idb.js';
 import { state } from './state.js';
 import { saveCacheToSession } from './cache.js';
 
-const DB_NAME    = 'hm-historical';
+const DB_NAME = 'hm-historical';
 const DB_VERSION = 1;
 const STORE_NAME = 'historical';
 
@@ -23,7 +23,7 @@ function getDb() {
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         db.createObjectStore(STORE_NAME);
       }
-    }).catch(e => {
+    }).catch((e) => {
       _dbPromise = null;
       throw e;
     });
@@ -37,8 +37,8 @@ export async function getHistoricalEntry(range, symbol) {
     const db = await getDb();
     const stored = await idbGet(db, STORE_NAME, `${range}:${symbol}`);
     if (!stored?.entries) return null;
-    return stored.entries.map(e => ({
-      date:  e.date instanceof Date ? e.date : new Date(e.date),
+    return stored.entries.map((e) => ({
+      date: e.date instanceof Date ? e.date : new Date(e.date),
       close: e.close,
     }));
   } catch (e) {
@@ -59,10 +59,10 @@ export async function setHistoricalEntry(range, symbol, entries) {
   // IDB に永続化（クロスセッション）
   try {
     const db = await getDb();
-    const serialised = entries.map(e => {
+    const serialised = entries.map((e) => {
       /** @type {{date: string, close: number, vol?: number}} */
       const s = {
-        date:  e.date instanceof Date ? e.date.toISOString() : e.date,
+        date: e.date instanceof Date ? e.date.toISOString() : e.date,
         close: e.close,
       };
       if (typeof e.vol === 'number' && isFinite(e.vol)) s.vol = e.vol;
@@ -87,10 +87,10 @@ export async function getAllHistorical(range) {
     for (const { key, value } of all) {
       if (typeof key !== 'string' || !key.startsWith(prefix)) continue;
       const symbol = key.slice(prefix.length);
-      result[symbol] = (value.entries || []).map(e => {
+      result[symbol] = (value.entries || []).map((e) => {
         /** @type {{date: Date, close: number, vol?: number}} */
         const o = {
-          date:  e.date instanceof Date ? e.date : new Date(e.date),
+          date: e.date instanceof Date ? e.date : new Date(e.date),
           close: e.close,
         };
         if (typeof e.vol === 'number' && isFinite(e.vol)) o.vol = e.vol;
@@ -118,13 +118,13 @@ export async function restoreFromIDB() {
     for (const { key, value } of all) {
       const colonIdx = key.indexOf(':');
       if (colonIdx === -1) continue;
-      const range  = key.slice(0, colonIdx);
+      const range = key.slice(0, colonIdx);
       const symbol = key.slice(colonIdx + 1);
       if (!state.historicalCache[range]) state.historicalCache[range] = {};
-      state.historicalCache[range][symbol] = (value.entries || []).map(e => {
+      state.historicalCache[range][symbol] = (value.entries || []).map((e) => {
         /** @type {{date: Date, close: number, vol?: number}} */
         const o = {
-          date:  e.date instanceof Date ? e.date : new Date(e.date),
+          date: e.date instanceof Date ? e.date : new Date(e.date),
           close: e.close,
         };
         if (typeof e.vol === 'number' && isFinite(e.vol)) o.vol = e.vol;
@@ -152,15 +152,15 @@ export async function migrateFromSessionStorage() {
       new Promise((_, rej) => setTimeout(() => rej(new Error('migrateFromSessionStorage timeout')), 5000)),
     ]);
     const existing = await idbGetAllEntries(db, STORE_NAME);
-    const existingKeys = new Set(existing.map(e => e.key));
+    const existingKeys = new Set(existing.map((e) => e.key));
 
     for (const range of ['1y', '5y', '10y']) {
       if (!obj[range]) continue;
       for (const [sym, entries] of Object.entries(obj[range])) {
         const key = `${range}:${sym}`;
         if (existingKeys.has(key)) continue;
-        const serialised = entries.map(e => ({
-          date:  typeof e.date === 'string' ? e.date : new Date(e.date).toISOString(),
+        const serialised = entries.map((e) => ({
+          date: typeof e.date === 'string' ? e.date : new Date(e.date).toISOString(),
           close: e.close,
         }));
         await idbPut(db, STORE_NAME, key, { entries: serialised, ts: Date.now() });

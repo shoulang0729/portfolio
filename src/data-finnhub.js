@@ -8,8 +8,8 @@ import { fetchWithTimeout } from './data-helpers.js';
  */
 export function toFinnhubSymbol(ySymbol) {
   if (!ySymbol) return null;
-  if (ySymbol.endsWith('.T')) return `TYO:${  ySymbol.slice(0, -2)}`;
-  if (ySymbol.endsWith('.HK')) return `HKG:${  ySymbol.slice(0, -3)}`;
+  if (ySymbol.endsWith('.T')) return `TYO:${ySymbol.slice(0, -2)}`;
+  if (ySymbol.endsWith('.HK')) return `HKG:${ySymbol.slice(0, -3)}`;
   return ySymbol;
 }
 
@@ -78,7 +78,10 @@ export async function fetchFinnhubCandles(fSymbol, fromTs, toTs) {
     if (!res.ok) return null;
     const d = await res.json();
     if (d?.s !== 'ok' || !d.t?.length) return null;
-    return d.t.map((ts, i) => ({ date: new Date(ts * 1000), close: d.c[i] }))
-              .filter(p => p.close != null && isFinite(p.close));
-  } catch { return null; }
+    return d.t
+      .map((ts, i) => ({ date: new Date(ts * 1000), close: d.c[i] }))
+      .filter((p) => p.close != null && isFinite(p.close));
+  } catch {
+    return null;
+  }
 }

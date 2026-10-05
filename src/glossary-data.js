@@ -44,7 +44,8 @@ export const GLOSSARY = [
     tab: 'value',
     terms: [
       {
-        term: 'PER（trail→fwd）', key: 'per',
+        term: 'PER（trail→fwd）',
+        key: 'per',
         desc: '株価収益率。trail=実績／fwd=予想。右（fwd）が小さい＝来期利益が増える見込み。向きが最重要。',
       },
       { term: 'PEG', key: 'peg', desc: 'PER ÷ 利益成長率。1未満＝割安寄り、3超＝割高。成長を加味した割高度。' },
@@ -56,7 +57,8 @@ export const GLOSSARY = [
         desc: '配当＋自社株買いで毎年株主に戻す現金の利回り。高いほど手厚い（3%超で厚い）。',
       },
       {
-        term: '%タイル', key: 'percentile',
+        term: '%タイル',
+        key: 'percentile',
         desc: 'その銘柄自身の過去PERバンドの中で今が何%の位置か。低い＝過去比で割安。',
       },
       {
@@ -68,11 +70,13 @@ export const GLOSSARY = [
         desc: '割安に見えるが構造的に稼げない銘柄。Quality 指標で炙り出す。',
       },
       {
-        term: 'リバースDCF / 織り込み成長率', key: 'impliedGrowth',
+        term: 'リバースDCF / 織り込み成長率',
+        key: 'impliedGrowth',
         desc: '今の株価が「年何%のFCF成長」を前提にしているかを逆算。(WACC − FCF利回り) ÷ (1 + FCF利回り)。妥当域より高い＝市場が期待を盛りすぎ（期待過多）のサイン。個別株のみ・参考値。',
       },
       {
-        term: '目標株価乖離（targetGap）', key: 'targetGap',
+        term: '目標株価乖離（targetGap）',
+        key: 'targetGap',
         desc: 'アナリスト平均目標株価と現値の差（%）。プラス大＝上値余地が見込まれている。アナリスト数が少ない銘柄は信頼度低め。',
       },
       {
@@ -87,24 +91,29 @@ export const GLOSSARY = [
     tab: 'value',
     terms: [
       {
-        term: 'ROIC', key: 'roic',
+        term: 'ROIC',
+        key: 'roic',
         desc: '投下資本利益率。ROIC > WACC なら価値創造、下回ると稼ぐほど価値破壊。',
       },
       { term: 'WACC', desc: '加重平均資本コスト。ROIC が超えるべきハードル。' },
       {
-        term: 'グロス収益性（Novy-Marx）', key: 'grossProfitability',
+        term: 'グロス収益性（Novy-Marx）',
+        key: 'grossProfitability',
         desc: '粗利 ÷ 総資産。質の高い割安株を見抜く学術指標。',
       },
       {
-        term: 'FCF変換率', key: 'fcfConversion',
+        term: 'FCF変換率',
+        key: 'fcfConversion',
         desc: '純利益がどれだけ実際の現金（FCF）になるか。低い＝利益が見かけ倒しの疑い。',
       },
       {
-        term: 'F-Score（0〜9・Piotroski）', key: 'fScore',
+        term: 'F-Score（0〜9・Piotroski）',
+        key: 'fScore',
         desc: '収益性・財務・効率の9項目を各1点。7〜9＝健全、0〜2＝危険（罠濃厚）。',
       },
       {
-        term: 'Altman Z', key: 'altmanZ',
+        term: 'Altman Z',
+        key: 'altmanZ',
         desc: '倒産確率の合成指標。3超＝安全圏／1.8未満＝危険ゾーン。',
       },
       { term: 'インタレストカバレッジ', desc: '営業利益 ÷ 支払利息。借金の利払い余力。' },
@@ -118,15 +127,18 @@ export const GLOSSARY = [
     terms: [
       { term: 'priceMom1Y（1Y騰落率）', key: 'priceMom1Y', desc: '直近1年の単純リターン（%）。' },
       {
-        term: 'pos52w（52週位置）', key: 'pos52w',
+        term: 'pos52w（52週位置）',
+        key: 'pos52w',
         desc: '52週レンジ内の現在位置（0%=安値・100%=高値）。',
       },
       {
-        term: 'epsRev90d（業績改定）', key: 'epsRev90d',
+        term: 'epsRev90d（業績改定）',
+        key: 'epsRev90d',
         desc: '直近90日でアナリストEPS予想が上方/下方修正された度合い。プラス＝期待が上向き。',
       },
       {
-        term: 'rsVsSector（対市場 相対強さ）', key: 'rsVsSector',
+        term: 'rsVsSector（対市場 相対強さ）',
+        key: 'rsVsSector',
         desc: '世界株ACWIと比べた値動きの強さ。地合いでなく個別の強さを見る。',
       },
     ],
@@ -137,11 +149,13 @@ export const GLOSSARY = [
     tab: 'value',
     terms: [
       {
-        term: '売りトリガー3種', key: 'sellTriggers',
+        term: '売りトリガー3種',
+        key: 'sellTriggers',
         desc: 'テーゼ崩壊売り／目標到達売り／バンド・リバランス売り。事前に決めて売り遅れを防ぐ。',
       },
       {
-        term: '的中率（hit-rate）', key: 'hitRate',
+        term: '的中率（hit-rate）',
+        key: 'hitRate',
         desc: '過去の判断が当たったかの学習ループ。発議とverdictを別建てで採点。',
       },
       {

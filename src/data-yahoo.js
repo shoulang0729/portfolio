@@ -14,12 +14,12 @@ export async function fetchViaProxy(url, timeoutMs = 7000, trackHealth = false) 
   const q2url = url.replace('query1.finance.yahoo.com', 'query2.finance.yahoo.com');
   const attempts = [
     // Worker 経由（最優先：CORS 確実・APIキー不要）
-    { url: `${WORKER_URL}/yahoo?url=${encodeURIComponent(url)}`,               opts: {} },
+    { url: `${WORKER_URL}/yahoo?url=${encodeURIComponent(url)}`, opts: {} },
     // 以下は Worker が落ちているときのフォールバック
-    { url,                                                                      opts: { credentials: 'include' } },
-    { url: q2url,                                                               opts: { credentials: 'include' } },
-    { url: `https://corsproxy.io/?${encodeURIComponent(url)}`,                 opts: {} },
-    { url: `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,    opts: {} },
+    { url, opts: { credentials: 'include' } },
+    { url: q2url, opts: { credentials: 'include' } },
+    { url: `https://corsproxy.io/?${encodeURIComponent(url)}`, opts: {} },
+    { url: `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`, opts: {} },
   ];
   for (const { url: u, opts } of attempts) {
     try {
@@ -34,7 +34,9 @@ export async function fetchViaProxy(url, timeoutMs = 7000, trackHealth = false) 
         state.providerHealth.yahoo.errCount = 0;
       }
       return result;
-    } catch { /* try next */ }
+    } catch {
+      /* try next */
+    }
   }
   if (trackHealth) {
     state.providerHealth.yahoo.ok = false;
@@ -53,10 +55,9 @@ export async function ensureYahooCrumb() {
   const now = Date.now();
   if (state.yahooCrumb && now < state.yahooCrumbExpiry) return state.yahooCrumb;
   try {
-    const res = await fetchWithTimeout(
-      'https://query1.finance.yahoo.com/v1/test/getcrumb', 5000,
-      { credentials: 'include' }
-    );
+    const res = await fetchWithTimeout('https://query1.finance.yahoo.com/v1/test/getcrumb', 5000, {
+      credentials: 'include',
+    });
     if (res.ok) {
       const text = await res.text();
       // crumb は短い文字列（HTMLでない）
@@ -66,7 +67,9 @@ export async function ensureYahooCrumb() {
         return state.yahooCrumb;
       }
     }
-  } catch { /* crumb なしで継続 */ }
+  } catch {
+    /* crumb なしで継続 */
+  }
   state.yahooCrumb = null;
   return null;
 }
