@@ -8,9 +8,9 @@ name: PER Daily
 # - Worker 中継口 /yahoo /watchlist を叩くだけ。API キー・Secrets は使わない（GITHUB_TOKEN は push と Issue 管理のみ）。
 # - 公開リポのログ・サマリ・Issue に出すのは銘柄シンボル・PER・%タイル・status・件数のみ（HTTP 本文・KV 本文は出さない）。
 # - PR2 の突き合わせ（compare ジョブ・01:30 UTC）は PR3 で廃止。
-# - 起動は Worker Cron 20:20 UTC の workflow_dispatch が本番、schedule 20:15 は予備。
-#   20:00 UTC 以降に当日分を書き込み済みなら何もしない（#708・docs/handoff/2026-10-05-per-daily-dispatch.md）。
-#   予備の schedule が定刻（20:00〜20:54 UTC）外に書いた日は per-daily-late Issue を開く（定刻内の書き込みで閉じる）。
+# - 本番は Worker Cron の workflow_dispatch（夏 20:20・冬 21:20 UTC）、schedule 20:15 は予備。
+#   米国の引け（夏 20:00・冬 21:00 UTC）以降に当日分を書き込み済みなら何もしない（#708・docs/handoff/2026-10-05-per-daily-dispatch.md）。
+#   予備の schedule が定刻（引け〜21:44 UTC）外に書いた日は per-daily-late Issue を開く（定刻内の書き込みで閉じる）。
 # - 設計書: docs/handoff/2026-10-03-phase15-data-migration.md §2.3・§2.6・§6
 
 on:
@@ -57,13 +57,13 @@ jobs:
             echo "::warning::開始 ${START} が 20:55〜22:30 UTC のため計算のみ（書き込み・コミットしない）。当日の PER は前日値のままです"
           fi
 
-      - name: Check already written (20:00 UTC 以降の当日分)
+      - name: Check already written (米国の引け以降の当日分)
         id: already
         env:
           START: ${{ steps.mode.outputs.start }}
           FORCE: ${{ inputs.force == true }}
         run: |
-          # 20:00 UTC 以降に github-actions[bot] の「data: daily PER <D>」（完全一致）が main にあれば何もしない（#708）。
+          # 米国の引け（夏 20:00・冬 21:00 UTC）以降に github-actions[bot] の「data: daily PER <D>」（完全一致）が main にあれば何もしない（#708）。
           # already-written の exit 6 だけが「書き込み済み」。それ以外の非 0 は判定の異常＝失敗にする。
           if [ "$FORCE" = "true" ]; then
             echo "already=false" >> "$GITHUB_OUTPUT"
@@ -77,7 +77,7 @@ jobs:
           if [ "$CODE" -eq 6 ]; then
             D="${START%%T*}"
             echo "already=true" >> "$GITHUB_OUTPUT"
-            echo "::notice::当日分（data: daily PER ${D}）は 20:00 UTC 以降に書き込み済みのため何もしません"
+            echo "::notice::当日分（data: daily PER ${D}）は米国の引け（夏 20:00・冬 21:00 UTC）以降に書き込み済みのため何もしません"
           elif [ "$CODE" -eq 0 ]; then
             echo "already=false" >> "$GITHUB_OUTPUT"
           else
@@ -420,7 +420,7 @@ jobs:
           START: ${{ steps.mode.outputs.start }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          # #708: 予備の schedule が定刻（20:00〜20:54 UTC）外に書いた日＝Worker 起動で当日分が書けなかった日に開く。
+          # #708: 予備の schedule が定刻（引け〜21:44 UTC）外に書いた日＝Worker 起動で当日分が書けなかった日に開く。
           # 定刻内の書き込み（起動経路は問わない）で閉じる。skipped・failure・朝の手動の write は何もしない。
           if [ "$RESULT" != "write" ]; then
             echo "result=${RESULT:-unknown}（per-daily-late Issue は変更しない）"
@@ -443,22 +443,22 @@ jobs:
           if [ "$CODE" -eq 0 ]; then
             if [ -n "$EXISTING" ]; then
               gh issue close "$EXISTING" \
-                --comment "✅ 定刻（20:00〜20:54 UTC）の書き込みが成功しました（${RUN_URL}）。自動クローズします。"
+                --comment "✅ 定刻（引け〜21:44 UTC）の書き込みが成功しました（${RUN_URL}）。自動クローズします。"
               echo "Closed late issue #$EXISTING"
             else
               echo "定刻の書き込み・対応不要"
             fi
           elif [ "$EVENT" = "schedule" ]; then
-            TITLE="⚠ 当日の PER が Mulmo（21:00 UTC）に間に合いませんでした（予備の schedule が書き込み）"
+            TITLE="⚠ 当日の PER が Mulmo に間に合いませんでした（予備の schedule が書き込み）"
             BODY=$(cat <<EOF
-          20:20 UTC の Worker 起動（workflow_dispatch）で当日分が書けず、予備の schedule が定刻（20:00〜20:54 UTC）外に書き込みました。Mulmo の日次バッチ（21:00 UTC）は前日の PER を使っています。
+          Worker 起動（夏 20:20・冬 21:20 UTC・workflow_dispatch）で当日分が書けず、予備の schedule が定刻（引け〜21:44 UTC）外に書き込みました。Mulmo の日次バッチ（21:00 UTC）は前日の PER を使っています。
 
           - **開始時刻（UTC）**: ${START:-不明}
           - **Run**: ${RUN_URL}
 
           確認先:
-          - Cloudflare ダッシュボード → Worker \`portfolio-proxy\` → Cron イベントの履歴（20:20 UTC の dispatch が失敗していないか）
-          - Actions の PER Daily に 20:20 UTC ごろの \`workflow_dispatch\` の run があるか（計算のみに落ちていないか）
+          - Cloudflare ダッシュボード → Worker \`portfolio-proxy\` → Cron イベントの履歴（夏 20:20・冬 21:20 UTC の dispatch が失敗していないか）
+          - Actions の PER Daily に夏 20:20・冬 21:20 UTC ごろの \`workflow_dispatch\` の run があるか（計算のみに落ちていないか）
           - \`per-daily-failed\` Issue
 
           > このIssueは \`PER Daily\` ワークフローが自動管理しています（定刻の書き込みが成功すると自動クローズ）。

@@ -14,6 +14,7 @@ import {
   hasWatchlistUpdates,
   isAlreadyWritten,
   isOnTimeStart,
+  writtenSinceIso,
 } from '../data/scheduler/lib/per-daily.mjs';
 import { score, FUND_SOURCE } from '../data/scheduler/lib/per-calc.mjs';
 import { detectFormat, stringifyLike } from '../data/scheduler/lib/json-format.mjs';
@@ -320,7 +321,7 @@ describe('per-daily.yml（PR3 の切り替え）', () => {
   });
 });
 
-describe('isAlreadyWritten（20:00 UTC 以降の当日分・#708 §3.1(a) の 7 例）', () => {
+describe('isAlreadyWritten（米国の引け以降の当日分・#708 §3.1(a) の 7 例・夏時間の日付）', () => {
   const bot = 'github-actions[bot]';
   const c = (subject, committedAt, author = bot) => ({ author, subject, committedAt });
   const now = (iso) => new Date(iso);
@@ -392,17 +393,104 @@ describe('isAlreadyWritten（20:00 UTC 以降の当日分・#708 §3.1(a) の 7 
   });
 });
 
-describe('isOnTimeStart（開始が 20:00〜20:54 UTC・#708）', () => {
+describe('isAlreadyWritten（冬時間は 21:00 UTC 以降だけを数える・#708 §4.1(b)）', () => {
+  const bot = 'github-actions[bot]';
+  const c = (subject, committedAt) => ({ author: bot, subject, committedAt });
+  const now = (iso) => new Date(iso);
+
   it.each([
-    ['19:59', false],
-    ['20:00', true],
-    ['20:20', true],
-    ['20:54', true],
-    ['20:55', false],
-    ['23:02', false],
-    ['08:30', false],
-  ])('%s → %s', (hhmm, expected) => {
-    expect(isOnTimeStart(at(hhmm))).toBe(expected);
+    [
+      '冬・Worker 21:20・予備の schedule が 20:16 に引け前の値を書いた → 書く（21:00 より前は数えない）',
+      '2026-11-02T21:20:00Z',
+      [c('data: daily PER 2026-11-02', '2026-11-02T20:16:00Z')],
+      false,
+    ],
+    [
+      '冬・予備 23:03・21:21 に書き込み済み → スキップ',
+      '2026-11-02T23:03:00Z',
+      [c('data: daily PER 2026-11-02', '2026-11-02T21:21:00Z')],
+      true,
+    ],
+    [
+      '夏・予備 23:03・20:21 に書き込み済み → スキップ（夏は今と同じ）',
+      '2026-10-05T23:03:00Z',
+      [c('data: daily PER 2026-10-05', '2026-10-05T20:21:00Z')],
+      true,
+    ],
+  ])('%s', (_label, nowIso, commits, expected) => {
+    expect(isAlreadyWritten(commits, now(nowIso))).toBe(expected);
+  });
+
+  it('境界（冬）: 21:00:00 ちょうどは数える・20:59:59 は数えない', () => {
+    const n = now('2026-11-02T23:00:00Z');
+    expect(isAlreadyWritten([c('data: daily PER 2026-11-02', '2026-11-02T21:00:00Z')], n)).toBe(true);
+    expect(isAlreadyWritten([c('data: daily PER 2026-11-02', '2026-11-02T20:59:59Z')], n)).toBe(false);
+  });
+
+  it('DST の切替日: 2026-11-01（冬）は 21:00・2027-03-14（夏）は 20:00 が下限', () => {
+    expect(
+      isAlreadyWritten([c('data: daily PER 2026-11-01', '2026-11-01T20:30:00Z')], now('2026-11-01T23:00:00Z'))
+    ).toBe(false);
+    expect(
+      isAlreadyWritten([c('data: daily PER 2026-10-31', '2026-10-31T20:30:00Z')], now('2026-10-31T23:00:00Z'))
+    ).toBe(true);
+    expect(
+      isAlreadyWritten([c('data: daily PER 2027-03-14', '2027-03-14T20:30:00Z')], now('2027-03-14T23:00:00Z'))
+    ).toBe(true);
+    expect(
+      isAlreadyWritten([c('data: daily PER 2027-03-13', '2027-03-13T20:30:00Z')], now('2027-03-13T23:00:00Z'))
+    ).toBe(false);
+  });
+});
+
+describe('writtenSinceIso（gate の git log --since・#708 §4.1(c)）', () => {
+  it.each([
+    ['2026-10-05T20:20:00Z', '2026-10-05T20:00:00Z'],
+    ['2026-10-31T23:00:00Z', '2026-10-31T20:00:00Z'],
+    ['2026-11-01T21:20:00Z', '2026-11-01T21:00:00Z'],
+    ['2026-11-02T21:20:00Z', '2026-11-02T21:00:00Z'],
+    ['2027-03-13T21:20:00Z', '2027-03-13T21:00:00Z'],
+    ['2027-03-14T20:20:00Z', '2027-03-14T20:00:00Z'],
+  ])('%s → %s', (nowIso, expected) => {
+    expect(writtenSinceIso(new Date(nowIso))).toBe(expected);
+  });
+});
+
+describe('isOnTimeStart（開始が引け〜21:44 UTC・#708 §4.1(b)）', () => {
+  it.each([
+    ['2026-10-05T20:20:00Z', true],
+    ['2026-10-05T20:55:00Z', true],
+    ['2026-11-02T21:20:00Z', true],
+    ['2026-11-02T20:30:00Z', false],
+    ['2026-11-02T21:45:00Z', false],
+  ])('設計書の表: %s → %s', (iso, expected) => {
+    expect(isOnTimeStart(new Date(iso))).toBe(expected);
+  });
+
+  it.each([
+    // 夏（2026-10-05）
+    ['2026-10-05T19:59:00Z', false],
+    ['2026-10-05T20:00:00Z', true],
+    ['2026-10-05T21:44:00Z', true],
+    ['2026-10-05T21:45:00Z', false],
+    ['2026-10-05T23:02:00Z', false],
+    ['2026-10-05T08:30:00Z', false],
+    // 冬（2026-11-02・2026-01-10）
+    ['2026-11-02T20:59:00Z', false],
+    ['2026-11-02T21:00:00Z', true],
+    ['2026-11-02T21:44:00Z', true],
+    ['2026-11-02T23:03:00Z', false],
+    ['2026-01-10T20:20:00Z', false],
+    ['2026-01-10T21:20:00Z', true],
+    // DST の切替日の前後
+    ['2026-10-31T20:20:00Z', true],
+    ['2026-11-01T20:20:00Z', false],
+    ['2026-11-01T21:20:00Z', true],
+    ['2027-03-13T20:20:00Z', false],
+    ['2027-03-13T21:20:00Z', true],
+    ['2027-03-14T20:20:00Z', true],
+  ])('境界: %s → %s', (iso, expected) => {
+    expect(isOnTimeStart(new Date(iso))).toBe(expected);
   });
 });
 
@@ -433,6 +521,15 @@ describe('per-daily.yml（#708 PR1 書き込み済みチェック・per-daily-la
     expect(WORKFLOW).toMatch(/per-daily-gate\.mjs on-time --now "\$START"/);
     expect(WORKFLOW).toMatch(/elif \[ "\$EVENT" = "schedule" \]; then/);
     expect(WORKFLOW).not.toMatch(/node -e/);
+  });
+  it('文言は引け（夏 20:00・冬 21:00 UTC）基準・定刻は引け〜21:44 UTC（#708 §4.1(d)）', () => {
+    expect(WORKFLOW).toContain('TITLE="⚠ 当日の PER が Mulmo に間に合いませんでした（予備の schedule が書き込み）"');
+    expect(WORKFLOW).toContain('Worker 起動（夏 20:20・冬 21:20 UTC');
+    expect(WORKFLOW).toContain('定刻（引け〜21:44 UTC）');
+    expect(WORKFLOW).toContain(
+      '本番は Worker Cron の workflow_dispatch（夏 20:20・冬 21:20 UTC）、schedule 20:15 は予備'
+    );
+    expect(WORKFLOW).not.toContain('20:00〜20:54');
   });
   it('concurrency group と予備の schedule は変えない', () => {
     expect(WORKFLOW).toMatch(/group: portfolio-data-batch\n\s+cancel-in-progress: false/);
