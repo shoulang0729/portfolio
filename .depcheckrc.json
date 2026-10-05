@@ -1,4 +1,4 @@
 {
-  "ignores": ["http-server"],
+  "ignores": ["http-server", "d3"],
   "skip-missing": true
 }
