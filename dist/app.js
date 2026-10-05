@@ -3050,10 +3050,13 @@ function saveWatchlist() {
 }
 var _wlKvSyncTimer = null;
 async function _syncWatchlistToWorker() {
+  const pinHash = _getActivePinHash();
+  const headers = { "Content-Type": "application/json" };
+  if (pinHash) headers["X-Pin-Hash"] = pinHash;
   try {
     const res = await fetch(`${WORKER_URL}/watchlist`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify(state.watchlist)
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -8030,8 +8033,12 @@ function setupEventListeners(applyThemeFn) {
 
 // src/positions-store.js
 async function loadPositionsFromKV() {
+  const pinHash = _getActivePinHash();
+  if (!pinHash) return false;
   try {
-    const res = await fetchWithTimeout(`${WORKER_URL}/positions`, 1e4);
+    const res = await fetchWithTimeout(`${WORKER_URL}/positions`, 1e4, {
+      headers: { "X-Pin-Hash": pinHash }
+    });
     if (!res.ok) return false;
     const kvPositions = await res.json();
     if (!Array.isArray(kvPositions) || kvPositions.length === 0) return false;
@@ -8267,6 +8274,8 @@ async function parseMoneyForwardImage(file) {
   if (file.size > MAX_IMAGE_BYTES) {
     throw new Error(`\u753B\u50CF\u30B5\u30A4\u30BA\u304C\u5927\u304D\u3059\u304E\u307E\u3059\uFF08${(file.size / 1024 / 1024).toFixed(1)} MB\uFF09\u300216 MB \u4EE5\u4E0B\u306E\u753B\u50CF\u3092\u4F7F\u7528\u3057\u3066\u304F\u3060\u3055\u3044\u3002`);
   }
+  const pinHash = _getActivePinHash();
+  if (!pinHash) throw new Error("\u30ED\u30B0\u30A4\u30F3\u304C\u5FC5\u8981\u3067\u3059\u3002PIN \u3067\u30ED\u30B0\u30A4\u30F3\u3057\u3066\u304B\u3089\u53D6\u308A\u8FBC\u3093\u3067\u304F\u3060\u3055\u3044\u3002");
   const buf = await file.arrayBuffer();
   const uint8 = new Uint8Array(buf);
   let binaryStr = "";
@@ -8296,7 +8305,7 @@ async function parseMoneyForwardImage(file) {
   };
   const res = await fetchWithTimeout(`${WORKER_URL}/ai/openai`, 3e4, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "X-Pin-Hash": pinHash },
     body: JSON.stringify(body)
   });
   if (!res.ok) {
