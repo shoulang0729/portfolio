@@ -80,6 +80,33 @@ export function writtenSinceIso(now) {
 }
 
 /**
+ * per-daily-gate already-written が実行する `git log` の引数（#708）。
+ * `--since` ではなく `--since-as-filter`（git 2.38+）を使う: `--since` は committer date が下限より古いコミットに
+ * 当たった時点で走査を止めるため、HEAD 側に古い committer date のコミット（rebase・cherry-pick 等）があると、
+ * その奥にある当日の bot コミットを見落とす。`--since-as-filter` は全履歴を走査して日付で絞り込む。
+ * @param {Date} now
+ * @returns {string[]}
+ */
+export function alreadyWrittenLogArgs(now) {
+  return ['log', 'HEAD', `--since-as-filter=${writtenSinceIso(now)}`, '--format=%an%x09%cI%x09%s'];
+}
+
+/**
+ * `alreadyWrittenLogArgs` の出力（`%an\t%cI\t%s` の行）をコミットの配列にする。
+ * @param {string} out
+ * @returns {Array<{author: string, committedAt: string, subject: string}>}
+ */
+export function parseCommitLog(out) {
+  return String(out || '')
+    .split('\n')
+    .filter((line) => line.length > 0)
+    .map((line) => {
+      const [author, committedAt, ...subject] = line.split('\t');
+      return { author, committedAt, subject: subject.join('\t') };
+    });
+}
+
+/**
  * 米国の引け（夏 20:00・冬 21:00 UTC）以降に書かれた当日分のコミットがあるか（#708）。
  * 次をすべて満たすコミットが 1 つでもあれば true:
  * - author が `github-actions[bot]`

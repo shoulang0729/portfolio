@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'fs';
+import { readFileSync, mkdtempSync, rmSync } from 'fs';
+import { execFileSync } from 'child_process';
+import { tmpdir } from 'os';
 import { fileURLToPath } from 'url';
-import { dirname, resolve } from 'path';
+import { dirname, resolve, join } from 'path';
 
 import {
   COMMIT_PREFIX,
@@ -15,6 +17,8 @@ import {
   isAlreadyWritten,
   isOnTimeStart,
   writtenSinceIso,
+  alreadyWrittenLogArgs,
+  parseCommitLog,
 } from '../data/scheduler/lib/per-daily.mjs';
 import { score, FUND_SOURCE } from '../data/scheduler/lib/per-calc.mjs';
 import { detectFormat, stringifyLike } from '../data/scheduler/lib/json-format.mjs';
@@ -453,6 +457,54 @@ describe('writtenSinceIso（gate の git log --since・#708 §4.1(c)）', () => 
     ['2027-03-14T20:20:00Z', '2027-03-14T20:00:00Z'],
   ])('%s → %s', (nowIso, expected) => {
     expect(writtenSinceIso(new Date(nowIso))).toBe(expected);
+  });
+});
+
+describe('alreadyWrittenLogArgs / parseCommitLog（git log --since-as-filter・#708 レビュー対応）', () => {
+  it('--since ではなく --since-as-filter で引けの時刻を渡す', () => {
+    const args = alreadyWrittenLogArgs(new Date('2026-11-02T21:20:00Z'));
+    expect(args).toContain('--since-as-filter=2026-11-02T21:00:00Z');
+    expect(args.some((a) => a.startsWith('--since='))).toBe(false);
+  });
+
+  it('parseCommitLog は author・committedAt・subject（タブを含む件名も）を取り出す', () => {
+    expect(parseCommitLog('a\t2026-10-05T20:21:00+00:00\tdata: daily PER 2026-10-05\nb\tx\ty\tz\n')).toEqual([
+      { author: 'a', committedAt: '2026-10-05T20:21:00+00:00', subject: 'data: daily PER 2026-10-05' },
+      { author: 'b', committedAt: 'x', subject: 'y\tz' },
+    ]);
+    expect(parseCommitLog('')).toEqual([]);
+  });
+
+  it('HEAD に古い committer date のコミットがあっても、その奥の当日の bot コミットを見つける（実 git・合成リポ）', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'per-daily-git-'));
+    const base = { ...process.env, GIT_CONFIG_NOSYSTEM: '1', GIT_CONFIG_GLOBAL: '/dev/null' };
+    const git = (args, env = {}) => execFileSync('git', args, { cwd: dir, encoding: 'utf8', env: { ...base, ...env } });
+    const commit = (subject, author, iso) =>
+      git(['commit', '-q', '--allow-empty', '-m', subject], {
+        GIT_AUTHOR_NAME: author,
+        GIT_AUTHOR_EMAIL: 'synthetic@example.invalid',
+        GIT_COMMITTER_NAME: author,
+        GIT_COMMITTER_EMAIL: 'synthetic@example.invalid',
+        GIT_AUTHOR_DATE: iso,
+        GIT_COMMITTER_DATE: iso,
+      });
+    try {
+      git(['init', '-q']);
+      commit('base', 'Synthetic Person', '2026-10-01T00:00:00Z');
+      commit('data: daily PER 2026-10-05', 'github-actions[bot]', '2026-10-05T20:21:00Z');
+      // tip に下限より古い committer date のコミット（例: 古い日付のまま取り込まれたコミット）
+      commit('synthetic old-dated tip', 'Synthetic Person', '2026-10-02T00:00:00Z');
+      const now = new Date('2026-10-05T23:03:00Z');
+      const commits = parseCommitLog(git(alreadyWrittenLogArgs(now)));
+      expect(isAlreadyWritten(commits, now)).toBe(true);
+      // 旧実装（--since）はここで走査を止めて見落とす（回帰の理由の確認）
+      const legacy = parseCommitLog(
+        git(['log', 'HEAD', `--since=${writtenSinceIso(now)}`, '--format=%an%x09%cI%x09%s'])
+      );
+      expect(isAlreadyWritten(legacy, now)).toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 

@@ -28,7 +28,8 @@ import {
   countWatchlistUpdated,
   isAlreadyWritten,
   isOnTimeStart,
-  writtenSinceIso,
+  alreadyWrittenLogArgs,
+  parseCommitLog,
 } from './lib/per-daily.mjs';
 import { detectFormat } from './lib/json-format.mjs';
 
@@ -75,17 +76,8 @@ function checkDiff() {
  */
 function alreadyWritten() {
   const now = nowArg();
-  const out = execFileSync('git', ['log', 'HEAD', `--since=${writtenSinceIso(now)}`, '--format=%an%x09%cI%x09%s'], {
-    cwd: ROOT,
-    encoding: 'utf8',
-  });
-  const commits = out
-    .split('\n')
-    .filter((line) => line.length > 0)
-    .map((line) => {
-      const [author, committedAt, ...subject] = line.split('\t');
-      return { author, committedAt, subject: subject.join('\t') };
-    });
+  const out = execFileSync('git', alreadyWrittenLogArgs(now), { cwd: ROOT, encoding: 'utf8' });
+  const commits = parseCommitLog(out);
   if (isAlreadyWritten(commits, now)) {
     console.log('written');
     process.exit(6);
