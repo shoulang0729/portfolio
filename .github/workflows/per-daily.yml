@@ -8,7 +8,8 @@ name: PER Daily
 #   引け（夏 20:00・冬 21:00 UTC）より前は計算のみ（入力 force=true なら書く）／引け〜21:44 は書く／
 #   21:45〜22:59 は計算のみ（Mulmo の時間帯・force でも書かない）／23:00〜23:59 は書く（予備の schedule）。
 #   21:50〜22:59 UTC は push しない（Mulmo が PER を最長 21:52 UTC まで待ってから判断・書き戻しする時間帯）。
-# - Worker 中継口 /yahoo /watchlist を叩くだけ。API キー・Secrets は使わない（GITHUB_TOKEN は push と Issue 管理のみ）。
+# - Worker 中継口 /yahoo /watchlist を叩くだけ（KV の同期は POST /watchlist/resync で Worker に同期させる・本文なし・Secrets 不要・#715）。
+#   API キー・Secrets は使わない（GITHUB_TOKEN は push と Issue 管理のみ）。
 # - 公開リポのログ・サマリ・Issue に出すのは銘柄シンボル・PER・%タイル・status・件数のみ（HTTP 本文・KV 本文は出さない）。
 # - PR2 の突き合わせ（compare ジョブ・01:30 UTC）は PR3 で廃止。
 # - 本番は Worker Cron の workflow_dispatch（夏 20:20・冬 21:20 UTC）、schedule 20:15 は予備。

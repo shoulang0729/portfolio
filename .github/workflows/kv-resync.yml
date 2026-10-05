@@ -2,7 +2,8 @@ name: KV Resync
 
 # アプリ KV のウォッチリスト valuation を正本 data/valuations.json に同期する（#652 PR1）。
 # - valuations.json の push 時に即同期、毎日 23:30 UTC に自己修復（冪等）。
-# - Worker 中継口 /watchlist を叩くだけ。API キー・Secrets は使わない（GITHUB_TOKEN は Issue 管理のみ）。
+# - GET /watchlist で比較し、ズレがあれば POST /watchlist/resync で Worker に同期させる（本文なし・Secrets 不要。
+#   Worker が公開 main の valuations.json を SHA 固定で読んで写す・#715）。API キー・Secrets は使わない（GITHUB_TOKEN は Issue 管理のみ）。
 # - 公開リポのログ・サマリ・Issue には KV の本文を出さない（stage・件数・銘柄シンボルのみ）。
 
 on:
@@ -14,7 +15,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'sync = 同期（既定） / check = ドリフト検知のみ（PUT しない）'
+        description: 'sync = 同期（既定） / check = ドリフト検知のみ（同期要求しない）'
         type: choice
         options: [sync, check]
         default: sync

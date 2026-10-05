@@ -4,7 +4,8 @@ name: Weekly Valuations
 # - Worker 中継口（/fmp /edinet-db /edgar /finnhub /yahoo）経由。API キー・Secrets は使わない
 #   （GITHUB_TOKEN は write モードの push と Issue 管理のみ）。
 # - report モード（workflow_dispatch の既定）: 各スクリプトを作業ツリーで実行 → 差分レポートを出して終了（commit しない）。
-# - write モード（PR6 から schedule は常に write）: 上記＋ commit → push → 同じジョブで kv-resync。
+# - write モード（PR6 から schedule は常に write）: 上記＋ commit → push → 同じジョブで kv-resync
+#   （POST /watchlist/resync で Worker に同期させる・本文なし・Secrets 不要・#715）。
 # - quality / value / sectorMedian の書き戻しは null ガード（lib/null-guard.mjs）を通る：
 #   新しい値が null・既存値が非 null のフィールドは既存値を保持し staleFields に印を付ける（§8.4）。
 # - 公開リポのログ・サマリ・artifact・Issue に出すのは銘柄シンボル・指標値・件数まで（HTTP 本文や KV 本文は出さない）。
