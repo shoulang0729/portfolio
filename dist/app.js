@@ -7272,7 +7272,11 @@ function fmtQty(q) {
 }
 function maskDollarText(text, masked) {
   const s = String(text ?? "");
-  return masked ? s.replace(/\$[0-9][0-9,.]*/g, (m) => maskAmount(m)) : s;
+  if (!masked) return s;
+  return s.replace(/(指値\s*)?\$\d+(?:,\d{3})*(\.\d+)?/g, (m, limitWord, decimals, offset) => {
+    if (limitWord || decimals || s.charAt(offset + m.length) === "\xD7") return m;
+    return maskAmount(m);
+  });
 }
 var STATUS_LABEL = {
   toPlace: "\u8981\u767A\u6CE8",
@@ -7409,7 +7413,7 @@ function renderFunding(sheet, masked) {
     sweep = `${sym} \u58F2 <b>${escapeHTML(fmtQty(u.sweepQty))} \u682A</b>\uFF08${escapeHTML(fmtUsd(u.sweepUsd, masked))}\uFF09`;
   else sweep = `${sym} \u306E\u58F2\u5374\u306F\u4E0D\u8981`;
   const capped = u.sweepCapped ? `<div class="os-warn">${sym} \u306E\u4FDD\u6709\u682A\u6570\u307E\u3067\u58F2\u3063\u3066\u3082 ${escapeHTML(fmtUsd(u.sweepShortUsd, masked))} \u4E0D\u8DB3</div>` : "";
-  const short = isNum(a.shortfallUsd) && a.shortfallUsd > 0 ? `<div class="os-warn">\u5168\u6BB5\u306E\u5408\u8A08\u306B\u5BFE\u3057\u8CC7\u91D1\u304C ${escapeHTML(fmtUsd(a.shortfallUsd, masked))} \u4E0D\u8DB3</div>` : '<div class="os-ok">\u5168\u6BB5\u306E\u5408\u8A08\u306B\u5BFE\u3057\u8CC7\u91D1\u306F\u8DB3\u308A\u3066\u3044\u307E\u3059</div>';
+  const short = !isNum(a.shortfallUsd) ? '<div class="os-warn">\u5168\u6BB5\u306E\u5408\u8A08\u306B\u5BFE\u3059\u308B\u8CC7\u91D1\u306E\u904E\u4E0D\u8DB3\u3092\u8A08\u7B97\u3067\u304D\u307E\u305B\u3093</div>' : a.shortfallUsd > 0 ? `<div class="os-warn">\u5168\u6BB5\u306E\u5408\u8A08\u306B\u5BFE\u3057\u8CC7\u91D1\u304C ${escapeHTML(fmtUsd(a.shortfallUsd, masked))} \u4E0D\u8DB3</div>` : '<div class="os-ok">\u5168\u6BB5\u306E\u5408\u8A08\u306B\u5BFE\u3057\u8CC7\u91D1\u306F\u8DB3\u308A\u3066\u3044\u307E\u3059</div>';
   const kv = (k, v) => `<div class="os-kv"><span>${k}</span><span>${v}</span></div>`;
   return [
     '<div class="os-card"><div class="os-card-title">\u8CC7\u91D1\u7E70\u308A\uFF08\u7C73\u30C9\u30EB\uFF09</div>',
@@ -7586,6 +7590,10 @@ async function _json(r) {
   }
 }
 async function renderOrderTab() {
+  if (state.orderSheet.busy) {
+    rerenderOrderTab();
+    return;
+  }
   const pinHash = _getActivePinHash();
   if (!pinHash) {
     state.orderSheet = { status: "nologin", data: null, error: null, busy: false };
