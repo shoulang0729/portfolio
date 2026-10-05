@@ -113,3 +113,13 @@ rl:<ip>:<bucket>:<shard>
 
 binding が使えなくなった場合は、この節より上に残した案 B（shard 分散）の
 設計をそのまま復元すればよい（git 履歴 = Issue #62 時点の実装）。
+
+---
+
+## 【2026-10-05 追加】`POST /watchlist/resync` 専用 binding `RESYNC_LIMITER`（Issue #715）
+
+- 設計: `docs/handoff/2026-10-05-watchlist-resync-worker.md` §4.4。
+- `wrangler.toml` の `[[unsafe.bindings]]` に `RESYNC_LIMITER`（`type = "ratelimit"`・`namespace_id = "1002"`＝既存 `RATE_LIMITER` の `1001` と別・`simple = { limit = 10, period = 60 }`）。
+- 対象パス: `/watchlist/resync` のみ（全メソッド・ルート処理より前に `index.js` で判定）。キーは `CF-Connecting-IP`（無ければ `unknown`）。
+- 1 回の呼び出しで GitHub API（main の SHA）と raw（SHA 固定の `data/valuations.json`）を読むため、既存の 120/60s より厳しくする。`kv-resync.mjs` の呼び出しは 1 回の実行で最大 9 回なので収まる。
+- 超過時 429。`RESYNC_LIMITER` が無い環境では `RATE_LIMITER` を使い、どちらも無ければ素通し。判定の例外は fail-open（既存どおり）。
