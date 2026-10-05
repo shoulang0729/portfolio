@@ -46,9 +46,8 @@ npm run check:deps    # 未使用依存を検出
 
 ## ドキュメント
 
-- 設計・引き継ぎ情報: [CLAUDE.md](./CLAUDE.md)
-- 機能仕様（中国語）: [docs/SPEC_cn.md](./docs/SPEC_cn.md)
-- ルーティン定義: [docs/routine_japan_1700.md](./docs/routine_japan_1700.md) / [docs/routine_us_0600.md](./docs/routine_us_0600.md)
+- 設計・引き継ぎ情報・開発フロー: [CLAUDE.md](./CLAUDE.md)
+- 開発ツール・よくある作業: [docs/dev-guide.md](./docs/dev-guide.md)
 
 ## ライセンス
 
