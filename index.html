@@ -24,10 +24,10 @@
 
 <!-- スタイルシート -->
 
-<link rel="stylesheet" href="assets/01-base.css?v=20261004b">
-<link rel="stylesheet" href="assets/02-tables.css?v=20261004b">
-<link rel="stylesheet" href="assets/03-misc.css?v=20261004b">
-<link rel="stylesheet" href="assets/04-auth.css?v=20261004b">
+<link rel="stylesheet" href="assets/01-base.css?v=20261005a">
+<link rel="stylesheet" href="assets/02-tables.css?v=20261005a">
+<link rel="stylesheet" href="assets/03-misc.css?v=20261005a">
+<link rel="stylesheet" href="assets/04-auth.css?v=20261005a">
 
 <!-- assets/05-ai-tab.css は src/_disabled/05-ai-tab.css に移動（AIタブ無効化中）-->
 <!-- 銘柄リスト列表示制御（JS が動的に書き込む） -->
@@ -148,15 +148,6 @@
               <line x1="12.5" y1="9" x2="10.5" y2="11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
             </svg>
           </span>銘柄を整理
-        </button>
-        <button class="hm-menu-item" id="snapshot-btn" data-action="triggerPortfolioSnapshot|closeHmMenu" title="ポートフォリオの完全スナップショットをGitHubに保存（他AIから参照可）" style="display:none">
-          <span class="hm-icon">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="2" y="3" width="10" height="9" rx="1.5" stroke="currentColor" stroke-width="1.4" fill="none"/>
-              <circle cx="7" cy="7.5" r="2.2" stroke="currentColor" stroke-width="1.4"/>
-              <path d="M5 3l1-1.2h2L9 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" fill="none"/>
-            </svg>
-          </span>スナップショット保存
         </button>
         <div class="hm-menu-divider"></div>
         <a class="hm-menu-item" href="https://github.com/shoulang0729/portfolio/blob/main/README.md" target="_blank" rel="noopener">
@@ -348,14 +339,14 @@
 
 <!-- ES Module エントリーポイント（全ファイルを import する単一スクリプト） -->
 
-<script type="module" src="dist/app.js?v=20261004b"></script>
+<script type="module" src="dist/app.js?v=20261005a"></script>
 
 
 <!-- PWA Service Worker 登録 -->
 <script>
 if ('serviceWorker' in navigator) {
 
-navigator.serviceWorker.register('./sw.js?v=20261004b').catch(() => {});
+navigator.serviceWorker.register('./sw.js?v=20261005a').catch(() => {});
 
 }
 </script>

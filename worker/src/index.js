@@ -350,247 +350,12 @@ async function handleFmp(url, env, origin) {
 }
 
 // ══════════════════════════════════════════════════════════════
-// ポートフォリオ・スナップショット（他AI連携用の完全な分析データ）
-//
-// POST /portfolio/snapshot
-//   body 任意（あれば即push、なければWorker側で生成）
-//   レスポンス: { ok, positions, pushedAt }
-//
-// Cron 6h ごとに自動生成・GitHub push
-// 保存先: data/portfolio-snapshot.json
-//
-// 構造:
-//   { asOf, source,
-//     summary:   { totalValue, totalPnl, pnlPct, positionCount, watchlistCount, performance },
-//     positions: [{...basic, performance:{1d,1w,...,10y}}],
-//     watchlist: [{symbol, name, ySymbol, cat, cur, performance:{1d,...,10y}}] }
-//   ※ historicals（日次価格系列）は重い（5MB超）ため含めない。
-//     必要な情報は positions[].performance / watchlist[].performance に集約済み。
+// POST /portfolio/snapshot — 無効化済み（#709）
+//   未使用の書き込み経路として停止。GitHub への push・KV からの組み立ては行わない。
+//   どのメソッドでも 410 Gone（CORS 付き）を返す。
 // ══════════════════════════════════════════════════════════════
-
-const _SNAPSHOT_PERIODS = [
-  { id: '1d',  days: 1   },
-  { id: '1w',  days: 7   },
-  { id: '1m',  days: 30  },
-  { id: '3m',  days: 91  },
-  { id: '6m',  days: 182 },
-  { id: '9m',  days: 273 },
-  { id: '1y',  days: 365 },
-  { id: '3y',  days: 1095 },
-  { id: '5y',  days: 1825 },
-  { id: '10y', days: 3650 },
-];
-
-async function handlePortfolioSnapshot(request, env, origin, ctx) {
-  if (request.method !== 'POST') return errRes('POST のみ許可', 405, origin);
-  if (!env.KV) return errRes('KV 未設定', 500, origin);
-
-  // body が空でなければ frontend が用意した payload をそのまま使う
-  let payload = null;
-  try { payload = await request.json(); } catch { /* body 無し可 */ }
-
-  // payload が空 or 'auto-build' フラグ → Worker 側でゼロから組み立て
-  const shouldBuild = !payload || payload.autoBuild === true || !payload.positions;
-  let snapshot;
-  if (shouldBuild) {
-    snapshot = await _buildSnapshotFromKV(env);
-    snapshot.source = 'worker-manual';
-  } else {
-    snapshot = { ...payload, asOf: payload.asOf || new Date().toISOString(), source: payload.source || 'frontend-manual' };
-  }
-
-  if (!snapshot) return errRes('スナップショット生成失敗', 500, origin);
-
-  if (!snapshot.asOf || typeof snapshot.asOf !== 'string') return errRes('Snapshot.asOf は必須です', 400, origin);
-  if (!snapshot.source || typeof snapshot.source !== 'string') return errRes('Snapshot.source は必須です', 400, origin);
-  if (!snapshot.summary || typeof snapshot.summary !== 'object') return errRes('Snapshot.summary は必須です', 400, origin);
-  if (typeof snapshot.summary.totalValue !== 'number' || !isFinite(snapshot.summary.totalValue)) return errRes('Snapshot.summary.totalValue は有限数値が必要です', 400, origin);
-  if (typeof snapshot.summary.totalPnl !== 'number' || !isFinite(snapshot.summary.totalPnl)) return errRes('Snapshot.summary.totalPnl は有限数値が必要です', 400, origin);
-  if (typeof snapshot.summary.positionCount !== 'number' || !Number.isInteger(snapshot.summary.positionCount) || snapshot.summary.positionCount < 0) return errRes('Snapshot.summary.positionCount は非負整数が必要です', 400, origin);
-  if (typeof snapshot.summary.watchlistCount !== 'number' || !Number.isInteger(snapshot.summary.watchlistCount) || snapshot.summary.watchlistCount < 0) return errRes('Snapshot.summary.watchlistCount は非負整数が必要です', 400, origin);
-  if (typeof snapshot.summary.currencyBase !== 'string' || !snapshot.summary.currencyBase.trim()) return errRes('Snapshot.summary.currencyBase は必須です', 400, origin);
-  if (!Array.isArray(snapshot.positions)) return errRes('Snapshot.positions は配列が必要です', 400, origin);
-  if (!Array.isArray(snapshot.watchlist)) return errRes('Snapshot.watchlist は配列が必要です', 400, origin);
-
-  // GitHub push を waitUntil で保護
-  const push = _pushSnapshotToGithub(snapshot, env).catch(e => console.warn('[snapshot push]', e));
-  if (ctx?.waitUntil) ctx.waitUntil(push);
-
-  return jsonRes({
-    ok: true,
-    asOf: snapshot.asOf,
-    positions: snapshot.positions?.length || 0,
-    source: snapshot.source,
-  }, 200, origin);
-}
-
-// KV の positions + watchlist を元に Yahoo Finance から historicals を取得してスナップショットを構築
-async function _buildSnapshotFromKV(env) {
-  const posVal = await env.KV.get('positions');
-  if (!posVal) return null;
-  const positions = JSON.parse(posVal);
-  if (!Array.isArray(positions) || positions.length === 0) return null;
-
-  // Watchlist（保有していない注目銘柄）も同時に取得
-  const wlVal = await env.KV.get('watchlist');
-  const watchlist = wlVal ? (JSON.parse(wlVal) || []) : [];
-
-  // 全対象銘柄（positions + watchlist、重複除去）
-  const allSymbols = [...new Set([
-    ...positions.map(p => p.ySymbol),
-    ...watchlist.map(w => w.ySymbol || w.symbol),
-  ].filter(Boolean))];
-
-  // 1y/5y/10y の historicals を並列フェッチ（範囲ごと・5並列バッチ）
-  const RANGES = ['1y', '5y', '10y'];
-  const historicals = { '1y': {}, '5y': {}, '10y': {} };
-  for (const range of RANGES) {
-    const BATCH = 5;
-    for (let i = 0; i < allSymbols.length; i += BATCH) {
-      const batch = allSymbols.slice(i, i + BATCH);
-      await Promise.all(batch.map(async sym => {
-        const arr = await _fetchYahooHistory(sym, range).catch(() => null);
-        if (arr) historicals[range][sym] = arr;
-      }));
-      if (i + BATCH < allSymbols.length) await new Promise(r => setTimeout(r, 600));
-    }
-  }
-
-  const perfOf = (ySymbol) => {
-    const perf = {};
-    for (const { id, days } of _SNAPSHOT_PERIODS) {
-      perf[id] = _computePeriodPctFromHistoricals(ySymbol, days, historicals);
-    }
-    return perf;
-  };
-
-  // positions に performance を付与
-  const positionsWithPerf = positions.map(p => ({
-    ...p,
-    performance: perfOf(p.ySymbol),
-  }));
-
-  // watchlist は最小限フィールド + performance のみ
-  const watchlistWithPerf = watchlist.map(w => ({
-    symbol: w.symbol,
-    name:   w.name || w.symbol,
-    ySymbol: w.ySymbol || w.symbol,
-    cat:    w.cat || null,
-    cur:    w.cur || null,
-    performance: perfOf(w.ySymbol || w.symbol),
-  }));
-
-  // サマリ
-  const totalValue = positions.reduce((s, p) => s + (p.value || 0), 0);
-  const totalPnl   = positions.reduce((s, p) => s + (p.pnl || 0), 0);
-  const summary = {
-    totalValue,
-    totalPnl,
-    totalPnlPct: totalValue > totalPnl ? totalPnl / (totalValue - totalPnl) * 100 : null,
-    positionCount: positions.length,
-    watchlistCount: watchlistWithPerf.length,
-    currencyBase: 'JPY',
-    performance: _computePortfolioPerf(positionsWithPerf, totalValue),
-  };
-
-  // historicals は performance 算出に内部利用するだけで、出力 JSON には含めない（サイズ削減）
-  return {
-    asOf: new Date().toISOString(),
-    source: 'worker-cron',
-    summary,
-    positions: positionsWithPerf,
-    watchlist: watchlistWithPerf,
-  };
-}
-
-// Yahoo Finance chart API から [{date, close}] を取得（日次データ）
-async function _fetchYahooHistory(ySymbol, range) {
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ySymbol)}?interval=1d&range=${range}`;
-  const res = await fetch(url, {
-    headers: { 'User-Agent': 'Mozilla/5.0 portfolio-proxy-worker' },
-    cf: { cacheTtl: 600 },
-  });
-  if (!res.ok) return null;
-  const data = await res.json();
-  const result = data?.chart?.result?.[0];
-  if (!result) return null;
-  const timestamps = result.timestamp || [];
-  const adjCloses  = result.indicators?.adjclose?.[0]?.adjclose || [];
-  const rawCloses  = result.indicators?.quote?.[0]?.close || [];
-  const closes = adjCloses.length ? adjCloses : rawCloses;
-  return timestamps
-    .map((ts, i) => ({ date: new Date(ts * 1000).toISOString().slice(0, 10), close: closes[i] }))
-    .filter(p => p.close != null && isFinite(p.close));
-}
-
-// historicals から N 日前との % 変化を計算
-function _computePeriodPctFromHistoricals(ySymbol, days, historicals) {
-  // 1y / 5y / 10y のうち適切なレンジを選択
-  const range = days <= 365 ? '1y' : (days <= 1825 ? '5y' : '10y');
-  const arr = historicals[range]?.[ySymbol];
-  if (!arr || arr.length < 2) return null;
-  const latest = arr[arr.length - 1].close;
-  // N 日前のインデックスを近似（営業日ベース）
-  const targetIdx = Math.max(0, arr.length - 1 - Math.round(days * 252 / 365));
-  const past = arr[targetIdx]?.close;
-  if (latest == null || past == null || past === 0) return null;
-  return ((latest - past) / past) * 100;
-}
-
-// 全銘柄を value 加重平均してポートフォリオ全体のパフォーマンスを算出
-function _computePortfolioPerf(positionsWithPerf, totalValue) {
-  const perf = {};
-  if (!totalValue) return perf;
-  for (const { id } of _SNAPSHOT_PERIODS) {
-    let weighted = 0;
-    let coveredValue = 0;
-    for (const p of positionsWithPerf) {
-      const pct = p.performance?.[id];
-      if (pct == null || !p.value) continue;
-      weighted += (pct / 100) * p.value;
-      coveredValue += p.value;
-    }
-    perf[id] = coveredValue > 0 ? (weighted / coveredValue) * 100 : null;
-  }
-  return perf;
-}
-
-// スナップショットを data/portfolio-snapshot.json として GitHub に push
-async function _pushSnapshotToGithub(snapshot, env) {
-  if (!env.GITHUB_TOKEN) return;
-  const owner = 'shoulang0729';
-  const repo  = 'portfolio';
-  const path  = 'data/portfolio-snapshot.json';
-  const branch = 'main';
-  const headers = {
-    'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
-    'Accept': 'application/vnd.github+json',
-    'User-Agent': 'portfolio-proxy-worker',
-    'X-GitHub-Api-Version': '2022-11-28',
-  };
-
-  let sha;
-  try {
-    const getRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${branch}`, { headers });
-    if (getRes.ok) { const meta = await getRes.json(); sha = meta.sha; }
-  } catch {}
-
-  const content = btoa(unescape(encodeURIComponent(JSON.stringify(snapshot, null, 2) + '\n')));
-  const putRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
-    method: 'PUT',
-    headers: { ...headers, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      message: `chore(snapshot): ${snapshot.source || 'auto'} @ ${snapshot.asOf || new Date().toISOString()}`,
-      content,
-      branch,
-      ...(sha ? { sha } : {}),
-    }),
-  });
-  if (!putRes.ok) {
-    const t = await putRes.text().catch(() => '');
-    console.warn(`[snapshot push] HTTP ${putRes.status}: ${t.slice(0, 200)}`);
-    return;
-  }
+function handlePortfolioSnapshot(origin) {
+  return errRes('スナップショット保存は無効化されました', 410, origin);
 }
 
 // ── AI モデル一覧（各プロバイダーの /v1/models を集約・1時間KVキャッシュ）─
@@ -1016,7 +781,7 @@ async function verifyPinHash(request, env, origin) {
   return null;
 }
 
-async function handlePositions(request, env, origin, ctx) {
+async function handlePositions(request, env, origin) {
   if (!env.KV) return errRes('KV 未設定', 500, origin);
 
   if (request.method === 'GET') {
@@ -1049,12 +814,6 @@ async function handlePositions(request, env, origin, ctx) {
     }
 
     await env.KV.put('positions', JSON.stringify(body));
-
-    // GitHub にもミラー（response 返却後も処理を継続させるため waitUntil で包む）
-    const githubSync = _syncPositionsToGithub(body, env).catch(e => console.warn('[github sync]', e));
-    if (ctx && typeof ctx.waitUntil === 'function') {
-      ctx.waitUntil(githubSync);
-    }
 
     return jsonRes({ ok: true }, 200, origin);
   }
@@ -1459,67 +1218,6 @@ async function _cronConfirmOrderFills(env) {
   return { written: true, fills: logs.length };
 }
 
-// ══════════════════════════════════════════════════════════════
-// GitHub Contents API ミラー: KV に保存した positions を
-// shoulang0729/portfolio リポジトリの data/positions.json にも書き出す
-//
-// 他アプリは https://raw.githubusercontent.com/shoulang0729/portfolio/main/data/positions.json
-// から fetch して利用可能。
-//
-// 必要 Secret: GITHUB_TOKEN（Classic PAT で repo スコープ）
-// ══════════════════════════════════════════════════════════════
-async function _syncPositionsToGithub(positions, env) {
-  if (!env.GITHUB_TOKEN) return;
-  const owner  = 'shoulang0729';
-  const repo   = 'portfolio';
-  const path   = 'data/positions.json';
-  const branch = 'main';
-
-  const headers = {
-    'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
-    'Accept':        'application/vnd.github+json',
-    'User-Agent':    'portfolio-proxy-worker',
-    'X-GitHub-Api-Version': '2022-11-28',
-  };
-
-  // 1. 現在の SHA を取得（無ければ新規作成扱い）
-  let sha = undefined;
-  try {
-    const getRes = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${branch}`,
-      { headers },
-    );
-    if (getRes.ok) {
-      const meta = await getRes.json();
-      sha = meta.sha;
-    }
-  } catch (e) { /* 取得失敗時は sha なしで新規 PUT */ }
-
-  // 2. base64 エンコード（Worker は btoa が使える）
-  const content = btoa(unescape(encodeURIComponent(JSON.stringify(positions, null, 2) + '\n')));
-
-  // 3. PUT で content を上書き
-  const putRes = await fetch(
-    `https://api.github.com/repos/${owner}/${repo}/contents/${path}`,
-    {
-      method: 'PUT',
-      headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message: `chore(positions): sync from KV (${positions.length} items)`,
-        content,
-        branch,
-        ...(sha ? { sha } : {}),
-      }),
-    },
-  );
-
-  if (!putRes.ok) {
-    const errText = await putRes.text().catch(() => '');
-    console.warn(`[github sync] HTTP ${putRes.status}: ${errText.slice(0, 300)}`);
-    return;
-  }
-}
-
 // ── PIN ハッシュ更新 ──────────────────────────────────────────
 async function handleAuthPinHash(request, env, origin) {
   if (!env.KV) return errRes('KV 未設定', 500, origin);
@@ -1685,12 +1383,12 @@ export default {
     if (path === '/ai/context')      return handleAIContext(request, env, org);
     if (path.startsWith('/ai/'))     return handleAI(request, path, env, org);
     if (path === '/watchlist')       return handleWatchlist(request, env, org);
-    if (path === '/positions')       return handlePositions(request, env, org, ctx);
+    if (path === '/positions')       return handlePositions(request, env, org);
     if (path === '/networth')        return handleNetworth(request, env, org);
     if (path === '/order-sheet')     return handleOrderSheet(request, env, org);
     if (path === '/order-sheet/plan') return handleOrderSheetPlan(request, env, org);
     if (path === '/order-sheet/events') return handleOrderSheetEvents(request, env, org);
-    if (path === '/portfolio/snapshot') return handlePortfolioSnapshot(request, env, org, ctx);
+    if (path === '/portfolio/snapshot') return handlePortfolioSnapshot(org);
     if (path === '/prices/cache')    return handlePricesCache(env, org);
     if (path === '/auth/pin-hash')   return handleAuthPinHash(request, env, org);
     if (path === '/notion/save')     return handleNotionSave(request, env, org);
@@ -1702,7 +1400,7 @@ export default {
   },
 
   // ── Cron: 6時間ごとに全保有銘柄の価格をキャッシュ ───────────
-  async scheduled(event, env, ctx) {
+  async scheduled(event, env, _ctx) {
     // 注文表の約定確定（#672）。価格キャッシュの有無と独立に先に実行し、失敗しても既存処理は続ける
     try {
       await _cronConfirmOrderFills(env);
@@ -1745,17 +1443,6 @@ export default {
 
     if (Object.keys(cache).length > 0) {
       await env.KV.put('prices:cache', JSON.stringify(cache), { expirationTtl: 25200 }); // 7h TTL
-    }
-
-    // ── 6時間ごとのポートフォリオ・スナップショット生成 → GitHub に push ──
-    try {
-      const snapshot = await _buildSnapshotFromKV(env);
-      if (snapshot) {
-        snapshot.source = 'worker-cron';
-        await _pushSnapshotToGithub(snapshot, env);
-      }
-    } catch (e) {
-      console.warn('[cron snapshot]', e);
     }
   },
 };
