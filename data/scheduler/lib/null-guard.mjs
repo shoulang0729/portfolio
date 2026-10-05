@@ -8,6 +8,10 @@
 // - 印 `staleFields` はエントリ直下のフラットなオブジェクト。キー＝"<ブロック>.<フィールド>"、
 //   値＝null を最初に観測した日（UTC・YYYY-MM-DD）。非 null が取れたら外す（回復）。空なら {} を残す。
 // - 派生値の再計算はしない。`writeback.mjs` は変えずにそのまま使う。
+// - ガード後のブロックが null（＝新ブロックが null で既存ブロックがオブジェクトでない）なら
+//   `writeBlocks` に渡さず書かない（#665・Toshio 決定 (a)）。既存ブロックが無ければ作らない、
+//   既存ブロックが null なら null のまま残す。`writeBlocks` は値 null の既存ブロックの置換で
+//   後続ブロックの `{` を拾うため、null ブロックを生まない・触らないことで回避する。
 import { readFileSync } from 'fs';
 import { writeBlocks } from '../writeback.mjs';
 
@@ -91,7 +95,7 @@ function sameStale(a, b) {
  * @param {Record<string, any>} results  { symbol: blockObj | null }
  * @param {string} blockKey  'quality' | 'value' | 'sectorMedian'
  * @param {{ today?: string }} [opts]
- * @returns {number} `writeBlocks` と同じ（ブロックを更新したシンボル数）
+ * @returns {number} `writeBlocks` と同じ（ブロックを更新したシンボル数。null で書かなかった銘柄は数えない）
  */
 export function writeGuardedBlocks(path, results, blockKey, opts = {}) {
   const today = opts.today ?? new Date().toISOString().slice(0, 10);
@@ -111,6 +115,12 @@ export function writeGuardedBlocks(path, results, blockKey, opts = {}) {
     }
     const oldStale = isPlainObj(entry.staleFields) ? entry.staleFields : {};
     const g = guardBlock(entry[blockKey], newBlock, oldStale, blockKey, today);
+    // ガード後も null → 書かない（#665）。既存ブロック無しなら作らず、既存 null ブロックはそのまま残す。
+    // `writeBlocks` に null を渡すと `"key": null` が生まれ、次回のオブジェクト書き込みで後続ブロックを上書きする。
+    if (g.block === null) {
+      console.log(`  [null-guard] ${sym} ${blockKey}: null → 書かない（既存ブロックをそのまま）`);
+      continue; // この場合 guardBlock は印を変えない（保持する既存値が無い）
+    }
     guarded[sym] = g.block;
     for (const field of g.kept) {
       console.log(

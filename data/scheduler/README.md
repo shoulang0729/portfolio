@@ -55,6 +55,7 @@ Worker 中継口の呼び出しは `lib/worker-client.mjs` 経由（`Origin` ヘ
 - ガードしないもの：新ブロックに**キーが無い**フィールド（`etf-pe.mjs` の丸ごと置換）・既存も null（または既存ブロック無し）・
   銘柄ごとスキップ（取得失敗）・`verdict-outcomes.json`（`hit-rate.mjs`）・毎日の PER。
 - 新ブロック自体が null（`computeQuality` が null 等）で既存ブロックがあれば、既存ブロックを丸ごと保持し、非 null だった各フィールドに印。
+  既存ブロックが無い（または既存も null）なら**書かない**（`"quality": null` のような null ブロックを作らない・既存の null はそのまま。#665）。
 - 派生値は再計算しない（`roic` を保持しても `qScore` は新しく算出された値）。
 - ログは `  [null-guard] <銘柄> <ブロック>.<フィールド>: null → 既存値を保持（stale since <日付>）`（値は出さない）。
 - 差分レポート（`diff-report.mjs`）は `staleFields` の変化を「null 化（保持）」「保持継続」「回復（old→new）」の節で出し、
