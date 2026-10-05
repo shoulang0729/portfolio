@@ -4,7 +4,10 @@ name: PER Daily
 # - watchlist-per --write → fund-per --write → commit「data: daily PER <UTC日付>」→ push → 同じジョブで kv-resync。
 # - コミットメッセージは固定形式（Mulmo が main 上の文字列一致で当日分の有無を判定する・設計書 §6.2 / §9）。
 #   差分が無い日も --allow-empty で作る。計算のみに落ちた日・失敗した日はコミットしない。
-# - 開始が 20:55〜22:30 UTC なら計算のみ（§2.6）。21:00〜22:30 UTC は push しない（Mulmo の書き込み時間帯・§2.3）。
+# - 開始時刻による分岐（#708 PR3・docs/handoff/2026-10-05-per-daily-dispatch.md §3.3）:
+#   引け（夏 20:00・冬 21:00 UTC）より前は計算のみ（入力 force=true なら書く）／引け〜21:44 は書く／
+#   21:45〜22:59 は計算のみ（Mulmo の時間帯・force でも書かない）／23:00〜23:59 は書く（予備の schedule）。
+#   21:50〜22:59 UTC は push しない（Mulmo が PER を最長 21:52 UTC まで待ってから判断・書き戻しする時間帯）。
 # - Worker 中継口 /yahoo /watchlist を叩くだけ。API キー・Secrets は使わない（GITHUB_TOKEN は push と Issue 管理のみ）。
 # - 公開リポのログ・サマリ・Issue に出すのは銘柄シンボル・PER・%タイル・status・件数のみ（HTTP 本文・KV 本文は出さない）。
 # - PR2 の突き合わせ（compare ジョブ・01:30 UTC）は PR3 で廃止。
@@ -47,14 +50,23 @@ jobs:
 
       - name: Resolve mode (start time)
         id: mode
+        env:
+          FORCE: ${{ inputs.force == true }}
         run: |
           START=$(date -u +%FT%TZ)
-          MODE=$(node data/scheduler/per-daily-gate.mjs mode --now "$START")
+          FORCE_ARG=""
+          if [ "$FORCE" = "true" ]; then FORCE_ARG="--force"; fi
+          MODE=$(node data/scheduler/per-daily-gate.mjs mode --now "$START" $FORCE_ARG)
           echo "mode=$MODE" >> "$GITHUB_OUTPUT"
           echo "start=$START" >> "$GITHUB_OUTPUT"
-          echo "start=${START} mode=${MODE}"
+          echo "start=${START} mode=${MODE} force=${FORCE}"
           if [ "$MODE" = "compute-only" ]; then
-            echo "::warning::開始 ${START} が 20:55〜22:30 UTC のため計算のみ（書き込み・コミットしない）。当日の PER は前日値のままです"
+            HM=$(date -u -d "$START" +%H%M)
+            if [ "$HM" -ge 2145 ] && [ "$HM" -le 2259 ]; then
+              echo "::warning::開始 ${START} が Mulmo の時間帯（21:45〜22:59 UTC）のため計算のみ（書き込み・コミットしない。force でも書かない）。当日の PER は前日値のままです（予備の schedule が 23:00 UTC 以降に動けば書きます）"
+            else
+              echo "::warning::開始 ${START} が米国の引け前（夏 20:00・冬 21:00 UTC より前）のため計算のみ（書き込み・コミットしない）。書く場合は force=true で再実行してください"
+            fi
           fi
 
       - name: Check already written (米国の引け以降の当日分)
@@ -167,7 +179,7 @@ jobs:
         env:
           DATE: ${{ steps.run.outputs.date }}
         run: |
-          # 21:00〜22:30 UTC は Mulmo が valuations.json を書く時間帯なので push しない（§2.3）。
+          # 21:50〜22:59 UTC は Mulmo が PER を読んで判断・valuations.json を書き戻す時間帯なので push しない（#708 PR3 §3.3）。
           # push-ok の exit 3 だけが「禁止時間帯」。それ以外の非 0 は判定の異常＝失敗にする。
           push_window() {
             set +e
@@ -176,7 +188,7 @@ jobs:
             set -e
             if [ "$code" -eq 0 ]; then return 0; fi
             if [ "$code" -eq 3 ]; then
-              echo "::warning::21:00〜22:30 UTC（push 禁止時間帯）のため push しません。当日の PER は前日値のままです"
+              echo "::warning::21:50〜22:59 UTC（push 禁止時間帯）のため push しません。当日の PER は前日値のままです（予備の schedule が 23:00 UTC 以降に動けば書きます）"
               echo "pushed=false" >> "$GITHUB_OUTPUT"
               echo "skipped=push-window" >> "$GITHUB_OUTPUT"
               exit 0
@@ -451,7 +463,7 @@ jobs:
           elif [ "$EVENT" = "schedule" ]; then
             TITLE="⚠ 当日の PER が Mulmo に間に合いませんでした（予備の schedule が書き込み）"
             BODY=$(cat <<EOF
-          Worker 起動（夏 20:20・冬 21:20 UTC・workflow_dispatch）で当日分が書けず、予備の schedule が定刻（引け〜21:44 UTC）外に書き込みました。Mulmo の日次バッチ（21:00 UTC）は前日の PER を使っています。
+          Worker 起動（夏 20:20・冬 21:20 UTC・workflow_dispatch）で当日分が書けず、予備の schedule が定刻（引け〜21:44 UTC）外に書き込みました。Mulmo の日次バッチ（21:00 UTC 開始・PER の当日コミットを最長 21:52 UTC まで待つ）は前日の PER で続行しています。
 
           - **開始時刻（UTC）**: ${START:-不明}
           - **Run**: ${RUN_URL}
