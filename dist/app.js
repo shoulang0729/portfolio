@@ -899,20 +899,9 @@ async function authenticatePasskey() {
 var _AUTH_ENC_SALT = "hm-ai-keys-v1";
 var _AUTH_ENC_SS = "hm-enc-key-v1";
 async function _deriveEncKey(pin) {
-  const keyMat = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(pin),
-    "PBKDF2",
-    false,
-    ["deriveKey"]
-  );
+  const keyMat = await crypto.subtle.importKey("raw", new TextEncoder().encode(pin), "PBKDF2", false, ["deriveKey"]);
   _auth.encKey = await crypto.subtle.deriveKey(
-    {
-      name: "PBKDF2",
-      salt: new TextEncoder().encode(_AUTH_ENC_SALT),
-      iterations: 1e5,
-      hash: "SHA-256"
-    },
+    { name: "PBKDF2", salt: new TextEncoder().encode(_AUTH_ENC_SALT), iterations: 1e5, hash: "SHA-256" },
     keyMat,
     { name: "AES-GCM", length: 256 },
     true,
@@ -1106,9 +1095,7 @@ function _buildPinScreen() {
 }
 function _pinKeypadHTML(pressAction, backAction) {
   return `<div class="pin-keypad">
-    ${"123456789".split("").map(
-    (n) => `<button class="pin-key" data-action="${pressAction}" data-arg="${n}">${n}</button>`
-  ).join("")}
+    ${"123456789".split("").map((n) => `<button class="pin-key" data-action="${pressAction}" data-arg="${n}">${n}</button>`).join("")}
     <span class="pin-key-empty"></span>
     <button class="pin-key" data-action="${pressAction}" data-arg="0">0</button>
     <button class="pin-key pin-key-back" data-action="${backAction}" aria-label="\u524A\u9664">
@@ -1345,14 +1332,20 @@ function openInitialPinSetup() {
   document.body.appendChild(ov);
   const ac = new AbortController();
   ov._kbAbort = ac;
-  document.addEventListener("keydown", (e) => {
-    if (e.key >= "0" && e.key <= "9") pcKeyPress(e.key);
-    else if (e.key === "Backspace") pcBackspace();
-  }, { signal: ac.signal });
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    ov.style.opacity = "1";
-    _trapFocus(ov);
-  }));
+  document.addEventListener(
+    "keydown",
+    (e) => {
+      if (e.key >= "0" && e.key <= "9") pcKeyPress(e.key);
+      else if (e.key === "Backspace") pcBackspace();
+    },
+    { signal: ac.signal }
+  );
+  requestAnimationFrame(
+    () => requestAnimationFrame(() => {
+      ov.style.opacity = "1";
+      _trapFocus(ov);
+    })
+  );
   _initInitialPinMode();
 }
 function openPinChange() {
@@ -1397,14 +1390,20 @@ function openPinChange() {
   document.body.appendChild(ov);
   const ac = new AbortController();
   ov._kbAbort = ac;
-  document.addEventListener("keydown", (e) => {
-    if (e.key >= "0" && e.key <= "9") pcKeyPress(e.key);
-    else if (e.key === "Backspace") pcBackspace();
-    else if (e.key === "Escape") closePinChange();
-  }, { signal: ac.signal });
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    ov.style.opacity = "1";
-  }));
+  document.addEventListener(
+    "keydown",
+    (e) => {
+      if (e.key >= "0" && e.key <= "9") pcKeyPress(e.key);
+      else if (e.key === "Backspace") pcBackspace();
+      else if (e.key === "Escape") closePinChange();
+    },
+    { signal: ac.signal }
+  );
+  requestAnimationFrame(
+    () => requestAnimationFrame(() => {
+      ov.style.opacity = "1";
+    })
+  );
 }
 function closePinChange() {
   const ov = document.getElementById("pc-overlay");
@@ -1447,10 +1446,12 @@ function _showChangePinButton() {
   document.body.style.overflow = "hidden";
   const ov = _buildPinScreen();
   document.body.appendChild(ov);
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    ov.style.opacity = "1";
-    _trapFocus(ov);
-  }));
+  requestAnimationFrame(
+    () => requestAnimationFrame(() => {
+      ov.style.opacity = "1";
+      _trapFocus(ov);
+    })
+  );
   if (window.PublicKeyCredential && localStorage.getItem("hm-passkey-seen") === "1") {
     setTimeout(() => {
       if (typeof window.authenticatePasskey === "function") window.authenticatePasskey();
@@ -1466,32 +1467,30 @@ function fetchWithTimeout(url, ms = 7e3, opts = {}) {
 }
 var sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function batchWithRetry(items, fn, opts = {}) {
-  const {
-    batchSize = 5,
-    batchDelay = 300,
-    retryDelay = 2e3,
-    isFailed = (r) => !r,
-    onProgress = null
-  } = opts;
+  const { batchSize = 5, batchDelay = 300, retryDelay = 2e3, isFailed = (r) => !r, onProgress = null } = opts;
   const results = [];
   let done = 0;
   for (let i = 0; i < items.length; i += batchSize) {
     const batch = items.slice(i, i + batchSize);
-    const batchResults = await Promise.all(batch.map(async (item) => {
-      const result = await fn(item);
-      done++;
-      if (onProgress) onProgress(done, items.length);
-      return result;
-    }));
+    const batchResults = await Promise.all(
+      batch.map(async (item) => {
+        const result = await fn(item);
+        done++;
+        if (onProgress) onProgress(done, items.length);
+        return result;
+      })
+    );
     results.push(...batchResults);
     if (i + batchSize < items.length) await sleep(batchDelay);
   }
   const failedIndices = results.map((r, idx) => isFailed(r, idx) ? idx : -1).filter((idx) => idx >= 0);
   if (failedIndices.length > 0) {
     await sleep(retryDelay);
-    await Promise.all(failedIndices.map(async (idx) => {
-      results[idx] = await fn(items[idx]);
-    }));
+    await Promise.all(
+      failedIndices.map(async (idx) => {
+        results[idx] = await fn(items[idx]);
+      })
+    );
   }
   return results;
 }
@@ -2234,14 +2233,10 @@ async function refreshPrices() {
       }
     }
   }
-  const fetched = await batchWithRetry(
-    targets,
-    async (p) => ({ pos: p, live: await fetchLivePrice(p.ySymbol) }),
-    {
-      isFailed: (r) => !r.live || r.live._err === "timeout" || r.live._err === "serverError",
-      onProgress: (done, total2) => setStatus(`\u30E9\u30A4\u30D6\u4FA1\u683C\u3092\u53D6\u5F97\u4E2D\uFF08${done}/${total2}\uFF09...`, "yellow")
-    }
-  );
+  const fetched = await batchWithRetry(targets, async (p) => ({ pos: p, live: await fetchLivePrice(p.ySymbol) }), {
+    isFailed: (r) => !r.live || r.live._err === "timeout" || r.live._err === "serverError",
+    onProgress: (done, total2) => setStatus(`\u30E9\u30A4\u30D6\u4FA1\u683C\u3092\u53D6\u5F97\u4E2D\uFF08${done}/${total2}\uFF09...`, "yellow")
+  });
   const updateCache = (sym, price) => {
     if (!price || !isFinite(price) || price <= 0) return;
     for (const r of ["1y", "5y", "10y"]) {
@@ -2546,9 +2541,27 @@ function _calcMA(points, n) {
 function _buildMAStyles(points) {
   const enough = points.length >= 2;
   return [
-    { data: enough ? _calcMA(points, 5) : [], color: cssVar("--chart-ma-fast"), width: 1, opacity: 0.85, label: "5\u65E5MA" },
-    { data: enough ? _calcMA(points, 200) : [], color: cssVar("--chart-ma-mid"), width: 1.4, opacity: 0.9, label: "200\u65E5MA" },
-    { data: enough ? _calcMA(points, 50) : [], color: cssVar("--chart-ma-slow"), width: 1.8, opacity: 0.9, label: "50\u9031MA" }
+    {
+      data: enough ? _calcMA(points, 5) : [],
+      color: cssVar("--chart-ma-fast"),
+      width: 1,
+      opacity: 0.85,
+      label: "5\u65E5MA"
+    },
+    {
+      data: enough ? _calcMA(points, 200) : [],
+      color: cssVar("--chart-ma-mid"),
+      width: 1.4,
+      opacity: 0.9,
+      label: "200\u65E5MA"
+    },
+    {
+      data: enough ? _calcMA(points, 50) : [],
+      color: cssVar("--chart-ma-slow"),
+      width: 1.8,
+      opacity: 0.9,
+      label: "50\u9031MA"
+    }
   ];
 }
 function _drawChartContent(g, x, y, iW, iH, points, avgCost, cur, lineColor, defs, dateFmt, maStyles) {
@@ -2557,7 +2570,10 @@ function _drawChartContent(g, x, y, iW, iH, points, avgCost, cur, lineColor, def
   const areaGrad = defs.append("linearGradient").attr("id", "area-grad").attr("x1", "0").attr("y1", "0").attr("x2", "0").attr("y2", "1");
   areaGrad.append("stop").attr("offset", "0%").attr("stop-color", lineColor).attr("stop-opacity", 0.28);
   areaGrad.append("stop").attr("offset", "100%").attr("stop-color", lineColor).attr("stop-opacity", 0.02);
-  g.append("path").datum(points).attr("d", d3.area().x((d) => x(d.date)).y0(iH).y1((d) => y(d.close)).curve(d3.curveMonotoneX)).attr("fill", "url(#area-grad)");
+  g.append("path").datum(points).attr(
+    "d",
+    d3.area().x((d) => x(d.date)).y0(iH).y1((d) => y(d.close)).curve(d3.curveMonotoneX)
+  ).attr("fill", "url(#area-grad)");
   const cy = y(avgCost);
   g.append("line").attr("x1", 0).attr("x2", iW).attr("y1", cy).attr("y2", cy).attr("stroke", cssVar("--cost-line")).attr("stroke-width", 0.7).attr("stroke-dasharray", "4,3");
   g.append("text").attr("x", 2).attr("y", cy - 4).attr("fill", cssVar("--cost-text")).attr("font-size", 10).text(`\u53D6\u5F97\u5358\u4FA1: ${cur === "USD" ? `$${avgCost.toFixed(2)}` : `\xA5${Math.round(avgCost).toLocaleString()}`}`);
@@ -2566,7 +2582,10 @@ function _drawChartContent(g, x, y, iW, iH, points, avgCost, cur, lineColor, def
     if (!ma.data.length) return;
     g.append("path").datum(ma.data).attr("d", maLineFn).attr("fill", "none").attr("stroke", ma.color).attr("stroke-width", ma.width).attr("opacity", ma.opacity);
   });
-  g.append("path").datum(points).attr("d", d3.line().x((d) => x(d.date)).y((d) => y(d.close)).curve(d3.curveMonotoneX)).attr("fill", "none").attr("stroke", lineColor).attr("stroke-width", 2);
+  g.append("path").datum(points).attr(
+    "d",
+    d3.line().x((d) => x(d.date)).y((d) => y(d.close)).curve(d3.curveMonotoneX)
+  ).attr("fill", "none").attr("stroke", lineColor).attr("stroke-width", 2);
   const lp = points[points.length - 1];
   g.append("circle").attr("cx", x(lp.date)).attr("cy", y(lp.close)).attr("r", 4).attr("fill", lineColor);
   const tickFmt = cur === "USD" ? (d) => `$${d >= 1e3 ? `${(d / 1e3).toFixed(1)}k` : d.toFixed(0)}` : (d) => d >= 1e5 ? `\xA5${(d / 1e4).toFixed(0)}\u4E07` : d >= 1e4 ? `\xA5${(d / 1e3).toFixed(0)}k` : `\xA5${Math.round(d)}`;
@@ -2844,11 +2863,14 @@ function renderHeatmap() {
     const pct = getDisplayPct(d.data);
     return `${d.data.name} ${pct !== null ? fmtPctInt(pct) : "\u30C7\u30FC\u30BF\u306A\u3057"}`;
   });
-  cells.append("rect").attr("x", (d) => d.x0).attr("y", (d) => d.y0).attr("width", (d) => Math.max(0, d.x1 - d.x0)).attr("height", (d) => Math.max(0, d.y1 - d.y0)).attr("rx", 7).attr("data-ysymbol", (d) => d.data.ySymbol || "").attr("fill", (d) => getColor(
-    getDisplayPct(d.data),
-    state.colorMode === "change" ? "change" : "pnl",
-    state.colorMode === "change" ? PERIOD_MAP[state.changePeriod]?.scale ?? 25 : null
-  ));
+  cells.append("rect").attr("x", (d) => d.x0).attr("y", (d) => d.y0).attr("width", (d) => Math.max(0, d.x1 - d.x0)).attr("height", (d) => Math.max(0, d.y1 - d.y0)).attr("rx", 7).attr("data-ysymbol", (d) => d.data.ySymbol || "").attr(
+    "fill",
+    (d) => getColor(
+      getDisplayPct(d.data),
+      state.colorMode === "change" ? "change" : "pnl",
+      state.colorMode === "change" ? PERIOD_MAP[state.changePeriod]?.scale ?? 25 : null
+    )
+  );
   cells.each(function(d) {
     const g = d3.select(this);
     const w = d.x1 - d.x0, h = d.y1 - d.y0;
@@ -2904,10 +2926,12 @@ function renderHeatmap() {
         <div class="tt-row"><span class="tt-label">\u6642\u4FA1\u8A55\u4FA1\u984D</span><span class="tt-val">${fmtJPY(p.value)}</span></div>
         <div class="tt-row"><span class="tt-label">\u542B\u307F\u640D\u76CA\uFF08\u5186\uFF09</span><span class="tt-val ${sgn(p.pnl)}">${fmtJPYFull(p.pnl)}</span></div>
         <div class="tt-row"><span class="tt-label">\u640D\u76CA\u7387</span><span class="tt-val ${sgn(p.pnlPct)}">${fmtPct(p.pnlPct)}</span></div>`;
-    if (p.dayPct !== null && p.dayCh != null) html += `<div class="tt-sep"></div>
+    if (p.dayPct !== null && p.dayCh != null)
+      html += `<div class="tt-sep"></div>
         <div class="tt-row"><span class="tt-label">\u524D\u65E5\u6BD4\uFF08\u5186\uFF09</span><span class="tt-val ${sgn(p.dayCh)}">${fmtJPYFull(p.dayCh)}</span></div>
         <div class="tt-row"><span class="tt-label">\u524D\u65E5\u6BD4\uFF08%\uFF09</span><span class="tt-val ${sgn(p.dayPct)}">${fmtPct(p.dayPct)}</span></div>`;
-    if (p.isProxy) html += `<div class="tt-hint" style="color:var(--text2)">\u{1F4CA} \u9A30\u843D\u7387\u306F\u4EE3\u66FF\u30A4\u30F3\u30C7\u30C3\u30AF\u30B9\u3067\u8FD1\u4F3C<br>${escapeHTML(p.proxyName)}</div>`;
+    if (p.isProxy)
+      html += `<div class="tt-hint" style="color:var(--text2)">\u{1F4CA} \u9A30\u843D\u7387\u306F\u4EE3\u66FF\u30A4\u30F3\u30C7\u30C3\u30AF\u30B9\u3067\u8FD1\u4F3C<br>${escapeHTML(p.proxyName)}</div>`;
     html += `<div class="tt-hint">\u30AF\u30EA\u30C3\u30AF\u3067\u30C1\u30E3\u30FC\u30C8\u3092\u8868\u793A</div>`;
     tt.innerHTML = html;
     tt.style.display = "block";
@@ -2978,7 +3002,7 @@ function validatePosition(obj) {
   if (obj.isProxy !== void 0 && typeof obj.isProxy !== "boolean") {
     throw new Error("Position.isProxy must be a boolean or undefined");
   }
-  if (obj.proxyName !== void 0 && (typeof obj.proxyName !== "string" && obj.proxyName !== null)) {
+  if (obj.proxyName !== void 0 && typeof obj.proxyName !== "string" && obj.proxyName !== null) {
     throw new Error("Position.proxyName must be a string, null, or undefined");
   }
   return obj;
@@ -3417,14 +3441,16 @@ function renderStats() {
   document.getElementById("stats").innerHTML = html;
 }
 async function refreshHistoricalAndRender() {
-  const results = await Promise.allSettled(["5y", "10y"].map(async (range) => {
-    await fetchAllHistorical(range);
-    renderStats();
-    renderHeatmapList();
-    if (state.activeTab === "list") updateListHeight();
-    if (state.changePeriod && state.changePeriod !== "1d") renderHeatmap();
-    return range;
-  }));
+  const results = await Promise.allSettled(
+    ["5y", "10y"].map(async (range) => {
+      await fetchAllHistorical(range);
+      renderStats();
+      renderHeatmapList();
+      if (state.activeTab === "list") updateListHeight();
+      if (state.changePeriod && state.changePeriod !== "1d") renderHeatmap();
+      return range;
+    })
+  );
   const failed = results.filter((r) => r.status === "rejected");
   failed.forEach((r) => console.warn("[historical] fetch failed:", r.reason));
   if (failed.length > 0) {
@@ -7949,43 +7975,51 @@ function setupSwipeNav() {
     null
   );
   let tracking = false;
-  document.addEventListener("touchstart", (e) => {
-    if (e.touches.length !== 1) {
+  document.addEventListener(
+    "touchstart",
+    (e) => {
+      if (e.touches.length !== 1) {
+        tracking = false;
+        return;
+      }
+      const t = e.touches[0];
+      if (t.clientX <= EDGE_IGNORE || t.clientX >= window.innerWidth - EDGE_IGNORE) {
+        tracking = false;
+        return;
+      }
+      startX = t.clientX;
+      startY = t.clientY;
+      startT = Date.now();
+      startTarget = e.target;
+      tracking = true;
+    },
+    { passive: true }
+  );
+  document.addEventListener(
+    "touchend",
+    (e) => {
+      if (!tracking) return;
       tracking = false;
-      return;
-    }
-    const t = e.touches[0];
-    if (t.clientX <= EDGE_IGNORE || t.clientX >= window.innerWidth - EDGE_IGNORE) {
-      tracking = false;
-      return;
-    }
-    startX = t.clientX;
-    startY = t.clientY;
-    startT = Date.now();
-    startTarget = e.target;
-    tracking = true;
-  }, { passive: true });
-  document.addEventListener("touchend", (e) => {
-    if (!tracking) return;
-    tracking = false;
-    if (overlayOpen()) return;
-    const t = e.changedTouches[0];
-    const dx = t.clientX - startX;
-    const dy = t.clientY - startY;
-    if (Date.now() - startT > TIME_LIMIT) return;
-    if (Math.abs(dx) < DIST_THRESHOLD) return;
-    if (Math.abs(dx) < Math.abs(dy) * RATIO) return;
-    if (inHScrollable(startTarget, dx)) return;
-    const order = tabOrder();
-    const cur = order.indexOf(state.activeTab);
-    if (cur === -1) return;
-    const next = dx < 0 ? cur + 1 : cur - 1;
-    if (next < 0 || next >= order.length) return;
-    switchTab(
-      /** @type {any} */
-      order[next]
-    );
-  }, { passive: true });
+      if (overlayOpen()) return;
+      const t = e.changedTouches[0];
+      const dx = t.clientX - startX;
+      const dy = t.clientY - startY;
+      if (Date.now() - startT > TIME_LIMIT) return;
+      if (Math.abs(dx) < DIST_THRESHOLD) return;
+      if (Math.abs(dx) < Math.abs(dy) * RATIO) return;
+      if (inHScrollable(startTarget, dx)) return;
+      const order = tabOrder();
+      const cur = order.indexOf(state.activeTab);
+      if (cur === -1) return;
+      const next = dx < 0 ? cur + 1 : cur - 1;
+      if (next < 0 || next >= order.length) return;
+      switchTab(
+        /** @type {any} */
+        order[next]
+      );
+    },
+    { passive: true }
+  );
 }
 
 // src/init.js
@@ -8344,10 +8378,7 @@ function _renderImportStep(step, payload) {
       });
       html += `</div>`;
     } else {
-      const { added, removed, changed } = computeImportDiff(
-        _importState.current,
-        _importState.parsed
-      );
+      const { added, removed, changed } = computeImportDiff(_importState.current, _importState.parsed);
       const symCount = {};
       _importState.parsed.forEach((p) => {
         symCount[p.symbol] = (symCount[p.symbol] || 0) + 1;
@@ -8463,9 +8494,7 @@ async function _confirmImport() {
     );
     const newPositions = _importState.parsed.filter((_, i) => parsedKeepIdx.has(i));
     const incomingSymbols = new Set(newPositions.map((p) => p.symbol));
-    const oldKept = _importState.current.filter(
-      (p) => !incomingSymbols.has(p.symbol) && !delSymbols.has(p.symbol)
-    );
+    const oldKept = _importState.current.filter((p) => !incomingSymbols.has(p.symbol) && !delSymbols.has(p.symbol));
     finalPositions = [...newPositions, ...oldKept];
   }
   finalPositions = finalPositions.map(canonicalizeFundPosition);
@@ -8682,51 +8711,51 @@ async function setConstituentEntry(symbol, entry) {
 
 // src/data-stock-profile.js
 var FINNHUB_INDUSTRY_MAP = {
-  "technology": "tech",
-  "software": "tech",
-  "internet": "tech",
+  technology: "tech",
+  software: "tech",
+  internet: "tech",
   "it services": "tech",
-  "semiconductors": "semis",
-  "banking": "financials",
+  semiconductors: "semis",
+  banking: "financials",
   "financial services": "financials",
-  "insurance": "financials",
+  insurance: "financials",
   "diversified financials": "financials",
-  "healthcare": "healthcare",
+  healthcare: "healthcare",
   "health care": "healthcare",
-  "pharmaceuticals": "healthcare",
-  "biotechnology": "healthcare",
-  "retail": "consumer",
-  "automobiles": "consumer",
+  pharmaceuticals: "healthcare",
+  biotechnology: "healthcare",
+  retail: "consumer",
+  automobiles: "consumer",
   "auto components": "consumer",
   "hotels restaurants & leisure": "consumer",
   "textiles apparel & luxury goods": "consumer",
   "consumer products": "consumer",
   "leisure products": "consumer",
   "food products": "staples",
-  "beverages": "staples",
-  "tobacco": "staples",
+  beverages: "staples",
+  tobacco: "staples",
   "household products": "staples",
   "industrial conglomerates": "industrials",
-  "machinery": "industrials",
+  machinery: "industrials",
   "aerospace & defense": "industrials",
   "logistics & transportation": "industrials",
   "electrical equipment": "industrials",
-  "building": "industrials",
+  building: "industrials",
   "commercial services & supplies": "industrials",
   "trading companies & distributors": "industrials",
-  "airlines": "industrials",
-  "energy": "energy",
+  airlines: "industrials",
+  energy: "energy",
   "oil & gas": "energy",
-  "chemicals": "materials",
+  chemicals: "materials",
   "metals & mining": "materials",
   "basic materials": "materials",
   "construction materials": "materials",
   "paper & forest": "materials",
-  "media": "comm",
-  "telecommunication": "comm",
-  "communications": "comm",
-  "entertainment": "comm",
-  "utilities": "utilities",
+  media: "comm",
+  telecommunication: "comm",
+  communications: "comm",
+  entertainment: "comm",
+  utilities: "utilities",
   "real estate": "realestate"
 };
 var FINNHUB_COUNTRY_MAP = {
@@ -8895,46 +8924,62 @@ if ("ontouchstart" in window) {
   let indicator = null;
   let arrow = null;
   const atTop = () => (window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0) <= 0;
-  document.addEventListener("touchstart", (e) => {
-    pulling = atTop() && !touchInScrollable(e.target);
-    startY = e.touches[0].clientY;
-  }, { passive: true });
-  document.addEventListener("touchmove", (e) => {
-    if (!pulling) return;
-    const delta = e.touches[0].clientY - startY;
-    if (delta <= 0) return;
-    const ind = getIndicator();
-    ind.style.transition = "none";
-    ind.style.height = `${Math.min(delta * 0.55, 56)}px`;
-    const progress = Math.min(delta / THRESHOLD, 1);
-    if (arrow) {
-      arrow.style.transition = "none";
-      arrow.style.animation = "none";
-      arrow.style.transform = `rotate(${Math.round(progress * 360)}deg)`;
-      arrow.style.opacity = 0.4 + progress * 0.6;
-      arrow.style.color = progress >= 1 ? "var(--accent)" : "var(--text2)";
-    }
-  }, { passive: true });
-  document.addEventListener("touchend", (e) => {
-    if (!pulling) return;
-    const delta = e.changedTouches[0].clientY - startY;
-    pulling = false;
-    if (delta >= THRESHOLD) {
+  document.addEventListener(
+    "touchstart",
+    (e) => {
+      pulling = atTop() && !touchInScrollable(e.target);
+      startY = e.touches[0].clientY;
+    },
+    { passive: true }
+  );
+  document.addEventListener(
+    "touchmove",
+    (e) => {
+      if (!pulling) return;
+      const delta = e.touches[0].clientY - startY;
+      if (delta <= 0) return;
+      const ind = getIndicator();
+      ind.style.transition = "none";
+      ind.style.height = `${Math.min(delta * 0.55, 56)}px`;
+      const progress = Math.min(delta / THRESHOLD, 1);
       if (arrow) {
         arrow.style.transition = "none";
-        arrow.style.animation = "ptr-spin 0.5s linear infinite";
-        arrow.style.opacity = "1";
-        arrow.style.color = "var(--accent)";
+        arrow.style.animation = "none";
+        arrow.style.transform = `rotate(${Math.round(progress * 360)}deg)`;
+        arrow.style.opacity = 0.4 + progress * 0.6;
+        arrow.style.color = progress >= 1 ? "var(--accent)" : "var(--text2)";
       }
-      setTimeout(() => location.reload(), 650);
-    } else {
+    },
+    { passive: true }
+  );
+  document.addEventListener(
+    "touchend",
+    (e) => {
+      if (!pulling) return;
+      const delta = e.changedTouches[0].clientY - startY;
+      pulling = false;
+      if (delta >= THRESHOLD) {
+        if (arrow) {
+          arrow.style.transition = "none";
+          arrow.style.animation = "ptr-spin 0.5s linear infinite";
+          arrow.style.opacity = "1";
+          arrow.style.color = "var(--accent)";
+        }
+        setTimeout(() => location.reload(), 650);
+      } else {
+        collapseIndicator();
+      }
+    },
+    { passive: true }
+  );
+  document.addEventListener(
+    "touchcancel",
+    () => {
+      pulling = false;
       collapseIndicator();
-    }
-  }, { passive: true });
-  document.addEventListener("touchcancel", () => {
-    pulling = false;
-    collapseIndicator();
-  }, { passive: true });
+    },
+    { passive: true }
+  );
 }
 
 // src/app.js
@@ -9052,10 +9097,14 @@ document.addEventListener("click", (e) => {
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible" && state.autoSec > 0) state.countdownVal = state.autoSec;
 });
-window.addEventListener("scroll", () => {
-  const st = document.querySelector(".sticky-top");
-  if (st) st.classList.toggle("stuck", window.scrollY > 2);
-}, { passive: true });
+window.addEventListener(
+  "scroll",
+  () => {
+    const st = document.querySelector(".sticky-top");
+    if (st) st.classList.toggle("stuck", window.scrollY > 2);
+  },
+  { passive: true }
+);
 function _setupMobileLayout() {
   const stickyTop = document.querySelector(".sticky-top");
   if (!stickyTop) return;
