@@ -26,26 +26,86 @@ function saveWatchlist() {
     console.warn('[watchlist] localStorage 保存失敗（容量超過の可能性）:', e);
   }
   clearTimeout(_wlKvSyncTimer);
-  _wlKvSyncTimer = setTimeout(_syncWatchlistToWorker, 1000);
+  _wlKvSyncTimer = setTimeout(() => _syncWatchlistToWorker({ fromEdit: true }), 1000);
 }
 
 let _wlKvSyncTimer = null;
 
-async function _syncWatchlistToWorker() {
-  // PIN があれば X-Pin-Hash を付ける（無くても従来どおり送る・#714）
+// 未ログイン（この端末に PIN 未設定）や送信失敗のとき、KV へ未反映の編集があることを示す（#715）
+const WL_PENDING_KEY = 'hm-watchlist-pending';
+
+function _isWatchlistPending() {
+  try {
+    return localStorage.getItem(WL_PENDING_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function _setWatchlistPending(on) {
+  try {
+    if (on) localStorage.setItem(WL_PENDING_KEY, '1');
+    else localStorage.removeItem(WL_PENDING_KEY);
+  } catch (e) {
+    console.warn('[watchlist] 保留フラグの保存失敗:', e);
+  }
+}
+
+/**
+ * ウォッチリストを KV（PUT /watchlist）へ送る。
+ * PIN 未設定なら送らず保留フラグを立てる。失敗時も保留を残し、200 で保留を消す（#715）。
+ * @param {{ fromEdit?: boolean }} [opts] fromEdit: ユーザーの編集（debounce 経由）による呼び出し
+ * @returns {Promise<boolean>} 送信に成功したら true
+ */
+async function _syncWatchlistToWorker({ fromEdit = false } = {}) {
   const pinHash = _getActivePinHash();
-  const headers = { 'Content-Type': 'application/json' };
-  if (pinHash) headers['X-Pin-Hash'] = pinHash;
+  if (!pinHash) {
+    _setWatchlistPending(true);
+    if (fromEdit) {
+      setStatus('ウォッチリストはこの端末にだけ保存しました（PIN ログイン後に同期します）', 'yellow');
+    }
+    return false;
+  }
   try {
     const res = await fetch(`${WORKER_URL}/watchlist`, {
       method: 'PUT',
-      headers,
+      headers: { 'Content-Type': 'application/json', 'X-Pin-Hash': pinHash },
       body: JSON.stringify(state.watchlist),
     });
+    if (res.status === 401 || res.status === 428) {
+      _setWatchlistPending(true);
+      setStatus('ウォッチリストを同期できませんでした（PIN を確認してください・この端末には保存済み）', 'yellow');
+      return false;
+    }
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    _setWatchlistPending(false);
+    return true;
   } catch {
+    _setWatchlistPending(true);
     setStatus('ウォッチリストの保存に失敗しました（ローカルには保存済み）', 'yellow');
+    return false;
   }
+}
+
+/**
+ * 保留中のローカル編集を優先し、各銘柄の valuation だけ KV の同じシンボルから取る（#715 §6.2）。
+ * @param {Array<any>} local
+ * @param {Array<any>} remote
+ * @returns {Array<any>}
+ */
+function _mergeRemoteValuations(local, remote) {
+  const bySymbol = new Map();
+  for (const r of remote) {
+    if (r && typeof r.symbol === 'string') bySymbol.set(r.symbol, r);
+  }
+  return local.map((item) => {
+    const r = bySymbol.get(item?.symbol);
+    if (!r) return item;
+    const merged = { ...item };
+    if (r.valuation !== undefined) merged.valuation = r.valuation;
+    else delete merged.valuation;
+    return merged;
+  });
 }
 
 async function _loadWatchlistFromWorker() {
@@ -53,7 +113,17 @@ async function _loadWatchlistFromWorker() {
     const res = await fetch(`${WORKER_URL}/watchlist`);
     if (!res.ok) return;
     const remote = await res.json();
-    if (Array.isArray(remote) && remote.length > 0) {
+    if (_isWatchlistPending() && Array.isArray(remote)) {
+      // 保留あり: 銘柄の構成はローカルを採用し、valuation だけ KV から取り込む
+      state.watchlist = _mergeRemoteValuations(state.watchlist, remote);
+      try {
+        localStorage.setItem('hm-watchlist', JSON.stringify(state.watchlist));
+      } catch (e) {
+        console.warn('[watchlist] localStorage 保存失敗（容量超過の可能性）:', e);
+      }
+      // ログイン済みなら 1 回送る（未ログインなら保留のまま）
+      if (_getActivePinHash()) _syncWatchlistToWorker();
+    } else if (Array.isArray(remote) && remote.length > 0) {
       // 通常: KV のデータをローカルへ反映
       state.watchlist = remote;
       try {
