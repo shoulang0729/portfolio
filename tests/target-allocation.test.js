@@ -179,10 +179,10 @@ describe('getThemeCap', () => {
 describe('data/target-allocation.json の設定値（#668）', () => {
   const real = JSON.parse(readFileSync(new URL('../data/target-allocation.json', import.meta.url), 'utf8'));
 
-  it('半導体テーマ上限は 15%・megatech は 17%', () => {
+  it('半導体テーマ上限は 15%・megatech は 18%（2026-10-05 本人決定で 17→18）', () => {
     __setConfig(real);
     expect(getThemeCap('semiconductor')).toBe(15);
-    expect(getThemeCap('megatech')).toBe(17);
+    expect(getThemeCap('megatech')).toBe(18);
   });
 });
 
@@ -244,21 +244,21 @@ describe('getAiTechConfig / getStressConfig / getOrderSheetConfig', () => {
 
   it('実データ data/target-allocation.json に aiTech・stress・orderSheet があり §12 の既定案と一致する', () => {
     const real = JSON.parse(readFileSync(new URL('../data/target-allocation.json', import.meta.url), 'utf8'));
-    expect(real.aiTech).toMatchObject({ themes: ['semiconductor', 'megatech'], capPct: 29 });
+    expect(real.aiTech).toMatchObject({ themes: ['semiconductor', 'megatech'], capPct: 33 });
     expect(typeof real.aiTech.note).toBe('string');
     expect(real.stress).toEqual({ tolerancePct: 20, nonEquity: ['JPST', 'GLDM', 'SLV'], scenarios: DEFAULT_SCENARIOS });
     expect(real.orderSheet).toMatchObject({ cashFloorPct: 12, rebaseMovePct: 5 });
     expect(typeof real.orderSheet.note).toBe('string');
     __setConfig(real);
-    expect(getAiTechConfig()).toEqual({ themes: ['semiconductor', 'megatech'], capPct: 29 });
+    expect(getAiTechConfig()).toEqual({ themes: ['semiconductor', 'megatech'], capPct: 33 });
     expect(getStressConfig().scenarios).toEqual(DEFAULT_SCENARIOS);
     expect(getOrderSheetConfig()).toEqual({ cashFloorPct: 12, rebaseMovePct: 5 });
   });
 
-  it('既存キーの値は変わっていない（#668 の値を維持）', () => {
+  it('既存キーの値（#668 の値・2026-10-05 に megatech を 18 へ変更）', () => {
     const real = JSON.parse(readFileSync(new URL('../data/target-allocation.json', import.meta.url), 'utf8'));
     expect(real.convictionPct).toEqual({ probe: 0.3, standard: 1.4, high: 3.0 });
     expect(real.themeCaps.semiconductor.cap).toBe(15);
-    expect(real.themeCaps.megatech.cap).toBe(17);
+    expect(real.themeCaps.megatech.cap).toBe(18);
   });
 });

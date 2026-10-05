@@ -1,5 +1,5 @@
 {
-  "updated": "2026-06-29",
+  "updated": "2026-10-05",
   "denominator": "managedAssets",
   "note": "適正サイズv1。target%=clip(convictionPct[確信度], テーマ上限の取り分)。コア/守りはtargets直接。乖離=現在%−target%。",
   "unitUSD": 50000,
@@ -38,7 +38,7 @@
       "members": ["NLR", "DTCR", "URA"]
     },
     "megatech": {
-      "cap": 17,
+      "cap": 18,
       "members": ["MSFT", "AMZN", "AAPL", "GOOGL", "TSLA", "PLTR"]
     },
     "japan_theme": {
@@ -70,9 +70,9 @@
     "MSFT": "high",
     "GOOGL": "high",
     "PLTR": "high",
-    "AMZN": "standard",
+    "AMZN": "high",
     "AAPL": "standard",
-    "TSLA": "standard",
+    "TSLA": "high",
     "9983.T": "standard",
     "8050.T": "standard",
     "6301.T": "standard",
@@ -84,13 +84,17 @@
   "override": {
     "GLDM": {
       "targetPct": 8,
-      "note": "保険・$300K例外・固定"
+      "note": "保険・例外・固定"
+    },
+    "AAPL": {
+      "targetPct": 2.2,
+      "note": "目標・薄め・2026-10-05"
     }
   },
   "themeEtfs": ["SMH", "200A.T", "NLR", "DTCR", "URA", "1615.T", "1629.T", "COPX", "REMX", "SLV", "VGK", "XLE"],
   "aiTech": {
     "themes": ["semiconductor", "megatech"],
-    "capPct": 29,
+    "capPct": 33,
     "note": "AI/テック合計＝themes の members の現在%の和。capPct 超で警告。"
   },
   "stress": {
