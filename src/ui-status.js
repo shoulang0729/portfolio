@@ -27,7 +27,7 @@ export function setStatus(msg, color) {
   const dot = document.getElementById('status-dot');
   const txt = document.getElementById('status-text');
   // @ts-ignore dot/txt always exist in DOM
-  dot.className = `dot${  color === 'red' ? ' red' : color === 'yellow' ? ' yellow' : ''}`;
+  dot.className = `dot${color === 'red' ? ' red' : color === 'yellow' ? ' yellow' : ''}`;
   // @ts-ignore dot/txt always exist in DOM
   txt.textContent = msg;
 }

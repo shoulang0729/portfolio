@@ -33,7 +33,7 @@ async function applyPricesCache() {
       const c = cache[p.ySymbol];
       if (!c || !c.price) continue;
       // キャッシュが8時間以内のもののみ適用
-      if (c.ts && (now - c.ts) > 8 * 3600 * 1000) continue;
+      if (c.ts && now - c.ts > 8 * 3600 * 1000) continue;
       if (!p.isProxy && p.price > 0 && (c.price / p.price < 0.1 || c.price / p.price > 10)) continue;
       if (p.isProxy) {
         p.dayPct = c.dayPct ?? null;
@@ -44,16 +44,16 @@ async function applyPricesCache() {
         if (p.cur === 'JPY') {
           p.value = Math.round(c.price * p.shares);
           const cost = p.avgCost * p.shares;
-          p.pnl    = p.value - cost;
+          p.pnl = p.value - cost;
           p.pnlPct = cost > 0 ? (p.pnl / cost) * 100 : 0;
         } else {
           // USD建て: 既存 JPY 評価額を価格変化率でスケール。
           // p.value が 0/null の場合は比率計算が無意味なのでスキップ（refreshPrices に委ねる）。
           if (p.value > 0) {
-            const costJPY = (p.value != null && p.pnl != null) ? p.value - p.pnl : 0;
-            const ratio   = oldPrice > 0 ? c.price / oldPrice : 1;
-            p.value  = Math.round(p.value * ratio);
-            p.pnl    = p.value - costJPY;
+            const costJPY = p.value != null && p.pnl != null ? p.value - p.pnl : 0;
+            const ratio = oldPrice > 0 ? c.price / oldPrice : 1;
+            p.value = Math.round(p.value * ratio);
+            p.pnl = p.value - costJPY;
             p.pnlPct = costJPY > 0 ? (p.pnl / costJPY) * 100 : 0;
           }
         }
@@ -78,15 +78,15 @@ async function fetchAllHistorical(neededRange = '1y') {
     if (!state.historicalCache[neededRange]) state.historicalCache[neededRange] = {};
     // 保有銘柄 + ウォッチリスト銘柄を一括処理（Historical Heatmap と Watchlist Historical Heatmap で
     // 同じ履歴キャッシュ・同じ取得中フラグを共有することで "…/-" 表示の挙動も統一される）
-    const posSymbols = positions.filter(p => p.ySymbol).map(p => p.ySymbol);
-    const wlSymbols  = (state.watchlist || []).map(w => w.symbol).filter(Boolean);
+    const posSymbols = positions.filter((p) => p.ySymbol).map((p) => p.ySymbol);
+    const wlSymbols = (state.watchlist || []).map((w) => w.symbol).filter(Boolean);
     const symbols = [...new Set([...posSymbols, ...wlSymbols])];
-    const toFetch = symbols.filter(s => !state.historicalCache[neededRange][s]);
+    const toFetch = symbols.filter((s) => !state.historicalCache[neededRange][s]);
     if (toFetch.length === 0) return;
     setStatus(`履歴データ取得中（${toFetch.length}銘柄 / ${neededRange}）...`, 'yellow');
 
     // batchWithRetry でバッチ取得＋自動リトライ（キャッシュ未投入を失敗と判定）
-    await batchWithRetry(toFetch, s => fetchSymbolHistory(s, neededRange), {
+    await batchWithRetry(toFetch, (s) => fetchSymbolHistory(s, neededRange), {
       isFailed: (_result, idx) => !state.historicalCache[neededRange][toFetch[idx]],
     });
 
@@ -101,7 +101,6 @@ async function fetchAllHistorical(neededRange = '1y') {
     state.historicalAttempted[neededRange] = true; // この range は一度試行済み（"…" → "–" に切替えるフラグ）
   }
 }
-
 
 async function fetchSymbolHistory(symbol, range = '1y') {
   if (!state.historicalCache[range]) state.historicalCache[range] = {};
@@ -130,7 +129,7 @@ async function fetchSymbolHistory(symbol, range = '1y') {
       if (v != null && isFinite(v)) e.vol = v;
       return e;
     })
-    .filter(p => p.close != null && isFinite(p.close));
+    .filter((p) => p.close != null && isFinite(p.close));
   // adjclose が超直近の分割に未対応の場合に備えてスプリット自動補正
   // IDB・sessionStorage・メモリに並行書き込み
   await setHistoricalEntry(range, symbol, applySplitCorrection(entries));
@@ -153,7 +152,7 @@ function isMarketHours() {
   const h = now.getUTCHours();
   const m = now.getUTCMinutes();
   const utcMin = h * 60 + m;
-  const tse  = utcMin >= 0   && utcMin < 390;  // 0:00〜6:30 UTC
+  const tse = utcMin >= 0 && utcMin < 390; // 0:00〜6:30 UTC
   const nyse = utcMin >= 870 && utcMin < 1260; // 14:30〜21:00 UTC
   return tse || nyse;
 }
@@ -164,11 +163,11 @@ function isMarketHours() {
 
 /** エラー種別の日本語ラベル */
 const ERR_LABELS = {
-  rateLimit:    'レート制限429',
-  serverError:  'サーバーエラー',
-  timeout:      'タイムアウト',
+  rateLimit: 'レート制限429',
+  serverError: 'サーバーエラー',
+  timeout: 'タイムアウト',
   networkError: '通信エラー',
-  noData:       'データなし',
+  noData: 'データなし',
 };
 
 /**
@@ -204,27 +203,27 @@ async function fetchLivePrice(symbol) {
 
   // Yahoo Finance が事前計算した騰落率を最優先（サイト表示値と一致する）
   const preCalcPct = result.meta?.regularMarketChangePercent ?? null;
-  const prevClose  = result.meta?.regularMarketPreviousClose
-                  ?? result.meta?.chartPreviousClose
-                  ?? result.meta?.previousClose ?? null;
-  const dayPct = preCalcPct !== null
-    ? preCalcPct
-    : (prevClose ? ((price - prevClose) / prevClose) * 100 : null);
+  const prevClose =
+    result.meta?.regularMarketPreviousClose ?? result.meta?.chartPreviousClose ?? result.meta?.previousClose ?? null;
+  const dayPct = preCalcPct !== null ? preCalcPct : prevClose ? ((price - prevClose) / prevClose) * 100 : null;
   return { price, dayPct };
 }
 
 async function refreshPrices() {
-  const targets = positions.filter(p => p.ySymbol);
-  if (targets.length === 0) { setStatus('取得対象銘柄なし', 'yellow'); return; }
+  const targets = positions.filter((p) => p.ySymbol);
+  if (targets.length === 0) {
+    setStatus('取得対象銘柄なし', 'yellow');
+    return;
+  }
 
   setStatus(`ライブ価格を取得中（0/${targets.length}）...`, 'yellow');
 
   // USD為替レート取得（USD建て銘柄がある場合）
-  const hasUSD = targets.some(p => p.cur === 'USD');
+  const hasUSD = targets.some((p) => p.cur === 'USD');
   if (hasUSD) {
     const now = Date.now();
     // 1時間以内のキャッシュがあれば再利用
-    if (!state.forexRate.USDJPY || (now - state.forexRate.ts) > 3600000) {
+    if (!state.forexRate.USDJPY || now - state.forexRate.ts > 3600000) {
       const rate = await fetchForexRate('USD', 'JPY');
       if (rate) {
         state.forexRate.USDJPY = rate;
@@ -235,14 +234,10 @@ async function refreshPrices() {
 
   // batchWithRetry でバッチ取得＋自動リトライ
   // timeout / serverError は一時障害なのでリトライ、rateLimit / noData / networkError はしない
-  const fetched = await batchWithRetry(
-    targets,
-    async p => ({ pos: p, live: await fetchLivePrice(p.ySymbol) }),
-    {
-      isFailed: r => !r.live || r.live._err === 'timeout' || r.live._err === 'serverError',
-      onProgress: (done, total) => setStatus(`ライブ価格を取得中（${done}/${total}）...`, 'yellow'),
-    }
-  );
+  const fetched = await batchWithRetry(targets, async (p) => ({ pos: p, live: await fetchLivePrice(p.ySymbol) }), {
+    isFailed: (r) => !r.live || r.live._err === 'timeout' || r.live._err === 'serverError',
+    onProgress: (done, total) => setStatus(`ライブ価格を取得中（${done}/${total}）...`, 'yellow'),
+  });
 
   const updateCache = (sym, price) => {
     if (!price || !isFinite(price) || price <= 0) return;
@@ -289,22 +284,21 @@ async function refreshPrices() {
       if (p.cur === 'JPY') {
         // 円建て: 価格×株数で評価額を直接計算
         p.value = Math.round(live.price * p.shares);
-        const costTotal = p.avgCost * p.shares;  // both JPY
-        p.pnl    = p.value - costTotal;
+        const costTotal = p.avgCost * p.shares; // both JPY
+        p.pnl = p.value - costTotal;
         p.pnlPct = costTotal > 0 ? (p.pnl / costTotal) * 100 : 0;
       } else {
         // USD建て: 為替レートで JPY 換算。
         // fetchForexRate が失敗した場合は既存評価額から逆算した推定レートを使い
         // USD値そのままで上書きするのを防ぐ（USD値はJPY値の約1/150であり消失の原因になる）。
         const storedFxRate = state.forexRate.USDJPY;
-        const estimatedFxRate = (!storedFxRate && p.value > 0 && p.price > 0 && p.shares > 0)
-          ? p.value / (p.price * p.shares)
-          : 0;
+        const estimatedFxRate =
+          !storedFxRate && p.value > 0 && p.price > 0 && p.shares > 0 ? p.value / (p.price * p.shares) : 0;
         const fxRate = storedFxRate || estimatedFxRate;
-        const costJPY = (p.value != null && p.pnl != null) ? p.value - p.pnl : 0;
+        const costJPY = p.value != null && p.pnl != null ? p.value - p.pnl : 0;
         if (fxRate > 0) {
-          p.value  = Math.round(live.price * p.shares * fxRate);
-          p.pnl    = p.value - costJPY;
+          p.value = Math.round(live.price * p.shares * fxRate);
+          p.pnl = p.value - costJPY;
           p.pnlPct = costJPY > 0 ? (p.pnl / costJPY) * 100 : 0;
         }
         // fxRate = 0 の場合（為替レート未取得かつ既存評価額もない）: value 更新をスキップ
@@ -326,13 +320,14 @@ async function refreshPrices() {
 
   if (n > 0) {
     const now = new Date();
-    const ts2 = now.toLocaleTimeString('ja-JP', { hour:'2-digit', minute:'2-digit' });
+    const ts2 = now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
     // 「最終更新」前の銘柄数 ＝ 追跡ティッカーのユニーク数（保有数＋ウォッチ数−重複数）。
     const trackedCount = trackedSymbolCount(positions, state.watchlist);
-    const msg = failedCount > 0
-      ? `ライブ価格: ${n}/${total}銘柄 更新（${fmtErrDetail()}） ${ts2}`
-      : `${trackedCount}銘柄 最終更新: ${ts2}`;
-    state.lastUpdateText = msg;  // 履歴データ取得後に復元できるよう保存
+    const msg =
+      failedCount > 0
+        ? `ライブ価格: ${n}/${total}銘柄 更新（${fmtErrDetail()}） ${ts2}`
+        : `${trackedCount}銘柄 最終更新: ${ts2}`;
+    state.lastUpdateText = msg; // 履歴データ取得後に復元できるよう保存
     setStatus(msg, failedCount > 0 ? 'yellow' : 'green');
     document.dispatchEvent(new CustomEvent('hm:prices-updated'));
     // 価格変化をフラッシュアニメーションで表示（前回価格がある場合のみ）
@@ -347,7 +342,6 @@ async function refreshPrices() {
     renderProviderHealth();
   }
 }
-
 
 // CSV パース系（normalizeStr, parseCsvText, parseNum, detectCsvType, parseJpRow, parseUsRow, parseFundRow）は src/csv.js に移動。
 // 旧 importMonexCsvs / handleCsvImport は廃止（取込モーダル import.js に統合済み）。

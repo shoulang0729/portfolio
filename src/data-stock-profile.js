@@ -31,51 +31,51 @@ import { setConstituentEntry, isStale } from './constituents-cache.js';
  * @type {Record<string, string>}
  */
 const FINNHUB_INDUSTRY_MAP = {
-  'technology': 'tech',
-  'software': 'tech',
-  'internet': 'tech',
+  technology: 'tech',
+  software: 'tech',
+  internet: 'tech',
   'it services': 'tech',
-  'semiconductors': 'semis',
-  'banking': 'financials',
+  semiconductors: 'semis',
+  banking: 'financials',
   'financial services': 'financials',
-  'insurance': 'financials',
+  insurance: 'financials',
   'diversified financials': 'financials',
-  'healthcare': 'healthcare',
+  healthcare: 'healthcare',
   'health care': 'healthcare',
-  'pharmaceuticals': 'healthcare',
-  'biotechnology': 'healthcare',
-  'retail': 'consumer',
-  'automobiles': 'consumer',
+  pharmaceuticals: 'healthcare',
+  biotechnology: 'healthcare',
+  retail: 'consumer',
+  automobiles: 'consumer',
   'auto components': 'consumer',
   'hotels restaurants & leisure': 'consumer',
   'textiles apparel & luxury goods': 'consumer',
   'consumer products': 'consumer',
   'leisure products': 'consumer',
   'food products': 'staples',
-  'beverages': 'staples',
-  'tobacco': 'staples',
+  beverages: 'staples',
+  tobacco: 'staples',
   'household products': 'staples',
   'industrial conglomerates': 'industrials',
-  'machinery': 'industrials',
+  machinery: 'industrials',
   'aerospace & defense': 'industrials',
   'logistics & transportation': 'industrials',
   'electrical equipment': 'industrials',
-  'building': 'industrials',
+  building: 'industrials',
   'commercial services & supplies': 'industrials',
   'trading companies & distributors': 'industrials',
-  'airlines': 'industrials',
-  'energy': 'energy',
+  airlines: 'industrials',
+  energy: 'energy',
   'oil & gas': 'energy',
-  'chemicals': 'materials',
+  chemicals: 'materials',
   'metals & mining': 'materials',
   'basic materials': 'materials',
   'construction materials': 'materials',
   'paper & forest': 'materials',
-  'media': 'comm',
-  'telecommunication': 'comm',
-  'communications': 'comm',
-  'entertainment': 'comm',
-  'utilities': 'utilities',
+  media: 'comm',
+  telecommunication: 'comm',
+  communications: 'comm',
+  entertainment: 'comm',
+  utilities: 'utilities',
   'real estate': 'realestate',
 };
 
@@ -86,15 +86,43 @@ const FINNHUB_INDUSTRY_MAP = {
 const FINNHUB_COUNTRY_MAP = {
   US: 'us',
   JP: 'japan',
-  CN: 'china', HK: 'china',
-  BR: 'latam', MX: 'latam', AR: 'latam', CL: 'latam', CO: 'latam', PE: 'latam',
-  GB: 'europe', DE: 'europe', FR: 'europe', CH: 'europe', NL: 'europe',
-  IT: 'europe', ES: 'europe', SE: 'europe', NO: 'europe', DK: 'europe',
-  FI: 'europe', BE: 'europe', AT: 'europe', IE: 'europe', PT: 'europe',
-  IN: 'em', ID: 'em', TH: 'em', TR: 'em', ZA: 'em', KR: 'em', TW: 'em',
-  MY: 'em', PH: 'em', VN: 'em', PL: 'em', SA: 'em', AE: 'em',
+  CN: 'china',
+  HK: 'china',
+  BR: 'latam',
+  MX: 'latam',
+  AR: 'latam',
+  CL: 'latam',
+  CO: 'latam',
+  PE: 'latam',
+  GB: 'europe',
+  DE: 'europe',
+  FR: 'europe',
+  CH: 'europe',
+  NL: 'europe',
+  IT: 'europe',
+  ES: 'europe',
+  SE: 'europe',
+  NO: 'europe',
+  DK: 'europe',
+  FI: 'europe',
+  BE: 'europe',
+  AT: 'europe',
+  IE: 'europe',
+  PT: 'europe',
+  IN: 'em',
+  ID: 'em',
+  TH: 'em',
+  TR: 'em',
+  ZA: 'em',
+  KR: 'em',
+  TW: 'em',
+  MY: 'em',
+  PH: 'em',
+  VN: 'em',
+  PL: 'em',
+  SA: 'em',
+  AE: 'em',
 };
-
 
 /**
  * Finnhub の業種文字列をアプリ内セクターキーに変換する。
@@ -139,7 +167,7 @@ export function buildStockConstituent(profile, symbol, cur) {
     ticker: symbol,
     name: symbol,
     weight: 1,
-    currency: cur === 'USD' ? 'USD' : cur === 'JPY' ? 'JPY' : (cur || ''),
+    currency: cur === 'USD' ? 'USD' : cur === 'JPY' ? 'JPY' : cur || '',
     assetClass: 'equity',
   };
   if (sector) holding.sector = sector;
@@ -181,9 +209,9 @@ export async function loadStockProfiles(posList = positions) {
   for (const p of posList) {
     const symbol = p.symbol;
     if (!symbol || !p.ySymbol) continue;
-    if (p.isProxy) continue;                       // 投信 proxy は対象外
-    if (symbol.includes('現金')) continue;          // 現金は対象外
-    if (CONSTITUENTS[symbol]) continue;            // curated 済みは上書きしない
+    if (p.isProxy) continue; // 投信 proxy は対象外
+    if (symbol.includes('現金')) continue; // 現金は対象外
+    if (CONSTITUENTS[symbol]) continue; // curated 済みは上書きしない
 
     // IDB 復元済みかつ鮮度が新しいものは再取得しない
     const existing = state.liveConstituents[symbol];

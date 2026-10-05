@@ -34,9 +34,27 @@ function _calcMA(points, n) {
 function _buildMAStyles(points) {
   const enough = points.length >= 2;
   return [
-    { data: enough ? _calcMA(points, 5)   : [], color: cssVar('--chart-ma-fast'), width: 1,   opacity: 0.85, label: '5日MA'   },
-    { data: enough ? _calcMA(points, 200) : [], color: cssVar('--chart-ma-mid'),  width: 1.4, opacity: 0.90, label: '200日MA' },
-    { data: enough ? _calcMA(points, 50)  : [], color: cssVar('--chart-ma-slow'), width: 1.8, opacity: 0.90, label: '50週MA'  },
+    {
+      data: enough ? _calcMA(points, 5) : [],
+      color: cssVar('--chart-ma-fast'),
+      width: 1,
+      opacity: 0.85,
+      label: '5日MA',
+    },
+    {
+      data: enough ? _calcMA(points, 200) : [],
+      color: cssVar('--chart-ma-mid'),
+      width: 1.4,
+      opacity: 0.9,
+      label: '200日MA',
+    },
+    {
+      data: enough ? _calcMA(points, 50) : [],
+      color: cssVar('--chart-ma-slow'),
+      width: 1.8,
+      opacity: 0.9,
+      label: '50週MA',
+    },
   ];
 }
 
@@ -59,62 +77,109 @@ function _drawChartContent(g, x, y, iW, iH, points, avgCost, cur, lineColor, def
   // ── Grid ──
   g.append('g')
     .call(d3.axisLeft(y).ticks(5).tickSize(-iW).tickFormat(''))
-    .call(g2 => g2.select('.domain').remove())
-    .call(g2 => g2.selectAll('.tick line').attr('stroke', cssVar('--chart-grid')));
-  g.append('g').attr('transform', `translate(0,${iH})`)
+    .call((g2) => g2.select('.domain').remove())
+    .call((g2) => g2.selectAll('.tick line').attr('stroke', cssVar('--chart-grid')));
+  g.append('g')
+    .attr('transform', `translate(0,${iH})`)
     .call(d3.axisBottom(x).ticks(5).tickSize(-iH).tickFormat(''))
-    .call(g2 => g2.select('.domain').remove())
-    .call(g2 => g2.selectAll('.tick line').attr('stroke', cssVar('--chart-grid')));
+    .call((g2) => g2.select('.domain').remove())
+    .call((g2) => g2.selectAll('.tick line').attr('stroke', cssVar('--chart-grid')));
 
   // ── Gradient fill (iPhone Stocks style) ──
-  const areaGrad = defs.append('linearGradient')
-    .attr('id', 'area-grad').attr('x1', '0').attr('y1', '0').attr('x2', '0').attr('y2', '1');
+  const areaGrad = defs
+    .append('linearGradient')
+    .attr('id', 'area-grad')
+    .attr('x1', '0')
+    .attr('y1', '0')
+    .attr('x2', '0')
+    .attr('y2', '1');
   areaGrad.append('stop').attr('offset', '0%').attr('stop-color', lineColor).attr('stop-opacity', 0.28);
   areaGrad.append('stop').attr('offset', '100%').attr('stop-color', lineColor).attr('stop-opacity', 0.02);
   g.append('path')
     .datum(points)
-    .attr('d', d3.area().x(d => x(d.date)).y0(iH).y1(d => y(d.close)).curve(d3.curveMonotoneX))
+    .attr(
+      'd',
+      d3
+        .area()
+        .x((d) => x(d.date))
+        .y0(iH)
+        .y1((d) => y(d.close))
+        .curve(d3.curveMonotoneX)
+    )
     .attr('fill', 'url(#area-grad)');
 
   // ── Cost basis line ──
   const cy = y(avgCost);
-  g.append('line').attr('x1', 0).attr('x2', iW).attr('y1', cy).attr('y2', cy)
-    .attr('stroke', cssVar('--cost-line')).attr('stroke-width', 0.7).attr('stroke-dasharray', '4,3');
-  g.append('text').attr('x', 2).attr('y', cy - 4)
-    .attr('fill', cssVar('--cost-text')).attr('font-size', 10)
-    .text(`取得単価: ${  cur === 'USD' ? `$${  avgCost.toFixed(2)}` : `¥${  Math.round(avgCost).toLocaleString()}`}`);
+  g.append('line')
+    .attr('x1', 0)
+    .attr('x2', iW)
+    .attr('y1', cy)
+    .attr('y2', cy)
+    .attr('stroke', cssVar('--cost-line'))
+    .attr('stroke-width', 0.7)
+    .attr('stroke-dasharray', '4,3');
+  g.append('text')
+    .attr('x', 2)
+    .attr('y', cy - 4)
+    .attr('fill', cssVar('--cost-text'))
+    .attr('font-size', 10)
+    .text(`取得単価: ${cur === 'USD' ? `$${avgCost.toFixed(2)}` : `¥${Math.round(avgCost).toLocaleString()}`}`);
 
   // ── Moving average lines ──
-  const maLineFn = d3.line().x(d => x(d.date)).y(d => y(d.ma)).curve(d3.curveMonotoneX);
-  maStyles.forEach(ma => {
+  const maLineFn = d3
+    .line()
+    .x((d) => x(d.date))
+    .y((d) => y(d.ma))
+    .curve(d3.curveMonotoneX);
+  maStyles.forEach((ma) => {
     if (!ma.data.length) return;
-    g.append('path').datum(ma.data)
-      .attr('d', maLineFn).attr('fill', 'none')
-      .attr('stroke', ma.color).attr('stroke-width', ma.width).attr('opacity', ma.opacity);
+    g.append('path')
+      .datum(ma.data)
+      .attr('d', maLineFn)
+      .attr('fill', 'none')
+      .attr('stroke', ma.color)
+      .attr('stroke-width', ma.width)
+      .attr('opacity', ma.opacity);
   });
 
   // ── Price line + last dot ──
   g.append('path')
     .datum(points)
-    .attr('d', d3.line().x(d => x(d.date)).y(d => y(d.close)).curve(d3.curveMonotoneX))
-    .attr('fill', 'none').attr('stroke', lineColor).attr('stroke-width', 2);
+    .attr(
+      'd',
+      d3
+        .line()
+        .x((d) => x(d.date))
+        .y((d) => y(d.close))
+        .curve(d3.curveMonotoneX)
+    )
+    .attr('fill', 'none')
+    .attr('stroke', lineColor)
+    .attr('stroke-width', 2);
   const lp = points[points.length - 1];
   g.append('circle').attr('cx', x(lp.date)).attr('cy', y(lp.close)).attr('r', 4).attr('fill', lineColor);
 
   // ── Axes ──
-  const tickFmt = cur === 'USD'
-    ? d => `$${  d >= 1000 ? `${(d / 1000).toFixed(1)  }k` : d.toFixed(0)}`
-    : d => d >= 100000 ? `¥${  (d / 10000).toFixed(0)  }万` : d >= 10000 ? `¥${  (d / 1000).toFixed(0)  }k` : `¥${  Math.round(d)}`;
-  g.append('g').attr('transform', `translate(0,${iH})`)
+  const tickFmt =
+    cur === 'USD'
+      ? (d) => `$${d >= 1000 ? `${(d / 1000).toFixed(1)}k` : d.toFixed(0)}`
+      : (d) =>
+          d >= 100000
+            ? `¥${(d / 10000).toFixed(0)}万`
+            : d >= 10000
+              ? `¥${(d / 1000).toFixed(0)}k`
+              : `¥${Math.round(d)}`;
+  g.append('g')
+    .attr('transform', `translate(0,${iH})`)
     .call(d3.axisBottom(x).ticks(6).tickFormat(d3.timeFormat(dateFmt)))
-    .call(g2 => {
+    .call((g2) => {
       g2.select('.domain').attr('stroke', cssVar('--border'));
       g2.selectAll('.tick text').attr('fill', cssVar('--text2')).attr('font-size', 11);
       g2.selectAll('.tick line').attr('stroke', cssVar('--border'));
     });
   g.append('g')
     .call(d3.axisLeft(y).ticks(5).tickFormat(tickFmt))
-    .call(g2 => {
+    .call((g2) => {
       g2.select('.domain').attr('stroke', cssVar('--border'));
       g2.selectAll('.tick text').attr('fill', cssVar('--text2')).attr('font-size', 11);
       g2.selectAll('.tick line').attr('stroke', cssVar('--border'));
@@ -136,21 +201,38 @@ function _drawChartContent(g, x, y, iW, iH, points, avgCost, cur, lineColor, def
  * @param {Array} maStyles
  */
 function _initChartCrosshair(g, x, y, points, m, iW, iH, interval, cur, lineColor, maStyles) {
-  const bisect = d3.bisector(d => d.date).left;
-  const pf2 = v => cur === 'USD' ? `$${  v.toFixed(2)}` : `¥${  Math.round(v).toLocaleString()}`;
+  const bisect = d3.bisector((d) => d.date).left;
+  const pf2 = (v) => (cur === 'USD' ? `$${v.toFixed(2)}` : `¥${Math.round(v).toLocaleString()}`);
 
   // ── クロスヘア要素群 ──
   const crosshair = g.append('g').style('display', 'none');
-  const chLineV = crosshair.append('line')
-    .attr('stroke', cssVar('--text2')).attr('stroke-dasharray', '3,3').attr('stroke-width', 1);
-  const chLineH = crosshair.append('line')
-    .attr('stroke', cssVar('--text2')).attr('stroke-dasharray', '3,3').attr('stroke-width', 1);
-  const chDot = crosshair.append('circle')
-    .attr('r', 4.5).attr('fill', lineColor).attr('stroke', cssVar('--surface')).attr('stroke-width', 2);
-  const chBg = crosshair.append('rect')
-    .attr('rx', 4).attr('fill', cssVar('--surface')).attr('stroke', cssVar('--border')).attr('stroke-width', 1);
-  const chLabel = crosshair.append('text')
-    .attr('fill', cssVar('--text')).attr('font-size', 12).attr('font-weight', 600);
+  const chLineV = crosshair
+    .append('line')
+    .attr('stroke', cssVar('--text2'))
+    .attr('stroke-dasharray', '3,3')
+    .attr('stroke-width', 1);
+  const chLineH = crosshair
+    .append('line')
+    .attr('stroke', cssVar('--text2'))
+    .attr('stroke-dasharray', '3,3')
+    .attr('stroke-width', 1);
+  const chDot = crosshair
+    .append('circle')
+    .attr('r', 4.5)
+    .attr('fill', lineColor)
+    .attr('stroke', cssVar('--surface'))
+    .attr('stroke-width', 2);
+  const chBg = crosshair
+    .append('rect')
+    .attr('rx', 4)
+    .attr('fill', cssVar('--surface'))
+    .attr('stroke', cssVar('--border'))
+    .attr('stroke-width', 1);
+  const chLabel = crosshair
+    .append('text')
+    .attr('fill', cssVar('--text'))
+    .attr('font-size', 12)
+    .attr('font-weight', 600);
   const chMABox = crosshair.append('g');
 
   function updateCrosshair(clientX) {
@@ -161,7 +243,8 @@ function _initChartCrosshair(g, x, y, points, m, iW, iH, interval, cur, lineColo
     const date = x.invert(mx);
     const idx = Math.min(bisect(points, date), points.length - 1);
     const p = points[idx];
-    const px = x(p.date), py = y(p.close);
+    const px = x(p.date),
+      py = y(p.close);
     const isRight = px > iW * 0.65;
     const labelX = isRight ? px - 10 : px + 10;
 
@@ -170,45 +253,70 @@ function _initChartCrosshair(g, x, y, points, m, iW, iH, interval, cur, lineColo
     chLineH.attr('x1', 0).attr('x2', iW).attr('y1', py).attr('y2', py);
     chDot.attr('cx', px).attr('cy', py);
 
-    const dateStr = (interval === '5m' || interval === '1h')
-      ? p.date.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
-      : p.date.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' });
+    const dateStr =
+      interval === '5m' || interval === '1h'
+        ? p.date.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
+        : p.date.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' });
     chLabel
-      .attr('x', labelX).attr('y', Math.max(14, py - 14))
+      .attr('x', labelX)
+      .attr('y', Math.max(14, py - 14))
       .attr('text-anchor', isRight ? 'end' : 'start')
       .text(`${dateStr}  ${pf2(p.close)}`);
 
     const bb = chLabel.node().getBBox();
-    chBg.attr('x', bb.x - 4).attr('y', bb.y - 4).attr('width', bb.width + 8).attr('height', bb.height + 8);
+    chBg
+      .attr('x', bb.x - 4)
+      .attr('y', bb.y - 4)
+      .attr('width', bb.width + 8)
+      .attr('height', bb.height + 8);
 
     // MA 値ボックス（右上固定）
     chMABox.selectAll('*').remove();
     const bxX = isRight ? 6 : iW - 110;
-    const getMAAt = maData => {
+    const getMAAt = (maData) => {
       const mi = bisect(maData, date, 0, maData.length);
       return maData[Math.min(mi, maData.length - 1)]?.ma ?? null;
     };
-    maStyles.filter(ma => ma.data.length > 0).forEach((ma, i) => {
-      const val = getMAAt(ma.data);
-      if (val === null) return;
-      chMABox.append('circle').attr('cx', bxX + 5).attr('cy', 8 + i * 16).attr('r', 3).attr('fill', ma.color);
-      chMABox.append('text').attr('x', bxX + 12).attr('y', 12 + i * 16)
-        .attr('fill', ma.color).attr('font-size', 11)
-        .text(`${ma.label} ${pf2(val)}`);
-    });
+    maStyles
+      .filter((ma) => ma.data.length > 0)
+      .forEach((ma, i) => {
+        const val = getMAAt(ma.data);
+        if (val === null) return;
+        chMABox
+          .append('circle')
+          .attr('cx', bxX + 5)
+          .attr('cy', 8 + i * 16)
+          .attr('r', 3)
+          .attr('fill', ma.color);
+        chMABox
+          .append('text')
+          .attr('x', bxX + 12)
+          .attr('y', 12 + i * 16)
+          .attr('fill', ma.color)
+          .attr('font-size', 11)
+          .text(`${ma.label} ${pf2(val)}`);
+      });
   }
 
-  const interactRect = g.append('rect')
-    .attr('width', iW).attr('height', iH)
+  const interactRect = g
+    .append('rect')
+    .attr('width', iW)
+    .attr('height', iH)
     .attr('fill', 'transparent')
     .style('touch-action', 'none');
 
   interactRect
-    .on('mousemove',  e => updateCrosshair(e.clientX))
+    .on('mousemove', (e) => updateCrosshair(e.clientX))
     .on('mouseleave', () => crosshair.style('display', 'none'))
-    .on('touchstart', e => { e.preventDefault(); updateCrosshair(e.touches[0].clientX); })
-    .on('touchmove',  e => { e.preventDefault(); updateCrosshair(e.touches[0].clientX); })
-    .on('touchend',   () => crosshair.style('display', 'none'));
+    .on('touchstart', (e) => {
+      e.preventDefault();
+      updateCrosshair(e.touches[0].clientX);
+    })
+    .on('touchmove', (e) => {
+      e.preventDefault();
+      updateCrosshair(e.touches[0].clientX);
+    })
+    .on('touchend', () => crosshair.style('display', 'none'));
 }
 
 /**
@@ -221,18 +329,21 @@ function _initChartCrosshair(g, x, y, points, m, iW, iH, interval, cur, lineColo
 function _renderChartStats(points, avgCost, cur, maStyles) {
   const fp = points[0].close;
   const lastPrice = points[points.length - 1].close;
-  const chgPct = (lastPrice - fp) / fp * 100;
-  const pnlPct = (lastPrice - avgCost) / avgCost * 100;
-  const pf = v => cur === 'USD' ? `$${  v.toFixed(2)}` : `¥${  Math.round(v).toLocaleString()}`;
+  const chgPct = ((lastPrice - fp) / fp) * 100;
+  const pnlPct = ((lastPrice - avgCost) / avgCost) * 100;
+  const pf = (v) => (cur === 'USD' ? `$${v.toFixed(2)}` : `¥${Math.round(v).toLocaleString()}`);
 
   const maLegend = maStyles
-    .filter(ma => ma.data.length > 0)
-    .map(ma => {
+    .filter((ma) => ma.data.length > 0)
+    .map((ma) => {
       const last = ma.data[ma.data.length - 1].ma;
-      return `<span style="display:inline-flex;align-items:center;gap:4px">` +
+      return (
+        `<span style="display:inline-flex;align-items:center;gap:4px">` +
         `<svg width="8" height="8"><circle cx="4" cy="4" r="3.5" fill="${ma.color}"/></svg>` +
-        `<span style="color:${ma.color};font-size:11px">${ma.label}</span> <strong>${pf(last)}</strong></span>`;
-    }).join('');
+        `<span style="color:${ma.color};font-size:11px">${ma.label}</span> <strong>${pf(last)}</strong></span>`
+      );
+    })
+    .join('');
 
   const chartStatsEl = document.getElementById('chart-stats');
   if (chartStatsEl) {
@@ -240,12 +351,11 @@ function _renderChartStats(points, avgCost, cur, maStyles) {
       <span>現在値: <strong class="neu">${pf(lastPrice)}</strong></span>
       <span>期間変動: <strong class="${sgn(chgPct)}">${fmtPct(chgPct)}</strong></span>
       <span>損益率: <strong class="${sgn(pnlPct)}">${fmtPct(pnlPct)}</strong></span>
-      <span>高値: <strong class="neu">${pf(d3.max(points, d => d.close))}</strong></span>
-      <span>安値: <strong class="neu">${pf(d3.min(points, d => d.close))}</strong></span>
+      <span>高値: <strong class="neu">${pf(d3.max(points, (d) => d.close))}</strong></span>
+      <span>安値: <strong class="neu">${pf(d3.min(points, (d) => d.close))}</strong></span>
       ${maLegend}
     `;
   }
-
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -285,7 +395,9 @@ function handleOverlayClick(event) {
   if (event.target === document.getElementById('modal-overlay')) closeModal();
 }
 
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeModal();
+});
 
 function setRange(range) {
   state.currentRange = range;
@@ -294,7 +406,7 @@ function setRange(range) {
 }
 
 function updateRangeBtns() {
-  document.querySelectorAll('.range-btn').forEach(b => {
+  document.querySelectorAll('.range-btn').forEach((b) => {
     b.classList.toggle('active', b.dataset.range === state.currentRange);
   });
 }
@@ -338,10 +450,12 @@ async function loadChart(symbol, rangeId) {
 
   const timestamps = chartResult.timestamp || [];
   const closes = chartResult.indicators?.quote?.[0]?.close || [];
-  const points = timestamps.map((ts, i) => ({
-    date: new Date(ts * 1000),
-    close: closes[i]
-  })).filter(p => p.close != null && isFinite(p.close));
+  const points = timestamps
+    .map((ts, i) => ({
+      date: new Date(ts * 1000),
+      close: closes[i],
+    }))
+    .filter((p) => p.close != null && isFinite(p.close));
 
   if (points.length < 2) {
     msg.className = 'chart-error';
@@ -366,7 +480,7 @@ async function loadChart(symbol, rangeId) {
 function renderChart(points, interval = '1d', dateFmt = '%m/%d') {
   const container = document.getElementById('modal');
   const W = container.clientWidth - 40;
-  const H = Math.max(260, Math.min(360, Math.round(W * 0.50)));
+  const H = Math.max(260, Math.min(360, Math.round(W * 0.5)));
   const m = { top: 18, right: 18, bottom: 32, left: 68 };
   const iW = W - m.left - m.right;
   const iH = H - m.top - m.bottom;
@@ -374,7 +488,7 @@ function renderChart(points, interval = '1d', dateFmt = '%m/%d') {
   const fp = points[0].close;
   const lastPrice = points[points.length - 1].close;
   // iPhone Stocks スタイル: 期間始値との比較でグリーン/レッド
-  const lineColor = (lastPrice >= fp) ? cssVar('--chart-price-up') : cssVar('--chart-price-down');
+  const lineColor = lastPrice >= fp ? cssVar('--chart-price-up') : cssVar('--chart-price-down');
 
   // 移動平均計算
   const maStyles = _buildMAStyles(points);
@@ -386,10 +500,18 @@ function renderChart(points, interval = '1d', dateFmt = '%m/%d') {
   const defs = svg.append('defs');
 
   // スケール
-  const x = d3.scaleTime().domain(d3.extent(points, d => d.date)).range([0, iW]);
-  const maVals = maStyles.flatMap(ma => ma.data.map(d => d.ma));
-  const allVals = points.map(d => d.close).concat([avgCost]).concat(maVals).filter(v => v != null);
-  const y = d3.scaleLinear()
+  const x = d3
+    .scaleTime()
+    .domain(d3.extent(points, (d) => d.date))
+    .range([0, iW]);
+  const maVals = maStyles.flatMap((ma) => ma.data.map((d) => d.ma));
+  const allVals = points
+    .map((d) => d.close)
+    .concat([avgCost])
+    .concat(maVals)
+    .filter((v) => v != null);
+  const y = d3
+    .scaleLinear()
     .domain([d3.min(allVals) * 0.97, d3.max(allVals) * 1.02])
     .range([iH, 0]);
 

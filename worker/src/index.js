@@ -59,7 +59,8 @@ import { isUsEasternDst } from './us-dst.js';
 
 const FINNHUB_BASE = 'https://finnhub.io/api/v1';
 const PER_DAILY_CRON = '20 20,21 * * *';
-const PER_DAILY_DISPATCH_URL = 'https://api.github.com/repos/shoulang0729/portfolio/actions/workflows/per-daily.yml/dispatches';
+const PER_DAILY_DISPATCH_URL =
+  'https://api.github.com/repos/shoulang0729/portfolio/actions/workflows/per-daily.yml/dispatches';
 const FMP_BASE = 'https://financialmodelingprep.com';
 
 /**
@@ -129,10 +130,9 @@ async function handleForex(url, env, origin) {
 
   try {
     const symbol = `${from}${to}=X`;
-    const res = await fetch(
-      `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}`,
-      { cf: { cacheTtl: 300 } }
-    );
+    const res = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}`, {
+      cf: { cacheTtl: 300 },
+    });
     if (!res.ok) return errRes('Yahoo Finance API エラー', 502, origin);
 
     const data = await res.json();
@@ -154,7 +154,7 @@ async function getYahooCrumb(env) {
   if (env.KV) {
     try {
       const cached = await env.KV.get('yahoo:crumb', 'json');
-      if (cached?.crumb && cached?.cookie && (Date.now() - (cached.ts || 0)) < 3000000) {
+      if (cached?.crumb && cached?.cookie && Date.now() - (cached.ts || 0) < 3000000) {
         return cached;
       }
     } catch {}
@@ -166,10 +166,7 @@ async function getYahooCrumb(env) {
   const ua =
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
   // cookie 取得元の候補（順に試し、最初に取れたものを使う）
-  const COOKIE_SOURCES = [
-    'https://finance.yahoo.com/',
-    'https://query2.finance.yahoo.com/v1/test/getcrumb',
-  ];
+  const COOKIE_SOURCES = ['https://finance.yahoo.com/', 'https://query2.finance.yahoo.com/v1/test/getcrumb'];
   try {
     let cookie = '';
     for (const src of COOKIE_SOURCES) {
@@ -185,12 +182,14 @@ async function getYahooCrumb(env) {
             : cookieRes.headers.get('set-cookie')
               ? [cookieRes.headers.get('set-cookie')]
               : [];
-        const pairs = rawList.map(c => c.split(';')[0].trim()).filter(Boolean);
+        const pairs = rawList.map((c) => c.split(';')[0].trim()).filter(Boolean);
         if (pairs.length) {
           cookie = pairs.join('; ');
           break;
         }
-      } catch { /* 次の候補へ */ }
+      } catch {
+        /* 次の候補へ */
+      }
     }
     if (!cookie) return null;
 
@@ -292,7 +291,9 @@ async function handleEdgar(url, env, origin) {
   }
   const ua = env.SEC_USER_AGENT || 'portfolio-quality contact@example.com';
   try {
-    const res = await fetch(`https://data.sec.gov${path}`, { headers: { 'User-Agent': ua, Accept: 'application/json' } });
+    const res = await fetch(`https://data.sec.gov${path}`, {
+      headers: { 'User-Agent': ua, Accept: 'application/json' },
+    });
     const data = await res.json();
     return jsonRes(data, res.status, origin);
   } catch (e) {
@@ -395,17 +396,26 @@ async function handleWatchlist(request, env, origin) {
   }
   if (request.method === 'PUT') {
     let body;
-    try { body = await request.json(); } catch { return errRes('JSON 不正', 400, origin); }
+    try {
+      body = await request.json();
+    } catch {
+      return errRes('JSON 不正', 400, origin);
+    }
     if (!Array.isArray(body)) return errRes('Array が必要です', 400, origin);
 
     for (let i = 0; i < body.length; i++) {
       const item = body[i];
       if (!item || typeof item !== 'object') return errRes(`watchlist[${i}]: object が必要です`, 400, origin);
-      if (typeof item.symbol !== 'string' || !item.symbol.trim()) return errRes(`watchlist[${i}].symbol は必須です`, 400, origin);
-      if (typeof item.name !== 'string' || !item.name.trim()) return errRes(`watchlist[${i}].name は必須です`, 400, origin);
-      if (typeof item.exchange !== 'string' || !item.exchange.trim()) return errRes(`watchlist[${i}].exchange は必須です`, 400, origin);
-      if (typeof item.type !== 'string' || !item.type.trim()) return errRes(`watchlist[${i}].type は必須です`, 400, origin);
-      if (typeof item.cur !== 'string' || !item.cur.trim()) return errRes(`watchlist[${i}].cur は必須です`, 400, origin);
+      if (typeof item.symbol !== 'string' || !item.symbol.trim())
+        return errRes(`watchlist[${i}].symbol は必須です`, 400, origin);
+      if (typeof item.name !== 'string' || !item.name.trim())
+        return errRes(`watchlist[${i}].name は必須です`, 400, origin);
+      if (typeof item.exchange !== 'string' || !item.exchange.trim())
+        return errRes(`watchlist[${i}].exchange は必須です`, 400, origin);
+      if (typeof item.type !== 'string' || !item.type.trim())
+        return errRes(`watchlist[${i}].type は必須です`, 400, origin);
+      if (typeof item.cur !== 'string' || !item.cur.trim())
+        return errRes(`watchlist[${i}].cur は必須です`, 400, origin);
     }
 
     await env.KV.put(key, JSON.stringify(body));
@@ -442,23 +452,36 @@ async function handlePositions(request, env, origin) {
     if (authErr) return authErr;
 
     let body;
-    try { body = await request.json(); } catch { return errRes('JSON 不正', 400, origin); }
+    try {
+      body = await request.json();
+    } catch {
+      return errRes('JSON 不正', 400, origin);
+    }
     if (!Array.isArray(body)) return errRes('Array が必要です', 400, origin);
 
     for (let i = 0; i < body.length; i++) {
       const pos = body[i];
       if (!pos || typeof pos !== 'object') return errRes(`positions[${i}]: object が必要です`, 400, origin);
-      if (typeof pos.symbol !== 'string' || !pos.symbol.trim()) return errRes(`positions[${i}].symbol は必須です`, 400, origin);
-      if (typeof pos.name !== 'string' || !pos.name.trim()) return errRes(`positions[${i}].name は必須です`, 400, origin);
+      if (typeof pos.symbol !== 'string' || !pos.symbol.trim())
+        return errRes(`positions[${i}].symbol は必須です`, 400, origin);
+      if (typeof pos.name !== 'string' || !pos.name.trim())
+        return errRes(`positions[${i}].name は必須です`, 400, origin);
       if (typeof pos.cat !== 'string' || !pos.cat.trim()) return errRes(`positions[${i}].cat は必須です`, 400, origin);
-      if (typeof pos.shares !== 'number' || !isFinite(pos.shares)) return errRes(`positions[${i}].shares は有限数値が必要です`, 400, origin);
-      if (typeof pos.price !== 'number' || !isFinite(pos.price)) return errRes(`positions[${i}].price は有限数値が必要です`, 400, origin);
-      if (typeof pos.avgCost !== 'number' || !isFinite(pos.avgCost)) return errRes(`positions[${i}].avgCost は有限数値が必要です`, 400, origin);
-      if (typeof pos.value !== 'number' || !isFinite(pos.value)) return errRes(`positions[${i}].value は有限数値が必要です`, 400, origin);
-      if (typeof pos.pnl !== 'number' || !isFinite(pos.pnl)) return errRes(`positions[${i}].pnl は有限数値が必要です`, 400, origin);
-      if (typeof pos.pnlPct !== 'number' || !isFinite(pos.pnlPct)) return errRes(`positions[${i}].pnlPct は有限数値が必要です`, 400, origin);
+      if (typeof pos.shares !== 'number' || !isFinite(pos.shares))
+        return errRes(`positions[${i}].shares は有限数値が必要です`, 400, origin);
+      if (typeof pos.price !== 'number' || !isFinite(pos.price))
+        return errRes(`positions[${i}].price は有限数値が必要です`, 400, origin);
+      if (typeof pos.avgCost !== 'number' || !isFinite(pos.avgCost))
+        return errRes(`positions[${i}].avgCost は有限数値が必要です`, 400, origin);
+      if (typeof pos.value !== 'number' || !isFinite(pos.value))
+        return errRes(`positions[${i}].value は有限数値が必要です`, 400, origin);
+      if (typeof pos.pnl !== 'number' || !isFinite(pos.pnl))
+        return errRes(`positions[${i}].pnl は有限数値が必要です`, 400, origin);
+      if (typeof pos.pnlPct !== 'number' || !isFinite(pos.pnlPct))
+        return errRes(`positions[${i}].pnlPct は有限数値が必要です`, 400, origin);
       if (typeof pos.cur !== 'string' || !pos.cur.trim()) return errRes(`positions[${i}].cur は必須です`, 400, origin);
-      if (typeof pos.ySymbol !== 'string' || !pos.ySymbol.trim()) return errRes(`positions[${i}].ySymbol は必須です`, 400, origin);
+      if (typeof pos.ySymbol !== 'string' || !pos.ySymbol.trim())
+        return errRes(`positions[${i}].ySymbol は必須です`, 400, origin);
     }
 
     await env.KV.put('positions', JSON.stringify(body));
@@ -495,7 +518,11 @@ async function handleNetworth(request, env, origin) {
     if (authErr) return authErr;
 
     let body;
-    try { body = await request.json(); } catch { return errRes('JSON 不正', 400, origin); }
+    try {
+      body = await request.json();
+    } catch {
+      return errRes('JSON 不正', 400, origin);
+    }
     if (!body || typeof body !== 'object' || Array.isArray(body)) {
       return errRes('object が必要です', 400, origin);
     }
@@ -602,14 +629,18 @@ async function _resolveOrderFx(env) {
     if (cached && typeof cached.rate === 'number' && cached.rate > 0) {
       return { usdJpy: cached.rate, asOf: cached.ts ? new Date(cached.ts).toISOString() : null };
     }
-  } catch { /* 次の手段へ */ }
+  } catch {
+    /* 次の手段へ */
+  }
   try {
     const res = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/USDJPY%3DX', { cf: { cacheTtl: 300 } });
     if (!res.ok) return null;
     const data = await res.json();
     const rate = data?.chart?.result?.[0]?.meta?.regularMarketPrice ?? data?.chart?.result?.[0]?.regularMarketPrice;
     if (typeof rate === 'number' && rate > 0) return { usdJpy: rate, asOf: new Date().toISOString() };
-  } catch { /* 取れなければ null */ }
+  } catch {
+    /* 取れなければ null */
+  }
   return null;
 }
 
@@ -626,28 +657,40 @@ async function _resolveOrderPrices(env, symbols, nowMs) {
   let cache = {};
   try {
     cache = (await _kvJson(env, 'prices:cache')) || {};
-  } catch { cache = {}; }
+  } catch {
+    cache = {};
+  }
   const missing = [];
   for (const sym of symbols) {
     const c = Object.prototype.hasOwnProperty.call(cache, sym) ? cache[sym] : null;
-    if (c && typeof c.price === 'number' && c.price > 0 && typeof c.ts === 'number' && nowMs - c.ts <= ORDER_PRICE_MAX_AGE_MS) {
+    if (
+      c &&
+      typeof c.price === 'number' &&
+      c.price > 0 &&
+      typeof c.ts === 'number' &&
+      nowMs - c.ts <= ORDER_PRICE_MAX_AGE_MS
+    ) {
       out[sym] = c.price;
     } else {
       missing.push(sym);
     }
   }
   if (missing.length && env.FINNHUB_API_KEY) {
-    await Promise.all(missing.map(async (sym) => {
-      try {
-        const res = await fetch(
-          `${FINNHUB_BASE}/quote?symbol=${encodeURIComponent(_workerToFinnhubSymbol(sym))}&token=${env.FINNHUB_API_KEY}`,
-          { cf: { cacheTtl: 300 } }
-        );
-        if (!res.ok) return;
-        const d = await res.json();
-        if (typeof d?.c === 'number' && d.c > 0) out[sym] = d.c;
-      } catch { /* 個別エラーは無視（計算側が概算にフォールバック） */ }
-    }));
+    await Promise.all(
+      missing.map(async (sym) => {
+        try {
+          const res = await fetch(
+            `${FINNHUB_BASE}/quote?symbol=${encodeURIComponent(_workerToFinnhubSymbol(sym))}&token=${env.FINNHUB_API_KEY}`,
+            { cf: { cacheTtl: 300 } }
+          );
+          if (!res.ok) return;
+          const d = await res.json();
+          if (typeof d?.c === 'number' && d.c > 0) out[sym] = d.c;
+        } catch {
+          /* 個別エラーは無視（計算側が概算にフォールバック） */
+        }
+      })
+    );
   }
   return out;
 }
@@ -659,17 +702,21 @@ async function _resolveOrderEtfTop(env, plan) {
   const themeSyms = Object.entries(plan.symbols || {})
     .filter(([sym, sc]) => isValidSymbolKey(sym) && sc && sc.tier === 'theme')
     .map(([sym]) => sym);
-  await Promise.all(themeSyms.map(async (sym) => {
-    try {
-      const c = await env.KV.get(CONSTITUENTS_KV_PREFIX + sym, 'json');
-      const list = Array.isArray(c?.holdings) ? c.holdings : [];
-      let top = null;
-      for (const h of list) {
-        if (h && h.ticker && typeof h.weight === 'number' && (!top || h.weight > top.weight)) top = h;
+  await Promise.all(
+    themeSyms.map(async (sym) => {
+      try {
+        const c = await env.KV.get(CONSTITUENTS_KV_PREFIX + sym, 'json');
+        const list = Array.isArray(c?.holdings) ? c.holdings : [];
+        let top = null;
+        for (const h of list) {
+          if (h && h.ticker && typeof h.weight === 'number' && (!top || h.weight > top.weight)) top = h;
+        }
+        if (top) out[sym] = { ticker: top.ticker, weight: top.weight };
+      } catch {
+        /* キャッシュが無い・壊れている場合は出さない */
       }
-      if (top) out[sym] = { ticker: top.ticker, weight: top.weight };
-    } catch { /* キャッシュが無い・壊れている場合は出さない */ }
-  }));
+    })
+  );
   return out;
 }
 
@@ -767,10 +814,14 @@ async function handleOrderSheetPlan(request, env, origin) {
 
     const now = new Date().toISOString();
     const next = { ...body, rev: (current ? curRev : Number.isInteger(body.rev) ? body.rev : 0) + 1, updatedAt: now };
-    const written = await _putOrderKv(env, [
-      [ORDER_PLAN_KEY, next],
-      [ORDER_LOG_KEY, appendLog(log, [{ at: now, type: 'plan-put', rev: next.rev }])],
-    ], '[order-sheet/plan]');
+    const written = await _putOrderKv(
+      env,
+      [
+        [ORDER_PLAN_KEY, next],
+        [ORDER_LOG_KEY, appendLog(log, [{ at: now, type: 'plan-put', rev: next.rev }])],
+      ],
+      '[order-sheet/plan]'
+    );
     if (!written) return _osErr('KV への保存に失敗しました', 500, origin);
     console.warn('[order-sheet/plan] plan-put');
     return _osJson({ ok: true, rev: next.rev, updatedAt: now }, 200, origin);
@@ -817,10 +868,14 @@ async function handleOrderSheetEvents(request, env, origin) {
     return _osErr('イベントの適用に失敗しました', 500, origin);
   }
   const newLog = appendLog(log, [result.log]);
-  const written = await _putOrderKv(env, [
-    [ORDER_PLAN_KEY, result.plan],
-    [ORDER_LOG_KEY, newLog],
-  ], '[order-sheet/events]');
+  const written = await _putOrderKv(
+    env,
+    [
+      [ORDER_PLAN_KEY, result.plan],
+      [ORDER_LOG_KEY, newLog],
+    ],
+    '[order-sheet/events]'
+  );
   if (!written) return _osErr('KV への保存に失敗しました', 500, origin);
   console.warn('[order-sheet/events]', event.type, typeof event.symbol === 'string' ? event.symbol.slice(0, 12) : '');
 
@@ -885,7 +940,9 @@ async function _dispatchPerDaily(env) {
       try {
         const j = await res.json();
         if (j && typeof j.message === 'string') msg = j.message.slice(0, 200);
-      } catch { /* 本文が JSON でなければ message なし */ }
+      } catch {
+        /* 本文が JSON でなければ message なし */
+      }
       retryable = status === 429 || status >= 500;
     } catch (e) {
       status = 0;
@@ -942,7 +999,11 @@ async function handleAuthPinHash(request, env, origin) {
   if (request.method !== 'PUT') return errRes('GET/PUT のみ許可', 405, origin);
 
   let body;
-  try { body = await request.json(); } catch { return errRes('JSON 不正', 400, origin); }
+  try {
+    body = await request.json();
+  } catch {
+    return errRes('JSON 不正', 400, origin);
+  }
   const { oldHash, newHash } = body;
   if (!newHash) return errRes('newHash が必要です', 400, origin);
 
@@ -1016,7 +1077,11 @@ async function handleAuthRegister(request, env, origin) {
   const authErr = await verifyPinHash(request, env, origin);
   if (authErr) return authErr;
   let body;
-  try { body = await request.json(); } catch { return errRes('JSON 不正', 400, origin); }
+  try {
+    body = await request.json();
+  } catch {
+    return errRes('JSON 不正', 400, origin);
+  }
   const { id, publicKey, clientDataJSON } = body;
   if (!id || !publicKey) return errRes('id / publicKey が必要です', 400, origin);
 
@@ -1028,7 +1093,11 @@ async function handleAuthRegister(request, env, origin) {
 async function handleAuthVerify(request, env, origin) {
   if (!env.KV) return errRes('KV 未設定', 500, origin);
   let body;
-  try { body = await request.json(); } catch { return errRes('JSON 不正', 400, origin); }
+  try {
+    body = await request.json();
+  } catch {
+    return errRes('JSON 不正', 400, origin);
+  }
 
   const stored = await env.KV.get('auth:credential', 'json');
   if (!stored) return errRes('パスキー未登録', 401, origin);
@@ -1071,41 +1140,51 @@ export default {
     const org = allowed ? origin : '*';
 
     const path = url.pathname;
-    if (path === '/')                return new Response('portfolio-proxy OK', { status: 200 });
+    if (path === '/') return new Response('portfolio-proxy OK', { status: 200 });
     // 無効化済みルート（#714）: レート制限・外部 fetch・KV より前に 410 を返す
-    if (DISABLED_PATHS.has(path))    return handleDisabledRoute(org);
+    if (DISABLED_PATHS.has(path)) return handleDisabledRoute(org);
     // レート制限: Workers ネイティブ ratelimit binding（#16・KV 不使用・rate-limit.md 参照）。
     // binding 未設定環境（テスト等）では素通し。判定失敗時も fail-open。
-    if (path === '/yahoo' || path === '/finnhub' || path === '/fmp' || path === '/edgar' || path === '/edinet-db' || path === '/etf/constituents'
-      || path === '/forex'
-      || path === '/order-sheet' || path.startsWith('/order-sheet/')) {
+    if (
+      path === '/yahoo' ||
+      path === '/finnhub' ||
+      path === '/fmp' ||
+      path === '/edgar' ||
+      path === '/edinet-db' ||
+      path === '/etf/constituents' ||
+      path === '/forex' ||
+      path === '/order-sheet' ||
+      path.startsWith('/order-sheet/')
+    ) {
       if (env.RATE_LIMITER) {
         try {
           const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
           const { success } = await env.RATE_LIMITER.limit({ key: ip });
           if (!success) return errRes('Too Many Requests', 429, org);
-        } catch { /* fail-open */ }
+        } catch {
+          /* fail-open */
+        }
       }
     }
-    if (path === '/yahoo')           return handleYahoo(url, env, org);
-    if (path === '/finnhub')         return handleFinnhub(url, env, org);
-    if (path === '/fmp')             return handleFmp(url, env, org);
-    if (path === '/edgar')           return handleEdgar(url, env, org);
-    if (path === '/edinet-db')       return handleEdinetDb(url, env, org);
-    if (path === '/forex')           return handleForex(url, env, org);
+    if (path === '/yahoo') return handleYahoo(url, env, org);
+    if (path === '/finnhub') return handleFinnhub(url, env, org);
+    if (path === '/fmp') return handleFmp(url, env, org);
+    if (path === '/edgar') return handleEdgar(url, env, org);
+    if (path === '/edinet-db') return handleEdinetDb(url, env, org);
+    if (path === '/forex') return handleForex(url, env, org);
     if (path === '/etf/constituents') return handleEtfConstituents(url, env, org, ctx);
-    if (path === '/watchlist')       return handleWatchlist(request, env, org);
-    if (path === '/positions')       return handlePositions(request, env, org);
-    if (path === '/networth')        return handleNetworth(request, env, org);
-    if (path === '/order-sheet')     return handleOrderSheet(request, env, org);
+    if (path === '/watchlist') return handleWatchlist(request, env, org);
+    if (path === '/positions') return handlePositions(request, env, org);
+    if (path === '/networth') return handleNetworth(request, env, org);
+    if (path === '/order-sheet') return handleOrderSheet(request, env, org);
     if (path === '/order-sheet/plan') return handleOrderSheetPlan(request, env, org);
     if (path === '/order-sheet/events') return handleOrderSheetEvents(request, env, org);
     if (path === '/portfolio/snapshot') return handlePortfolioSnapshot(org);
-    if (path === '/prices/cache')    return handlePricesCache(env, org);
-    if (path === '/auth/pin-hash')   return handleAuthPinHash(request, env, org);
-    if (path === '/auth/challenge')  return handleAuthChallenge(env, org);
-    if (path === '/auth/register')   return handleAuthRegister(request, env, org);
-    if (path === '/auth/verify')     return handleAuthVerify(request, env, org);
+    if (path === '/prices/cache') return handlePricesCache(env, org);
+    if (path === '/auth/pin-hash') return handleAuthPinHash(request, env, org);
+    if (path === '/auth/challenge') return handleAuthChallenge(env, org);
+    if (path === '/auth/register') return handleAuthRegister(request, env, org);
+    if (path === '/auth/verify') return handleAuthVerify(request, env, org);
 
     return errRes('Not Found', 404, org);
   },
@@ -1143,24 +1222,28 @@ export default {
 
     for (let i = 0; i < positions.length; i += BATCH) {
       const batch = positions.slice(i, i + BATCH);
-      await Promise.all(batch.map(async p => {
-        if (!p.ySymbol) return;
-        try {
-          const fSym = _workerToFinnhubSymbol(p.ySymbol);
-          const res = await fetch(
-            `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(fSym)}&token=${env.FINNHUB_API_KEY}`,
-            { cf: { cacheTtl: 300 } }
-          );
-          if (!res.ok) return;
-          const d = await res.json();
-          if (d?.c && d.c > 0) {
-            cache[p.ySymbol] = { price: d.c, dayPct: d.dp ?? null, ts: Date.now() };
+      await Promise.all(
+        batch.map(async (p) => {
+          if (!p.ySymbol) return;
+          try {
+            const fSym = _workerToFinnhubSymbol(p.ySymbol);
+            const res = await fetch(
+              `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(fSym)}&token=${env.FINNHUB_API_KEY}`,
+              { cf: { cacheTtl: 300 } }
+            );
+            if (!res.ok) return;
+            const d = await res.json();
+            if (d?.c && d.c > 0) {
+              cache[p.ySymbol] = { price: d.c, dayPct: d.dp ?? null, ts: Date.now() };
+            }
+          } catch {
+            /* 個別エラーは無視して継続 */
           }
-        } catch { /* 個別エラーは無視して継続 */ }
-      }));
+        })
+      );
       // バッチ間の待機（Finnhub 60リクエスト/分制限）
       if (i + BATCH < positions.length) {
-        await new Promise(r => setTimeout(r, 1200));
+        await new Promise((r) => setTimeout(r, 1200));
       }
     }
 

@@ -58,8 +58,7 @@ export function computeTrueRegionExposure(holdings, regionMap, regionWeights) {
     // ルックスルー判定: symbol → ySymbol の順でキー解決
     const sym = h.symbol;
     const ysym = h.ySymbol;
-    const profileId =
-      (sym != null && lookThrough[sym]) || (ysym != null && lookThrough[ysym]) || null;
+    const profileId = (sym != null && lookThrough[sym]) || (ysym != null && lookThrough[ysym]) || null;
 
     if (profileId && weights[profileId]) {
       // 構成比（%）で按分。合計が 100 でなくても比率で配分する。

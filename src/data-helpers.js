@@ -14,7 +14,7 @@ export function fetchWithTimeout(url, ms = 7000, opts = {}) {
 }
 
 /** 指定ミリ秒待機する */
-export const sleep = ms => new Promise(r => setTimeout(r, ms));
+export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /**
  * バッチ処理 + 自動リトライの共通ヘルパー
@@ -29,35 +29,33 @@ export const sleep = ms => new Promise(r => setTimeout(r, ms));
  * @returns {Promise<Array>} 全結果
  */
 export async function batchWithRetry(items, fn, opts = {}) {
-  const {
-    batchSize = 5,
-    batchDelay = 300,
-    retryDelay = 2000,
-    isFailed = r => !r,
-    onProgress = null,
-  } = opts;
+  const { batchSize = 5, batchDelay = 300, retryDelay = 2000, isFailed = (r) => !r, onProgress = null } = opts;
 
   const results = [];
   let done = 0;
   for (let i = 0; i < items.length; i += batchSize) {
     const batch = items.slice(i, i + batchSize);
-    const batchResults = await Promise.all(batch.map(async item => {
-      const result = await fn(item);
-      done++;
-      if (onProgress) onProgress(done, items.length);
-      return result;
-    }));
+    const batchResults = await Promise.all(
+      batch.map(async (item) => {
+        const result = await fn(item);
+        done++;
+        if (onProgress) onProgress(done, items.length);
+        return result;
+      })
+    );
     results.push(...batchResults);
     if (i + batchSize < items.length) await sleep(batchDelay);
   }
 
   // 失敗したアイテムをリトライ
-  const failedIndices = results.map((r, idx) => isFailed(r, idx) ? idx : -1).filter(idx => idx >= 0);
+  const failedIndices = results.map((r, idx) => (isFailed(r, idx) ? idx : -1)).filter((idx) => idx >= 0);
   if (failedIndices.length > 0) {
     await sleep(retryDelay);
-    await Promise.all(failedIndices.map(async idx => {
-      results[idx] = await fn(items[idx]);
-    }));
+    await Promise.all(
+      failedIndices.map(async (idx) => {
+        results[idx] = await fn(items[idx]);
+      })
+    );
   }
 
   return results;

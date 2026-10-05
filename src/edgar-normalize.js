@@ -104,7 +104,10 @@ const C = {
   equity: ['StockholdersEquity', 'StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest'],
   shares: ['WeightedAverageNumberOfDilutedSharesOutstanding', 'EntityCommonStockSharesOutstanding'],
   taxExpense: ['IncomeTaxExpenseBenefit'],
-  pretax: ['IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest', 'IncomeLossFromContinuingOperationsBeforeIncomeTaxesMinorityInterestAndIncomeLossFromEquityMethodInvestments'],
+  pretax: [
+    'IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest',
+    'IncomeLossFromContinuingOperationsBeforeIncomeTaxesMinorityInterestAndIncomeLossFromEquityMethodInvestments',
+  ],
 };
 
 /**
@@ -121,7 +124,19 @@ export function normalizeEdgarFacts(companyfacts, opts = {}) {
   const flow = {};
   /** @type {Record<string, ReturnType<typeof seriesOf>>} */
   const inst = {};
-  const flowKeys = ['netIncome', 'ocf', 'revenue', 'grossProfit', 'costOfRevenue', 'ebit', 'interest', 'capex', 'shares', 'taxExpense', 'pretax'];
+  const flowKeys = [
+    'netIncome',
+    'ocf',
+    'revenue',
+    'grossProfit',
+    'costOfRevenue',
+    'ebit',
+    'interest',
+    'capex',
+    'shares',
+    'taxExpense',
+    'pretax',
+  ];
   const instKeys = ['assets', 'curAssets', 'liabilities', 'curLiab', 'ltDebt', 'retained', 'equity'];
   for (const k of flowKeys) flow[k] = seriesOf(pickNode(facts, C[k]), false);
   for (const k of instKeys) inst[k] = seriesOf(pickNode(facts, C[k]), true);
@@ -130,7 +145,11 @@ export function normalizeEdgarFacts(companyfacts, opts = {}) {
 
   // 基準期末日 = netIncome（通期フロー）の最新 end。無ければ assets の最新。
   const niSeries = flow.netIncome;
-  const fyeMs = niSeries.length ? niSeries[niSeries.length - 1].end : (inst.assets.length ? inst.assets[inst.assets.length - 1].end : NaN);
+  const fyeMs = niSeries.length
+    ? niSeries[niSeries.length - 1].end
+    : inst.assets.length
+      ? inst.assets[inst.assets.length - 1].end
+      : NaN;
   if (Number.isNaN(fyeMs)) return null;
   // 前期末 = 約1年前
   const priorMs = fyeMs - Math.round(365.25 * 864e5);

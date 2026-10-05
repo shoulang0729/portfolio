@@ -36,6 +36,6 @@ const CONSTITUENTS = { ...CURATED_OVERRIDES };
 // positions.js は 'ひふみ'/'マイクロSP'、KV 実保有は 'ひふみ投信'/'ひふみMS' のため両対応。
 // （alias は JSON では表現できないためローダ側で適用する）
 CONSTITUENTS['ひふみ投信'] = CONSTITUENTS['ひふみ'];
-CONSTITUENTS['ひふみMS']  = CONSTITUENTS['マイクロSP'];
+CONSTITUENTS['ひふみMS'] = CONSTITUENTS['マイクロSP'];
 
 export { CONSTITUENTS };

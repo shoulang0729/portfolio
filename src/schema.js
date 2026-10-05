@@ -63,7 +63,7 @@ export function validatePosition(obj) {
     throw new Error('Position.isProxy must be a boolean or undefined');
   }
 
-  if (obj.proxyName !== undefined && (typeof obj.proxyName !== 'string' && obj.proxyName !== null)) {
+  if (obj.proxyName !== undefined && typeof obj.proxyName !== 'string' && obj.proxyName !== null) {
     throw new Error('Position.proxyName must be a string, null, or undefined');
   }
 
@@ -167,11 +167,19 @@ export function validateSnapshot(obj) {
     }
   }
 
-  if (typeof summary.positionCount !== 'number' || !Number.isInteger(summary.positionCount) || summary.positionCount < 0) {
+  if (
+    typeof summary.positionCount !== 'number' ||
+    !Number.isInteger(summary.positionCount) ||
+    summary.positionCount < 0
+  ) {
     throw new Error('Snapshot.summary.positionCount must be a non-negative integer');
   }
 
-  if (typeof summary.watchlistCount !== 'number' || !Number.isInteger(summary.watchlistCount) || summary.watchlistCount < 0) {
+  if (
+    typeof summary.watchlistCount !== 'number' ||
+    !Number.isInteger(summary.watchlistCount) ||
+    summary.watchlistCount < 0
+  ) {
     throw new Error('Snapshot.summary.watchlistCount must be a non-negative integer');
   }
 

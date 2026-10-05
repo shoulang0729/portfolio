@@ -13,17 +13,22 @@ import { showAlert } from './modal.js';
 
 // ── 循環依存解消: auth-ui._showChangePinButton をコールバックで受け取る ──
 let _onPasskeySuccess = null;
-export function setPasskeySuccessCallback(fn) { _onPasskeySuccess = fn; }
+export function setPasskeySuccessCallback(fn) {
+  _onPasskeySuccess = fn;
+}
 
-const _PASSKEY_RP_ID   = location.hostname;
+const _PASSKEY_RP_ID = location.hostname;
 const _PASSKEY_RP_NAME = 'Portfolio Heatmap';
 const _PASSKEY_USER_ID = new TextEncoder().encode('portfolio-owner');
 
 function _b64ToU8(b64) {
-  return Uint8Array.from(atob(b64.replace(/-/g,'+').replace(/_/g,'/')), c => c.charCodeAt(0));
+  return Uint8Array.from(atob(b64.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0));
 }
 function _u8ToB64url(u8) {
-  return btoa(String.fromCharCode(...u8)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+  return btoa(String.fromCharCode(...u8))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
 }
 
 export async function registerPasskey() {
@@ -41,7 +46,7 @@ export async function registerPasskey() {
         rp: { id: _PASSKEY_RP_ID, name: _PASSKEY_RP_NAME },
         user: { id: _PASSKEY_USER_ID, name: 'Portfolio Manager', displayName: 'Portfolio Manager' },
         pubKeyCredParams: [
-          { type: 'public-key', alg: -7  },
+          { type: 'public-key', alg: -7 },
           { type: 'public-key', alg: -257 },
         ],
         authenticatorSelection: { userVerification: 'preferred', residentKey: 'preferred' },
@@ -101,22 +106,36 @@ export async function authenticatePasskey() {
     if ((await verifyRes.json()).ok) {
       sessionStorage.setItem(AUTH_SESSION_KEY, '1');
       // 次回起動時に自動でパスキー画面を出すためのフラグ
-      try { localStorage.setItem('hm-passkey-seen', '1'); } catch {}
+      try {
+        localStorage.setItem('hm-passkey-seen', '1');
+      } catch {}
       // パスキー認証時はランダムなセッション鍵を生成（PIN を経由しないため）
       const rawKey = crypto.getRandomValues(new Uint8Array(32));
       _auth.encKey = await crypto.subtle.importKey('raw', rawKey, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
       _auth.fails = 0;
       const ov = document.getElementById('pin-overlay');
-      if (ov) { ov.style.opacity = '0'; setTimeout(() => { ov.remove(); document.body.style.overflow = ''; }, 380); }
+      if (ov) {
+        ov.style.opacity = '0';
+        setTimeout(() => {
+          ov.remove();
+          document.body.style.overflow = '';
+        }, 380);
+      }
       if (_onPasskeySuccess) _onPasskeySuccess();
     } else {
       const errEl = document.getElementById('pin-error');
-      if (errEl) { errEl.textContent = 'パスキー認証失敗'; errEl.classList.add('visible'); }
+      if (errEl) {
+        errEl.textContent = 'パスキー認証失敗';
+        errEl.classList.add('visible');
+      }
     }
   } catch (e) {
     if (e.name !== 'NotAllowedError') {
       const errEl = document.getElementById('pin-error');
-      if (errEl) { errEl.textContent = `パスキーエラー: ${e.message}`; errEl.classList.add('visible'); }
+      if (errEl) {
+        errEl.textContent = `パスキーエラー: ${e.message}`;
+        errEl.classList.add('visible');
+      }
     }
   }
 }

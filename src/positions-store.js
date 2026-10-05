@@ -38,8 +38,7 @@ async function loadPositionsFromKV() {
 }
 
 async function savePositionsToKV(newPositions, pinHashOverride) {
-  const pinHash = pinHashOverride
-    || localStorage.getItem('hm-pin-hash');
+  const pinHash = pinHashOverride || localStorage.getItem('hm-pin-hash');
   if (!pinHash) throw new Error('PINが未設定です。初回PIN設定を完了してください。');
   const res = await fetchWithTimeout(`${WORKER_URL}/positions`, 30000, {
     method: 'PUT',
@@ -78,10 +77,10 @@ function mergeDuplicatePositions(positions) {
     const sharesB = p.shares || 0;
     const totalShares = sharesA + sharesB;
     const totalCost = (existing.avgCost || 0) * sharesA + (p.avgCost || 0) * sharesB;
-    existing.shares  = totalShares;
-    existing.avgCost = totalShares > 0 ? Math.round((totalCost / totalShares) * 100) / 100 : (existing.avgCost || 0);
-    existing.value   = (existing.value || 0) + (p.value || 0);
-    existing.pnl     = (existing.pnl   || 0) + (p.pnl   || 0);
+    existing.shares = totalShares;
+    existing.avgCost = totalShares > 0 ? Math.round((totalCost / totalShares) * 100) / 100 : existing.avgCost || 0;
+    existing.value = (existing.value || 0) + (p.value || 0);
+    existing.pnl = (existing.pnl || 0) + (p.pnl || 0);
     if (!existing.price && p.price) existing.price = p.price;
     const costBase = (existing.avgCost || 0) * (existing.shares || 0);
     existing.pnlPct = costBase > 0 ? (existing.pnl / costBase) * 100 : 0;
@@ -90,17 +89,17 @@ function mergeDuplicatePositions(positions) {
 }
 
 function computeImportDiff(current, incoming) {
-  const keyOf = p => p.symbol;
-  const curMap = new Map(current.map(p => [keyOf(p), p]));
-  const newMap = new Map(incoming.map(p => [keyOf(p), p]));
+  const keyOf = (p) => p.symbol;
+  const curMap = new Map(current.map((p) => [keyOf(p), p]));
+  const newMap = new Map(incoming.map((p) => [keyOf(p), p]));
 
-  const added    = incoming.filter(p => !curMap.has(keyOf(p)));
-  const removed  = current.filter(p => !newMap.has(keyOf(p)));
-  const changed  = incoming.filter(p => {
+  const added = incoming.filter((p) => !curMap.has(keyOf(p)));
+  const removed = current.filter((p) => !newMap.has(keyOf(p)));
+  const changed = incoming.filter((p) => {
     const c = curMap.get(keyOf(p));
     return c && (c.shares !== p.shares || c.avgCost !== p.avgCost);
   });
-  const unchanged = incoming.filter(p => {
+  const unchanged = incoming.filter((p) => {
     const c = curMap.get(keyOf(p));
     return c && c.shares === p.shares && c.avgCost === p.avgCost;
   });

@@ -15,17 +15,17 @@ import { state } from './state.js';
  * @type {Record<string, string>}
  */
 const YAHOO_SECTOR_MAP = {
-  technology:            'tech',
-  financial_services:    'financials',
-  healthcare:            'healthcare',
-  consumer_cyclical:     'consumer',
-  consumer_defensive:    'staples',
-  industrials:           'industrials',
-  energy:                'energy',
-  basic_materials:       'materials',
-  communication_services:'comm',
-  utilities:             'utilities',
-  realestate:            'realestate',
+  technology: 'tech',
+  financial_services: 'financials',
+  healthcare: 'healthcare',
+  consumer_cyclical: 'consumer',
+  consumer_defensive: 'staples',
+  industrials: 'industrials',
+  energy: 'energy',
+  basic_materials: 'materials',
+  communication_services: 'comm',
+  utilities: 'utilities',
+  realestate: 'realestate',
 };
 
 /**
@@ -86,11 +86,13 @@ export async function loadTopHoldings() {
       Object.assign(state.liveTopHoldings, parsed);
       return;
     }
-  } catch { /* sessionStorage 失敗は無視 */ }
+  } catch {
+    /* sessionStorage 失敗は無視 */
+  }
 
   for (const symbol of TOPHOLDINGS_ALLOWLIST) {
     // positions から ySymbol を引く
-    const pos = positions.find(p => p.symbol === symbol);
+    const pos = positions.find((p) => p.symbol === symbol);
     if (!pos?.ySymbol) continue;
 
     const sector = await fetchTopHoldingsSector(pos.ySymbol);
@@ -107,5 +109,7 @@ export async function loadTopHoldings() {
     if (Object.keys(state.liveTopHoldings).length > 0) {
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state.liveTopHoldings));
     }
-  } catch { /* quota オーバーは無視 */ }
+  } catch {
+    /* quota オーバーは無視 */
+  }
 }

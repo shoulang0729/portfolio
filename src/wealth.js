@@ -234,8 +234,7 @@ async function netWorthCardHTML() {
   }
   const real = mf.realAssetsTotal || 0;
   const gross = mf.imported + real; // 総資産 ＝ 運用 ＋ 実物
-  const nw =
-    typeof mf.netWorthComputed === 'number' ? mf.netWorthComputed : gross - mf.liabilitiesTotal;
+  const nw = typeof mf.netWorthComputed === 'number' ? mf.netWorthComputed : gross - mf.liabilitiesTotal;
   const oku = (n) => `${(n / 1e8).toFixed(2)}億`;
   const pctUn = gross > 0 ? (mf.imported / gross) * 100 : 0;
   const pctRe = gross > 0 ? (real / gross) * 100 : 0;
@@ -246,8 +245,7 @@ async function netWorthCardHTML() {
         `<tr class="we-nw-sub"><td>${escapeHTML(l.tag ? `${l.tag}（${l.institution}）` : l.institution)}</td><td>−${escapeHTML(fmtYen(l.balance))}</td></tr>`
     )
     .join('');
-  const realCell =
-    real > 0 ? escapeHTML(fmtYen(real)) : '<span class="we-nw-na">—（未投入）</span>';
+  const realCell = real > 0 ? escapeHTML(fmtYen(real)) : '<span class="we-nw-na">—（未投入）</span>';
   const bar =
     real > 0
       ? `<div class="we-nw-bar"><span class="we-nw-seg s-un" style="width:${pctUn.toFixed(1)}%"></span><span class="we-nw-seg s-re" style="width:${pctRe.toFixed(1)}%"></span></div>

@@ -32,7 +32,7 @@ function clamp01(x) {
 export function buildConstituentsResponse(raw) {
   const list = Array.isArray(raw?.holdings) ? raw.holdings : [];
   const holdings = list
-    .map(h => ({
+    .map((h) => ({
       ticker: h.ticker || '',
       name: h.name || '',
       weight: Number(h.weight) || 0,
@@ -41,7 +41,7 @@ export function buildConstituentsResponse(raw) {
       sector: h.sector || '',
       assetClass: h.assetClass || '',
     }))
-    .filter(h => h.weight > 0);
+    .filter((h) => h.weight > 0);
   const coverage = clamp01(holdings.reduce((s, h) => s + h.weight, 0));
   return {
     asOf: raw?.asOf || new Date().toISOString(),

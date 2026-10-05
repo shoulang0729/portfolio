@@ -305,11 +305,4 @@ function heatSort(col) {
   renderHeatmapList();
 }
 
-export {
-  renderHeatmapList,
-  heatSort,
-  updateHeatControls,
-  slToggleDetail,
-  applyStockBars,
-  updateSlColStyle,
-};
+export { renderHeatmapList, heatSort, updateHeatControls, slToggleDetail, applyStockBars, updateSlColStyle };

@@ -26,7 +26,7 @@ function openImportModal(source) {
   _importGen++;
   _importState = { source, parsed: [], current: [...positions] };
   const overlay = document.getElementById('import-modal-overlay');
-  const title   = document.getElementById('import-modal-title');
+  const title = document.getElementById('import-modal-title');
   if (!overlay) return;
   title.textContent = 'マネックス証券 取込';
   _renderImportStep('select');
@@ -40,7 +40,7 @@ function openManagePositionsModal() {
   const normalized = positions.map(canonicalizeFundPosition);
   _importState = { source: 'manage', parsed: normalized, current: [...positions] };
   const overlay = document.getElementById('import-modal-overlay');
-  const title   = document.getElementById('import-modal-title');
+  const title = document.getElementById('import-modal-title');
   if (!overlay) return;
   title.textContent = '保有銘柄を整理';
   _renderImportStep('review');
@@ -53,7 +53,9 @@ function closeImportModal() {
   const overlay = document.getElementById('import-modal-overlay');
   if (!overlay) return;
   overlay.classList.remove('open');
-  setTimeout(() => { overlay.style.display = 'none'; }, 220);
+  setTimeout(() => {
+    overlay.style.display = 'none';
+  }, 220);
   _importState = { source: null, parsed: [], current: [] };
 }
 
@@ -109,23 +111,23 @@ function _renderImportStep(step, payload) {
       });
       html += `</div>`;
     } else {
-      const { added, removed, changed } = computeImportDiff(
-        _importState.current, _importState.parsed
-      );
+      const { added, removed, changed } = computeImportDiff(_importState.current, _importState.parsed);
       // 重複検出（同 symbol が parsed 内に複数）→ ユーザーへ表示
       const symCount = {};
-      _importState.parsed.forEach(p => { symCount[p.symbol] = (symCount[p.symbol] || 0) + 1; });
-      const dupSymCount = Object.values(symCount).filter(n => n > 1).length;
+      _importState.parsed.forEach((p) => {
+        symCount[p.symbol] = (symCount[p.symbol] || 0) + 1;
+      });
+      const dupSymCount = Object.values(symCount).filter((n) => n > 1).length;
 
       html += `<div class="import-review-summary">${_importState.parsed.length}銘柄を検出`;
-      if (added.length)    html += ` · <span class="imp-badge new">${added.length}件新規</span>`;
-      if (changed.length)  html += ` · <span class="imp-badge chg">${changed.length}件変更</span>`;
-      if (dupSymCount)     html += ` · <span class="imp-badge chg">${dupSymCount}銘柄に重複行あり（保存時に合算）</span>`;
+      if (added.length) html += ` · <span class="imp-badge new">${added.length}件新規</span>`;
+      if (changed.length) html += ` · <span class="imp-badge chg">${changed.length}件変更</span>`;
+      if (dupSymCount) html += ` · <span class="imp-badge chg">${dupSymCount}銘柄に重複行あり（保存時に合算）</span>`;
       html += `</div>`;
 
       // parsed を元の順序のままインデックス付きで描画（重複行も個別に uncheck 可能）
-      const addedSyms   = new Set(added.map(p => p.symbol));
-      const changedKeys = new Set(changed.map(p => p.symbol));
+      const addedSyms = new Set(added.map((p) => p.symbol));
+      const changedKeys = new Set(changed.map((p) => p.symbol));
       html += `<div class="import-list">`;
       _importState.parsed.forEach((p, idx) => {
         let type = 'same';
@@ -134,7 +136,7 @@ function _renderImportStep(step, payload) {
           type = 'new';
         } else if (changedKeys.has(p.symbol)) {
           type = 'chg';
-          const cur = _importState.current.find(c => c.symbol === p.symbol);
+          const cur = _importState.current.find((c) => c.symbol === p.symbol);
           if (cur) hint = `${cur.shares}→${p.shares}株 / @${cur.avgCost}→@${p.avgCost}`;
         }
         html += _importRow(p, type, true, hint, idx);
@@ -203,13 +205,9 @@ function _renderImportStep(step, payload) {
 
 function _importRow(p, type, checked, hint, idx) {
   const label = { new: '新規', chg: '変更', same: '', del: '削除予定' }[type];
-  const badgeHtml = label
-    ? `<span class="imp-badge ${type}">${label}</span>`
-    : '';
-  const hintHtml = hint
-    ? `<span class="imp-row-hint">${escapeHTML(hint)}</span>`
-    : '';
-  const idxAttr = (idx != null) ? ` data-idx="${idx}"` : '';
+  const badgeHtml = label ? `<span class="imp-badge ${type}">${label}</span>` : '';
+  const hintHtml = hint ? `<span class="imp-row-hint">${escapeHTML(hint)}</span>` : '';
+  const idxAttr = idx != null ? ` data-idx="${idx}"` : '';
   return `<label class="import-row">
     <input type="checkbox" class="import-cb" data-symbol="${escapeHTML(p.symbol)}"
       data-type="${type}"${idxAttr} ${checked ? 'checked' : ''}>
@@ -224,16 +222,14 @@ function _importRow(p, type, checked, hint, idx) {
 
 async function _confirmImport() {
   const body = document.getElementById('import-modal-body');
-  const cbs  = body?.querySelectorAll('.import-cb');
+  const cbs = body?.querySelectorAll('.import-cb');
   if (!cbs) return;
 
   let finalPositions;
   if (_importState.source === 'manage') {
     // 管理モード: チェックされた行のインデックスで parsed をフィルタ（重複symbol対応）
     const keepIdx = new Set(
-      [...cbs]
-        .filter(cb => cb.checked && cb.dataset.idx != null)
-        .map(cb => Number(cb.dataset.idx))
+      [...cbs].filter((cb) => cb.checked && cb.dataset.idx != null).map((cb) => Number(cb.dataset.idx))
     );
     finalPositions = _importState.parsed.filter((_, i) => keepIdx.has(i));
   } else {
@@ -242,17 +238,15 @@ async function _confirmImport() {
     //  - removed (del) のうちチェック済みは current から除外
     const parsedKeepIdx = new Set(
       [...cbs]
-        .filter(cb => cb.checked && cb.dataset.type !== 'del' && cb.dataset.idx != null)
-        .map(cb => Number(cb.dataset.idx))
+        .filter((cb) => cb.checked && cb.dataset.type !== 'del' && cb.dataset.idx != null)
+        .map((cb) => Number(cb.dataset.idx))
     );
     const delSymbols = new Set(
-      [...cbs].filter(cb => cb.checked && cb.dataset.type === 'del').map(cb => cb.dataset.symbol)
+      [...cbs].filter((cb) => cb.checked && cb.dataset.type === 'del').map((cb) => cb.dataset.symbol)
     );
     const newPositions = _importState.parsed.filter((_, i) => parsedKeepIdx.has(i));
-    const incomingSymbols = new Set(newPositions.map(p => p.symbol));
-    const oldKept = _importState.current.filter(p =>
-      !incomingSymbols.has(p.symbol) && !delSymbols.has(p.symbol)
-    );
+    const incomingSymbols = new Set(newPositions.map((p) => p.symbol));
+    const oldKept = _importState.current.filter((p) => !incomingSymbols.has(p.symbol) && !delSymbols.has(p.symbol));
     finalPositions = [...newPositions, ...oldKept];
   }
 
@@ -271,7 +265,7 @@ async function _confirmImport() {
 async function _doSavePositions(finalPositions, pinHashOverride, gen) {
   // モーダルが閉じ/再オープンされた場合はモーダルへの描画のみ抑止する。
   // 保存とグローバル再描画はデータ整合性のため常に実行する（#176）。
-  const stale = () => (gen !== undefined && gen !== _importGen);
+  const stale = () => gen !== undefined && gen !== _importGen;
   try {
     await savePositionsToKV(finalPositions, pinHashOverride);
     positions.splice(0, positions.length, ...finalPositions);
@@ -300,13 +294,19 @@ async function _retryWithPin() {
   const gen = _importGen;
   const pinInput = document.getElementById('import-pin-input');
   const pin = pinInput?.value?.trim();
-  if (!pin) { if (pinInput) pinInput.focus(); return; }
+  if (!pin) {
+    if (pinInput) pinInput.focus();
+    return;
+  }
 
   const pinHash = await _hashPin(pin);
   if (gen !== _importGen) return; // モーダルが閉じ/再オープンされた
 
   const finalPositions = _importState.pendingPositions;
-  if (!finalPositions?.length) { closeImportModal(); return; }
+  if (!finalPositions?.length) {
+    closeImportModal();
+    return;
+  }
   _renderImportStep('saving');
   await _doSavePositions(finalPositions, pinHash, gen);
   // 保存成功後にのみ PIN ハッシュをローカルに記録（誤入力で上書きしないため）
@@ -335,8 +335,21 @@ async function handleManexFileSelect(event) {
 // ── HTML エスケープ（モーダル内のXSS対策）────────────────────────────────
 function escapeHTML(s) {
   return String(s)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
-export { openImportModal, closeImportModal, openManagePositionsModal, handleImportOverlayClick, handleManexFileSelect, focusImportFileInput, _renderImportStep, _confirmImport, _retryWithPin };
+export {
+  openImportModal,
+  closeImportModal,
+  openManagePositionsModal,
+  handleImportOverlayClick,
+  handleManexFileSelect,
+  focusImportFileInput,
+  _renderImportStep,
+  _confirmImport,
+  _retryWithPin,
+};

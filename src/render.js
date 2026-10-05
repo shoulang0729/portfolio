@@ -28,7 +28,7 @@ export function renderStats() {
 
   const masked = state.statsMasked;
   /** 金額セル: マスク時は数字を *** に置換（カンマ・¥は残す） */
-  const amt = v => (masked ? maskAmount(fmtYen(v)) : fmtYen(v));
+  const amt = (v) => (masked ? maskAmount(fmtYen(v)) : fmtYen(v));
 
   const mfTag = '<span class="stat-src">MF実値</span>';
 
@@ -91,16 +91,18 @@ export function renderStats() {
  * @returns {Promise<void>}
  */
 export async function refreshHistoricalAndRender() {
-  const results = await Promise.allSettled(['5y', '10y'].map(async range => {
-    await fetchAllHistorical(range);
-    renderStats();
-    renderHeatmapList(); // 統合タブ（保有＋ウォッチ）
-    if (state.activeTab === 'list') updateListHeight();
-    if (state.changePeriod && state.changePeriod !== '1d') renderHeatmap();
-    return range;
-  }));
-  const failed = results.filter(r => r.status === 'rejected');
-  failed.forEach(r => console.warn('[historical] fetch failed:', r.reason));
+  const results = await Promise.allSettled(
+    ['5y', '10y'].map(async (range) => {
+      await fetchAllHistorical(range);
+      renderStats();
+      renderHeatmapList(); // 統合タブ（保有＋ウォッチ）
+      if (state.activeTab === 'list') updateListHeight();
+      if (state.changePeriod && state.changePeriod !== '1d') renderHeatmap();
+      return range;
+    })
+  );
+  const failed = results.filter((r) => r.status === 'rejected');
+  failed.forEach((r) => console.warn('[historical] fetch failed:', r.reason));
   if (failed.length > 0) {
     setStatus(`履歴データ取得失敗（${failed.length}/${results.length}）`, 'red');
   }
@@ -113,7 +115,11 @@ export async function refreshHistoricalAndRender() {
 export function hideHeatmapSkeleton() {
   const sk = document.getElementById('heatmap-skeleton');
   const sv = document.getElementById('heatmap');
-  if (sk) { sk.style.transition = 'opacity 0.3s ease'; sk.style.opacity = '0'; setTimeout(() => sk.remove(), 320); }
+  if (sk) {
+    sk.style.transition = 'opacity 0.3s ease';
+    sk.style.opacity = '0';
+    setTimeout(() => sk.remove(), 320);
+  }
   if (sv) sv.style.display = '';
 }
 
@@ -122,13 +128,13 @@ export function hideHeatmapSkeleton() {
  * @returns {void}
  */
 export function updateListHeight() {
-  const wrap    = document.getElementById('stock-list-wrap');
+  const wrap = document.getElementById('stock-list-wrap');
   if (!wrap) return;
-  const sticky  = document.querySelector('.sticky-top');
+  const sticky = document.querySelector('.sticky-top');
   const stickyH = sticky instanceof HTMLElement ? sticky.offsetHeight : 0;
   const padBot = parseFloat(getComputedStyle(document.body).paddingBottom) || 16;
   const h = Math.max(160, window.innerHeight - stickyH - padBot - 4);
-  wrap.style.maxHeight = `${h  }px`;
+  wrap.style.maxHeight = `${h}px`;
 }
 
 /**
