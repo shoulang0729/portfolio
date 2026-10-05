@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "esbuild src/app.js --bundle --format=esm --outfile=dist/app.js --external:d3 --minify --sourcemap=linked",
+    "build": "esbuild src/app.js --bundle --format=esm --outfile=dist/app.js --external:d3 --minify --sourcemap=linked --charset=utf8",
     "build:watch": "esbuild src/app.js --bundle --format=esm --outfile=dist/app.js --external:d3 --sourcemap=linked --watch",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
