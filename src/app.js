@@ -5,14 +5,12 @@
 // ══════════════════════════════════════════════════════════════
 
 // ── ES Module imports ──
-import { positions, PERIODS, PERIOD_MAP } from './positions.js';
+import { positions, PERIOD_MAP } from './positions.js';
 import { state } from './state.js';
 import { authenticatePasskey, registerPasskey, setPasskeySuccessCallback } from './auth-passkey.js';
 import { authKeyPress, authBackspace, pcKeyPress, pcBackspace, openPinChange, closePinChange, _showChangePinButton } from './auth-ui.js';
-import { getHistoricalChangePct, calcPortfolioPeriodPct } from './utils.js';
 import { fetchAllHistorical, refreshPrices, applyPricesCache, migrateFromSessionStorage, restoreFromIDB } from './data.js';
 import { setStatus } from './ui-status.js';
-import { WORKER_URL } from './config.js';
 import { renderHeatmap } from './heatmap.js';
 import { loadChart, setRange, closeModal, handleOverlayClick } from './chart.js';
 import { switchTab } from './tabs.js';
@@ -37,7 +35,6 @@ import {
 } from './watchlist.js';
 import { loadPositionsFromKV } from './positions-store.js';
 import { openImportModal, closeImportModal, openManagePositionsModal, handleImportOverlayClick, handleManexFileSelect, handleMoneyForwardImageSelect, focusImportFileInput, _renderImportStep, _confirmImport, _retryWithPin } from './import-ui.js';
-import { showConfirm, showAlert } from './modal.js';
 import { renderStats, refreshHistoricalAndRender, setupPriceUpdateListener, hideHeatmapSkeleton, updateActiveTableHeight } from './render.js';
 import { toggleHmMenu, closeHmMenu } from './menu.js';
 import { loadTopHoldings } from './data-topholdings.js';
@@ -113,117 +110,6 @@ function cycleTheme() {
   if (overlay && overlay.style.display !== 'none' && state.currentPos?.ySymbol) {
     loadChart(state.currentPos.ySymbol, state.currentRange);
   }
-}
-
-// ══════════════════════════════════════════════
-// PORTFOLIO SNAPSHOT
-//   フロントの state を使ってフルスナップショット（履歴付き）を組み立て、
-//   Worker /portfolio/snapshot に POST して GitHub に保存させる。
-//   失敗時は Worker 側で自前再生成にフォールバック（payload なし指定）。
-// ══════════════════════════════════════════════
-async function triggerPortfolioSnapshot() {
-  const confirmed = await showConfirm({
-    title: 'スナップショット保存',
-    message: '現在のポートフォリオを GitHub にスナップショット保存します。\n（data/portfolio-snapshot.json が更新されます）',
-    okLabel: '保存',
-    cancelLabel: 'キャンセル',
-  });
-  if (!confirmed) return;
-  try {
-    setStatus('スナップショット作成中...', 'yellow');
-    const payload = _buildPortfolioSnapshotPayload();
-    const res = await fetch(`${WORKER_URL}/portfolio/snapshot`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok) {
-      const t = await res.text().catch(() => '');
-      throw new Error(`HTTP ${res.status}: ${t.slice(0, 200)}`);
-    }
-    const data = await res.json();
-    setStatus(`スナップショット保存完了（${data.positions} 銘柄）`, 'green');
-    await showAlert({
-      title: '保存完了',
-      message: `https://github.com/shoulang0729/portfolio/blob/main/data/portfolio-snapshot.json\n\n反映まで raw.githubusercontent.com 側で最大5分のキャッシュラグあり。`,
-      okLabel: 'OK',
-    });
-  } catch (e) {
-    setStatus(`スナップショット保存失敗: ${e.message}`, 'red');
-    await showAlert({
-      title: 'エラー',
-      message: `スナップショット保存失敗:\n${e.message}`,
-      okLabel: 'OK',
-    });
-  }
-}
-
-function _buildPortfolioSnapshotPayload() {
-  const perfOf = (ySymbol) => {
-    const perf = {};
-    for (const period of PERIODS) {
-      // 1d は当日騰落率（live price）、他は historical cache から計算
-      if (period.id === '1d') {
-        const pos = positions.find(p => p.ySymbol === ySymbol);
-        perf['1d'] = pos?.dayPct ?? null;
-      } else {
-        perf[period.id] = getHistoricalChangePct(ySymbol, period.id);
-      }
-    }
-    return perf;
-  };
-
-  const positionsWithPerf = positions.map(p => ({
-    ...p,
-    performance: perfOf(p.ySymbol),
-  }));
-
-  const totalValue = positions.reduce((s, p) => s + (p.value || 0), 0);
-  const totalPnl   = positions.reduce((s, p) => s + (p.pnl || 0), 0);
-
-  const portPerf = {};
-  for (const period of PERIODS) {
-    portPerf[period.id] = calcPortfolioPeriodPct(period.id);
-  }
-
-  // ウォッチリスト：保有していない注目銘柄。期間パフォーマンスのみ出力
-  const watchlistWithPerf = (state.watchlist || []).map(item => {
-    const ySymbol = item.ySymbol || item.symbol;
-    const perf = {};
-    for (const period of PERIODS) {
-      if (period.id === '1d') {
-        perf['1d'] = state.watchlistPrices?.[item.symbol]?.dayPct ?? null;
-      } else {
-        perf[period.id] = getHistoricalChangePct(ySymbol, period.id);
-      }
-    }
-    return {
-      symbol: item.symbol,
-      name:   item.name || item.symbol,
-      ySymbol,
-      cat:    item.cat || null,
-      cur:    item.cur || null,
-      performance: perf,
-    };
-  });
-
-  // historicals（日次価格系列）は重い（5MB超）ので保存しない。
-  // 必要な情報は positions[].performance / watchlist[].performance に集約されている。
-  return {
-    asOf: new Date().toISOString(),
-    source: 'frontend-manual',
-    summary: {
-      totalValue,
-      totalPnl,
-      totalPnlPct: totalValue > totalPnl ? totalPnl / (totalValue - totalPnl) * 100 : null,
-      positionCount: positions.length,
-      watchlistCount: watchlistWithPerf.length,
-      currencyBase: 'JPY',
-      performance: portPerf,
-    },
-    positions: positionsWithPerf,
-    watchlist: watchlistWithPerf,
-  };
 }
 
 // ══════════════════════════════════════════════
@@ -398,7 +284,7 @@ const ACTION_MAP = {
   // app.js
   toggleStats, cycleTheme, toggleHmMenu, closeHmMenu,
   setChangePeriod, setColorModePnl, handleRefreshSelect,
-  switchTab, triggerPortfolioSnapshot,
+  switchTab,
   // briefing.js
   reloadBriefing,
   // order-sheet.js（Order タブ・#674）
