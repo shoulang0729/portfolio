@@ -377,7 +377,7 @@ function handlePortfolioSnapshot(origin) {
 
 // ══════════════════════════════════════════════════════════════
 // 無効化済みルート（#714）
-//   AI タブ（src/_disabled/ に退避・無効化中）専用だったルート。
+//   AI タブ（#723 で src/_disabled/ ごと削除）専用だったルート。
 //   /ai/gemini・/ai/grok・/ai/deepseek・/ai/claude・/ai/models・/ai/context・/notion/save
 //   /ai/openai はマネフォ画像取込（アプリから削除）専用だったため #718 で追加。
 //   どのメソッドでも 410 Gone（CORS 付き）を返す。外部 fetch・KV には触れない。
