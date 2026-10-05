@@ -1,6 +1,7 @@
 # 開発ガイド（開発ツール・ビルドと配信・よくある作業・並列作業の注意）
 
 > CLAUDE.md から移した詳細（#722・`docs/handoff/2026-10-05-refactor-before-migration.md` §4）。開発フロー・Toshio 確認・データの書き手は [CLAUDE.md](../CLAUDE.md) が正本。設計規約は [docs/design-system.md](./design-system.md)。
+> 外部（Mulmo・Actions・Mac）との境目（書く/読むデータ・呼ぶ Worker API・時刻・リポ外からの import）は [docs/interfaces.md](./interfaces.md)。
 
 ## 1. 開発ツール
 
