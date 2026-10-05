@@ -7,12 +7,13 @@
 //   GET  /edgar?path=<path>             SEC EDGAR プロキシ（キー不要・UA付与・quality 照合用）
 //   GET  /edinet-db?path=<path>         EDINET DB プロキシ（APIキー隠蔽・日本株 quality 用）
 //   GET  /forex?from=<from>&to=<to>    為替レートプロキシ（Yahoo Finance）
-//   GET  /etf/constituents?symbol=<sym> ETF 構成銘柄（look-through・KV キャッシュ）
+//   GET  /etf/constituents?symbol=<sym> ETF 構成銘柄（look-through・KV キャッシュ）。取得アダプタ未実装のため
+//                                       現状はキャッシュが無ければ 404（etf-constituents.js・#305）
 //   GET  /watchlist                     ウォッチリスト取得（KV・公開）
-//   PUT  /watchlist                     ウォッチリスト保存（KV）
+//   PUT  /watchlist                     ウォッチリスト保存（KV・認証なし＝kv-resync の Actions が使う）
 //   GET  /positions                     保有銘柄取得（KV・非公開・PIN認証必須・#714）
 //   PUT  /positions                     保有銘柄保存（KV・PIN認証必須）
-//   GET  /networth                      ネットワース機微データ取得（KV・非公開・#589 Phase2）
+//   GET  /networth                      ネットワース機微データ取得（KV・非公開・PIN認証必須・#589 Phase2）
 //   PUT  /networth                      ネットワース機微データ保存（KV・PIN認証必須・#589 Phase2）
 //   GET  /order-sheet                   注文表を計算して返す（KV・PIN認証必須・KV に書かない・#672）
 //   GET  /order-sheet/plan              注文表の設定 order:plan 取得（KV・PIN認証必須・#672）
@@ -24,19 +25,32 @@
 //   GET  /auth/challenge                パスキー認証チャレンジ生成
 //   POST /auth/register                 パスキー登録
 //   POST /auth/verify                   パスキー検証
-//   *    /ai/{gemini,grok,deepseek,claude,models,context}, /notion/save
-//                                       無効化済み（410・#714）
-//   *    /ai/openai                     無効化済み（410・マネフォ画像取込の削除・#718）
 //
-// 環境変数（Cloudflare Secrets / vars に設定）:
-//   FINNHUB_API_KEY, ALLOWED_ORIGIN
+// 無効化済み（どのメソッドでも 410 Gone・CORS 付き。古いキャッシュのアプリ向けに 404 にしない）:
+//   *    /portfolio/snapshot            スナップショット保存の停止（#709）
+//   *    /ai/{gemini,grok,deepseek,claude,models,context}, /notion/save
+//                                       AI タブ専用ルートの停止（#714）
+//   *    /ai/openai                     マネフォ画像取込の削除（#718）
+//
+// 環境変数（Cloudflare Secrets / vars・名前のみ）:
+//   FINNHUB_API_KEY      /finnhub・Cron の価格キャッシュ
+//   FMP_API_KEY          /fmp
+//   EDINET_DB_API_KEY    /edinet-db
+//   SEC_USER_AGENT       /edgar（未設定時は既定の UA）
+//   GH_DISPATCH_TOKEN    per-daily.yml の起動（無ければ GITHUB_TOKEN）
+//   GITHUB_TOKEN         同上のフォールバック
+//   ALLOWED_ORIGIN       CORS の許可 Origin（vars・未設定時は https://shoulang0729.github.io）
 //   （GEMINI/GROK/DEEPSEEK/ANTHROPIC/NOTION 系は #714 以降、OPENAI_API_KEY は #718 以降 Worker からは参照しない）
-//   KV: Cloudflare KV namespace binding
-// Cron: 0 1,8,15,22 * * *  — 1日4回、全保有銘柄の価格を取得してキャッシュ
-//                     ＋注文表の約定（mf の株数の増減）を order:plan に確定（変化時のみ書く・#672）
-// Cron: 20 20,21 * * *     — per-daily.yml を workflow_dispatch で起動（#708）。
-//                     米国東部の夏時間は 20:20 UTC、冬時間は 21:20 UTC の回だけ。他の処理はしない。
-//                     トークンは GH_DISPATCH_TOKEN || GITHUB_TOKEN（ログには名前だけ）
+// Binding:
+//   KV                   Cloudflare KV namespace
+//   RATE_LIMITER         Workers ネイティブ ratelimit（rate-limit.md・未設定時は素通し）
+//
+// Cron（wrangler.toml）:
+//   0 1,8,15,22 * * *  — 1日4回、全保有銘柄の価格を取得してキャッシュ
+//                        ＋注文表の約定（mf の株数の増減）を order:plan に確定（変化時のみ書く・#672）
+//   20 20,21 * * *     — per-daily.yml を workflow_dispatch で起動（#708）。
+//                        米国東部の夏時間は 20:20 UTC、冬時間は 21:20 UTC の回だけ。他の処理はしない。
+//                        トークンは GH_DISPATCH_TOKEN || GITHUB_TOKEN（ログには名前だけ）
 
 import {
   CONSTITUENTS_KV_PREFIX,
@@ -1189,7 +1203,7 @@ export default {
     return errRes('Not Found', 404, org);
   },
 
-  // ── Cron: 6時間ごとに全保有銘柄の価格をキャッシュ ───────────
+  // ── Cron: 1日4回（0 1,8,15,22 * * *）全保有銘柄の価格をキャッシュ ───────────
   async scheduled(event, env, _ctx) {
     // per-daily.yml の起動（#708）。この Cron では価格キャッシュ・注文表の約定を動かさない
     if (event?.cron === PER_DAILY_CRON) {
