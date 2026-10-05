@@ -13,7 +13,7 @@
 - [x] 付随: #727 / PR #728（`src/positions.js` のフォールバック保有を合成値に置換）マージ 21a373a（Toshio 承認・旧値の履歴は残す判断）
 - [x] 段階3 #705 / PR3a #729 マージ 2026-10-05（squash の SHA 81cb7653225ee49aff7f11cdf08ce634abc6503e・バンドル sha256 一致・Worker 再デプロイ不要）/ PR3b #730（blame-ignore）マージ f283c6b ／ PR3c #731（CI）マージ 5dd821a（Toshio 承認）。確認用の使い捨てブランチ `feature/705-format-probe` はプロキシで削除不可のため残存
 - [x] 段階4 Issue #723 / PR4a #733 bc6b44e / PR4b #736 27f0425（コメントのみ・バンドル一致・デプロイ不要）/ PR4c #734 a3d4216（Q6 回答によりルーティン docs も削除）/ PR4d #735 03528df（d3 は E2E が node_modules から読むため残し depcheck の ignores に追加）/ PR4e #732 277481a（Q5: CodeRabbit・codex-review の設定削除・Toshio 承認）/ Secrets 削除: しない（Toshio 回答「残す」）
-- [ ] 段階5 Issue #____ / PR5a #____ / PR5b #____ / PR5c #____（#306・デプロイ ____）/ PR5d #____（#704）/ PR5e #____（#703）
+- [ ] 段階5 Issue #724 / PR5a #738 839279e（Mulmo 欄は未確認・Mulmo 環境で調査中）/ PR5b #739 ff83868（契約テスト 375 件）/ PR5c #741 3ae2014（#306・移動のみ・ルート表は作らず別 PR、ルート一覧コメントは index.js に残す・Toshio 承認・デプロイ ____）/ PR5d #740 f95dd6e（#704・minify＋sourcemap 250KB・Toshio 承認）＋ #742 42c6a98（--charset=utf8・223KB）/ PR5e #737 2c9fbd2（#703）
 
 ---
 
