@@ -22,7 +22,6 @@ vi.hoisted(() => {
 });
 
 import { loadPositionsFromKV } from '../src/positions-store.js';
-import { parseMoneyForwardImage } from '../src/import-parse.js';
 import { saveWatchlist } from '../src/watchlist.js';
 import { state } from '../src/state.js';
 
@@ -41,15 +40,6 @@ function syntheticPosition() {
     pnlPct: 11.1,
     cur: 'USD',
     ySymbol: 'AAA',
-  };
-}
-
-function syntheticImage() {
-  const bytes = new Uint8Array([1, 2, 3, 4]);
-  return {
-    type: 'image/png',
-    size: bytes.length,
-    arrayBuffer: async () => bytes.buffer,
   };
 }
 
@@ -91,23 +81,6 @@ describe('loadPositionsFromKV', () => {
     localStorage.setItem('hm-pin-hash', PIN);
     fetchMock.mockResolvedValue(new Response('{"error":"x"}', { status: 401 }));
     expect(await loadPositionsFromKV()).toBe(false);
-  });
-});
-
-describe('parseMoneyForwardImage', () => {
-  it('PIN が無ければ通信せず「ログインが必要」で止まる', async () => {
-    await expect(parseMoneyForwardImage(syntheticImage())).rejects.toThrow('ログインが必要');
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  it('PIN があれば /ai/openai に X-Pin-Hash を付ける', async () => {
-    localStorage.setItem('hm-pin-hash', PIN);
-    const content = JSON.stringify({ assets: [] });
-    fetchMock.mockResolvedValue(new Response(JSON.stringify({ choices: [{ message: { content } }] }), { status: 200 }));
-    expect(await parseMoneyForwardImage(syntheticImage())).toEqual([]);
-    const [url, init] = fetchMock.mock.calls[0];
-    expect(String(url)).toMatch(/\/ai\/openai$/);
-    expect(headerOf(init, 'X-Pin-Hash')).toBe(PIN);
   });
 });
 

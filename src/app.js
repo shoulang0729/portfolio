@@ -34,7 +34,7 @@ import {
   fetchWatchlistData,
 } from './watchlist.js';
 import { loadPositionsFromKV } from './positions-store.js';
-import { openImportModal, closeImportModal, openManagePositionsModal, handleImportOverlayClick, handleManexFileSelect, handleMoneyForwardImageSelect, focusImportFileInput, _renderImportStep, _confirmImport, _retryWithPin } from './import-ui.js';
+import { openImportModal, closeImportModal, openManagePositionsModal, handleImportOverlayClick, handleManexFileSelect, focusImportFileInput, _renderImportStep, _confirmImport, _retryWithPin } from './import-ui.js';
 import { renderStats, refreshHistoricalAndRender, setupPriceUpdateListener, hideHeatmapSkeleton, updateActiveTableHeight } from './render.js';
 import { toggleHmMenu, closeHmMenu } from './menu.js';
 import { loadTopHoldings } from './data-topholdings.js';
@@ -302,7 +302,7 @@ const ACTION_MAP = {
   onWatchlistSearch, removeFromWatchlist, wlSelectItem,
   // import-ui.js
   openImportModal, closeImportModal, openManagePositionsModal,
-  handleImportOverlayClick, handleManexFileSelect, handleMoneyForwardImageSelect,
+  handleImportOverlayClick, handleManexFileSelect,
   focusImportFileInput, _renderImportStep, _confirmImport, _retryWithPin,
 };
 

@@ -7,7 +7,6 @@
 //   GET  /edgar?path=<path>             SEC EDGAR プロキシ（キー不要・UA付与・quality 照合用）
 //   GET  /edinet-db?path=<path>         EDINET DB プロキシ（APIキー隠蔽・日本株 quality 用）
 //   GET  /forex?from=<from>&to=<to>    為替レートプロキシ（Yahoo Finance）
-//   POST /ai/openai                     OpenAI プロキシ（マネフォ画像取込用・PIN認証必須・#714）
 //   GET  /etf/constituents?symbol=<sym> ETF 構成銘柄（look-through・KV キャッシュ）
 //   GET  /watchlist                     ウォッチリスト取得（KV・公開）
 //   PUT  /watchlist                     ウォッチリスト保存（KV）
@@ -27,10 +26,11 @@
 //   POST /auth/verify                   パスキー検証
 //   *    /ai/{gemini,grok,deepseek,claude,models,context}, /notion/save
 //                                       無効化済み（410・#714）
+//   *    /ai/openai                     無効化済み（410・マネフォ画像取込の削除・#718）
 //
 // 環境変数（Cloudflare Secrets / vars に設定）:
-//   FINNHUB_API_KEY, OPENAI_API_KEY, ALLOWED_ORIGIN
-//   （GEMINI/GROK/DEEPSEEK/ANTHROPIC/NOTION 系は #714 以降 Worker からは参照しない）
+//   FINNHUB_API_KEY, ALLOWED_ORIGIN
+//   （GEMINI/GROK/DEEPSEEK/ANTHROPIC/NOTION 系は #714 以降、OPENAI_API_KEY は #718 以降 Worker からは参照しない）
 //   KV: Cloudflare KV namespace binding
 // Cron: 0 1,8,15,22 * * *  — 1日4回、全保有銘柄の価格を取得してキャッシュ
 //                     ＋注文表の約定（mf の株数の増減）を order:plan に確定（変化時のみ書く・#672）
@@ -364,6 +364,7 @@ function handlePortfolioSnapshot(origin) {
 // 無効化済みルート（#714）
 //   AI タブ（src/_disabled/ に退避・無効化中）専用だったルート。
 //   /ai/gemini・/ai/grok・/ai/deepseek・/ai/claude・/ai/models・/ai/context・/notion/save
+//   /ai/openai はマネフォ画像取込（アプリから削除）専用だったため #718 で追加。
 //   どのメソッドでも 410 Gone（CORS 付き）を返す。外部 fetch・KV には触れない。
 // ══════════════════════════════════════════════════════════════
 const DISABLED_PATHS = new Set([
@@ -374,34 +375,11 @@ const DISABLED_PATHS = new Set([
   '/ai/models',
   '/ai/context',
   '/notion/save',
+  '/ai/openai',
 ]);
 
 function handleDisabledRoute(origin) {
   return errRes('このルートは無効化されました', 410, origin);
-}
-
-// ── AI プロキシ（OpenAI のみ・マネフォ画像取込用・PIN認証必須・#714）──────
-async function handleAIOpenAI(request, env, origin) {
-  if (request.method !== 'POST') return errRes('POST のみ許可', 405, origin);
-  if (!env.KV) return errRes('KV 未設定', 500, origin);
-  const authErr = await verifyPinHash(request, env, origin);
-  if (authErr) return authErr;
-  if (!env.OPENAI_API_KEY) return errRes('OpenAI キー未設定', 500, origin);
-
-  let body;
-  try { body = await request.json(); } catch { return errRes('JSON が不正です', 400, origin); }
-
-  try {
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    const data = await res.json();
-    return jsonRes(data, res.status, origin);
-  } catch (e) {
-    return errRes(`AI 呼び出し失敗: ${e.message}`, 502, origin);
-  }
 }
 
 // ── ウォッチリスト（KV）────────────────────────────────
@@ -1099,7 +1077,7 @@ export default {
     // レート制限: Workers ネイティブ ratelimit binding（#16・KV 不使用・rate-limit.md 参照）。
     // binding 未設定環境（テスト等）では素通し。判定失敗時も fail-open。
     if (path === '/yahoo' || path === '/finnhub' || path === '/fmp' || path === '/edgar' || path === '/edinet-db' || path === '/etf/constituents'
-      || path === '/forex' || path === '/ai/openai'
+      || path === '/forex'
       || path === '/order-sheet' || path.startsWith('/order-sheet/')) {
       if (env.RATE_LIMITER) {
         try {
@@ -1116,7 +1094,6 @@ export default {
     if (path === '/edinet-db')       return handleEdinetDb(url, env, org);
     if (path === '/forex')           return handleForex(url, env, org);
     if (path === '/etf/constituents') return handleEtfConstituents(url, env, org, ctx);
-    if (path === '/ai/openai')       return handleAIOpenAI(request, env, org);
     if (path === '/watchlist')       return handleWatchlist(request, env, org);
     if (path === '/positions')       return handlePositions(request, env, org);
     if (path === '/networth')        return handleNetworth(request, env, org);

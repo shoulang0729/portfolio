@@ -1,7 +1,7 @@
 // ══════════════════════════════════════════════════════════════
 // import-ui.js  ―  資産取込モーダルUI
 //
-// 依存: import-parse.js (parseManexFiles, parseMoneyForwardImage),
+// 依存: import-parse.js (parseManexFiles),
 //       positions-store.js (savePositionsToKV, computeImportDiff, mergeDuplicatePositions),
 //       funds.js (canonicalizeFundPosition),
 //       data.js (clearCacheSession, refreshPrices),
@@ -13,7 +13,7 @@ import { positions } from './positions.js';
 import { canonicalizeFundPosition } from './funds.js';
 import { savePositionsToKV, computeImportDiff, mergeDuplicatePositions } from './positions-store.js';
 import { clearCacheSession, clearHistoricalIDB, refreshPrices } from './data.js';
-import { parseManexFiles, parseMoneyForwardImage } from './import-parse.js';
+import { parseManexFiles } from './import-parse.js';
 import { renderHeatmapList } from './stock-list.js';
 import { _hashPin } from './auth-pin.js';
 
@@ -28,7 +28,7 @@ function openImportModal(source) {
   const overlay = document.getElementById('import-modal-overlay');
   const title   = document.getElementById('import-modal-title');
   if (!overlay) return;
-  title.textContent = source === 'manex' ? 'マネックス証券 取込' : 'マネーフォワード 取込';
+  title.textContent = 'マネックス証券 取込';
   _renderImportStep('select');
   overlay.style.display = 'flex';
   requestAnimationFrame(() => overlay.classList.add('open'));
@@ -62,9 +62,7 @@ function handleImportOverlayClick(e) {
 }
 
 function focusImportFileInput() {
-  const isManex = _importState.source === 'manex';
-  const inputId = isManex ? 'import-manex-input' : 'import-mf-input';
-  document.getElementById(inputId)?.click();
+  document.getElementById('import-manex-input')?.click();
 }
 
 function _renderImportStep(step, payload) {
@@ -72,12 +70,11 @@ function _renderImportStep(step, payload) {
   if (!body) return;
 
   if (step === 'select') {
-    const isManex = _importState.source === 'manex';
     body.innerHTML = `
       <div class="import-select-area" id="import-drop-zone">
-        <div class="import-icon">${isManex ? '📄' : '📷'}</div>
-        <div class="import-select-title">${isManex ? 'CSVファイルを選択' : 'スクリーンショットを選択'}</div>
-        <div class="import-select-hint">${isManex ? '国内株・米国株・投資信託の3ファイルまとめて選択できます' : 'マネーフォワードの資産一覧画面のスクショ'}</div>
+        <div class="import-icon">📄</div>
+        <div class="import-select-title">CSVファイルを選択</div>
+        <div class="import-select-hint">国内株・米国株・投資信託の3ファイルまとめて選択できます</div>
         <button class="import-file-btn" data-action="focusImportFileInput">
           ファイルを選択
         </button>
@@ -240,7 +237,7 @@ async function _confirmImport() {
     );
     finalPositions = _importState.parsed.filter((_, i) => keepIdx.has(i));
   } else {
-    // インポートモード（manex / moneyforward）:
+    // インポートモード（manex）:
     //  - parsed のうちチェック済みインデックスを採用（重複symbol対応で symbol ではなく idx で判定）
     //  - removed (del) のうちチェック済みは current から除外
     const parsedKeepIdx = new Set(
@@ -335,28 +332,6 @@ async function handleManexFileSelect(event) {
   _renderImportStep('review');
 }
 
-async function handleMoneyForwardImageSelect(event) {
-  const gen = _importGen;
-  const file = event.target.files?.[0];
-  event.target.value = '';
-  if (!file) return;
-  _renderImportStep('loading', 'AIで資産情報を読み取り中...');
-  try {
-    const parsed = await parseMoneyForwardImage(file);
-    if (gen !== _importGen) return; // モーダルが閉じ/再オープンされた → 破棄
-    if (parsed.length === 0) {
-      _renderImportStep('error', 'AIが資産情報を検出できませんでした。資産一覧が写ったスクリーンショットをお試しください。');
-      return;
-    }
-    _importState.parsed = parsed;
-    _renderImportStep('review');
-  } catch (e) {
-    if (gen !== _importGen) return;
-    console.error('[import-ui] MF image handler error:', e);
-    _renderImportStep('error', e.message);
-  }
-}
-
 // ── HTML エスケープ（モーダル内のXSS対策）────────────────────────────────
 function escapeHTML(s) {
   return String(s)
@@ -364,4 +339,4 @@ function escapeHTML(s) {
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
-export { openImportModal, closeImportModal, openManagePositionsModal, handleImportOverlayClick, handleManexFileSelect, handleMoneyForwardImageSelect, focusImportFileInput, _renderImportStep, _confirmImport, _retryWithPin };
+export { openImportModal, closeImportModal, openManagePositionsModal, handleImportOverlayClick, handleManexFileSelect, focusImportFileInput, _renderImportStep, _confirmImport, _retryWithPin };
