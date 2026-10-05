@@ -4,7 +4,7 @@
 //
 // 原本: docs/handoff/assets/2026-10-03-phase15/kv-resync.mjs（Mulmo ワークスペース版）。
 //   curl/execSync を Node 標準の fetch（lib/worker-client.mjs）に置き換え、正本パスをリポ基準にした。
-//   比較キー・マージ・リトライ回数・exit コードは原本どおり。
+//   マージ・リトライ回数・exit コードは原本どおり。比較は valuation 全体・キー順非依存（#647・lib/kv-sync.mjs）。
 //
 // 保証すること:
 //   ①配列形状を必ず保持 ②PUT を最大5回リトライ ③PUT後 GET read-back で反映を必ず検証
