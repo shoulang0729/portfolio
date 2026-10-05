@@ -1422,7 +1422,6 @@ function _showChangePinButton() {
     "pin-change-btn",
     "passkey-register-btn",
     "import-manex-btn",
-    "import-mf-btn",
     "manage-positions-btn",
     "snapshot-btn"
   ]) {
@@ -8264,110 +8263,6 @@ async function parseManexFiles(files) {
   }
   return results;
 }
-var SUPPORTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"];
-var MAX_IMAGE_BYTES = 16e6;
-async function parseMoneyForwardImage(file) {
-  const mime = file.type || "image/png";
-  if (!SUPPORTED_IMAGE_TYPES.includes(mime.toLowerCase())) {
-    throw new Error(`\u975E\u5BFE\u5FDC\u306E\u753B\u50CF\u5F62\u5F0F\u3067\u3059\uFF08${mime}\uFF09\u3002JPEG \u307E\u305F\u306F PNG \u5F62\u5F0F\u306E\u30B9\u30AF\u30EA\u30FC\u30F3\u30B7\u30E7\u30C3\u30C8\u3092\u4F7F\u7528\u3057\u3066\u304F\u3060\u3055\u3044\u3002`);
-  }
-  if (file.size > MAX_IMAGE_BYTES) {
-    throw new Error(`\u753B\u50CF\u30B5\u30A4\u30BA\u304C\u5927\u304D\u3059\u304E\u307E\u3059\uFF08${(file.size / 1024 / 1024).toFixed(1)} MB\uFF09\u300216 MB \u4EE5\u4E0B\u306E\u753B\u50CF\u3092\u4F7F\u7528\u3057\u3066\u304F\u3060\u3055\u3044\u3002`);
-  }
-  const pinHash = _getActivePinHash();
-  if (!pinHash) throw new Error("\u30ED\u30B0\u30A4\u30F3\u304C\u5FC5\u8981\u3067\u3059\u3002PIN \u3067\u30ED\u30B0\u30A4\u30F3\u3057\u3066\u304B\u3089\u53D6\u308A\u8FBC\u3093\u3067\u304F\u3060\u3055\u3044\u3002");
-  const buf = await file.arrayBuffer();
-  const uint8 = new Uint8Array(buf);
-  let binaryStr = "";
-  for (let i = 0; i < uint8.length; i += 8192) {
-    binaryStr += String.fromCharCode(...uint8.subarray(i, i + 8192));
-  }
-  const b64 = btoa(binaryStr);
-  const prompt = `\u3053\u306E\u30B9\u30AF\u30EA\u30FC\u30F3\u30B7\u30E7\u30C3\u30C8\u306F\u8CC7\u7523\u7BA1\u7406\u30A2\u30D7\u30EA\u306E\u4FDD\u6709\u8CC7\u7523\u4E00\u89A7\u3067\u3059\u3002
-\u753B\u50CF\u304B\u3089\u4FDD\u6709\u8CC7\u7523\u3092\u62BD\u51FA\u3057\u3001\u5FC5\u305A\u4EE5\u4E0B\u306EJSON\u5F62\u5F0F\u306E\u307F\u3067\u56DE\u7B54\u3057\u3066\u304F\u3060\u3055\u3044\uFF08\u8AAC\u660E\u6587\u4E0D\u8981\uFF09:
-{"assets":[{"symbol":"\u30B3\u30FC\u30C9or\u30C6\u30A3\u30C3\u30AB\u30FC","name":"\u9298\u67C4\u540D","shares":\u4FDD\u6709\u6570,"avgCost":\u5E73\u5747\u53D6\u5F97\u5358\u4FA1,"price":\u73FE\u5728\u5024or\u57FA\u6E96\u4FA1\u984D,"value":\u6642\u4FA1\u8A55\u4FA1\u984D,"category":"\u65E5\u672C\u682A|\u7C73\u56FD\u682A|\u6295\u8CC7\u4FE1\u8A17|\u305D\u306E\u4ED6"}]}
-
-\u6CE8\u610F:
-- \u6570\u5024\u306F\u30AB\u30F3\u30DE\u3084\u901A\u8CA8\u8A18\u53F7\u3092\u9664\u3044\u305F\u6570\u5024\u306E\u307F\uFF08\u4F8B: 1,234,567 \u2192 1234567\uFF09
-- \u4E0D\u660E\u306A\u9805\u76EE\u306F 0 \u306B\u3059\u308B
-- \u6295\u8CC7\u4FE1\u8A17\u306F\u300C\u4FDD\u6709\u53E3\u6570\u300D\u3092 shares\u3001\u300C\u57FA\u6E96\u4FA1\u984D\u300D\u3092 price\u3001\u300C\u5E73\u5747\u53D6\u5F97\u5358\u4FA1\u300D\u3092 avgCost\u3001\u300C\u6642\u4FA1\u8A55\u4FA1\u984D\u300D\u3092 value \u306B
-- \u540C\u3058\u9298\u67C4\u304C\u8907\u6570\u884C\u3042\u308B\u5834\u5408\u306F\u305D\u308C\u305E\u308C\u5225\u30EC\u30B3\u30FC\u30C9\u3068\u3057\u3066\u62BD\u51FA\uFF08\u5408\u7B97\u306F\u5F8C\u6BB5\u3067\u3084\u308B\uFF09`;
-  const body = {
-    model: "gpt-4o",
-    max_tokens: 2048,
-    messages: [{
-      role: "user",
-      content: [
-        { type: "image_url", image_url: { url: `data:${mime};base64,${b64}` } },
-        { type: "text", text: prompt }
-      ]
-    }]
-  };
-  const res = await fetchWithTimeout(`${WORKER_URL}/ai/openai`, 3e4, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Pin-Hash": pinHash },
-    body: JSON.stringify(body)
-  });
-  if (!res.ok) {
-    let detail = "";
-    try {
-      const e = await res.json();
-      detail = e?.error?.message || JSON.stringify(e);
-    } catch {
-    }
-    throw new Error(`AI API \u30A8\u30E9\u30FC (${res.status})${detail ? `: ${detail}` : ""}`);
-  }
-  const data = await res.json();
-  const text = data?.choices?.[0]?.message?.content || "";
-  const m = text.match(/\{[\s\S]*\}/);
-  if (!m) throw new Error("AI\u306E\u30EC\u30B9\u30DD\u30F3\u30B9\u304B\u3089JSON\u3092\u62BD\u51FA\u3067\u304D\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u5225\u306E\u30B9\u30AF\u30EA\u30FC\u30F3\u30B7\u30E7\u30C3\u30C8\u3092\u304A\u8A66\u3057\u304F\u3060\u3055\u3044\u3002");
-  const parsed = JSON.parse(m[0]);
-  return (parsed.assets || []).map((a) => _mfAssetToPosition(a)).filter(Boolean);
-}
-function _mfAssetToPosition(a) {
-  if (!a.name) return null;
-  const name = String(a.name).trim();
-  const cat = a.category === "\u7C73\u56FD\u682A" ? "\u7C73\u56FD\u682A\u30FBETF" : a.category === "\u6295\u8CC7\u4FE1\u8A17" ? "\u6295\u8CC7\u4FE1\u8A17" : "\u65E5\u672C\u682A\u30FBETF";
-  const isJP = cat === "\u65E5\u672C\u682A\u30FBETF";
-  const isFund = cat === "\u6295\u8CC7\u4FE1\u8A17";
-  let sym = String(a.symbol || "").trim();
-  if (!sym && isFund) {
-    sym = fundSymbolFromName(name) || "";
-  }
-  if (!sym) sym = name;
-  const proxy = isFund ? fundProxyOf(sym) ?? FUND_FALLBACK_PROXY : null;
-  let shares = Number(a.shares) || 0;
-  const avgCost = Number(a.avgCost) || 0;
-  let price = Number(a.price) || 0;
-  let value = Number(a.value) || 0;
-  if (isFund && shares > 0) {
-    if (value > 0 && avgCost > 0) {
-      if (shares * avgCost > value * 1e3) shares = shares / 1e4;
-    } else if (shares >= 1e4) {
-      shares = shares / 1e4;
-    }
-  }
-  if (value === 0 && shares > 0 && avgCost > 0) value = shares * avgCost;
-  if (price === 0 && avgCost > 0) price = avgCost;
-  const pnl = price > 0 && avgCost > 0 && shares > 0 ? (price - avgCost) * shares : 0;
-  const pnlPct = avgCost > 0 && shares > 0 ? pnl / (avgCost * shares) * 100 : 0;
-  return {
-    symbol: sym,
-    name,
-    cat,
-    shares,
-    price,
-    avgCost,
-    value,
-    pnl,
-    pnlPct,
-    dayPct: null,
-    dayCh: null,
-    cur: cat === "\u7C73\u56FD\u682A\u30FBETF" ? "USD" : "JPY",
-    ySymbol: isFund ? proxy.ySymbol : isJP ? `${sym.replace(/\.T$/i, "")}.T` : sym,
-    ...isFund ? { isProxy: true, proxyName: proxy.proxyName } : {}
-  };
-}
 
 // src/import-ui.js
 var _importState = { source: null, parsed: [], current: [], pendingPositions: [] };
@@ -8378,7 +8273,7 @@ function openImportModal(source) {
   const overlay = document.getElementById("import-modal-overlay");
   const title = document.getElementById("import-modal-title");
   if (!overlay) return;
-  title.textContent = source === "manex" ? "\u30DE\u30CD\u30C3\u30AF\u30B9\u8A3C\u5238 \u53D6\u8FBC" : "\u30DE\u30CD\u30FC\u30D5\u30A9\u30EF\u30FC\u30C9 \u53D6\u8FBC";
+  title.textContent = "\u30DE\u30CD\u30C3\u30AF\u30B9\u8A3C\u5238 \u53D6\u8FBC";
   _renderImportStep("select");
   overlay.style.display = "flex";
   requestAnimationFrame(() => overlay.classList.add("open"));
@@ -8409,20 +8304,17 @@ function handleImportOverlayClick(e) {
   if (e.target === document.getElementById("import-modal-overlay")) closeImportModal();
 }
 function focusImportFileInput() {
-  const isManex = _importState.source === "manex";
-  const inputId = isManex ? "import-manex-input" : "import-mf-input";
-  document.getElementById(inputId)?.click();
+  document.getElementById("import-manex-input")?.click();
 }
 function _renderImportStep(step, payload) {
   const body = document.getElementById("import-modal-body");
   if (!body) return;
   if (step === "select") {
-    const isManex = _importState.source === "manex";
     body.innerHTML = `
       <div class="import-select-area" id="import-drop-zone">
-        <div class="import-icon">${isManex ? "\u{1F4C4}" : "\u{1F4F7}"}</div>
-        <div class="import-select-title">${isManex ? "CSV\u30D5\u30A1\u30A4\u30EB\u3092\u9078\u629E" : "\u30B9\u30AF\u30EA\u30FC\u30F3\u30B7\u30E7\u30C3\u30C8\u3092\u9078\u629E"}</div>
-        <div class="import-select-hint">${isManex ? "\u56FD\u5185\u682A\u30FB\u7C73\u56FD\u682A\u30FB\u6295\u8CC7\u4FE1\u8A17\u306E3\u30D5\u30A1\u30A4\u30EB\u307E\u3068\u3081\u3066\u9078\u629E\u3067\u304D\u307E\u3059" : "\u30DE\u30CD\u30FC\u30D5\u30A9\u30EF\u30FC\u30C9\u306E\u8CC7\u7523\u4E00\u89A7\u753B\u9762\u306E\u30B9\u30AF\u30B7\u30E7"}</div>
+        <div class="import-icon">\u{1F4C4}</div>
+        <div class="import-select-title">CSV\u30D5\u30A1\u30A4\u30EB\u3092\u9078\u629E</div>
+        <div class="import-select-hint">\u56FD\u5185\u682A\u30FB\u7C73\u56FD\u682A\u30FB\u6295\u8CC7\u4FE1\u8A17\u306E3\u30D5\u30A1\u30A4\u30EB\u307E\u3068\u3081\u3066\u9078\u629E\u3067\u304D\u307E\u3059</div>
         <button class="import-file-btn" data-action="focusImportFileInput">
           \u30D5\u30A1\u30A4\u30EB\u3092\u9078\u629E
         </button>
@@ -8641,27 +8533,6 @@ async function handleManexFileSelect(event) {
   }
   _importState.parsed = parsed;
   _renderImportStep("review");
-}
-async function handleMoneyForwardImageSelect(event) {
-  const gen = _importGen;
-  const file = event.target.files?.[0];
-  event.target.value = "";
-  if (!file) return;
-  _renderImportStep("loading", "AI\u3067\u8CC7\u7523\u60C5\u5831\u3092\u8AAD\u307F\u53D6\u308A\u4E2D...");
-  try {
-    const parsed = await parseMoneyForwardImage(file);
-    if (gen !== _importGen) return;
-    if (parsed.length === 0) {
-      _renderImportStep("error", "AI\u304C\u8CC7\u7523\u60C5\u5831\u3092\u691C\u51FA\u3067\u304D\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u8CC7\u7523\u4E00\u89A7\u304C\u5199\u3063\u305F\u30B9\u30AF\u30EA\u30FC\u30F3\u30B7\u30E7\u30C3\u30C8\u3092\u304A\u8A66\u3057\u304F\u3060\u3055\u3044\u3002");
-      return;
-    }
-    _importState.parsed = parsed;
-    _renderImportStep("review");
-  } catch (e) {
-    if (gen !== _importGen) return;
-    console.error("[import-ui] MF image handler error:", e);
-    _renderImportStep("error", e.message);
-  }
 }
 function escapeHTML2(s) {
   return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
@@ -9272,7 +9143,6 @@ var ACTION_MAP = {
   openManagePositionsModal,
   handleImportOverlayClick,
   handleManexFileSelect,
-  handleMoneyForwardImageSelect,
   focusImportFileInput,
   _renderImportStep,
   _confirmImport,
