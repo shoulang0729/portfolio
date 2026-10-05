@@ -11,7 +11,7 @@ import { workerJson } from './lib/worker-client.mjs';
 // `summaryDetail.trailingPE` が唯一の自動取得手段なので、Worker `/yahoo` 経由で取得し、
 // 対象 ETF の value.perTrail / value.perSource を更新する。
 //
-// 設計根拠: docs/d3-etf-proxy-data-availability.md §7（確定設計 A4）。
+// 設計根拠: docs/handoff/assets/d3-etf-proxy-data-availability.md §7（確定設計 A4）。
 //   - perFwd / peg は ETF では取得不能 → 触らない（null のまま）。
 //   - perSource:"fund-trailing" を立て、UI で proxy バッジ＋低 confidence を表示。
 //   - 対象は §7.2「広域株式」「セクター/テーマ株式」の上2区分のみ（10銘柄）。

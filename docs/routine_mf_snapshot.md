@@ -87,3 +87,8 @@
 - 口座を増減したら Mac mini の非公開設定（`~/.mf-snapshot/private-config.json` の `exclude.accounts`）を見直す（中身はチャット・Issue・PR に貼らない。必要なら `routine_mf_discovery.md` を再実行）。
 - 桁ズレ・読み取り不能が頻発するカテゴリがあれば、そのカテゴリを `include.categories` から外して手動管理に回す。
 - 将来 ③（アプリ側に専用取り込み口＋自動マージ）へ発展させる場合も、この `mf-holdings.json` を入力にできる。
+
+## トラブル時（Mac mini の自動取込・#706）
+- 症状: Chrome 起動が EAGAIN で失敗し MF 取込が落ちる。有力な一因は UCSS（プロキシ）の特権ヘルパー `net.ucss.macos.daemon` がゾンビプロセスを溜め続けること（2026-10-04 調査・未確定）。#685 の再試行で一時的な失敗には耐えるが、プロセス数の上限に達すると再起動まで直らない。
+- 対処の選択肢（Toshio が決める・コード変更は不要）: UCSS アプリの更新／提供元への問い合わせ、ヘルパーの定期再起動（`sudo launchctl kickstart -k system/net.ucss.macos.daemon`・数秒〜1分ネット断）、ゾンビ数の監視（閾値で通知）。
+- `sudo` を要するため Mac セッション（Claude）には任せない（CLAUDE.md「Mac セッション」の禁止事項）。

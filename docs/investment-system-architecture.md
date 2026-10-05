@@ -1,3 +1,5 @@
+> 2026-06 時点の記述・#713 で改訂予定
+
 # 投資システム アーキテクチャ（2026/06 改訂）
 
 MulmoClaude を頭脳とした投資運用システムの設計。本リポジトリ（portfolioアプリ）が担う部分を中心にまとめる。運用の本体は MulmoClaude Wiki `investment-system-architecture.md` を参照。
@@ -86,6 +88,6 @@ MulmoClaude を頭脳とした投資運用システムの設計。本リポジ�
 
 ## 廃止・宿題
 
-- 日次2本の Notion ルーティン（`docs/routine_japan_1700.md` / `routine_us_0600.md`）は **廃止**（トークン節約）。PER割高割安ノウハウは Briefing #5 と壁打ちに継承。
+- 日次2本の Notion ルーティン（routine_japan_1700 / routine_us_0600。手順書は #723 で削除）は **廃止**（トークン節約）。PER割高割安ノウハウは Briefing #5 と壁打ちに継承。
 - 現金二重計上: `src/manual-assets.js` の現金ハードコードを撤去（mf-holdingsに現金を含めるため）。
 - 旧 `portfolio-snapshot.json` 依存の下流（日次ルーティン廃止後の整理、Heatmapのデータ源整理）は段階移行。
