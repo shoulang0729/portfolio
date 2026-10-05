@@ -51,7 +51,6 @@ function makeEnv(extra = {}) {
   return {
     KV: makeKv({ 'auth:pin-hash': PIN, positions: [syntheticPosition()], watchlist: [syntheticWatchItem()] }),
     FINNHUB_API_KEY: 'synthetic-key-not-real',
-    OPENAI_API_KEY: 'synthetic-key-not-real',
     GEMINI_API_KEY: 'synthetic-key-not-real',
     GROK_API_KEY: 'synthetic-key-not-real',
     DEEPSEEK_API_KEY: 'synthetic-key-not-real',
@@ -93,6 +92,7 @@ describe('無効化したルート（410・外部 fetch と KV に触れない�
     '/ai/models',
     '/ai/context',
     '/notion/save',
+    '/ai/openai', // マネフォ画像取込の削除（#718）
   ];
 
   for (const path of disabled) {
@@ -116,45 +116,14 @@ describe('無効化したルート（410・外部 fetch と KV に触れない�
   }
 });
 
-describe('POST /ai/openai（PIN 必須）', () => {
-  const body = { model: 'gpt-4o', messages: [{ role: 'user', content: 'synthetic' }] };
-
-  it('PIN 無し → 401・fetch しない', async () => {
-    const res = await worker.fetch(req('/ai/openai', { method: 'POST', body }), makeEnv());
-    expect(res.status).toBe(401);
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  it('PIN 不一致 → 401・fetch しない', async () => {
-    const res = await worker.fetch(req('/ai/openai', { method: 'POST', pin: 'wrong-synthetic', body }), makeEnv());
-    expect(res.status).toBe(401);
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  it('PIN 一致 → OpenAI へ中継して 200', async () => {
-    const res = await worker.fetch(req('/ai/openai', { method: 'POST', pin: PIN, body }), makeEnv());
-    expect(res.status).toBe(200);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe('https://api.openai.com/v1/chat/completions');
-    expect(init.method).toBe('POST');
-    expect(JSON.parse(init.body)).toEqual(body);
-  });
-
-  it('GET → 405', async () => {
-    const res = await worker.fetch(req('/ai/openai', { pin: PIN }), makeEnv());
-    expect(res.status).toBe(405);
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  it('レート制限の対象（超過で 429・fetch しない）', async () => {
-    const limit = vi.fn(async () => ({ success: false }));
+describe('POST /ai/openai（#718 で無効化）', () => {
+  it('OpenAI キーが設定されていても PIN 無しで 410・fetch しない', async () => {
+    const env = makeEnv({ OPENAI_API_KEY: 'synthetic-key-not-real' });
     const res = await worker.fetch(
-      req('/ai/openai', { method: 'POST', pin: PIN, body }),
-      makeEnv({ RATE_LIMITER: { limit } })
+      req('/ai/openai', { method: 'POST', body: { model: 'x', messages: [] } }),
+      env
     );
-    expect(res.status).toBe(429);
-    expect(limit).toHaveBeenCalled();
+    expect(res.status).toBe(410);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

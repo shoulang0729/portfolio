@@ -24,7 +24,7 @@ test.beforeEach(async ({ page }) => {
 
   // 認証済みとして import ボタンを表示する
   await page.evaluate(() => {
-    const ids = ['import-manex-btn', 'import-mf-btn', 'manage-positions-btn'];
+    const ids = ['import-manex-btn', 'manage-positions-btn'];
     ids.forEach(id => {
       const btn = document.getElementById(id);
       if (btn) btn.style.display = '';
