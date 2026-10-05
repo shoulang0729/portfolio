@@ -53,6 +53,7 @@ export async function handleWatchlist(request, env, origin) {
 // - 応答・ログに出すのはシンボル・件数・stage・SHA・HTTP ステータスだけ（KV の本文・正本の値・トークンは出さない）。
 const RESYNC_REPO = 'shoulang0729/portfolio';
 const RESYNC_SHA_URL = `https://api.github.com/repos/${RESYNC_REPO}/commits/main`;
+const RESYNC_REF_URL = `https://api.github.com/repos/${RESYNC_REPO}/git/ref/heads/main`;
 const RESYNC_RAW_BASE = `https://raw.githubusercontent.com/${RESYNC_REPO}`;
 const RESYNC_FILE = 'data/valuations.json';
 const RESYNC_MAX_ATTEMPTS = 3;
@@ -67,10 +68,10 @@ const _sleep = (ms) => new Promise((r) => setTimeout(r, ms));
  * fetch を計 3 回まで試す（429・5xx・ネットワークエラー・タイムアウトのみ再試行。間隔 2s→4s）。
  * @returns {Promise<{res: Response|null, status: number}>} 最後の応答（ネットワークエラーで終わったら res=null・status=0）
  */
-async function _fetchWithRetry(url, init, timeoutMs, sleep) {
+async function _fetchWithRetry(url, init, timeoutMs, sleep, maxAttempts = RESYNC_MAX_ATTEMPTS) {
   let res = null;
   let status = 0;
-  for (let attempt = 1; attempt <= RESYNC_MAX_ATTEMPTS; attempt++) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     const ac = new AbortController();
     const timer = setTimeout(() => ac.abort(), timeoutMs);
     let retryable = false;
@@ -85,10 +86,35 @@ async function _fetchWithRetry(url, init, timeoutMs, sleep) {
     } finally {
       clearTimeout(timer);
     }
-    if (!retryable || attempt === RESYNC_MAX_ATTEMPTS) break;
+    if (!retryable || attempt === maxAttempts) break;
     await sleep(RESYNC_BACKOFF_MS[attempt - 1]);
   }
   return { res, status };
+}
+
+/**
+ * main の SHA の予備経路: git/ref/heads/main の JSON（object.sha）をトークンなし・1 回だけ読む。
+ * @returns {Promise<string>} 40 桁の 16 進。取れなければ ''
+ */
+async function _fetchRefSha(sleep) {
+  const headers = {
+    Accept: 'application/vnd.github+json',
+    'User-Agent': 'portfolio-proxy-worker',
+    'X-GitHub-Api-Version': '2022-11-28',
+  };
+  const r = await _fetchWithRetry(RESYNC_REF_URL, { method: 'GET', headers }, RESYNC_SHA_TIMEOUT_MS, sleep, 1);
+  let sha = '';
+  if (r.res && r.status === 200) {
+    try {
+      const j = await r.res.json();
+      sha = typeof j?.object?.sha === 'string' ? j.object.sha.trim() : '';
+    } catch {
+      sha = '';
+    }
+  }
+  if (/^[0-9a-f]{40}$/.test(sha)) return sha;
+  console.warn(`[watchlist-resync] sha ref fallback fail http=${r.status}`);
+  return '';
 }
 
 function _resyncFail(status, stage, error, http = 0) {
@@ -121,7 +147,9 @@ export async function resyncWatchlistFromMain(env, deps = {}) {
   const sleep = deps.sleep || _sleep;
   if (!env.KV) return _resyncFail(500, 'kv', 'KV 未設定');
 
-  // ① main の先頭コミット SHA（Cloudflare 側でキャッシュしない・トークンは読むだけ・§10 Q2）
+  // ① main の先頭コミット SHA（トークンは読むだけ・§10 Q2）
+  // cache: 'no-store' は付けない（#748 の本番で stage=sha の 502 が続いたため外した）。
+  // Worker のサブリクエストは cf のキャッシュ指定が無ければ api.github.com の応答をキャッシュしない。
   const token = env.GH_DISPATCH_TOKEN || env.GITHUB_TOKEN;
   /** @type {Record<string, string>} */
   const shaHeaders = {
@@ -130,22 +158,40 @@ export async function resyncWatchlistFromMain(env, deps = {}) {
     'X-GitHub-Api-Version': '2022-11-28',
   };
   if (token) shaHeaders.Authorization = `Bearer ${token}`;
-  const shaRes = await _fetchWithRetry(
+  let shaRes = await _fetchWithRetry(
     RESYNC_SHA_URL,
-    { method: 'GET', headers: shaHeaders, cache: 'no-store' },
+    { method: 'GET', headers: shaHeaders },
     RESYNC_SHA_TIMEOUT_MS,
     sleep
   );
-  if (!shaRes.res || shaRes.status !== 200) {
-    return _resyncFail(502, 'sha', 'main の SHA を取得できません', shaRes.status);
+  // トークンが拒否された（401/403）ら、トークンなしで読み直す（切り替えは 1 回だけ・公開リポなので未認証でも読める）
+  if (token && (shaRes.status === 401 || shaRes.status === 403)) {
+    console.warn(`[watchlist-resync] sha auth fallback http=${shaRes.status}`);
+    const anonHeaders = { ...shaHeaders };
+    delete anonHeaders.Authorization;
+    shaRes = await _fetchWithRetry(
+      RESYNC_SHA_URL,
+      { method: 'GET', headers: anonHeaders },
+      RESYNC_SHA_TIMEOUT_MS,
+      sleep
+    );
   }
   let sha = '';
-  try {
-    sha = (await shaRes.res.text()).trim();
-  } catch {
-    sha = '';
+  if (shaRes.res && shaRes.status === 200) {
+    try {
+      sha = (await shaRes.res.text()).trim();
+    } catch {
+      sha = '';
+    }
   }
-  if (!/^[0-9a-f]{40}$/.test(sha)) return _resyncFail(502, 'sha', 'main の SHA が不正です', shaRes.status);
+  if (!/^[0-9a-f]{40}$/.test(sha)) {
+    // commits/main で取れなければ git/ref/heads/main（JSON の object.sha）をトークンなしで 1 回だけ試す
+    sha = await _fetchRefSha(sleep);
+    if (!sha) {
+      const error = shaRes.res && shaRes.status === 200 ? 'main の SHA が不正です' : 'main の SHA を取得できません';
+      return _resyncFail(502, 'sha', error, shaRes.status);
+    }
+  }
 
   // ② SHA 固定で正本を取得（main の URL へのフォールバックはしない）
   const rawRes = await _fetchWithRetry(
@@ -216,7 +262,7 @@ export async function handleWatchlistResync(request, env, origin) {
   const r = await resyncWatchlistFromMain(env);
   if (!r.ok) {
     console.warn(`[watchlist-resync] fail stage=${r.stage} http=${r.http}`);
-    return jsonRes({ error: r.error, stage: r.stage }, r.status, origin);
+    return jsonRes({ error: r.error, stage: r.stage, http: r.http }, r.status, origin);
   }
   console.log(`[watchlist-resync] ${r.stage} ${r.drift} sha=${r.sha.slice(0, 7)}`);
   return jsonRes({ ok: true, stage: r.stage, drift: r.drift, symbols: r.symbols, sha: r.sha }, 200, origin);

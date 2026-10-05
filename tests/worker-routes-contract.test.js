@@ -775,18 +775,18 @@ describe('fetch: POST /watchlist/resync', () => {
   });
 
   it.each([
-    ['SHA 取得失敗（404）', { shaStatus: 404 }, 'sha'],
-    ['SHA が 40 桁でない', { sha: 'not-a-sha' }, 'sha'],
-    ['正本 404', { rawStatus: 404 }, 'fetch'],
-    ['JSON 不正', { rawBody: '{not json' }, 'parse'],
-    ['valuations が配列', { rawBody: JSON.stringify({ valuations: [SOURCE_VAL] }) }, 'validate'],
-  ])('%s → 502 stage=%s・KV に書かない', async (_label, opts, stage) => {
+    ['SHA 取得失敗（404）', { shaStatus: 404 }, 'sha', 404],
+    ['SHA が 40 桁でない', { sha: 'not-a-sha' }, 'sha', 200],
+    ['正本 404', { rawStatus: 404 }, 'fetch', 404],
+    ['JSON 不正', { rawBody: '{not json' }, 'parse', 0],
+    ['valuations が配列', { rawBody: JSON.stringify({ valuations: [SOURCE_VAL] }) }, 'validate', 0],
+  ])('%s → 502 stage=%s http=%i・KV に書かない', async (_label, opts, stage, http) => {
     fetchMock.mockImplementation(githubUpstream(opts));
     const env = makeEnv();
     const res = await call(req('/watchlist/resync', { method: 'POST' }), env);
     expect(res.status).toBe(502);
     expectCors(res);
-    expect(await res.json()).toEqual({ error: expect.any(String), stage });
+    expect(await res.json()).toEqual({ error: expect.any(String), stage, http });
     expect(env.KV.put).not.toHaveBeenCalled();
   });
 
