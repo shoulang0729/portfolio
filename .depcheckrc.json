@@ -1,9 +1,4 @@
 {
-  "ignores": [
-    "@vitest/coverage-v8",
-    "@playwright/test",
-    "http-server",
-    "fake-indexeddb"
-  ],
+  "ignores": ["http-server", "d3"],
   "skip-missing": true
 }
