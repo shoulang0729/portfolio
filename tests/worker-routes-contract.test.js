@@ -280,12 +280,16 @@ const ROUTE_CASES = [
   ['POST', '/prices/cache', {}, 200],
   ['GET', '/prices/cache', { kv: null }, 500],
 
-  // /watchlist（GET 公開・PUT 認証なし）
+  // /watchlist（GET 公開・PUT は PIN 必須）
+  // #715 PR5: PUT を /positions と同じ PIN 必須に変えた（意図した挙動の変更。無し・不一致 401／未設定 428）
   ['GET', '/watchlist', {}, 200],
-  ['PUT', '/watchlist', { body: [syntheticWatchItem()] }, 200],
-  ['PUT', '/watchlist', { body: { not: 'array' } }, 400],
-  ['PUT', '/watchlist', { body: [{ symbol: 'AAA' }] }, 400],
-  ['PUT', '/watchlist', { body: 'not json' }, 400],
+  ['PUT', '/watchlist', { pin: null, body: [syntheticWatchItem()] }, 401],
+  ['PUT', '/watchlist', { pin: 'bad', body: [syntheticWatchItem()] }, 401],
+  ['PUT', '/watchlist', { pin: 'ok', body: [syntheticWatchItem()] }, 200],
+  ['PUT', '/watchlist', { pin: 'ok', kv: {}, body: [syntheticWatchItem()] }, 428],
+  ['PUT', '/watchlist', { pin: 'ok', body: { not: 'array' } }, 400],
+  ['PUT', '/watchlist', { pin: 'ok', body: [{ symbol: 'AAA' }] }, 400],
+  ['PUT', '/watchlist', { pin: 'ok', body: 'not json' }, 400],
   ['POST', '/watchlist', { body: [] }, 405],
   ['DELETE', '/watchlist', {}, 405],
   ['GET', '/watchlist', { kv: null }, 500],
@@ -433,9 +437,9 @@ describe('fetch: 応答の中身（主要ルート）', () => {
     expect(await (await call(req('/watchlist'), makeEnv({ kv: {} }))).json()).toEqual([]);
   });
 
-  it('PUT /watchlist は KV watchlist に保存し {ok:true}', async () => {
+  it('PUT /watchlist（PIN 一致）は KV watchlist に保存し {ok:true}', async () => {
     const env = makeEnv();
-    const res = await call(req('/watchlist', { method: 'PUT', body: [syntheticWatchItem()] }), env);
+    const res = await call(req('/watchlist', { method: 'PUT', pin: 'ok', body: [syntheticWatchItem()] }), env);
     expect(await res.json()).toEqual({ ok: true });
     expect(env.KV.put).toHaveBeenCalledWith('watchlist', JSON.stringify([syntheticWatchItem()]));
   });
@@ -807,9 +811,14 @@ describe('fetch: POST /watchlist/resync', () => {
     expect(res.status).toBe(200);
   });
 
-  it('PUT /watchlist は従来どおり認証なしで保存できる（この PR では変えない）', async () => {
-    const res = await call(req('/watchlist', { method: 'PUT', body: [syntheticWatchItem()] }), makeEnv());
-    expect(res.status).toBe(200);
+  // #715 PR5: PUT /watchlist は PIN 必須に変えた（意図した挙動の変更）。resync は認証なしのまま。
+  it('PUT /watchlist は PIN 無しで 401・resync は PIN 無しで 200', async () => {
+    fetchMock.mockImplementation(githubUpstream());
+    const env = makeEnv();
+    const put = await call(req('/watchlist', { method: 'PUT', body: [syntheticWatchItem()] }), env);
+    expect(put.status).toBe(401);
+    const resync = await call(req('/watchlist/resync', { method: 'POST' }), env);
+    expect(resync.status).toBe(200);
   });
 });
 

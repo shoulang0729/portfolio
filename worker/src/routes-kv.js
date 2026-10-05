@@ -5,7 +5,8 @@ import { errRes, jsonRes } from './http.js';
 
 // ── ウォッチリスト（KV）────────────────────────────────
 // GET: 公開（銘柄のシンボル・名称のみで数量・金額を含まない）
-// PUT: 現状は認証なし（kv-resync の Actions が PIN なしで使うため。扱いは別 Issue で検討・#714）
+// PUT: X-Pin-Hash ヘッダーによる PIN 認証が必要（/positions と同じ・#715 PR5）。
+//      Actions の同期は POST /watchlist/resync を使い、PUT は呼ばない。
 export async function handleWatchlist(request, env, origin) {
   if (!env.KV) return errRes('KV 未設定', 500, origin);
   const key = 'watchlist';
@@ -15,6 +16,9 @@ export async function handleWatchlist(request, env, origin) {
     return jsonRes(val ? JSON.parse(val) : [], 200, origin);
   }
   if (request.method === 'PUT') {
+    const authErr = await verifyPinHash(request, env, origin);
+    if (authErr) return authErr;
+
     let body;
     try {
       body = await request.json();

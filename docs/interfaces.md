@@ -47,7 +47,7 @@ Worker は `https://portfolio-proxy.shoulang.workers.dev`。ブラウザ以外�
 |---|---|---|---|---|
 | `/yahoo?url=<encoded>` | GET | なし（Origin） | `url` は `https://query1|query2.finance.yahoo.com` のみ（他は 400）。Yahoo の応答をそのまま中継 | Mulmo（日次バッチの `market-snapshot.mjs` がマクロ表のハンセン `^HSI` と TOPIX 代理 `1308.T` の 1 年分の終値を取る。Origin 付き・#724 の Mulmo ワークスペース調査（2026-10-05））／Actions: `watchlist-per`・`fund-per`・`etf-pe`・`target-gap`・`jp-sector-median`・`hit-rate`／アプリ |
 | `/watchlist` | GET | なし（公開） | JSON 配列（各要素に `symbol`・`name`・`valuation` ほか） | Mulmo（日次バッチの PER ゲートの後に 1 回。PER ゲートの結果が無いときは収集の段が自前で `curl` するフォールバックあり・#724 の Mulmo ワークスペース調査（2026-10-05））／`kv-resync.mjs`（read-back を含む）／アプリ |
-| `/watchlist` | PUT | なし（Origin のみ・PIN 不要） | JSON 配列のみ（オブジェクトなら 400。各要素は `symbol`・`name` 必須） | アプリ（`kv-resync.mjs` は #715 PR3 から呼ばない。`POST /watchlist/resync` に移行）。Mulmo は呼ばない（2026-10-03〜・#724 の Mulmo ワークスペース調査（2026-10-05）） |
+| `/watchlist` | PUT | `X-Pin-Hash`（無し・不一致 401・PIN 未設定 428。#715 PR5） | JSON 配列のみ（オブジェクトなら 400。各要素は `symbol`・`name` 必須） | アプリのみ（ログイン済みのとき。未ログインは端末内だけに保存・#715 PR4。`kv-resync.mjs` は #715 PR3 から呼ばない。`POST /watchlist/resync` に移行）。Mulmo は呼ばない（2026-10-03〜・#724 の Mulmo ワークスペース調査（2026-10-05）） |
 | `/watchlist/resync` | POST | なし（Origin のみ。本文・クエリは読まない） | 公開 main の `data/valuations.json` を SHA 固定で取得し、KV `watchlist` の正本にある銘柄の `valuation` だけを差し替える（ズレが無ければ書かない・銘柄の追加削除なし）。応答 200 `{ ok, stage: 'noop'\|'resynced', drift, symbols, sha }`／429（専用 `RESYNC_LIMITER` 10 回/60 秒・IP 単位）／500 `KV 未設定`・`{ error, stage:'kv' }`／502 `{ error, stage }`（`sha`・`fetch`・`parse`・`validate`）。Worker Cron `0 1,8,15,22` でも同じ処理を実行（#715） | `kv-resync.mjs`（`kv-resync.yml`・`per-daily.yml`・`weekly-valuations.yml`。ズレがあるときだけ・最大 5 回。#715 PR3）／Worker Cron。Mulmo は呼ばない |
 | `/finnhub?path=<path>&…` | GET | なし（Origin） | Finnhub の応答を中継 | Actions: `sector-median`／アプリ・Cron |
 | `/fmp?path=<path>&…` | GET | なし（Origin） | FMP stable API の応答を中継（不正な `path` は 400） | Actions: `quality-us` |
@@ -79,6 +79,8 @@ Worker は `https://portfolio-proxy.shoulang.workers.dev`。ブラウザ以外�
 | 書き手 | 起動（UTC） | 書くもの |
 |---|---|---|
 | `kv-resync.yml` | `data/valuations.json` の main への push／`30 23 * * *`（自己修復）／workflow_dispatch（`sync`・`check`） | KV `watchlist` の各要素の `valuation`（自分では書かない。`GET /watchlist` を手元の正本と全項目比較し、ズレがあれば `POST /watchlist/resync`（本文なし）で Worker に同期させ、read-back で検証。Worker が見た SHA が手元 HEAD より新しければその SHA の正本で、古ければ 15 秒おきに最大 4 回再要求。配列形状・他フィールド・正本に無い銘柄は保持。#715 PR3） |
+| アプリ（`PUT /watchlist`・PIN 必須） | ログイン済みでのウォッチの追加・削除・編集時 | KV `watchlist` 全体（未ログインでは送らない・#715 PR4/PR5） |
+| Worker Cron（`POST /watchlist/resync` と同じ処理） | `0 1,8,15,22 * * *` | KV `watchlist` の正本にある銘柄の `valuation`（ズレ時のみ・#715） |
 | `mf-freshness.yml` | `40 0 * * *` | 書かない。`data/mf-holdings.json` の `asOf` が古ければ Issue（ラベル `stale-mf-holdings`） |
 | 失敗通知（各ワークフロー） | 失敗時 | Issue（ラベル `per-daily-failed`・`per-daily-late`・`weekly-batch-failed`・`kv-resync-failed` ほか） |
 

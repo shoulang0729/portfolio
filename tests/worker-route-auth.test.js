@@ -154,16 +154,28 @@ describe('GET /positions（PIN 必須）', () => {
   });
 });
 
-describe('/watchlist（今回は従来どおり）', () => {
+describe('/watchlist（GET は公開・PUT は PIN 必須・#715 PR5）', () => {
   it('GET は PIN 無しで取得できる（公開）', async () => {
     const res = await worker.fetch(req('/watchlist'), makeEnv());
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual([syntheticWatchItem()]);
   });
 
-  it('PUT は PIN 無しでも保存できる（kv-resync 互換・認証は別 Issue）', async () => {
+  it('PUT は PIN 無し・不一致で 401・KV に書かない', async () => {
     const env = makeEnv();
-    const res = await worker.fetch(req('/watchlist', { method: 'PUT', body: [syntheticWatchItem()] }), env);
+    const none = await worker.fetch(req('/watchlist', { method: 'PUT', body: [syntheticWatchItem()] }), env);
+    expect(none.status).toBe(401);
+    const bad = await worker.fetch(
+      req('/watchlist', { method: 'PUT', pin: 'wrong-synthetic', body: [syntheticWatchItem()] }),
+      env,
+    );
+    expect(bad.status).toBe(401);
+    expect(env.KV.put).not.toHaveBeenCalled();
+  });
+
+  it('PUT は PIN 一致で保存できる', async () => {
+    const env = makeEnv();
+    const res = await worker.fetch(req('/watchlist', { method: 'PUT', pin: PIN, body: [syntheticWatchItem()] }), env);
     expect(res.status).toBe(200);
     expect(env.KV.put).toHaveBeenCalledWith('watchlist', JSON.stringify([syntheticWatchItem()]));
   });

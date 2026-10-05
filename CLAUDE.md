@@ -29,7 +29,7 @@
 | `data/valuations.json` の `quality`/`value`/`sectorMedian`/`staleFields`・`data/verdict-outcomes.json` | GitHub Actions `weekly-valuations.yml`（毎週日曜 02:00 UTC） |
 | `data/scheduler/fund-holdings.json` | GitHub Actions `fund-holdings-monthly.yml`（月次・毎月 1〜20 日 03:00 UTC） |
 | `data/positions.json`・`data/portfolio-snapshot.json` | 書き手なし（#711 で Worker の書き込みを停止・凍結）。扱いは `docs/handoff/2026-10-05-refactor-before-migration.md` §6.6 |
-| KV `watchlist` | アプリ（`PUT /watchlist`）と GitHub Actions `kv-resync.yml`（`data/scheduler/kv-resync.mjs`・`data/valuations.json` の push 時と毎日 23:30 UTC。`per-daily.yml` も同じジョブで実行） |
+| KV `watchlist` | アプリ（PIN 必須の `PUT /watchlist`）と Worker の `POST /watchlist/resync`（公開 main の `data/valuations.json` の `valuation` を写す。`kv-resync.yml`（`data/scheduler/kv-resync.mjs`・`data/valuations.json` の push 時と毎日 23:30 UTC）・`per-daily.yml`・`weekly-valuations.yml` から呼ぶ・Worker Cron でも 1 日 4 回） |
 | KV `positions`・`networth`（非公開） | アプリ（PIN 必須の `PUT /positions`・`PUT /networth`） |
 | KV `order:plan`・`order:log`（注文表の設定＋状態・操作ログ。非公開・PIN 保護） | Worker のみ：`PUT /order-sheet/plan`（初回投入・編集＝`scripts/order-plan.mjs`）／`POST /order-sheet/events`（アプリの Order タブの申告・対話中の Claude・Mulmo）／Cron（mf の株数で約定を確定・変化時のみ）。`wrangler kv` で直接書かない（復旧時の削除のみ・手順は `docs/order-sheet-ops.md`）。KV なので main へのコミットは無い |
 
@@ -94,17 +94,17 @@ Mac mini で `claude remote-control`（環境 `shoulang-Mac-mini:portfolio`・�
 ## Worker
 - **ルートの正本は `worker/src/index.js` 冒頭のコメント**（ここには要約だけ）。
   - 市場データ中継: `/yahoo`・`/finnhub`・`/fmp`・`/edgar`・`/edinet-db`・`/forex`・`/etf/constituents`
-  - KV データ: `/watchlist`（GET は公開）・`/positions`・`/networth`（PIN 必須）・`/prices/cache`
+  - KV データ: `/watchlist`（GET は公開・PUT は PIN 必須）・`/watchlist/resync`（POST・公開データの写しのみ）・`/positions`・`/networth`（PIN 必須）・`/prices/cache`
   - 注文表: `/order-sheet`・`/order-sheet/plan`・`/order-sheet/events`（PIN 必須・rev 楽観ロック）
   - 認証: `/auth/pin-hash`・`/auth/challenge`・`/auth/register`・`/auth/verify`
   - 410 済み（古いキャッシュのアプリ向けに 404 ではなく 410 を返す）: `/portfolio/snapshot`・`/ai/*`・`/notion/save`
 
 | Cron（`worker/wrangler.toml`） | 内容 |
 |---|---|
-| `0 1,8,15,22 * * *` | 全保有銘柄の価格を KV にキャッシュ＋注文表の約定（mf の株数の増減）を `order:plan` に確定（変化時のみ書く） |
+| `0 1,8,15,22 * * *` | 全保有銘柄の価格を KV にキャッシュ＋注文表の約定（mf の株数の増減）を `order:plan` に確定（変化時のみ書く）＋KV `watchlist` の valuation を main に同期（ズレ時のみ書く） |
 | `20 20,21 * * *` | `per-daily.yml` を workflow_dispatch で起動（米国の夏時間は 20:20、冬時間は 21:20 UTC の回だけ） |
 
-- **参照中の Secrets・vars（名前のみ）**: `FINNHUB_API_KEY`・`FMP_API_KEY`・`EDINET_DB_API_KEY`・`SEC_USER_AGENT`・`GH_DISPATCH_TOKEN`（無ければ `GITHUB_TOKEN`）・`ALLOWED_ORIGIN`（vars）。binding は `KV`・`RATE_LIMITER`。参照されなくなった Secrets・vars も削除せず残している（削除は Toshio の判断）。
+- **参照中の Secrets・vars（名前のみ）**: `FINNHUB_API_KEY`・`FMP_API_KEY`・`EDINET_DB_API_KEY`・`SEC_USER_AGENT`・`GH_DISPATCH_TOKEN`（無ければ `GITHUB_TOKEN`）・`ALLOWED_ORIGIN`（vars）。binding は `KV`・`RATE_LIMITER`・`RESYNC_LIMITER`。参照されなくなった Secrets・vars も削除せず残している（削除は Toshio の判断）。
 - レート制限: [worker/src/rate-limit.md](./worker/src/rate-limit.md)。注文表の運用: [docs/order-sheet-ops.md](./docs/order-sheet-ops.md)（設計は `docs/handoff/2026-10-03-order-sheet.md`。plan の実値はリポに置かない）。
 - デプロイはクラウドから行わない（「クラウドから実行できないもの」）。
 
