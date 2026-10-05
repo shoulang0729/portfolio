@@ -22,6 +22,7 @@ npm run format      # Prettier 整形（src/**/*.js と worker/src/**/*.js）
 - `eslint.config.js`: ESLint v9 flat config
 - `.prettierrc`: シングルクォート・印刷幅 120
 - 整形の確認: `npx prettier --check 'src/**/*.js' 'worker/src/**/*.js'`
+- blame から一括整形を除く: ローカルでは `git config blame.ignoreRevsFile .git-blame-ignore-revs`（GitHub の blame は自動で無視する）
 - `assets/*.css` に `prettier --write` を掛けない
 
 ### 型チェック
