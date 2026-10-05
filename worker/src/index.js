@@ -10,7 +10,7 @@
 //   GET  /etf/constituents?symbol=<sym> ETF 構成銘柄（look-through・KV キャッシュ）。取得アダプタ未実装のため
 //                                       現状はキャッシュが無ければ 404（etf-constituents.js・#305）
 //   GET  /watchlist                     ウォッチリスト取得（KV・公開）
-//   PUT  /watchlist                     ウォッチリスト保存（KV・認証なし＝kv-resync の Actions が使う）
+//   PUT  /watchlist                     ウォッチリスト保存（KV・X-Pin-Hash 必須＝アプリのみ・#715）
 //   POST /watchlist/resync              公開 main の data/valuations.json（SHA 固定）を KV watchlist の valuation に写す
 //                                       （認証なし・本文/クエリは読まない・ズレ時のみ書く・RESYNC_LIMITER・#715）
 //   GET  /positions                     保有銘柄取得（KV・非公開・PIN認証必須・#714）
