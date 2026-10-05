@@ -4,7 +4,7 @@ import importPlugin from 'eslint-plugin-import';
 
 export default [
   {
-    ignores: ['src/_disabled/**', 'tests/spec_validation.test.js', 'dist/**'],
+    ignores: ['tests/spec_validation.test.js', 'dist/**'],
   },
   {
     files: ['src/**/*.js', 'worker/src/**/*.js', 'scripts/**/*.mjs'],
