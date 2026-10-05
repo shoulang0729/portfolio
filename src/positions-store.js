@@ -4,14 +4,20 @@
 // 依存: data.js (WORKER_URL, fetchWithTimeout), positions.js (positions)
 // ══════════════════════════════════════════════════════════════
 
+import { _getActivePinHash } from './auth-pin.js';
 import { WORKER_URL } from './config.js';
 import { fetchWithTimeout } from './data.js';
 import { positions } from './positions.js';
 import { validatePosition } from './schema.js';
 
 async function loadPositionsFromKV() {
+  // Worker の GET /positions は PIN 必須（#714）。PIN が無ければ通信せず同梱データのまま
+  const pinHash = _getActivePinHash();
+  if (!pinHash) return false;
   try {
-    const res = await fetchWithTimeout(`${WORKER_URL}/positions`, 10000);
+    const res = await fetchWithTimeout(`${WORKER_URL}/positions`, 10000, {
+      headers: { 'X-Pin-Hash': pinHash },
+    });
     if (!res.ok) return false;
     const kvPositions = await res.json();
     if (!Array.isArray(kvPositions) || kvPositions.length === 0) return false;

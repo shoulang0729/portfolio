@@ -11,6 +11,7 @@ import { state } from './state.js';
 import { escapeHTML, fmtPrice } from './utils.js';
 import { renderHeatmapList } from './stock-list.js';
 import { fetchViaProxy, fetchLivePrice, fetchAllHistorical, setStatus } from './data.js';
+import { _getActivePinHash } from './auth-pin.js';
 import { WORKER_URL } from './config.js';
 import { validateWatchlistItem } from './schema.js';
 
@@ -31,10 +32,14 @@ function saveWatchlist() {
 let _wlKvSyncTimer = null;
 
 async function _syncWatchlistToWorker() {
+  // PIN があれば X-Pin-Hash を付ける（無くても従来どおり送る・#714）
+  const pinHash = _getActivePinHash();
+  const headers = { 'Content-Type': 'application/json' };
+  if (pinHash) headers['X-Pin-Hash'] = pinHash;
   try {
     const res = await fetch(`${WORKER_URL}/watchlist`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(state.watchlist),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
