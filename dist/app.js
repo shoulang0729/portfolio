@@ -1459,193 +1459,6 @@ function _showChangePinButton() {
   }
 })();
 
-// src/fmt.js
-var _ESC = {
-  "&": "&amp;",
-  "<": "&lt;",
-  ">": "&gt;",
-  '"': "&quot;",
-  "'": "&#39;"
-};
-var escapeHTML = (s) => String(s).replace(/[&<>"']/g, (c) => _ESC[c]);
-var fmtJPY = (v) => {
-  const m = v / 1e4;
-  return `${m.toFixed(1)}\u4E07`;
-};
-var fmtJPYFull = (v) => `${(v >= 0 ? "+" : "") + Math.round(v).toLocaleString()}\u5186`;
-var fmtYen = (v) => `\xA5${Math.round(v || 0).toLocaleString()}`;
-var maskAmount = (s) => String(s).replace(/[0-9]/g, "*");
-var fmtPct = (v) => `${v.toFixed(1)}%`;
-var fmtPrice = (v, cur) => {
-  if (v == null) return "\u2015";
-  return cur === "USD" ? `$${v.toFixed(2)}` : `\xA5${Math.round(v).toLocaleString()}`;
-};
-var sgn = (v) => v >= 0 ? "pos" : "neg";
-var fmtJPYInt = (v) => {
-  const m = Math.round(v / 1e4);
-  const sign2 = m < 0 ? "-" : "";
-  const abs = Math.abs(m);
-  if (abs >= 1e4) {
-    const s = (abs / 1e4).toFixed(2);
-    return `${sign2 + (s.endsWith("0") ? (abs / 1e4).toFixed(1) : s)}\u5104`;
-  }
-  return `${sign2 + abs.toLocaleString()}\u4E07`;
-};
-var fmtPctInt = (v) => `${Math.round(v)}%`;
-var fmtShares = (n) => {
-  if (n >= 1e6) {
-    const v = Math.round(n / 1e5) / 10;
-    return `${v.toFixed(1).replace(/\.0$/, "")}M`;
-  }
-  if (n >= 1e3) {
-    const v = Math.round(n / 100) / 10;
-    return `${v.toFixed(1).replace(/\.0$/, "")}K`;
-  }
-  return n.toLocaleString();
-};
-function getColor(pct, mode, scaleOverride) {
-  if (pct == null) return "var(--null-cell)";
-  const scale = scaleOverride != null ? scaleOverride : mode === "pnl" ? 50 : 5;
-  const t = Math.max(-1, Math.min(1, pct / scale));
-  if (t >= 0) {
-    const r = Math.round(232 + t * (198 - 232));
-    const g = Math.round(232 + t * (40 - 232));
-    const b = Math.round(237 + t * (40 - 237));
-    return `rgb(${r},${g},${b})`;
-  } else {
-    const r = Math.round(232 - -t * (232 - 27));
-    const g = Math.round(232 - -t * (232 - 94));
-    const b = Math.round(237 - -t * (237 - 32));
-    return `rgb(${r},${g},${b})`;
-  }
-}
-
-// src/color.js
-function cssVar(name) {
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-}
-function _lum(c) {
-  const lin = (v) => {
-    const s = v / 255;
-    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
-  };
-  return 0.2126 * lin(c.r) + 0.7152 * lin(c.g) + 0.0722 * lin(c.b);
-}
-function getCellTextColor(hexColor) {
-  const c = d3.color(hexColor);
-  if (!c) return cssVar("--text");
-  return _lum(c) > 0.35 ? cssVar("--ink-on-light") : cssVar("--ink-on-dark");
-}
-function getCellTextColorSub(hexColor) {
-  const c = d3.color(hexColor);
-  if (!c) return cssVar("--text3");
-  return _lum(c) > 0.35 ? cssVar("--ink-on-light-2") : cssVar("--ink-on-dark-2");
-}
-
-// src/table.js
-function makeTh(label, col, align, activeSortCol, sortDir, sortFnName) {
-  const active = col && activeSortCol === col;
-  const sortCls = active ? sortDir === "desc" ? "sort-desc" : "sort-asc" : "";
-  const alignCls = align === "center" ? "sl-th-center" : "";
-  const cls = [sortCls, alignCls].filter(Boolean).join(" ");
-  const dataCol = col ? `data-col="${col}"` : "";
-  const click = col && sortFnName ? `data-action="${sortFnName}" data-arg="${col}"` : "";
-  return `<th class="${cls}" ${dataCol} ${click}>${label}</th>`;
-}
-function makePctCell(pct, scale, dataCol = "") {
-  const dataAttr = dataCol ? `data-col="${dataCol}" ` : "";
-  if (pct == null) {
-    const period = PERIOD_MAP[dataCol];
-    const range = period?.range;
-    const fetching = !!(range && state.fetchingRanges?.has?.(range));
-    const attempted = !!(range && state.historicalAttempted?.[range] === true);
-    const loading = fetching || range && !attempted;
-    const placeholder = loading ? '<span class="sl-pct-loading">\u2026</span>' : "\u2013";
-    return `<td ${dataAttr}class="sl-pct-cell">${placeholder}</td>`;
-  }
-  const bg = getColor(pct, "change", scale);
-  const fg = getCellTextColor(bg);
-  return `<td ${dataAttr}class="sl-pct-cell" style="background:${bg};color:${fg}">${fmtPctInt(pct)}</td>`;
-}
-function _tableSort(colKey, dirKey, col, defaultAscCols = []) {
-  if (state[colKey] === col) {
-    state[dirKey] = state[dirKey] === "desc" ? "asc" : "desc";
-  } else {
-    state[colKey] = col;
-    state[dirKey] = defaultAscCols.includes(col) ? "asc" : "desc";
-  }
-}
-function makePeriodCells(getPct) {
-  return PERIOD_COLS.map((pc) => {
-    const pct = getPct(pc.id);
-    const scale = PERIOD_MAP[pc.id]?.scale ?? 25;
-    return makePctCell(pct, scale, pc.id);
-  }).join("");
-}
-function makePeriodHeaderCells(activeSortCol, sortDir, sortFnName) {
-  return PERIOD_COLS.map((pc) => makeTh(pc.label, pc.id, "center", activeSortCol, sortDir, sortFnName)).join("");
-}
-
-// src/portfolio-calc.js
-function getHistoricalChangePct(symbol, periodId) {
-  const cfg = PERIOD_MAP[periodId];
-  if (!cfg) return null;
-  const data = state.historicalCache[cfg.range]?.[symbol];
-  if (!data || data.length < 2) return null;
-  let startPoint;
-  if (periodId === "1d") {
-    startPoint = data[data.length - 2];
-  } else {
-    const lastPt = data[data.length - 1];
-    const lastMs = lastPt.date instanceof Date ? lastPt.date.getTime() : new Date(lastPt.date).getTime();
-    const targetDate = new Date(lastMs - cfg.days * 864e5);
-    startPoint = null;
-    for (let i = data.length - 2; i >= 0; i--) {
-      if (data[i].date <= targetDate) {
-        startPoint = data[i];
-        break;
-      }
-    }
-    if (!startPoint) startPoint = data[0];
-  }
-  const currentPrice = data[data.length - 1].close;
-  return (currentPrice - startPoint.close) / startPoint.close * 100;
-}
-function getDisplayPct(p) {
-  if (state.colorMode === "pnl") return p.pnlPct;
-  if (!p.ySymbol) return null;
-  if (state.changePeriod === "1d" && p.dayPct != null) return p.dayPct;
-  return getHistoricalChangePct(p.ySymbol, state.changePeriod);
-}
-function calcPortfolioPeriodPct(periodId) {
-  let weightedSum = 0, totalWeight = 0;
-  positions.forEach((p) => {
-    let pct = null;
-    if (periodId === "1d" && p.dayPct != null) {
-      pct = p.dayPct;
-    } else if (p.ySymbol) {
-      pct = getHistoricalChangePct(p.ySymbol, periodId);
-    }
-    if (pct === null) return;
-    weightedSum += p.value * pct;
-    totalWeight += p.value;
-  });
-  return totalWeight > 0 ? weightedSum / totalWeight : null;
-}
-function trackedSymbolCount(positionsList, watchlist) {
-  const norm = (s) => String(s || "").trim().toUpperCase();
-  const set = /* @__PURE__ */ new Set();
-  (positionsList || []).forEach((p) => {
-    const key = norm(p.ySymbol || p.symbol);
-    if (key) set.add(key);
-  });
-  (watchlist || []).forEach((w) => {
-    const key = norm(w.symbol);
-    if (key) set.add(key);
-  });
-  return set.size;
-}
-
 // src/data-helpers.js
 function fetchWithTimeout(url, ms = 7e3, opts = {}) {
   const ctrl = new AbortController();
@@ -1993,6 +1806,178 @@ async function clearHistoricalIDB() {
     console.warn("[historical-cache] clearHistoricalIDB failed:", e);
   }
   state.historicalCache = { "1y": {}, "5y": {}, "10y": {} };
+}
+
+// src/fmt.js
+var _ESC = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#39;"
+};
+var escapeHTML = (s) => String(s).replace(/[&<>"']/g, (c) => _ESC[c]);
+var fmtJPY = (v) => {
+  const m = v / 1e4;
+  return `${m.toFixed(1)}\u4E07`;
+};
+var fmtJPYFull = (v) => `${(v >= 0 ? "+" : "") + Math.round(v).toLocaleString()}\u5186`;
+var fmtYen = (v) => `\xA5${Math.round(v || 0).toLocaleString()}`;
+var maskAmount = (s) => String(s).replace(/[0-9]/g, "*");
+var fmtPct = (v) => `${v.toFixed(1)}%`;
+var fmtPrice = (v, cur) => {
+  if (v == null) return "\u2015";
+  return cur === "USD" ? `$${v.toFixed(2)}` : `\xA5${Math.round(v).toLocaleString()}`;
+};
+var sgn = (v) => v >= 0 ? "pos" : "neg";
+var fmtJPYInt = (v) => {
+  const m = Math.round(v / 1e4);
+  const sign2 = m < 0 ? "-" : "";
+  const abs = Math.abs(m);
+  if (abs >= 1e4) {
+    const s = (abs / 1e4).toFixed(2);
+    return `${sign2 + (s.endsWith("0") ? (abs / 1e4).toFixed(1) : s)}\u5104`;
+  }
+  return `${sign2 + abs.toLocaleString()}\u4E07`;
+};
+var fmtPctInt = (v) => `${Math.round(v)}%`;
+var fmtShares = (n) => {
+  if (n >= 1e6) {
+    const v = Math.round(n / 1e5) / 10;
+    return `${v.toFixed(1).replace(/\.0$/, "")}M`;
+  }
+  if (n >= 1e3) {
+    const v = Math.round(n / 100) / 10;
+    return `${v.toFixed(1).replace(/\.0$/, "")}K`;
+  }
+  return n.toLocaleString();
+};
+function getColor(pct, mode, scaleOverride) {
+  if (pct == null) return "var(--null-cell)";
+  const scale = scaleOverride != null ? scaleOverride : mode === "pnl" ? 50 : 5;
+  const t = Math.max(-1, Math.min(1, pct / scale));
+  if (t >= 0) {
+    const r = Math.round(232 + t * (198 - 232));
+    const g = Math.round(232 + t * (40 - 232));
+    const b = Math.round(237 + t * (40 - 237));
+    return `rgb(${r},${g},${b})`;
+  } else {
+    const r = Math.round(232 - -t * (232 - 27));
+    const g = Math.round(232 - -t * (232 - 94));
+    const b = Math.round(237 - -t * (237 - 32));
+    return `rgb(${r},${g},${b})`;
+  }
+}
+
+// src/color.js
+function cssVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+function _lum(c) {
+  const lin = (v) => {
+    const s = v / 255;
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  };
+  return 0.2126 * lin(c.r) + 0.7152 * lin(c.g) + 0.0722 * lin(c.b);
+}
+function getCellTextColor(hexColor) {
+  const c = d3.color(hexColor);
+  if (!c) return cssVar("--text");
+  return _lum(c) > 0.35 ? cssVar("--ink-on-light") : cssVar("--ink-on-dark");
+}
+function getCellTextColorSub(hexColor) {
+  const c = d3.color(hexColor);
+  if (!c) return cssVar("--text3");
+  return _lum(c) > 0.35 ? cssVar("--ink-on-light-2") : cssVar("--ink-on-dark-2");
+}
+
+// src/table.js
+function makeTh(label, col, align, activeSortCol, sortDir, sortFnName) {
+  const active = col && activeSortCol === col;
+  const sortCls = active ? sortDir === "desc" ? "sort-desc" : "sort-asc" : "";
+  const alignCls = align === "center" ? "sl-th-center" : "";
+  const cls = [sortCls, alignCls].filter(Boolean).join(" ");
+  const dataCol = col ? `data-col="${col}"` : "";
+  const click = col && sortFnName ? `data-action="${sortFnName}" data-arg="${col}"` : "";
+  return `<th class="${cls}" ${dataCol} ${click}>${label}</th>`;
+}
+function makePctCell(pct, scale, dataCol = "") {
+  const dataAttr = dataCol ? `data-col="${dataCol}" ` : "";
+  if (pct == null) {
+    const period = PERIOD_MAP[dataCol];
+    const range = period?.range;
+    const fetching = !!(range && state.fetchingRanges?.has?.(range));
+    const attempted = !!(range && state.historicalAttempted?.[range] === true);
+    const loading = fetching || range && !attempted;
+    const placeholder = loading ? '<span class="sl-pct-loading">\u2026</span>' : "\u2013";
+    return `<td ${dataAttr}class="sl-pct-cell">${placeholder}</td>`;
+  }
+  const bg = getColor(pct, "change", scale);
+  const fg = getCellTextColor(bg);
+  return `<td ${dataAttr}class="sl-pct-cell" style="background:${bg};color:${fg}">${fmtPctInt(pct)}</td>`;
+}
+function _tableSort(colKey, dirKey, col, defaultAscCols = []) {
+  if (state[colKey] === col) {
+    state[dirKey] = state[dirKey] === "desc" ? "asc" : "desc";
+  } else {
+    state[colKey] = col;
+    state[dirKey] = defaultAscCols.includes(col) ? "asc" : "desc";
+  }
+}
+function makePeriodCells(getPct) {
+  return PERIOD_COLS.map((pc) => {
+    const pct = getPct(pc.id);
+    const scale = PERIOD_MAP[pc.id]?.scale ?? 25;
+    return makePctCell(pct, scale, pc.id);
+  }).join("");
+}
+function makePeriodHeaderCells(activeSortCol, sortDir, sortFnName) {
+  return PERIOD_COLS.map((pc) => makeTh(pc.label, pc.id, "center", activeSortCol, sortDir, sortFnName)).join("");
+}
+
+// src/portfolio-calc.js
+function getHistoricalChangePct(symbol, periodId) {
+  const cfg = PERIOD_MAP[periodId];
+  if (!cfg) return null;
+  const data = state.historicalCache[cfg.range]?.[symbol];
+  if (!data || data.length < 2) return null;
+  let startPoint;
+  if (periodId === "1d") {
+    startPoint = data[data.length - 2];
+  } else {
+    const lastPt = data[data.length - 1];
+    const lastMs = lastPt.date instanceof Date ? lastPt.date.getTime() : new Date(lastPt.date).getTime();
+    const targetDate = new Date(lastMs - cfg.days * 864e5);
+    startPoint = null;
+    for (let i = data.length - 2; i >= 0; i--) {
+      if (data[i].date <= targetDate) {
+        startPoint = data[i];
+        break;
+      }
+    }
+    if (!startPoint) startPoint = data[0];
+  }
+  const currentPrice = data[data.length - 1].close;
+  return (currentPrice - startPoint.close) / startPoint.close * 100;
+}
+function getDisplayPct(p) {
+  if (state.colorMode === "pnl") return p.pnlPct;
+  if (!p.ySymbol) return null;
+  if (state.changePeriod === "1d" && p.dayPct != null) return p.dayPct;
+  return getHistoricalChangePct(p.ySymbol, state.changePeriod);
+}
+function trackedSymbolCount(positionsList, watchlist) {
+  const norm = (s) => String(s || "").trim().toUpperCase();
+  const set = /* @__PURE__ */ new Set();
+  (positionsList || []).forEach((p) => {
+    const key = norm(p.ySymbol || p.symbol);
+    if (key) set.add(key);
+  });
+  (watchlist || []).forEach((w) => {
+    const key = norm(w.symbol);
+    if (key) set.add(key);
+  });
+  return set.size;
 }
 
 // src/data-finnhub.js
@@ -9121,103 +9106,6 @@ function cycleTheme() {
     loadChart(state.currentPos.ySymbol, state.currentRange);
   }
 }
-async function triggerPortfolioSnapshot() {
-  const confirmed = await showConfirm({
-    title: "\u30B9\u30CA\u30C3\u30D7\u30B7\u30E7\u30C3\u30C8\u4FDD\u5B58",
-    message: "\u73FE\u5728\u306E\u30DD\u30FC\u30C8\u30D5\u30A9\u30EA\u30AA\u3092 GitHub \u306B\u30B9\u30CA\u30C3\u30D7\u30B7\u30E7\u30C3\u30C8\u4FDD\u5B58\u3057\u307E\u3059\u3002\n\uFF08data/portfolio-snapshot.json \u304C\u66F4\u65B0\u3055\u308C\u307E\u3059\uFF09",
-    okLabel: "\u4FDD\u5B58",
-    cancelLabel: "\u30AD\u30E3\u30F3\u30BB\u30EB"
-  });
-  if (!confirmed) return;
-  try {
-    setStatus("\u30B9\u30CA\u30C3\u30D7\u30B7\u30E7\u30C3\u30C8\u4F5C\u6210\u4E2D...", "yellow");
-    const payload = _buildPortfolioSnapshotPayload();
-    const res = await fetch(`${WORKER_URL}/portfolio/snapshot`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-    if (!res.ok) {
-      const t = await res.text().catch(() => "");
-      throw new Error(`HTTP ${res.status}: ${t.slice(0, 200)}`);
-    }
-    const data = await res.json();
-    setStatus(`\u30B9\u30CA\u30C3\u30D7\u30B7\u30E7\u30C3\u30C8\u4FDD\u5B58\u5B8C\u4E86\uFF08${data.positions} \u9298\u67C4\uFF09`, "green");
-    await showAlert({
-      title: "\u4FDD\u5B58\u5B8C\u4E86",
-      message: `https://github.com/shoulang0729/portfolio/blob/main/data/portfolio-snapshot.json
-
-\u53CD\u6620\u307E\u3067 raw.githubusercontent.com \u5074\u3067\u6700\u59275\u5206\u306E\u30AD\u30E3\u30C3\u30B7\u30E5\u30E9\u30B0\u3042\u308A\u3002`,
-      okLabel: "OK"
-    });
-  } catch (e) {
-    setStatus(`\u30B9\u30CA\u30C3\u30D7\u30B7\u30E7\u30C3\u30C8\u4FDD\u5B58\u5931\u6557: ${e.message}`, "red");
-    await showAlert({
-      title: "\u30A8\u30E9\u30FC",
-      message: `\u30B9\u30CA\u30C3\u30D7\u30B7\u30E7\u30C3\u30C8\u4FDD\u5B58\u5931\u6557:
-${e.message}`,
-      okLabel: "OK"
-    });
-  }
-}
-function _buildPortfolioSnapshotPayload() {
-  const perfOf = (ySymbol) => {
-    const perf = {};
-    for (const period of PERIODS) {
-      if (period.id === "1d") {
-        const pos = positions.find((p) => p.ySymbol === ySymbol);
-        perf["1d"] = pos?.dayPct ?? null;
-      } else {
-        perf[period.id] = getHistoricalChangePct(ySymbol, period.id);
-      }
-    }
-    return perf;
-  };
-  const positionsWithPerf = positions.map((p) => ({
-    ...p,
-    performance: perfOf(p.ySymbol)
-  }));
-  const totalValue = positions.reduce((s, p) => s + (p.value || 0), 0);
-  const totalPnl = positions.reduce((s, p) => s + (p.pnl || 0), 0);
-  const portPerf = {};
-  for (const period of PERIODS) {
-    portPerf[period.id] = calcPortfolioPeriodPct(period.id);
-  }
-  const watchlistWithPerf = (state.watchlist || []).map((item) => {
-    const ySymbol = item.ySymbol || item.symbol;
-    const perf = {};
-    for (const period of PERIODS) {
-      if (period.id === "1d") {
-        perf["1d"] = state.watchlistPrices?.[item.symbol]?.dayPct ?? null;
-      } else {
-        perf[period.id] = getHistoricalChangePct(ySymbol, period.id);
-      }
-    }
-    return {
-      symbol: item.symbol,
-      name: item.name || item.symbol,
-      ySymbol,
-      cat: item.cat || null,
-      cur: item.cur || null,
-      performance: perf
-    };
-  });
-  return {
-    asOf: (/* @__PURE__ */ new Date()).toISOString(),
-    source: "frontend-manual",
-    summary: {
-      totalValue,
-      totalPnl,
-      totalPnlPct: totalValue > totalPnl ? totalPnl / (totalValue - totalPnl) * 100 : null,
-      positionCount: positions.length,
-      watchlistCount: watchlistWithPerf.length,
-      currencyBase: "JPY",
-      performance: portPerf
-    },
-    positions: positionsWithPerf,
-    watchlist: watchlistWithPerf
-  };
-}
 function setColorModePnl() {
   if (state.colorMode === "pnl") {
     setChangePeriod(state.lastChangePeriod || "1d");
@@ -9339,7 +9227,6 @@ var ACTION_MAP = {
   setColorModePnl,
   handleRefreshSelect,
   switchTab,
-  triggerPortfolioSnapshot,
   // briefing.js
   reloadBriefing,
   // order-sheet.js（Order タブ・#674）
