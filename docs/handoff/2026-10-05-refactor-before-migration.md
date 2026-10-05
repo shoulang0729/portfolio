@@ -11,7 +11,7 @@
 - [x] 段階1 Issue なし（棚卸しは PM がチャットで実施）/ Toshio 判断 2026-10-05（フォーム）/ クローズ・統合の実施 2026-10-05
 - [x] 段階2 Issue #722 / 実際の順番は docs 移設が先: PR2a #725（docs/design-system.md・docs/dev-guide.md）マージ 70cab45 / PR2b #726（CLAUDE.md）マージ 5927f37（Toshio 承認）
 - [x] 付随: #727 / PR #728（`src/positions.js` のフォールバック保有を合成値に置換）マージ 21a373a（Toshio 承認・旧値の履歴は残す判断）
-- [ ] 段階3 #705 / PR3a #____ マージ ____（squash の SHA ______）/ PR3b #____（blame-ignore）／ PR3c #____（CI）
+- [x] 段階3 #705 / PR3a #729 マージ 2026-10-05（squash の SHA 81cb7653225ee49aff7f11cdf08ce634abc6503e・バンドル sha256 一致・Worker 再デプロイ不要）/ PR3b #730（blame-ignore）マージ f283c6b ／ PR3c #731（CI）マージ 5dd821a（Toshio 承認）。確認用の使い捨てブランチ `feature/705-format-probe` はプロキシで削除不可のため残存
 - [ ] 段階4 Issue #____ / PR4a #____ / PR4b #____ / PR4c #____ / PR4d #____ / Secrets 削除（Toshio）____
 - [ ] 段階5 Issue #____ / PR5a #____ / PR5b #____ / PR5c #____（#306・デプロイ ____）/ PR5d #____（#704）/ PR5e #____（#703）
 
