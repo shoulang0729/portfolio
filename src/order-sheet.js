@@ -57,9 +57,15 @@ async function _json(r) {
 
 /**
  * Order タブを描画する（タブを開くたびに最新を取得）。
+ * 申告の POST 中（busy）は取得しない（GET が並走して busy:false で上書きしないように）。
+ * 申告の完了時に _sendEvent が結果で描画し直す。
  * @returns {Promise<void>}
  */
 export async function renderOrderTab() {
+  if (state.orderSheet.busy) {
+    rerenderOrderTab();
+    return;
+  }
   const pinHash = _getActivePinHash();
   if (!pinHash) {
     state.orderSheet = { status: 'nologin', data: null, error: null, busy: false };
