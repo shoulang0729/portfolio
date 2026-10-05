@@ -12,6 +12,7 @@
     "lint": "eslint src/ scripts/ --ext .js",
     "lint:fix": "eslint src/ scripts/ --ext .js --fix",
     "format": "prettier --write 'src/**/*.js' 'worker/src/**/*.js'",
+    "format:check": "prettier --check 'src/**/*.js' 'worker/src/**/*.js'",
     "check:circular": "madge --circular src/",
     "check:types": "tsc --noEmit",
     "check:deps": "npx depcheck",
