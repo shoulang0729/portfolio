@@ -23,7 +23,7 @@ Worker 中継口の呼び出しは `lib/worker-client.mjs` 経由（`Origin` ヘ
 
 `quality-*` は純関数 `src/quality-calc.js` の `computeQuality()` で指標を算出。
 `etf-pe.mjs` は ETF のファンド実績PER を `value.perTrail` に投入し `value.perSource:"fund-trailing"` を立てる
-（FMP は ETF の PER を持たないため Yahoo 経由・予想PER/PEG は ETF では取得不能なので触らない。設計＝`docs/d3-etf-proxy-data-availability.md` §7）。
+（FMP は ETF の PER を持たないため Yahoo 経由・予想PER/PEG は ETF では取得不能なので触らない。設計＝`docs/handoff/assets/d3-etf-proxy-data-availability.md` §7）。
 `target-gap.mjs` は `(targetMeanPrice / currentPrice − 1)` を %（整数）で `value.targetGapPct` に投入。
 アナリスト未カバー（例 6016.T）は null 継続・ETF/HK は対象外（#427）。
 いずれも `data/scheduler/writeback.mjs` の `writeBlocks()` で**該当ブロックだけ**を元フォーマット保持で書き換える（インデント幅は自動検出）。

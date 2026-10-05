@@ -8,7 +8,7 @@ https://shoulang0729.github.io/portfolio/
 
 ## 概要
 
-3 タブ構成: Heatmap / Historical Heatmap / Watchlist Historical Heatmap
+タブ: Heatmap / Historical（保有＋ウォッチ）/ Valuation / Risk / Wealth / Briefing / Order（PIN ログイン後）
 
 ## 技術スタック
 
