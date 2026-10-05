@@ -21,17 +21,19 @@
 - **開発体制**: `CLAUDE.md`、`.claude/**`、`.github/workflows/**`
 
 ### データの書き手（手で編集しない）
-| ファイル | 書き手 |
+| ファイル / KV | 書き手 |
 |---|---|
 | `data/mf-holdings.json`・`data/mf-history.json` | Mac mini の MF 取得バッチ（毎日） |
 | `data/valuations.json`（判断の書き戻し）・`data/briefings/**` | Mulmo の日次バッチ（毎朝 05:00 CST。PER の当日コミット（引け以降・bot）を最長 21:52 UTC まで待ってから判断・書き戻し） |
-| `data/valuations.json` の `perCurrent`/`percentile`/`status`/`asOf` とファンドの加重 PER | GitHub Actions `per-daily.yml`（毎日 20:15 UTC・21:45〜22:59 UTC 開始は書かない・21:50〜22:59 UTC は push しない・コミット `data: daily PER <UTC日付>`） |
-| `data/positions.json`・`data/portfolio-snapshot.json` | Worker（KV 同期・スナップショット） |
+| `data/valuations.json` の `perCurrent`/`percentile`/`status`/`asOf` とファンドの加重 PER | GitHub Actions `per-daily.yml`（Worker Cron が米国の夏時間は 20:20 UTC・冬時間は 21:20 UTC に workflow_dispatch で起動・予備 schedule 20:15 UTC・引け以降に当日分があれば何もしない・21:45〜22:59 UTC 開始は書かない・21:50〜22:59 UTC は push しない・コミット `data: daily PER <UTC日付>`） |
 | `data/valuations.json` の `quality`/`value`/`sectorMedian`/`staleFields`・`data/verdict-outcomes.json` | GitHub Actions `weekly-valuations.yml`（毎週日曜 02:00 UTC） |
 | `data/scheduler/fund-holdings.json` | GitHub Actions `fund-holdings-monthly.yml`（月次・毎月 1〜20 日 03:00 UTC） |
+| `data/positions.json`・`data/portfolio-snapshot.json` | 書き手なし（#711 で Worker の書き込みを停止・凍結）。扱いは `docs/handoff/2026-10-05-refactor-before-migration.md` §6.6 |
+| KV `watchlist` | アプリ（`PUT /watchlist`）と GitHub Actions `kv-resync.yml`（`data/scheduler/kv-resync.mjs`・`data/valuations.json` の push 時と毎日 23:30 UTC。`per-daily.yml` も同じジョブで実行） |
+| KV `positions`・`networth`（非公開） | アプリ（PIN 必須の `PUT /positions`・`PUT /networth`） |
 | KV `order:plan`・`order:log`（注文表の設定＋状態・操作ログ。非公開・PIN 保護） | Worker のみ：`PUT /order-sheet/plan`（初回投入・編集＝`scripts/order-plan.mjs`）／`POST /order-sheet/events`（アプリの Order タブの申告・対話中の Claude・Mulmo）／Cron（mf の株数で約定を確定・変化時のみ）。`wrangler kv` で直接書かない（復旧時の削除のみ・手順は `docs/order-sheet-ops.md`）。KV なので main へのコミットは無い |
 
-- これらは自動で main に直接コミットされる。形状を変える場合は「データ構造」扱い（Toshio 確認）とし、書き手側の対応を設計書に明記する。
+- ファイルの行は自動で main に直接コミットされる。形状を変える場合は「データ構造」扱い（Toshio 確認）とし、書き手側の対応を設計書に明記する。
 - push 前の `git pull --rebase origin main` でこれらと衝突したら、**main 側を採用**する。
 - **Briefing**：生成（`data/briefings/**` と `docs/briefing-generation-spec.md`）は Mulmo の担当。アプリの Briefing タブ（表示側）は Claude Code の担当。生成仕様の変更は Issue で提案する。
 
@@ -50,7 +52,7 @@
 Mac mini で `claude remote-control`（環境 `shoulang-Mac-mini:portfolio`・作業ディレクトリ `~/GitHub/portfolio`）が動いている。PM（クラウドの親セッション）は Claude_Code_Remote の `create_session` でこの環境に指示を出し、上記の「Toshio が Mac で行う」作業を代行させてよい（Toshio がその都度依頼・了解したもの）。
 - **任せてよい作業**：Worker のデプロイ（`npx wrangler deploy`）と curl 検証・問題時の `npx wrangler rollback`、MF 取込の即時実行（`launchctl kickstart -k gui/$(id -u)/com.toshio.mf-snapshot`）と結果確認、別の作業ツリーでの `fetch_mf.py run --dry-run`、ログ（`~/.mf-snapshot/*.log`）の確認、`git pull --ff-only`。
 - **禁止**：`sudo`、リポのファイル編集・commit・push（取込バッチ自身の自動 commit は除く）、wrangler の secret / kv 操作、Secrets・PIN・ハッシュ・`.env`・Cookie の表示、feature ブランチでの `fetch_mf.py run`。
-- **prompt は自己完結で書く**：目的・コマンド・合否の基準・失敗時の戻し方・結果のコメント先（Issue/PR）・権限（してよいこと/禁止）を明記する。Mac 側はクラウドの文脈を知らない。
+- **prompt は自己完結で書く**（Mac 側はクラウドの文脈を知らない）：目的・コマンド・合否の基準・失敗時の戻し方・結果のコメント先（Issue/PR）・権限（してよいこと/禁止）を明記する。
 - **結果は GitHub で受け取る**：Mac 側に `gh` で Issue/PR へコメントさせる。内容は件数・成否・HTTP ステータス・エラーの種類だけ（金額・口座名・秘密は書かない）。状態は `get_session` で見る。
 - **長い作業は分ける**：1つの結果を確かめてから次の `create_session` を出す。Mac 側で権限確認に止まったら、PM が勝手に権限を足さず Toshio に報告する。
 
@@ -61,370 +63,65 @@ Mac mini で `claude remote-control`（環境 `shoulang-Mac-mini:portfolio`・�
 - ベースは必ず `main`。push 前に `git pull --rebase origin main`。マージは squash＋ブランチ削除。
 - **gh CLI が無い環境（クラウドセッション等）**：Issue/PR/マージは PM（親）が GitHub MCP で代行する。サブエージェントは本文をドラフトファイルで渡し、git は commit まで（push は親）。
 - main 直コミットは docs と設計書の「実装ログ」更新のみ。アプリ実装は必ず PR。
+- PR に `dist/app.js` を含めない（main への push で `build-dist.yml` が自動ビルド・コミットする）。
 
 ## プロジェクト概要
-Finnhub API（優先）+ Yahoo Finance API（フォールバック）を使ったポートフォリオ可視化 Web アプリ。
-Heatmap・Historical Heatmap（保有＋ウォッチを統合・セグメントピル[全部/保有/ウォッチ]で切替・#452）の2タブ構成（＋Risk/Value/Briefing）。
-AI相談タブは現在無効化中（ソースは `src/_disabled/` に保管）。
+個人のポートフォリオを可視化する Web アプリ（GitHub Pages・PWA）。
+- **本番 URL**: https://shoulang0729.github.io/portfolio/ ／ **GitHub**: https://github.com/shoulang0729/portfolio
+- **タブ**: Heatmap ／ Historical（期間ヒートマップ・保有＋ウォッチを統合・セグメントピル[全部/保有/ウォッチ]・#452）／ Valuation ／ Risk ／ Wealth ／ Briefing ／ Order（PIN ログイン後）
+- **データの流れ**: 保有は Mac mini の MF 取込 → `data/mf-*.json`。バリュエーションは Mulmo と Actions → `data/valuations.json`、Briefing は Mulmo → `data/briefings/`。価格は Worker 中継で Finnhub（優先）→ Yahoo Finance（フォールバック）。
+- **バージョン**: `index.html` の `?v=YYYYMMDDX` を見る（CLAUDE.md には数字を書かない）。
 
-- **本番 URL**: https://shoulang0729.github.io/portfolio/
-- **GitHub**: https://github.com/shoulang0729/portfolio
-- **現在バージョン**: `20260529I`
+## 構成
+| 層 | 中身 |
+|---|---|
+| 配信 | `index.html` ＋ `src/app.js`（入口）→ esbuild → `dist/app.js`（ESM 1 本・D3 は CDN）。main への push で `build-dist.yml` が自動コミットし、Pages が main のルートから配信。`sw.js` は PWA のオフラインキャッシュ |
+| `src/` 認証 | `auth-*`（PIN・暗号化・パスキー・UI） |
+| `src/` データ取得 | `data*`（Finnhub/Yahoo/プロファイル等）・`forex`・`cache`・`historical-cache`・`idb`・`holdings-from-mf` |
+| `src/` タブ別の描画 | `heatmap`・`stock-list`（＋`watchlist`）・`valuation-tab`・`risk-*`・`wealth`・`briefing`・`order-sheet*` |
+| `src/` 計算 | `*-calc`・`reverse-dcf` など |
+| `src/` 共通 | `utils`・`fmt`・`color`・`table`・`state`・`config`・`positions`（`PERIODS`） |
+| `assets/` | CSS（`01-base.css` に CSS 変数）・アイコン・`manifest.json` |
+| `worker/src/` | Cloudflare Worker（下記「Worker」） |
+| `scripts/` | Mac mini の MF 取込（`fetch_mf*.py`・launchd plist）・注文表の投入 `order-plan.mjs` |
+| `data/scheduler/` | Actions の日次・週次・月次のスクリプト（`README.md`） |
+| `.github/workflows/` | CI（`test.yml`・`e2e.yml`）・`build-dist.yml`・データ（`per-daily.yml`・`weekly-valuations.yml`・`fund-holdings-monthly.yml`・`kv-resync.yml`）・監視（`mf-freshness.yml`） |
+| `tests/`・`e2e/` | vitest・Playwright |
+| `docs/` | 正本の仕様・運用手順。`docs/handoff/` は設計書（記録） |
 
----
+ファイル単位の一覧は置かない（古くなる）。
 
-## ディレクトリ構成
+## Worker
+- **ルートの正本は `worker/src/index.js` 冒頭のコメント**（ここには要約だけ）。
+  - 市場データ中継: `/yahoo`・`/finnhub`・`/fmp`・`/edgar`・`/edinet-db`・`/forex`・`/etf/constituents`
+  - KV データ: `/watchlist`（GET は公開）・`/positions`・`/networth`（PIN 必須）・`/prices/cache`
+  - 注文表: `/order-sheet`・`/order-sheet/plan`・`/order-sheet/events`（PIN 必須・rev 楽観ロック）
+  - 認証: `/auth/pin-hash`・`/auth/challenge`・`/auth/register`・`/auth/verify`
+  - 410 済み（古いキャッシュのアプリ向けに 404 ではなく 410 を返す）: `/portfolio/snapshot`・`/ai/*`・`/notion/save`
 
-```
-/
-├── index.html          # GitHub Pages エントリーポイント
-├── CLAUDE.md           # Claude Code 引き継ぎ情報（このファイル）
-├── src/                # JS ソースファイル（スクリプト読込順あり）
-│   ├── auth-pin.js         # PIN ハッシュ・状態・ロックアウト
-│   ├── auth-crypto.js      # AES-GCM 暗号化
-│   ├── auth-passkey.js     # WebAuthn パスキー
-│   ├── auth-ui.js          # PINログイン・変更ダイアログ UI
-│   ├── positions.js        # 保有銘柄データ・PERIODS 定義（編集はここだけ）
-│   ├── state.js            # 定数 (C)・アプリ状態 (state)
-│   ├── funds.js            # 投資信託マッピング（FUND_DEFS）
-│   ├── csv.js              # マネックスCSVパース
-│   ├── utils.js            # 共通ユーティリティ
-│   ├── data-helpers.js     # ★新設：共有ヘルパー（fetchWithTimeout / sleep / batchWithRetry）
-│   ├── data-finnhub.js     # ★新設：Finnhub 専用関数（Task 4）
-│   ├── data-yahoo.js       # ★新設：Yahoo Finance 専用関数（Task 4）
-│   ├── data.js             # Finnhub/Yahoo Finance API オーケストレーション（Task 4 分割）
-│   ├── forex.js            # ★新設：Worker /forex 経由で為替レート取得（Task 5）
-│   ├── cache.js            # ★新設：メモリキャッシュ・IndexedDB 統合
-│   ├── historical-cache.js # ★新設：IndexedDB ベースの historical キャッシュ
-│   ├── color.js            # ★新設：色計算・テーマロジック
-│   ├── fmt.js              # ★新設：フォーマット関数（金額・通貨・日付）
-│   ├── config.js           # ★新設：設定定数・UI パラメータ
-│   ├── heatmap.js          # D3.js ヒートマップ描画
-│   ├── chart.js            # D3.js チャート描画
-│   ├── stock-list.js       # Historical Heatmap タブ（銘柄リスト＋期間別騰落率）
-│   ├── watchlist.js        # ウォッチリスト データ層（STORAGE/SEARCH/FETCH。描画は stock-list.js に統合・#452）
-│   ├── positions-store.js  # KV保存/読込・差分計算
-│   ├── import-parse.js     # マネックスCSV/マネフォ画像パース
-│   ├── import-ui.js        # 取込モーダルUI
-│   ├── portfolio-calc.js   # ★新設：ポートフォリオ計算（含み損益・リスク等）
-│   ├── ptr.js              # ★新設：Pull-to-refresh（app.js から分離）
-│   ├── render.js           # ★新設：描画オーケストレーション（app.js から分離）
-│   ├── modal.js            # ★新設：モーダルダイアログ共通処理
-│   ├── table.js            # ★新設：テーブル行生成ヘルパー
-│   ├── ui-status.js        # ★新設：ステータスバー・スピナー表示
-│   ├── init.js             # ★新設：初期化・event listener 登録
-│   ├── tabs.js             # ★新設：タブ切替ロジック
-│   ├── menu.js             # ★新設：メニュー・更新オプション
-│   ├── idb.js             # ★新設：IndexedDB ラッパー（Phase 1, 未統合）
-│   ├── _disabled/          # 無効化中コード（再有効化可能。再開手順は CLAUDE.md 参照）
-│   │   ├── history.js          # 資産推移記録＋D3グラフ（未統合）
-│   │   ├── ai-system-prompt.js # AI相談ペルソナ
-│   │   ├── ai-tab.js           # AI相談タブ
-│   │   └── 05-ai-tab.css       # AI相談タブCSS
-│   └── app.js              # data-action ディスパッチャ・タブ切替・初期化
-├── assets/             # 静的アセット
-│   ├── 01-base.css         # CSS変数・テーマ・レイアウト・モーダル基本
-│   ├── 02-tables.css       # 銘柄リスト・ウォッチリスト・ヒートマップセル
-│   ├── 03-misc.css         # タブバー・検索・タイプバッジ・PINキーパッド
-│   ├── 04-auth.css         # PIN変更ダイアログ
-│   ├── manifest.json       # PWA マニフェスト
-│   └── *.png / *.svg       # アイコン類（favicon.svg・apple-touch-icon.png 等）
-├── sw.js               # ★新設：PWA Service Worker（オフラインキャッシュ）
-├── package.json        # ★新設：npm スクリプト（test / lint / format）
-├── vitest.config.js    # ★新設：vitest テスト設定
-├── eslint.config.js    # ★新設：ESLint flat config (v9)
-├── .prettierrc         # ★新設：Prettier コードスタイル
-├── data/               # ★新設：Workerが生成するデータファイル
-│   ├── portfolio-snapshot.json  # スナップショット保存先（Worker → GitHub API で更新）
-│   └── positions.json           # KV保有銘柄のGit同期（Worker → GitHub API で更新）
-├── worker/             # Cloudflare Worker
-│   ├── src/index.js    # Worker 本体
-│   └── wrangler.toml   # Worker 設定
-└── docs/               # 設計書・ルーティン定義
-    ├── SPEC_cn.md              # 機能仕様書（中国語）
-    ├── DESIGN.md               # フロントエンド設計規約（カラー・コンポーネント等）
-    ├── ai-system-prompt.md     # AI相談ペルソナ定義（ai-system-prompt.js と同期）
-    ├── routine_japan_1700.md   # 国内株ルーティン
-    └── routine_us_0600.md      # 米国株ルーティン
-```
+| Cron（`worker/wrangler.toml`） | 内容 |
+|---|---|
+| `0 1,8,15,22 * * *` | 全保有銘柄の価格を KV にキャッシュ＋注文表の約定（mf の株数の増減）を `order:plan` に確定（変化時のみ書く） |
+| `20 20,21 * * *` | `per-daily.yml` を workflow_dispatch で起動（米国の夏時間は 20:20、冬時間は 21:20 UTC の回だけ） |
 
-### スクリプト読込順（index.html）
-
-```
-auth-pin → auth-crypto → auth-passkey → auth-ui
-→ positions → state → funds → csv → utils → data-helpers → data-finnhub → data-yahoo → data → forex
-→ heatmap → chart → stock-list → watchlist
-→ positions-store → import-parse → import-ui
-→ menu → app
-```
-
-`src/_disabled/` 内の各ファイルは index.html でコメントアウト中（git 履歴に残存）。
-
----
-
-## デプロイ手順
-
-```bash
-# 1. バージョンを上げる（index.html の ?v=YYYYMMDDX を全置換で更新）
-# 2. コミット & push → GitHub Pages に自動反映
-```
-
-**バージョン命名規則**: `?v=YYYYMMDDX`（例: `20260517H`）
-英字は同日複数リリース時に a, b, c… → … → z → A, B, C… と順に振る。
-index.html 内の CSS・JS すべての `?v=` を同じ値に揃える。
-
----
-
-## データソース設計
-
-### Finnhub（優先）
-- APIキー: Cloudflare Worker Secret `FINNHUB_API_KEY`（フロントには露出しない）
-- シンボル変換: `toFinnhubSymbol(ySymbol)` — `9983.T` → `TYO:9983`、US株はそのまま
-- ライブ価格: `fetchFinnhubQuote(fSymbol)` — `dp`（日次騰落率）・`c`（現在値）を返す
-- 履歴データ: `fetchFinnhubCandles(fSymbol, fromTs, toTs)` — 日足 OHLCV
-- 無料枠: 60リクエスト/分
-
-### Yahoo Finance（フォールバック）
-- Finnhub が失敗した場合に自動切り替え（投資信託プロキシなど未収録銘柄向け）
-- フォールバック順: Worker経由 → query1直接 → query2直接 → corsproxy.io → allorigins
-- `fetchViaProxy(url)` 経由で取得
-
-### データ取得フロー
-```
-fetchLivePrice(ySymbol)
-  → fetchFinnhubQuote(TYO:XXXX or AAPL)
-  → [失敗時] fetchViaProxy(Yahoo Finance chart API)
-
-fetchSymbolHistory(ySymbol, range)
-  → fetchFinnhubCandles(TYO:XXXX, fromTs, toTs)
-  → [失敗時] fetchViaProxy(Yahoo Finance chart API, range=1y/5y/10y)
-```
-
----
-
-## Cloudflare Worker ルート一覧
-
-```
-GET  /yahoo?url=<encoded>           Yahoo Finance プロキシ（CORS回避）
-GET  /finnhub?path=<path>&<params>  Finnhub プロキシ（APIキー隠蔽）
-GET  /forex?from=<from>&to=<to>    為替レートプロキシ（Yahoo Finance）
-POST /ai/openai                     OpenAI プロキシ
-POST /ai/gemini                     Gemini プロキシ
-POST /ai/grok                       Grok プロキシ
-POST /ai/deepseek                   DeepSeek プロキシ
-POST /ai/claude                     Claude プロキシ
-GET  /watchlist                     ウォッチリスト取得（KV）
-PUT  /watchlist                     ウォッチリスト保存（KV）
-GET  /positions                     保有銘柄取得（KV・非公開）
-PUT  /positions                     保有銘柄保存（KV・PIN認証必須）
-PUT  /auth/pin-hash                 PIN ハッシュ更新（KV）
-GET  /prices/cache                  Cron キャッシュ価格取得（KV）
-POST /portfolio/snapshot            スナップショット → data/portfolio-snapshot.json に保存（GitHub API）
-POST /notion/save                   AI相談結果をNotion DBに保存
-GET  /auth/challenge                パスキー認証チャレンジ生成
-POST /auth/register                 パスキー登録
-POST /auth/verify                   パスキー検証
-GET  /order-sheet                   注文表を計算して返す（KV order:plan・PIN認証必須・KV に書かない・#672）
-GET  /order-sheet/plan              注文表の設定 order:plan 取得（PIN認証必須・未投入なら null）
-PUT  /order-sheet/plan              order:plan を丸ごと置換（PIN認証必須・validatePlan＋rev 楽観ロック）
-POST /order-sheet/events            注文表の状態変更（発注/約定/取消/基準の取り直し/見直し・PIN認証必須・rev 楽観ロック）
-```
-
-**Cron**: `0 */6 * * *` — 6時間ごとに全保有銘柄の価格を取得してKVキャッシュ＋注文表の約定（mf の株数の増減）を `order:plan` に確定（変化時のみ書く）
-
-**注文表**: 運用手順（初回投入・約定の反映・見直し・壊れた `order:plan` の復旧）は [docs/order-sheet-ops.md](./docs/order-sheet-ops.md)、設計は `docs/handoff/2026-10-03-order-sheet.md`。plan の実値はリポに置かない（`scripts/order-plan.mjs` はリポ内のファイルを拒否）
-
-**Worker Secrets**: `FINNHUB_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`,
-`GROK_API_KEY`, `DEEPSEEK_API_KEY`, `ANTHROPIC_API_KEY`,
-`NOTION_API_KEY`, `NOTION_DB_ID`, `ALLOWED_ORIGIN`
-
-**レート制限**: Issue#62 対応で Worker のレート制限を shard 分散方式に変更。詳細は [worker/src/rate-limit.md](./worker/src/rate-limit.md) を参照。
-
----
-
-## スナップショット機能
-
-メニュー「スナップショット保存」ボタン（ログイン後のみ表示）から手動実行。
-
-- フロントエンドが `buildSnapshot()` でポートフォリオ全体（positions + watchlist + 集計）を JSON 生成
-- Worker `/portfolio/snapshot` に POST → GitHub API で `data/portfolio-snapshot.json` を更新
-- historicals（日次価格系列）は重い（5MB超）ので **保存しない**。performance 値のみ集約
-- 他の AI ツールがこの JSON を参照して現在のポートフォリオを把握できる仕組み
-
----
+- **参照中の Secrets・vars（名前のみ）**: `FINNHUB_API_KEY`・`FMP_API_KEY`・`EDINET_DB_API_KEY`・`SEC_USER_AGENT`・`GH_DISPATCH_TOKEN`（無ければ `GITHUB_TOKEN`）・`ALLOWED_ORIGIN`（vars）。binding は `KV`・`RATE_LIMITER`。参照されなくなった Secrets・vars も削除せず残している（削除は Toshio の判断）。
+- レート制限: [worker/src/rate-limit.md](./worker/src/rate-limit.md)。注文表の運用: [docs/order-sheet-ops.md](./docs/order-sheet-ops.md)（設計は `docs/handoff/2026-10-03-order-sheet.md`。plan の実値はリポに置かない）。
+- デプロイはクラウドから行わない（「クラウドから実行できないもの」）。
 
 ## 主要な設計ルール
+- **data-action 委譲**: `data-action="fn"`（`fn1|fn2`）・`data-arg`・`data-event` を `src/app.js` のディスパッチャが処理する。インライン `onclick=` は使わない。
+- **escapeHTML**: 外部 API の値・ユーザー入力を `innerHTML` に入れる前に必ず `escapeHTML()` を通す（または `textContent`）。
+- **色は CSS 変数のみ**（ハードコード hex 禁止）。`!important` は使わない。`assets/*.css` に `prettier --write` を掛けない。
+- **色の計算を変えない**: `getColor` と `src/positions.js` の期間別スケール（濃淡は業務仕様）。D3 のサイズ計算も設計書の指示なしに触らない。
+- **ソート**: comparator は antisymmetric（等値で 0）。null・保有専用列の空値は dir 非依存で末尾固定。文字列は `localeCompare(..., 'ja')`。
+- **期間**: `src/positions.js` の `PERIODS` が唯一の定義元（`PERIOD_COLS` 等は自動生成）。
+- **`?v=` の bump**: `src/**`・`assets/**`・`index.html` を変えたら `index.html` の `?v=YYYYMMDDX` を CSS・JS・SW 登録 URL すべて同じ値に揃えて上げる（英字は同日内で a→z→A→Z）。
+- 詳細: [docs/design-system.md](./docs/design-system.md)（設計規約・実装ルール）・[docs/dev-guide.md](./docs/dev-guide.md)（開発ツール・よくある作業）。
 
-### data-action イベント委譲
-- HTML 要素に `data-action="funcName"` / `data-action="fn1|fn2"` を付ける
-- `app.js` の `document.addEventListener('click', ...)` が一括ディスパッチ
-- インライン `onclick=` は使わない（auth-ui.js 内の一部 PIN キーパッドを除く）
-- `data-arg="value"` で引数を渡す。`data-event="input"` で click 以外のイベントを登録
-
-### ソートの仕組み
-- `state.heatSortCol` / `state.heatSortDir` で統合 Historical タブ（保有＋ウォッチ）のソート状態を管理（#452。旧 `listSortCol`/`wlSortCol` は廃止）
-- `state.heatSeg`（`all`/`held`/`watch`）でセグメント表示を管理（localStorage `hm-heat-seg` 永続）
-- ソート comparator は必ず antisymmetric にすること（等値で 0 を返す）。null・保有専用列の空値は dir 非依存で末尾固定
-- 文字列ソートは `localeCompare('ja')` を使う
-
-### 期間カラム
-- 期間設定は `positions.js` の `PERIODS` 配列が唯一の定義元
-- `PERIOD_COLS` / `PERIOD_IDS` / `PERIOD_MAP` は PERIODS から自動生成（positions.js 末尾）
-- 新しい期間を追加するときは `PERIODS` を変更するだけで全テーブルに反映される
-
-### 共通ヘルパー（utils.js）
-- `makeTh(label, col, align, activeSortCol, sortDir, sortFnName)` — テーブルヘッダー `<th>` 生成
-- `makePctCell(pct, scale, dataCol)` — 色付き % セル `<td>` 生成
-- `_tableSort(colKey, dirKey, col, defaultAscCols)` — テーブルのソート切り替え共通処理
-- `getColor(pct, mode, scale)` — ヒートマップ色計算
-- `getCellTextColor(bg)` — 背景色に合わせた文字色（白 or 黒）
-- `fmtPctInt(pct)` — % 表示フォーマット（小数点1桁）
-- `fmtJPYInt(val)` — 日本円整数フォーマット（億・万・円）
-- `getHistoricalChangePct(ySymbol, periodId)` — historicalCache から期間騰落率を取得
-
-### ウォッチリスト
-- `localStorage` の `hm-watchlist` キーに JSON 保存 + Worker KV に同期
-- `wlGetPct(item, periodId)` で 1d は watchlistPrices キャッシュ、他は historicalCache から取得
-- 市場列バッジは `<span class="wl-type-badge">` のみ（タイプ別クラスなし）
-- 検索は Yahoo Finance の chart/quoteSummary API（Finnhub の Search API は未使用）
-
-### 資産推移（src/_disabled/history.js・未統合）
-- `localStorage` の `hm-asset-history` キーに `{date, value}` 配列を保存（最大1000件）
-- `recordTodayAsset()` を `refreshPrices()` 成功後に呼ぶ想定
-- `renderHistoryTab()` で D3 面グラフ＋ホバーツールチップ描画
-- **現在 index.html には読み込まれていない**。統合するには下記手順を参照
-
-### CSS テーマ（Claude Desktop ウォームトーン）
-- CSS 変数 `--bg`, `--border`, `--text`, `--text2`, `--surface`, `--accent` でダーク/ライト切り替え
-- ベースパレット: ライト `#f7f2ee` / ダーク `#1c1917`（Claude Desktopトーン）
-- アクセントカラー: `#cc785c`（Claude ブラウン）
-- `--accent` 以外はハードコード hex 禁止
-- `#watchlist-table-wrap` に `overflow-x: auto` を設定（スマホ横スクロール対応）
-
-### 投資信託の扱い
-- `isProxy: true` の銘柄は `ySymbol` に代替インデックスを指定
-- 価格取得は代替シンボルで行い、表示名・通貨は元の投資信託名を使う
-- `funds.js` の `FUND_DEFS` / `fundSymbolFromName()` / `fundProxyOf()` で管理
-
----
-
-## 直近の変更履歴
-
-| バージョン | 内容 |
-|---|---|
-| 20260529N | Issue#145 対応: CSP の script-src に cdn.bootcdn.net を追加（D3 第1 CDN を許可） |
-| 20260529M | Issue#146 対応: ウォッチリスト検索ボックスとテーブルヘッダを sticky 化 |
-| 20260529L | Issue#35 Phase 2 対応: historicalCache を IndexedDB に並行書き込みで永続化（Sonnet 並列実行）<br>Issue#28 対応: Playwright E2E テスト導入（auth/tabs/watchlist + heatmap/auth-lockout/modal/import 14ケース）<br>Issue#29 対応: JSDoc + tsc --checkJs 型チェック基盤導入（opt-in 方式、全 src/ ファイル展開）<br>Issue#62 対応: Worker レート制限のレースコンディション緩和（shard 分散）<br>Issue#143 完了: 全 src/ ファイルに JSDoc 注釈<br>Issue#153 chore: depcheck で未使用 devDep を検出<br>Issue#156 暫定対応: e2e/heatmap.spec.js を一時 skip（IDB ハング根本修正まで） |
-| 20260529K | ESLint に prefer-template と no-restricted-syntax を追加 |
-| 20260529J | data.js を 300 行以下に薄化（batchWithRetry / applySplitCorrection を分離） |
-| 20260529I | feat: #36 USD建て銘柄を /forex 経由で JPY 換算 (Phase 2)、ci: dist/app.js サイズ監視、chore: coverage json-summary reporter |
-| 20260529H | refactor: #126 data.js を Finnhub / Yahoo / orchestrator に分割 |
-| 20260529G | refactor: #124 app.js を 500 行以下に削減（menu.js 分離） |
-| 20260529F | refactor: #113 app.js から描画オーケストレーションを src/render.js に分離 (Phase 3) |
-| 20260529E | chore: vitest coverage（@vitest/coverage-v8）・ESLint 未使用 import 削除・PWA manifest 拡張（shortcuts/categories）・Dependabot 設定 |
-| 20260529D | refactor: #32 init.js を新規作成、app.js の event listeners を分離 |
-| 20260529C | refactor: #99 tabs.js を新規作成、switchTab 関数を分離 |
-| 20260529B | security: #37 Content Security Policy (CSP) を meta タグで実装 |
-| 20260529A | docs: #106 README.md を新規作成（スタック・開発コマンド・ドキュメント導線） |
-| 20260528Z | a11y: 主要 UI に aria-label と role を追加 |
-| 20260528Z | Issue#34 Phase 2 対応: 残りの confirm/alert を自作モーダルに置換 |
-| 20260528Y | Issue#34 Phase 1 対応: 自作 confirm/alert モーダル実装 |
-| 20260528X | Issue#66対応: dist/app.js を main マージ後に CI で自動ビルド |
-| 20260528X | ESLint no-console: warn 導入、不要 console.log を整理 |
-| 20260528W | utils.js のテストカバレッジ拡張（getColor 境界値・_tableSort 等） |
-| 20260528V | Issue#54対応: import-ui.js の inline onclick を data-action 化（CSP前提条件） |
-| 20260528U | positions-store.js の単体テスト追加 |
-| 20260528T | Issue#58対応: csv.js の単体テスト追加（23ケース） |
-| 20260527B | Issue#15修正: sw.js の CACHE 名を SW 登録 URL の `?v=` から動的生成。index.html のバージョン更新だけで自動同期 |
-| 20260527A | Issue#11対応: アクセシビリティ改善 |
-| 20260526F | Issue#17修正: statsバー横スクロール対応(flex:none→min-width:0)、バージョン表示をimport.meta.urlに変更 |
-| 20260526E | ウォッチリストstickyティッカー列にwidth:130px固定追加（行固定崩れ修正） |
-| 20260526D | コード品質改善: escapeHTML追加・XSS対策、PTRをptr.jsに分離、PINキーパッドdata-action化、resizeデバウンス、SW/PWA、vitest+CI、ESLint、Workerレート制限、localStorage quota対応 |
-| 20260526C | sticky列固定・ステータス見切れ・ハンバーガー44px・パスキーボタン幅修正 |
-| 20260526B | sticky列固定・ステータス見切れ・ハンバーガー44px化 |
-| 20260526A | コードレビュー改善案#1-6適用: watchlist XSS修正、matchMedia二重登録解消、ロックアウト永続化、state.historicalAttempted正式定義、デッドコードをsrc/_disabled/に移動、_tableSortヘルパー追加 |
-| 20260525C | 自動更新UIをハンバーガーメニューへ移動（5/10/30/60分）、マニュアルリンク追加、タイトル1行化 |
-| 20260525B | Pull-to-refreshをSVGアイコンアニメーション（0→270deg回転→スピン）に変更 |
-| 20260525A | SPEC.md全面更新（v=20260517g相当から現状へ追従）、PR#6マージ |
-| 20260517H | 履歴ヒートマップ（Historical Heatmap）とウォッチリストの実装を共通化。stock-list.js・watchlist.js で同じ historicalCache を共有 |
-| 20260517G | ひふみ投信の proxy シンボルを `1312.T` → `2516.T`（東証グロース250ETF）に変更 |
-| 20260517F | 履歴データ「…」点滅表示の条件を「未試行」も含めるよう拡張 |
-| 20260517E | 履歴データ取得中のセルを「…」点滅表示に |
-| 20260517D | スナップショットにウォッチリスト（performance 付き）を追加 |
-| 20260517B | スナップショットから historicals を除外（5.5MB→約20KB に削減） |
-| 20260517A | タブ名修正: 保有銘柄リスト → Historical Heatmap |
-| 20260517g | AI相談 system prompt を「投資壁打ちAIペルソナ」に高度化。`docs/ai-system-prompt.md` / `src/ai-system-prompt.js` 新設 |
-| 20260517f | **大規模リファクタリング**: バグ修正、funds.js/csv.js 新設、CSS 5分割、import.js 3分割、auth.js 4分割、HTML の onclick → data-action 全置換 |
-| 20260516i | マネックスCSV/マネフォスクショ取込モーダル、保有銘柄KV化、Worker Cron 6h価格キャッシュ |
-| 20260516h | AI相談タブ全面リデザイン、Claude Desktop ウォームトーンデザイン |
-| 20260516c | ディレクトリ構成整理（src/ assets/ docs/）、AI API外部化、パスキー認証追加 |
-| 20260516b | Cloudflare Worker プロキシ実装、APIキーをWorker Secretsに移管 |
-| 20260322f | PWA アイコン実装（SVG favicon、PNG 512/192/180px、manifest.json） |
-| 20260322a | Finnhub 実装（Finnhub 優先→Yahoo フォールバック） |
-| 20260311k | ウォッチリストタブ実装 |
-
----
-
-## 開発ツール
-
-### テスト
-```bash
-npm test               # vitest 単発実行（CI 相当）
-npm run test:watch     # ウォッチモード
-npm run test:coverage  # カバレッジレポート生成
-```
-- テストファイルは `tests/` 以下
-- GitHub Actions `.github/workflows/test.yml` が push/PR 時に自動実行
-- `tests/fmt.test.js`: `fmtJPYInt`, `fmtPctInt`, `fmtShares`, `escapeHTML`, `getColor` の純関数テスト（vitest）
-
-### リント・フォーマット
-```bash
-npm run lint        # ESLint（src/ / worker/src/）
-npm run lint:fix    # 自動修正
-npm run format      # Prettier 整形
-```
-- `eslint.config.js`: ESLint v9 flat config
-- `.prettierrc`: シングルクォート・印刷幅 120
-
-### 型チェック
-```bash
-npm run check:types  # tsc --noEmit（opt-in 方式、// @ts-check 付きファイルのみ）
-```
-
-### E2E テスト
-```bash
-# 初回のみ: Playwright ブラウザのインストール
-npx playwright install --with-deps chromium
-# または
-npm run test:e2e:setup
-
-npm run test:e2e     # Playwright（chromium）
-```
-
-### 循環参照検出
-```bash
-npm run check:circular  # madge
-```
-
-### 未使用依存検出
-```bash
-npm run check:deps  # depcheck（false positive は .depcheckrc.json で除外）
-```
-
-### ビルド
-```bash
-npm run build        # esbuild でバンドル（D3 は external として除外）
-npm run build:watch  # ウォッチモード
-```
-- D3.js は esbuild の external 指定（バンドルに含めない）
-- index.html で CDN から読込: `<script src="https://cdn.bootcdn.net/...d3.min.js">`
-- `npm install` で d3 をインストール **しない**
-
-### utils.js の escapeHTML
-- Yahoo Finance API 等の外部値を `innerHTML` に埋め込む前に必ず `escapeHTML(s)` を通す
-- `escapeHTML` は `utils.js` に定義。`src/watchlist.js` の検索ドロップダウンで適用済み
-
----
+## 品質ゲート
+`npm test` ／ `npm run lint` ／ `npm run check:types` ／ `npm run check:circular` ／ `npm run build`（CI の `test.yml` と同じ。`dist/app.js` のサイズも監視）。
+E2E は `npm run test:e2e`（CI の `e2e.yml`）。
+詳細は [docs/dev-guide.md](./docs/dev-guide.md)。
 
 ## Claude Code 自律実行ルール
 
@@ -432,7 +129,6 @@ npm run build:watch  # ウォッチモード
 
 | 操作 | 内容 |
 |------|------|
-| レビュー対応 | CodeRabbit 等のレビューコメントは **PR をブロックしない（非同期）**。有用な指摘は GitHub Issue を新規作成してストックし、PR 自体はそのままマージする。自明な誤検知・スタイル指摘はスキップ。 |
 | テスト対応 | テスト失敗を修正し、対応内容を Issue にコメントする |
 | PR 操作 | PR を作成する。マージは reviewer が『マージ前の確認』に従って行う |
 | 依存追加 | `npm install <pkg> --save-dev` で devDependency を追加する |
@@ -447,179 +143,10 @@ npm run build:watch  # ウォッチモード
 - `CLAUDE.md` / `.claude/settings.json` の変更
 - GitHub Actions ワークフローの大幅な変更
 
----
-
-## 並列セッション / サブエージェント運用ルール
-
-複数モデル（Haiku / Sonnet / Opus）を並列実行する際の、過去の事故から学んだ運用ルール。
-
-### モデル分担の原則
-
-| モデル | 向き | 例 |
-|---|---|---|
-| Haiku | 既知パターンの繰り返し、テスト追加、軽い refactor | JSDoc 注釈、CSS 修正、テスト追加 |
-| Sonnet | 中規模リファクタ、複数モジュール連携、環境構築 | IndexedDB 移行、Playwright 導入 |
-| Opus | 設計判断、根本バグ修正、型設計、衝突解消 | KV race condition、tsconfig 設計、e2e blocking 解消 |
-
-判断を要する Task を Haiku に投げると、安易な選択をしがち（例: typescript の最新版を入れて madge と衝突）。**「決められたものを書く」が Haiku、「何を選ぶか決める」が Sonnet/Opus**。
-
-### 並列起動時の必須ルール
-
-1. **ベースブランチは必ず `main`**。他 Agent のブランチをベースにしない（過去事故: Agent E が test/e2e-expansion を D3 ブランチベースで作り、D3 PR が宙に浮いた）
-2. **1 Task = 1 ブランチ = 1 PR = 1 Issue**。実装 PR は `Closes #XX`（同じ Issue を複数 PR で分割する場合は最後の PR のみ `Closes`、他は `Refs`）
-3. **push 前に必ず `git pull --rebase origin main`**（コンフリクト解消責任は各 Agent）
-4. **動作変更がある Task は CI を待ってからマージ**。`npm run check:types` `npm run check:circular` `npm run test:e2e` のうち、CI 側でしか実行できないもの（E2E）は admin 権限の親（Opus）が監視
-
-### サブエージェントの権限制限への備え
-
-サブエージェントは `gh` / `npm` / `npx` の実行が許可なしで拒否されることがある（CLAUDE.md の自律実行ルールはサブエージェント環境に継承されない場合がある）。各クリックでユーザー操作が必要になり、並列実行の旨味が消える。
-
-**回避策**:
-- **Agent は実装と `git push` まで完了で OK**。PR 作成・マージは親（Opus）がリカバリで実行
-- 重要な判断を伴う `gh` / `npm install` は最初から Opus が直接やる方が早い
-- Agent への指示書末尾に「権限制限で進めない場合は実装と push だけ完了させて報告」を明記
-
-### Closes 競合への備え
-
-複数 Agent が同じ Issue を `Closes` で指すと、最初のマージで Issue が close され、後続 PR の `Closes` は no-op になる。結果として「PR は通ったが Issue が close されない」状態になりがち。
-
-**回避策**:
-- 同 Issue を分割実装する場合: **最後の PR のみ `Closes`**、他は `Refs`
-- Issue 番号の混同を避けるため、各 Agent に明示的に「あなたの担当範囲はこの Issue だけ」と指示
-
-### E2E fail の段階解消
-
-E2E が CI を blocking すると後続全 PR が止まる。既存バグで E2E が落ち始めたら、根本修正を待たず段階的に解除する。
-
-**手順**（過去事例: Issue #145 → #156 の連鎖）:
-1. 根本原因を 1 Agent (Sonnet) で調査、Issue に記録
-2. 修正可能なものは即 PR（例: CSP ホワイトリスト追加）
-3. 残りの失敗テストは `test.describe.skip` で一時無効化 + 「skip 解除条件 = Issue #XX」コメント
-4. 別 Issue で根本修正、修正完了後に skip 解除
-
-### ベースバージョンと bump の管理
-
-並列実行で index.html を触る Task が複数あると `?v=` の bump が競合する。
-
-**ルール**:
-- bump が必要な Task は同時並列起動しない（順次）
-- bump 不要な Task（テスト追加・ドキュメントのみ）は並列 OK
-- Build Dist Workflow があるので `dist/app.js` の手動 commit は不要
-
----
-
-## よくある作業パターン
-
-### 保有銘柄を更新する
-`positions.js` の `positions` 配列を編集するだけ。他のファイルは不要。
-
-### バージョンを上げる
-index.html 内の `?v=YYYYMMDDX` を新しい値に全置換する。CSS・JS・SW 登録 URL（`./sw.js?v=...`）合わせて全箇所を同じ値に揃える。
-`sw.js` の `CACHE` 名は SW 登録 URL の `?v=` から自動生成されるため、`sw.js` 本体の更新は不要（Issue#15 対応・v=20260527B〜）。
-
-### 新しいソート列を追加する（統合 Historical タブ）
-1. `stock-list.js` の `sortHeatItems()` に case を追加（comparator は antisymmetric・null 末尾）
-2. `renderHeatmapList()` のテーブルヘッダーに `makeTh('ラベル', 'col-id', 'center', state.heatSortCol, state.heatSortDir, 'heatSort')` を追加
-3. 行の `<td data-col="col-id">` を追加（保有専用なら watch 行は `–`）
-
-### Finnhub が取れない銘柄への対処
-- `fetchFinnhubQuote` が null を返すと自動で Yahoo Finance にフォールバック
-- 東証シンボルで取れない場合は `toFinnhubSymbol` の変換ロジックを確認
-- 投資信託は `isProxy: true` + `ySymbol` に代替インデックスを指定して対処
-
-### history.js タブを有効化する手順
-1. `src/_disabled/history.js` を `src/history.js` にコピー
-2. index.html に `<script src="src/history.js?v=...">` を追加（app.js の直前）
-3. index.html のタブバーに `<button data-tab="history" ...>資産推移</button>` を追加
-4. `<section id="panel-history" class="tab-panel">` パネルを追加
-5. `app.js` の `switchTab()` に `if (name === 'history') renderHistoryTab();` を追加
-6. `data.js` の `refreshPrices()` 成功後に `recordTodayAsset()` を呼ぶ
-
-### スナップショットの外部参照
-`data/portfolio-snapshot.json` を raw.githubusercontent.com 経由で取得可能（キャッシュラグ最大5分）:
-```
-https://raw.githubusercontent.com/shoulang0729/portfolio/main/data/portfolio-snapshot.json
-```
-
----
-
-## 設計規約（Design System）
-
-### カラーシステム（CSS変数トークン）
-
-```css
-:root {
-  --bg        /* 背景最底層 */
-  --surface   /* カード・パネル背景 */
-  --surface2  /* ネストされたカード・インプット背景 */
-  --surface3  /* ホバー・アクティブ state */
-  --border    /* 主要ボーダー */
-  --border2   /* サブ・セパレーター */
-  --text      /* プライマリテキスト */
-  --text2     /* セカンダリ / プレースホルダー */
-  --text3     /* ディセーブル / 薄いラベル */
-  --shadow    /* ボックスシャドウ値 */
-  --shadow2   /* オーバーレイ背景色 */
-  --accent    /* アクセントカラー（#cc785c = Claude ブラウン） */
-}
-```
-
-**ルール:**
-- 色は必ず変数で指定（ハードコード hex は NG）
-- ライト/ダーク両モードでコントラスト比 4.5:1 以上を確保
-- `auto` モードは `matchMedia` で解決、`data-theme` 属性で明示セット
-
-### タイポグラフィ
-
-```
-フォント: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Hiragino Sans', Arial, sans-serif
-サイズ: 10px(ラベル) / 11px(キャプション) / 12px(ステータス) / 13px(本文基本) / 14px(AI入力) / 15px(セクション) / 20px(ページ)
-ウェイト: 400(通常) / 500(メニュー・タブ) / 600(ボタン・強調) / 700(見出し)
-```
-
-### スペーシング
-
-```
-基本単位: 4px
-xs: 4-6px(ピル・バッジ) / sm: 8-10px(ボタン) / md: 12-14px(カード) / lg: 16-20px(ページ余白)
-border-radius: 4px(バッジ) / 6-8px(ボタン) / 10-12px(カード) / 20px+(ピル) / 50%(丸)
-```
-
-### コーディング規約
-
-**HTML:**
-- ID はシングルトン、class は再利用可能
-- `data-*` 属性で JS フック、スタイルフックには使わない
-- `onclick=` はグローバル関数に限定
-
-**JavaScript:**
-- グローバル変数/関数は最小化、モジュールごとにファイル分割
-- 状態は `state` オブジェクトに集約
-- DOM 操作は初期化時に querySelector でキャッシュ
-- API 呼び出しは `try/catch`、エラーは UI に表示
-- `async/await` + `Promise.allSettled()` で並列呼び出し
-
-**CSS:**
-- 色・サイズ・シャドウは CSS 変数のみ
-- クラス命名: `コンポーネント名-要素名-修飾子` の BEM ライク規則
-- セレクター深さは3段まで
-- `!important` は使わない
-
-### アンチパターン
-
-| NG | 代替案 |
-|---|---|
-| `el.style.color = '#ff0000'` | CSS class toggle / CSS 変数 |
-| `document.write(...)` | innerHTML / createElement |
-| APIキーをフロントに書く | Cloudflare Worker Secrets |
-| `localStorage.setItem('key', apiKey)` | Worker KV / Secrets |
-| `setInterval` でポーリング | WebSocket / SSE / ユーザーアクション起点 |
-| 深いセレクター `.a .b .c .d {}` | コンポーネントクラスを直接ターゲット |
-| `innerHTML` にユーザー入力を直接展開 | `textContent` / エスケープ処理 |
-
-### セキュリティチェックリスト
-
-- [ ] ユーザー入力は `textContent` か `escapeHTML()` でエスケープ
-- [ ] APIキーは Cloudflare Secrets / 環境変数
-- [ ] CORS ホワイトリストを Worker で管理
-- [ ] `.gitignore` に `.env`, `push.sh`, `*secret*` を追加
+## 並列作業の注意
+- ベースは必ず `main`。他のエージェントのブランチをベースにしない。
+- 1 Task＝1 ブランチ＝1 PR＝1 Issue。同じ Issue を複数 PR に分けるときは最後の PR だけ `Closes`、他は `Refs`。
+- push 前に `git pull --rebase origin main`（コンフリクトの解消は各自）。
+- `?v=` を bump する PR は並行させない（順番に）。
+- サブエージェントで `gh`・`npm`・`npx` が拒否されたら、実装と commit までで止めて親に報告する。
+- 背景と過去の事例は [docs/dev-guide.md](./docs/dev-guide.md)「並列作業の注意（詳細）」。
