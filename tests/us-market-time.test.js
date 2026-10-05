@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { isUsEasternDst, usCloseUtcHHMM, MULMO_WAIT_CUTOFF_HHMM } from '../data/scheduler/lib/us-market-time.mjs';
+import { isUsEasternDst as workerIsUsEasternDst } from '../worker/src/us-dst.js';
 
 // #708・docs/handoff/2026-10-05-per-daily-dispatch.md §4.1(a)。日付は UTC。
 
@@ -39,6 +40,39 @@ describe('isUsEasternDst は Intl（America/New_York）と 2026〜2035 の毎日
       const d = new Date(t);
       const intlDst = offsetOf(d) === 'GMT-4';
       if (intlDst !== isUsEasternDst(d)) mismatches.push(d.toISOString());
+      days++;
+    }
+    expect(days).toBe(3652);
+    expect(mismatches).toEqual([]);
+  });
+});
+
+describe('Worker 側の isUsEasternDst（worker/src/us-dst.js・#708 PR2）は PR1 と一致する', () => {
+  it.each([
+    ['2026-03-07', false],
+    ['2026-03-08', true],
+    ['2026-10-30', true],
+    ['2026-10-31', true],
+    ['2026-11-01', false],
+    ['2026-11-02', false],
+    ['2027-03-13', false],
+    ['2027-03-14', true],
+    ['2027-11-06', true],
+    ['2027-11-07', false],
+  ])('%s → dst=%s', (day, dst) => {
+    for (const hhmm of ['00:00', '20:20', '21:20', '23:59']) {
+      expect(workerIsUsEasternDst(new Date(`${day}T${hhmm}:00Z`))).toBe(dst);
+    }
+  });
+
+  it('2026〜2035 の毎日 20:20／21:20 UTC で PR1 の実装と一致する', () => {
+    const mismatches = [];
+    let days = 0;
+    for (let t = Date.UTC(2026, 0, 1); t <= Date.UTC(2035, 11, 31); t += 86400000) {
+      for (const min of [20 * 60 + 20, 21 * 60 + 20]) {
+        const d = new Date(t + min * 60000);
+        if (workerIsUsEasternDst(d) !== isUsEasternDst(d)) mismatches.push(d.toISOString());
+      }
       days++;
     }
     expect(days).toBe(3652);
