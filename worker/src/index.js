@@ -7,15 +7,11 @@
 //   GET  /edgar?path=<path>             SEC EDGAR プロキシ（キー不要・UA付与・quality 照合用）
 //   GET  /edinet-db?path=<path>         EDINET DB プロキシ（APIキー隠蔽・日本株 quality 用）
 //   GET  /forex?from=<from>&to=<to>    為替レートプロキシ（Yahoo Finance）
-//   POST /ai/openai                     OpenAI (ChatGPT) プロキシ
-//   POST /ai/gemini                     Gemini プロキシ
-//   POST /ai/grok                       Grok プロキシ
-//   POST /ai/deepseek                   DeepSeek プロキシ
-//   POST /ai/claude                     Claude (Anthropic) プロキシ
+//   POST /ai/openai                     OpenAI プロキシ（マネフォ画像取込用・PIN認証必須・#714）
 //   GET  /etf/constituents?symbol=<sym> ETF 構成銘柄（look-through・KV キャッシュ）
-//   GET  /watchlist                     ウォッチリスト取得（KV）
+//   GET  /watchlist                     ウォッチリスト取得（KV・公開）
 //   PUT  /watchlist                     ウォッチリスト保存（KV）
-//   GET  /positions                     保有銘柄取得（KV・非公開）
+//   GET  /positions                     保有銘柄取得（KV・非公開・PIN認証必須・#714）
 //   PUT  /positions                     保有銘柄保存（KV・PIN認証必須）
 //   GET  /networth                      ネットワース機微データ取得（KV・非公開・#589 Phase2）
 //   PUT  /networth                      ネットワース機微データ保存（KV・PIN認証必須・#589 Phase2）
@@ -26,15 +22,15 @@
 //   GET  /auth/pin-hash                 PIN 設定状態確認（ハッシュ値は返さない）
 //   PUT  /auth/pin-hash                 PIN ハッシュ更新/端末復旧（KV）
 //   GET  /prices/cache                  Cron キャッシュ価格取得（KV）
-//   POST /notion/save                   AI相談結果をNotion DBに保存
 //   GET  /auth/challenge                パスキー認証チャレンジ生成
 //   POST /auth/register                 パスキー登録
 //   POST /auth/verify                   パスキー検証
+//   *    /ai/{gemini,grok,deepseek,claude,models,context}, /notion/save
+//                                       無効化済み（410・#714）
 //
 // 環境変数（Cloudflare Secrets / vars に設定）:
-//   FINNHUB_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY,
-//   GROK_API_KEY, DEEPSEEK_API_KEY, ANTHROPIC_API_KEY,
-//   NOTION_API_KEY, NOTION_DB_ID, ALLOWED_ORIGIN
+//   FINNHUB_API_KEY, OPENAI_API_KEY, ALLOWED_ORIGIN
+//   （GEMINI/GROK/DEEPSEEK/ANTHROPIC/NOTION 系は #714 以降 Worker からは参照しない）
 //   KV: Cloudflare KV namespace binding
 // Cron: 0 */6 * * *  — 6時間ごとに全保有銘柄の価格を取得してキャッシュ
 //                     ＋注文表の約定（mf の株数の増減）を order:plan に確定（変化時のみ書く・#672）
@@ -358,325 +354,41 @@ function handlePortfolioSnapshot(origin) {
   return errRes('スナップショット保存は無効化されました', 410, origin);
 }
 
-// ── AI モデル一覧（各プロバイダーの /v1/models を集約・1時間KVキャッシュ）─
-// レスポンス形式:
-//   { openai: ['gpt-5.4-mini', ...], gemini: ['gemini-2.5-flash', ...],
-//     grok:   ['grok-4.3', ...],     claude: ['claude-sonnet-4-6', ...],
-//     cachedAt: '2026-05-17T...', ttl: 3600 }
-//
-// 部分的に取得失敗したプロバイダーは null を返す（フロント側でハードコードへフォールバック）
-async function handleAIModels(env, origin) {
-  const CACHE_KEY = 'ai:models:v1';
-  const CACHE_TTL = 3600; // 1時間
-
-  if (env.KV) {
-    const cached = await env.KV.get(CACHE_KEY, 'json');
-    if (cached && cached.cachedAt && (Date.now() - cached.cachedAt < CACHE_TTL * 1000)) {
-      return jsonRes(cached, 200, origin);
-    }
-  }
-
-  const [openai, gemini, grok, claude] = await Promise.all([
-    _fetchOpenAIModels(env.OPENAI_API_KEY).catch(e => { console.warn('openai models:', e); return null; }),
-    _fetchGeminiModels(env.GEMINI_API_KEY).catch(e => { console.warn('gemini models:', e); return null; }),
-    _fetchGrokModels(env.GROK_API_KEY).catch(e => { console.warn('grok models:', e); return null; }),
-    _fetchClaudeModels(env.ANTHROPIC_API_KEY).catch(e => { console.warn('claude models:', e); return null; }),
-  ]);
-
-  const result = { openai, gemini, grok, claude, cachedAt: Date.now(), ttl: CACHE_TTL };
-  if (env.KV) {
-    await env.KV.put(CACHE_KEY, JSON.stringify(result), { expirationTtl: CACHE_TTL });
-  }
-  return jsonRes(result, 200, origin);
-}
-
-async function _fetchOpenAIModels(apiKey) {
-  if (!apiKey) return null;
-  const res = await fetch('https://api.openai.com/v1/models', {
-    headers: { 'Authorization': `Bearer ${apiKey}` },
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const j = await res.json();
-  // チャット用モデルのみ抽出（embeddings/dall-e/whisper/tts/moderation を除外）
-  return (j.data || [])
-    .map(m => m.id)
-    .filter(id => /^(gpt-|o\d|chatgpt-)/i.test(id))
-    .filter(id => !/embed|dall-e|whisper|tts|moderation|realtime|audio|search-preview|transcribe/i.test(id))
-    .sort()
-    .reverse(); // 新しいモデルが先頭になりやすい
-}
-
-async function _fetchGeminiModels(apiKey) {
-  if (!apiKey) return null;
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const j = await res.json();
-  // generateContent をサポートする gemini モデルのみ
-  return (j.models || [])
-    .filter(m => (m.supportedGenerationMethods || []).includes('generateContent'))
-    .map(m => (m.name || '').replace(/^models\//, ''))
-    .filter(id => /^gemini-/i.test(id))
-    .filter(id => !/embedding|vision-latest|aqa/i.test(id))
-    .sort()
-    .reverse();
-}
-
-async function _fetchGrokModels(apiKey) {
-  if (!apiKey) return null;
-  const res = await fetch('https://api.x.ai/v1/models', {
-    headers: { 'Authorization': `Bearer ${apiKey}` },
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const j = await res.json();
-  // 言語モデルのみ（imagine/vision-only を除外）
-  return (j.data || [])
-    .map(m => m.id)
-    .filter(id => /^grok-/i.test(id))
-    .filter(id => !/imagine|tts|stt|realtime|vision-only/i.test(id))
-    .sort()
-    .reverse();
-}
-
-async function _fetchClaudeModels(apiKey) {
-  if (!apiKey) return null;
-  const res = await fetch('https://api.anthropic.com/v1/models', {
-    headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const j = await res.json();
-  return (j.data || [])
-    .map(m => m.id)
-    .filter(id => /^claude-/i.test(id))
-    .sort()
-    .reverse();
-}
-
 // ══════════════════════════════════════════════════════════════
-// AI コンテキスト・プリフェッチ
-// 質問内容(カテゴリ)に応じて Finnhub から必要なデータだけ取得し、
-// LLM の system prompt に注入できる Markdown 文字列を返す。
-//
-// POST body:
-//   { categories: ['news','fundamentals','earnings','recommendation','insider'],
-//     targetSymbols: ['AAPL', '9983.T'],
-//     question: '...' }
-//
-// レスポンス:
-//   { contextSection: '# 参考データ（プリフェッチ済み）\n...', gathered: 7 }
-//
-// 各フェッチャは独立 catch。全失敗でも空 contextSection を返す。
+// 無効化済みルート（#714）
+//   AI タブ（src/_disabled/ に退避・無効化中）専用だったルート。
+//   /ai/gemini・/ai/grok・/ai/deepseek・/ai/claude・/ai/models・/ai/context・/notion/save
+//   どのメソッドでも 410 Gone（CORS 付き）を返す。外部 fetch・KV には触れない。
 // ══════════════════════════════════════════════════════════════
-async function handleAIContext(request, env, origin) {
+const DISABLED_PATHS = new Set([
+  '/ai/gemini',
+  '/ai/grok',
+  '/ai/deepseek',
+  '/ai/claude',
+  '/ai/models',
+  '/ai/context',
+  '/notion/save',
+]);
+
+function handleDisabledRoute(origin) {
+  return errRes('このルートは無効化されました', 410, origin);
+}
+
+// ── AI プロキシ（OpenAI のみ・マネフォ画像取込用・PIN認証必須・#714）──────
+async function handleAIOpenAI(request, env, origin) {
   if (request.method !== 'POST') return errRes('POST のみ許可', 405, origin);
-  if (!env.FINNHUB_API_KEY)      return jsonRes({ contextSection: '', gathered: 0 }, 200, origin);
+  if (!env.KV) return errRes('KV 未設定', 500, origin);
+  const authErr = await verifyPinHash(request, env, origin);
+  if (authErr) return authErr;
+  if (!env.OPENAI_API_KEY) return errRes('OpenAI キー未設定', 500, origin);
 
   let body;
   try { body = await request.json(); } catch { return errRes('JSON が不正です', 400, origin); }
-  const { categories = [], targetSymbols = [], question = '' } = body;
-
-  const gathered = await _gatherContext({ categories, targetSymbols, question }, env);
-  const contextSection = _buildContextSection(gathered);
-  return jsonRes({ contextSection, gathered: gathered.length }, 200, origin);
-}
-
-// ── 個別フェッチャ ──
-async function _fetchFinnhubNews(ySym, env) {
-  const fSym = _workerToFinnhubSymbol(ySym);
-  if (!fSym) return null;
-  const to = new Date();
-  const from = new Date(to.getTime() - 7 * 24 * 60 * 60 * 1000);
-  const fmt = d => d.toISOString().slice(0, 10);
-  const url = `https://finnhub.io/api/v1/company-news?symbol=${fSym}&from=${fmt(from)}&to=${fmt(to)}&token=${env.FINNHUB_API_KEY}`;
-  const res = await fetch(url);
-  if (!res.ok) return null;
-  const data = await res.json();
-  if (!Array.isArray(data)) return null;
-  return data.slice(0, 5).map(n => ({
-    headline: n.headline, summary: n.summary, source: n.source, url: n.url,
-    datetime: n.datetime ? new Date(n.datetime * 1000).toISOString() : '',
-  }));
-}
-
-async function _fetchFinnhubFundamentals(ySym, env) {
-  const fSym = _workerToFinnhubSymbol(ySym);
-  if (!fSym) return null;
-  const url = `https://finnhub.io/api/v1/stock/metric?symbol=${fSym}&metric=all&token=${env.FINNHUB_API_KEY}`;
-  const res = await fetch(url);
-  if (!res.ok) return null;
-  const data = await res.json();
-  const m = data.metric || {};
-  return {
-    peTTM: m.peTTM, pbAnnual: m.pbAnnual, epsTTM: m.epsTTM, psTTM: m.psTTM,
-    roeTTM: m.roeTTM, dividendYield: m.dividendYieldIndicatedAnnual,
-    weekHigh52: m['52WeekHigh'], weekLow52: m['52WeekLow'],
-  };
-}
-
-async function _fetchFinnhubEarnings(ySym, env) {
-  const fSym = _workerToFinnhubSymbol(ySym);
-  if (!fSym) return null;
-  const url = `https://finnhub.io/api/v1/stock/earnings?symbol=${fSym}&token=${env.FINNHUB_API_KEY}`;
-  const res = await fetch(url);
-  if (!res.ok) return null;
-  const data = await res.json();
-  return Array.isArray(data) ? data.slice(0, 4) : null;
-}
-
-async function _fetchFinnhubRecommendation(ySym, env) {
-  const fSym = _workerToFinnhubSymbol(ySym);
-  if (!fSym) return null;
-  const url = `https://finnhub.io/api/v1/stock/recommendation?symbol=${fSym}&token=${env.FINNHUB_API_KEY}`;
-  const res = await fetch(url);
-  if (!res.ok) return null;
-  const data = await res.json();
-  return Array.isArray(data) ? data.slice(0, 3) : null;
-}
-
-async function _fetchFinnhubInsider(ySym, env) {
-  const fSym = _workerToFinnhubSymbol(ySym);
-  if (!fSym) return null;
-  const url = `https://finnhub.io/api/v1/stock/insider-transactions?symbol=${fSym}&token=${env.FINNHUB_API_KEY}`;
-  const res = await fetch(url);
-  if (!res.ok) return null;
-  const data = await res.json();
-  return (data?.data || []).slice(0, 10);
-}
-
-const _FETCHER_MAP = {
-  news:           _fetchFinnhubNews,
-  fundamentals:   _fetchFinnhubFundamentals,
-  earnings:       _fetchFinnhubEarnings,
-  recommendation: _fetchFinnhubRecommendation,
-  insider:        _fetchFinnhubInsider,
-};
-const _SYMBOL_BOUND = new Set(Object.keys(_FETCHER_MAP));
-
-async function _gatherContext({ categories, targetSymbols }, env) {
-  const tasks = [];
-  for (const cat of categories) {
-    if (_SYMBOL_BOUND.has(cat)) {
-      for (const sym of targetSymbols || []) {
-        tasks.push(
-          _FETCHER_MAP[cat](sym, env)
-            .then(data => ({ cat, sym, data }))
-            .catch(() => ({ cat, sym, data: null })),
-        );
-      }
-    }
-    // macro 等の銘柄非依存カテゴリは今回未実装（将来 Brave Search を足すならここに分岐追加）
-  }
-  const results = await Promise.all(tasks);
-  return results.filter(r => r.data);
-}
-
-function _buildContextSection(gathered) {
-  if (!gathered.length) return '';
-  // 銘柄×カテゴリでグルーピング
-  const bySym = {};
-  for (const r of gathered) {
-    bySym[r.sym] ||= {};
-    bySym[r.sym][r.cat] = r.data;
-  }
-  let out = '# 参考データ（プリフェッチ済み・出典: Finnhub）\n';
-  for (const [sym, cats] of Object.entries(bySym)) {
-    out += `\n## ${sym}\n`;
-    if (cats.news) {
-      out += `### 直近ニュース（過去1週間, 最大5件）\n`;
-      cats.news.forEach((n, i) => {
-        const date = (n.datetime || '').slice(0, 10);
-        out += `${i + 1}. ${n.headline} — ${n.source} (${date})\n   ${n.summary || ''}\n   ${n.url || ''}\n`;
-      });
-    }
-    if (cats.fundamentals) {
-      const f = cats.fundamentals;
-      const fmt = v => (v != null ? Number(v).toFixed(2) : 'N/A');
-      out += `### ファンダメンタル指標\n`
-           + `- PER(TTM): ${fmt(f.peTTM)} / PBR: ${fmt(f.pbAnnual)} / PSR: ${fmt(f.psTTM)}\n`
-           + `- EPS(TTM): ${fmt(f.epsTTM)} / ROE: ${fmt(f.roeTTM)}%\n`
-           + `- 配当利回り: ${fmt(f.dividendYield)}%\n`
-           + `- 52週高値/安値: ${fmt(f.weekHigh52)} / ${fmt(f.weekLow52)}\n`;
-    }
-    if (cats.earnings) {
-      out += `### 直近決算（最大4四半期）\n`;
-      cats.earnings.forEach(e => {
-        out += `- ${e.period ?? '?'}: 実績EPS ${e.actual ?? 'N/A'} / 予想 ${e.estimate ?? 'N/A'} / Surprise ${e.surprisePercent ?? 'N/A'}%\n`;
-      });
-    }
-    if (cats.recommendation) {
-      out += `### アナリスト評価（直近3ヶ月）\n`;
-      cats.recommendation.forEach(r => {
-        out += `- ${r.period}: 強買${r.strongBuy} / 買${r.buy} / 中立${r.hold} / 売${r.sell} / 強売${r.strongSell}\n`;
-      });
-    }
-    if (cats.insider) {
-      out += `### インサイダー取引（直近10件）\n`;
-      cats.insider.forEach(t => {
-        out += `- ${t.transactionDate ?? '?'} ${t.name ?? '?'}: ${t.share ?? '?'}株 (${t.transactionCode ?? '?'})\n`;
-      });
-    }
-  }
-  return out;
-}
-
-// ── AI プロキシ ───────────────────────────────────────
-async function handleAI(request, path, env, origin) {
-  if (request.method !== 'POST') return errRes('POST のみ許可', 405, origin);
-
-  let body;
-  try { body = await request.json(); } catch { return errRes('JSON が不正です', 400, origin); }
-
-  const provider = path.split('/')[2]; // /ai/<provider>
-  let upstreamUrl, headers;
-
-  switch (provider) {
-    case 'openai': {
-      if (!env.OPENAI_API_KEY) return errRes('OpenAI キー未設定', 500, origin);
-      upstreamUrl = 'https://api.openai.com/v1/chat/completions';
-      headers = { 'Authorization': `Bearer ${env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' };
-      break;
-    }
-    case 'gemini': {
-      if (!env.GEMINI_API_KEY) return errRes('Gemini キー未設定', 500, origin);
-      const model = body.model || 'gemini-2.0-flash';
-      upstreamUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${env.GEMINI_API_KEY}`;
-      headers = { 'Content-Type': 'application/json' };
-      // Gemini はボディから model フィールドを除去して送る
-      delete body.model;
-      break;
-    }
-    case 'grok': {
-      if (!env.GROK_API_KEY) return errRes('Grok キー未設定', 500, origin);
-      upstreamUrl = 'https://api.x.ai/v1/chat/completions';
-      headers = { 'Authorization': `Bearer ${env.GROK_API_KEY}`, 'Content-Type': 'application/json' };
-      break;
-    }
-    case 'deepseek': {
-      if (!env.DEEPSEEK_API_KEY) return errRes('DeepSeek キー未設定', 500, origin);
-      upstreamUrl = 'https://api.deepseek.com/v1/chat/completions';
-      headers = { 'Authorization': `Bearer ${env.DEEPSEEK_API_KEY}`, 'Content-Type': 'application/json' };
-      break;
-    }
-    case 'claude': {
-      if (!env.ANTHROPIC_API_KEY) return errRes('Claude キー未設定', 500, origin);
-      upstreamUrl = 'https://api.anthropic.com/v1/messages';
-      headers = {
-        'x-api-key': env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-        'Content-Type': 'application/json',
-      };
-      break;
-    }
-    default:
-      return errRes(`未知のプロバイダー: ${provider}`, 400, origin);
-  }
 
   try {
-    const res = await fetch(upstreamUrl, {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
-      headers,
+      headers: { 'Authorization': `Bearer ${env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
     const data = await res.json();
@@ -687,6 +399,8 @@ async function handleAI(request, path, env, origin) {
 }
 
 // ── ウォッチリスト（KV）────────────────────────────────
+// GET: 公開（銘柄のシンボル・名称のみで数量・金額を含まない）
+// PUT: 現状は認証なし（kv-resync の Actions が PIN なしで使うため。扱いは別 Issue で検討・#714）
 async function handleWatchlist(request, env, origin) {
   if (!env.KV) return errRes('KV 未設定', 500, origin);
   const key = 'watchlist';
@@ -716,60 +430,8 @@ async function handleWatchlist(request, env, origin) {
   return errRes('GET/PUT のみ許可', 405, origin);
 }
 
-// ── Notion 保存 ───────────────────────────────────────
-async function handleNotionSave(request, env, origin) {
-  if (request.method !== 'POST') return errRes('POST のみ許可', 405, origin);
-  if (!env.NOTION_API_KEY) return errRes('Notion APIキー未設定', 500, origin);
-
-  let body;
-  try { body = await request.json(); } catch { return errRes('JSON 不正', 400, origin); }
-
-  const { title, question, responses } = body;
-  const pageTitle = title || `AI相談 ${new Date().toISOString()}`;
-
-  const blocks = [
-    { object: 'block', type: 'heading_2', heading_2: { rich_text: [{ text: { content: '質問' } }] } },
-    { object: 'block', type: 'paragraph', paragraph: { rich_text: [{ text: { content: (question || '').slice(0, 1900) } }] } },
-  ];
-  for (const [provider, text] of Object.entries(responses || {})) {
-    if (!text) continue;
-    blocks.push({
-      object: 'block', type: 'heading_3',
-      heading_3: { rich_text: [{ text: { content: provider.toUpperCase() } }] },
-    });
-    // Notion ブロックは rich_text 要素 1 つあたり 2000 文字制限
-    for (let i = 0; i < text.length; i += 1900) {
-      blocks.push({
-        object: 'block', type: 'paragraph',
-        paragraph: { rich_text: [{ text: { content: text.slice(i, i + 1900) } }] },
-      });
-    }
-  }
-
-  try {
-    const notionRes = await fetch('https://api.notion.com/v1/pages', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${env.NOTION_API_KEY}`,
-        'Notion-Version': '2022-06-28',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        parent: { database_id: env.NOTION_DB_ID },
-        properties: { Name: { title: [{ text: { content: pageTitle } }] } },
-        children: blocks,
-      }),
-    });
-    const data = await notionRes.json();
-    return jsonRes(data, notionRes.status, origin);
-  } catch (e) {
-    return errRes(`Notion 保存失敗: ${e.message}`, 502, origin);
-  }
-}
-
 // ── 保有銘柄（KV・非公開）────────────────────────────────────
-// GET: 許可オリジンからのみ取得可能
-// PUT: 許可オリジンかつ X-Pin-Hash ヘッダーによる PIN 認証が必要
+// GET/PUT とも X-Pin-Hash ヘッダーによる PIN 認証が必要（GET は #714 で追加）
 // X-Pin-Hash ヘッダーを KV の保存ハッシュと照合する。
 // OK なら null、NG なら errRes を返す（呼び出し側でそのまま return する）。
 async function verifyPinHash(request, env, origin) {
@@ -785,6 +447,8 @@ async function handlePositions(request, env, origin) {
   if (!env.KV) return errRes('KV 未設定', 500, origin);
 
   if (request.method === 'GET') {
+    const authErr = await verifyPinHash(request, env, origin);
+    if (authErr) return authErr;
     const val = await env.KV.get('positions');
     return jsonRes(val ? JSON.parse(val) : [], 200, origin);
   }
@@ -826,7 +490,7 @@ async function handlePositions(request, env, origin) {
 //   /positions と異なり GET も PIN 必須にする: オリジンゲートは Origin ヘッダを
 //   送らない非ブラウザクライアント（curl 等）を弾けないため、Origin 判定だけでは
 //   負債・純資産が公開読み出し可能になってしまう（2026-07-21 実測で確認・#589）。
-//   ※/positions の GET が同じ理由で curl 読み出し可能な件は既存 Issue #367 スコープ。
+//   ※/positions の GET も #714 で PIN 必須にした。
 // mf-holdings 完全版（liabilities/realAssetsTotal/netWorthComputed 等の機微
 // フィールドを含みうる）をそのまま JSON で保存・配信する。公開リポには一切
 // 書かない（GitHub ミラーは行わない）。
@@ -1360,9 +1024,12 @@ export default {
 
     const path = url.pathname;
     if (path === '/')                return new Response('portfolio-proxy OK', { status: 200 });
+    // 無効化済みルート（#714）: レート制限・外部 fetch・KV より前に 410 を返す
+    if (DISABLED_PATHS.has(path))    return handleDisabledRoute(org);
     // レート制限: Workers ネイティブ ratelimit binding（#16・KV 不使用・rate-limit.md 参照）。
     // binding 未設定環境（テスト等）では素通し。判定失敗時も fail-open。
     if (path === '/yahoo' || path === '/finnhub' || path === '/fmp' || path === '/edgar' || path === '/edinet-db' || path === '/etf/constituents'
+      || path === '/forex' || path === '/ai/openai'
       || path === '/order-sheet' || path.startsWith('/order-sheet/')) {
       if (env.RATE_LIMITER) {
         try {
@@ -1379,9 +1046,7 @@ export default {
     if (path === '/edinet-db')       return handleEdinetDb(url, env, org);
     if (path === '/forex')           return handleForex(url, env, org);
     if (path === '/etf/constituents') return handleEtfConstituents(url, env, org, ctx);
-    if (path === '/ai/models')       return handleAIModels(env, org);
-    if (path === '/ai/context')      return handleAIContext(request, env, org);
-    if (path.startsWith('/ai/'))     return handleAI(request, path, env, org);
+    if (path === '/ai/openai')       return handleAIOpenAI(request, env, org);
     if (path === '/watchlist')       return handleWatchlist(request, env, org);
     if (path === '/positions')       return handlePositions(request, env, org);
     if (path === '/networth')        return handleNetworth(request, env, org);
@@ -1391,7 +1056,6 @@ export default {
     if (path === '/portfolio/snapshot') return handlePortfolioSnapshot(org);
     if (path === '/prices/cache')    return handlePricesCache(env, org);
     if (path === '/auth/pin-hash')   return handleAuthPinHash(request, env, org);
-    if (path === '/notion/save')     return handleNotionSave(request, env, org);
     if (path === '/auth/challenge')  return handleAuthChallenge(env, org);
     if (path === '/auth/register')   return handleAuthRegister(request, env, org);
     if (path === '/auth/verify')     return handleAuthVerify(request, env, org);

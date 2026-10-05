@@ -10,6 +10,7 @@
 
 import { parseCsvText, normalizeStr, parseNum, detectCsvType } from './csv.js';
 import { fundSymbolFromName, fundProxyOf } from './funds.js';
+import { _getActivePinHash } from './auth-pin.js';
 import { WORKER_URL } from './config.js';
 import { fetchWithTimeout } from './data.js';
 
@@ -122,6 +123,9 @@ async function parseMoneyForwardImage(file) {
   if (file.size > MAX_IMAGE_BYTES) {
     throw new Error(`画像サイズが大きすぎます（${(file.size / 1024 / 1024).toFixed(1)} MB）。16 MB 以下の画像を使用してください。`);
   }
+  // Worker の POST /ai/openai は PIN 必須（#714）。PIN が無ければ通信しない
+  const pinHash = _getActivePinHash();
+  if (!pinHash) throw new Error('ログインが必要です。PIN でログインしてから取り込んでください。');
 
   const buf   = await file.arrayBuffer();
   const uint8 = new Uint8Array(buf);
@@ -155,7 +159,7 @@ async function parseMoneyForwardImage(file) {
 
   const res = await fetchWithTimeout(`${WORKER_URL}/ai/openai`, 30000, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'X-Pin-Hash': pinHash },
     body: JSON.stringify(body),
   });
   if (!res.ok) {
