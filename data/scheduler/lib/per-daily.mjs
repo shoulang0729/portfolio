@@ -3,8 +3,8 @@
 //
 // - dailyPerCommitMessage(): 書き込みコミットのメッセージ（固定形式 `data: daily PER <YYYY-MM-DD>`）。
 //   Mulmo が main 上のこのコミットの有無（文字列一致）で「Actions が当日分を書いたか」を判定する（§6.2・§9）。
-// - runMode(): 開始時刻が 20:55〜22:30 UTC なら計算のみ（§2.6）。
-// - isPushBlocked(): 21:00〜22:30 UTC は push しない（§2.3）。
+// - runMode(): 引け前（force なしのとき）と 21:45〜22:59 UTC の開始は計算のみ（#708 PR3・2026-10-05-per-daily-dispatch.md §3.3）。
+// - isPushBlocked(): 21:50〜22:59 UTC は push しない（#708 PR3・§3.3。Mulmo が PER を待つ期限 21:52 の後〜Mulmo の push 期限）。
 // - findDisallowedChanges(): valuations.json の変更が §6.3 の許可フィールドだけかを検査する。
 // - isAlreadyWritten(): 米国の引け（夏 20:00・冬 21:00 UTC）以降に当日分のコミットが main にあるか
 //   （#708・2026-10-05-per-daily-dispatch.md §3.1・§4.1）。
@@ -45,24 +45,36 @@ export function utcHHMM(d) {
   return d.getUTCHours() * 100 + d.getUTCMinutes();
 }
 
+/** per-daily が push しない時間帯の開始（HHMM・#708 PR3 §3.3）。 */
+export const PUSH_BLOCK_START_HHMM = 2150;
+/** Mulmo の時間帯（計算のみ・push 禁止）の終わり（HHMM・この分を含む・#708 PR3 §3.3）。 */
+export const MULMO_WINDOW_END_HHMM = 2259;
+
 /**
- * 開始時刻から実行モードを決める。20:55〜22:30 UTC（22:30 台を含む）の開始は計算のみ（§2.6）。
+ * 開始時刻から実行モードを決める（#708 PR3・2026-10-05-per-daily-dispatch.md §3.3・§4.3(a)）。
+ * - 引け（夏 20:00・冬 21:00 UTC）より前: compute-only（引け前の値を書かない）。`force` なら write。
+ * - 引け〜21:44: write（夏 20:20・冬 21:20 の Worker 起動はここ）。
+ * - 21:45〜22:59（22:59 台を含む）: compute-only（Mulmo の時間帯。`force` でも書かない）。
+ * - 23:00〜23:59: write（予備の schedule）。
  * @param {Date} start
+ * @param {{ force?: boolean }} [opts]
  * @returns {'write' | 'compute-only'}
  */
-export function runMode(start) {
+export function runMode(start, { force = false } = {}) {
   const t = utcHHMM(start);
-  return t >= 2055 && t <= 2230 ? 'compute-only' : 'write';
+  if (t >= MULMO_WAIT_CUTOFF_HHMM && t <= MULMO_WINDOW_END_HHMM) return 'compute-only';
+  if (t < usCloseUtcHHMM(start)) return force ? 'write' : 'compute-only';
+  return 'write';
 }
 
 /**
- * push 禁止時間帯（21:00〜22:30 UTC・22:30 台を含む。weekly-valuations.yml と同じ判定）。
+ * push 禁止時間帯（21:50〜22:59 UTC・22:59 台を含む・#708 PR3 §3.3）。
  * @param {Date} now
  * @returns {boolean}
  */
 export function isPushBlocked(now) {
   const t = utcHHMM(now);
-  return t >= 2100 && t <= 2230;
+  return t >= PUSH_BLOCK_START_HHMM && t <= MULMO_WINDOW_END_HHMM;
 }
 
 /** 書き込みコミットの author 名（Mulmo の判定と同じ条件）。 */

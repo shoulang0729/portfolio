@@ -41,31 +41,82 @@ describe('dailyPerCommitMessage（§6.2 固定形式）', () => {
   });
 });
 
-describe('runMode（開始が 20:55〜22:30 UTC なら計算のみ・§2.6）', () => {
+// #708 PR3（2026-10-05-per-daily-dispatch.md §3.3・§4.3(a)）。夏＝2026-10-05、冬＝2026-11-02・2026-01-10。
+describe('runMode（引け前と 21:45〜22:59 UTC は計算のみ・#708 PR3 §3.3）', () => {
   it.each([
-    ['20:15', 'write'],
-    ['20:54', 'write'],
-    ['20:55', 'compute-only'],
-    ['21:00', 'compute-only'],
-    ['22:30', 'compute-only'],
-    ['22:31', 'write'],
-    ['23:59', 'write'],
-    ['00:00', 'write'],
-    ['08:29', 'write'],
-  ])('%s UTC → %s', (hhmm, mode) => {
-    expect(runMode(at(hhmm))).toBe(mode);
+    // 夏（引け 20:00）
+    ['2026-10-05T19:59:00Z', 'compute-only'],
+    ['2026-10-05T20:00:00Z', 'write'],
+    ['2026-10-05T20:20:00Z', 'write'],
+    ['2026-10-05T20:55:00Z', 'write'],
+    ['2026-10-05T21:44:00Z', 'write'],
+    ['2026-10-05T21:45:00Z', 'compute-only'],
+    ['2026-10-05T21:47:00Z', 'compute-only'],
+    ['2026-10-05T22:30:00Z', 'compute-only'],
+    ['2026-10-05T22:31:00Z', 'compute-only'],
+    ['2026-10-05T22:59:00Z', 'compute-only'],
+    ['2026-10-05T23:00:00Z', 'write'],
+    ['2026-10-05T23:03:00Z', 'write'],
+    ['2026-10-05T23:59:00Z', 'write'],
+    ['2026-10-05T00:00:00Z', 'compute-only'],
+    ['2026-10-06T09:00:00Z', 'compute-only'],
+    // 冬（引け 21:00）
+    ['2026-11-02T20:16:00Z', 'compute-only'],
+    ['2026-11-02T20:59:00Z', 'compute-only'],
+    ['2026-11-02T21:00:00Z', 'write'],
+    ['2026-11-02T21:20:00Z', 'write'],
+    ['2026-11-02T21:44:00Z', 'write'],
+    ['2026-11-02T21:45:00Z', 'compute-only'],
+    ['2026-11-02T22:59:00Z', 'compute-only'],
+    ['2026-11-02T23:00:00Z', 'write'],
+    ['2026-01-10T20:15:00Z', 'compute-only'],
+    ['2026-01-10T21:20:00Z', 'write'],
+    // DST の切替日の前後
+    ['2026-10-31T20:20:00Z', 'write'],
+    ['2026-11-01T20:20:00Z', 'compute-only'],
+    ['2026-11-01T21:20:00Z', 'write'],
+    ['2027-03-13T20:20:00Z', 'compute-only'],
+    ['2027-03-14T20:20:00Z', 'write'],
+  ])('%s → %s（force なし）', (iso, mode) => {
+    expect(runMode(new Date(iso))).toBe(mode);
+    expect(runMode(new Date(iso), {})).toBe(mode);
+    expect(runMode(new Date(iso), { force: false })).toBe(mode);
+  });
+
+  it.each([
+    // 引け前は force なら write
+    ['2026-10-06T09:00:00Z', 'write'],
+    ['2026-10-05T19:59:00Z', 'write'],
+    ['2026-11-02T20:59:00Z', 'write'],
+    ['2026-10-05T00:00:00Z', 'write'],
+    // 引け〜21:44・23:00〜は force でも同じ
+    ['2026-10-05T20:20:00Z', 'write'],
+    ['2026-11-02T21:44:00Z', 'write'],
+    ['2026-10-05T23:00:00Z', 'write'],
+    // Mulmo の時間帯は force でも書かない
+    ['2026-10-05T21:45:00Z', 'compute-only'],
+    ['2026-10-05T22:00:00Z', 'compute-only'],
+    ['2026-11-02T22:00:00Z', 'compute-only'],
+    ['2026-10-05T22:59:00Z', 'compute-only'],
+  ])('%s → %s（force=true）', (iso, mode) => {
+    expect(runMode(new Date(iso), { force: true })).toBe(mode);
   });
 });
 
-describe('isPushBlocked（21:00〜22:30 UTC は push しない・§2.3）', () => {
+describe('isPushBlocked（21:50〜22:59 UTC は push しない・#708 PR3 §3.3）', () => {
   it.each([
-    ['20:59', false],
-    ['21:00', true],
+    ['20:15', false],
+    ['21:00', false],
+    ['21:21', false],
+    ['21:49', false],
+    ['21:50', true],
     ['22:00', true],
     ['22:30', true],
-    ['22:31', false],
-    ['20:15', false],
-  ])('%s UTC → %s', (hhmm, blocked) => {
+    ['22:59', true],
+    ['23:00', false],
+    ['00:00', false],
+  ])('%s UTC → %s（夏・冬とも同じ）', (hhmm, blocked) => {
+    expect(isPushBlocked(new Date(`2026-10-05T${hhmm}:00.000Z`))).toBe(blocked);
     expect(isPushBlocked(at(hhmm))).toBe(blocked);
   });
 });
@@ -586,5 +637,58 @@ describe('per-daily.yml（#708 PR1 書き込み済みチェック・per-daily-la
   it('concurrency group と予備の schedule は変えない', () => {
     expect(WORKFLOW).toMatch(/group: portfolio-data-batch\n\s+cancel-in-progress: false/);
     expect(WORKFLOW).toMatch(/cron: '15 20 \* \* \*'/);
+  });
+});
+
+describe('per-daily-gate mode / push-ok（CLI・#708 PR3 §4.3(b)）', () => {
+  const GATE = resolve(__dir, '../data/scheduler/per-daily-gate.mjs');
+  const run = (args) => {
+    try {
+      return { code: 0, out: execFileSync('node', [GATE, ...args], { encoding: 'utf8' }).trim() };
+    } catch (e) {
+      return { code: e.status, out: String(e.stdout || '').trim() };
+    }
+  };
+  it.each([
+    [['mode', '--now', '2026-10-06T09:00:00Z'], 'compute-only'],
+    [['mode', '--now', '2026-10-06T09:00:00Z', '--force'], 'write'],
+    [['mode', '--force', '--now', '2026-10-06T09:00:00Z'], 'write'],
+    [['mode', '--now', '2026-11-02T21:20:00Z'], 'write'],
+    [['mode', '--now', '2026-10-05T22:00:00Z', '--force'], 'compute-only'],
+  ])('%j → %s', (args, out) => {
+    expect(run(args)).toEqual({ code: 0, out });
+  });
+  it.each([
+    ['2026-10-05T21:49:00Z', 0, 'ok'],
+    ['2026-10-05T21:50:00Z', 3, 'blocked'],
+    ['2026-10-05T22:59:00Z', 3, 'blocked'],
+    ['2026-10-05T23:00:00Z', 0, 'ok'],
+  ])('push-ok --now %s → exit %i %s', (iso, code, out) => {
+    expect(run(['push-ok', '--now', iso])).toEqual({ code, out });
+  });
+});
+
+describe('per-daily.yml（#708 PR3 force・時間帯の文言）', () => {
+  it('Resolve mode は force=true のとき --force を渡す', () => {
+    expect(WORKFLOW).toMatch(/id: mode\n\s+env:\n\s+FORCE: \$\{\{ inputs\.force == true \}\}/);
+    expect(WORKFLOW).toMatch(/if \[ "\$FORCE" = "true" \]; then FORCE_ARG="--force"; fi/);
+    expect(WORKFLOW).toMatch(/per-daily-gate\.mjs mode --now "\$START" \$FORCE_ARG/);
+  });
+  it('compute-only の理由を出し分け、push 禁止は 21:50〜22:59 UTC', () => {
+    expect(WORKFLOW).toContain('Mulmo の時間帯（21:45〜22:59 UTC）');
+    expect(WORKFLOW).toContain('米国の引け前（夏 20:00・冬 21:00 UTC より前）');
+    expect(WORKFLOW).toContain('21:50〜22:59 UTC（push 禁止時間帯）');
+    expect(WORKFLOW).not.toContain('20:55〜22:30');
+    expect(WORKFLOW).not.toContain('21:00〜22:30');
+    expect(WORKFLOW).not.toContain('Mulmo の日次バッチ（21:00 UTC）は前日の PER を使っています');
+  });
+});
+
+describe('weekly-valuations.yml・fund-holdings-monthly.yml（push 禁止 21:00〜22:59 UTC・#708 PR3 §4.3(d)）', () => {
+  it.each(['weekly-valuations.yml', 'fund-holdings-monthly.yml'])('%s', (name) => {
+    const wf = readFileSync(resolve(__dir, `../.github/workflows/${name}`), 'utf8');
+    expect(wf).toMatch(/if \[ "\$HM" -ge 2100 \] && \[ "\$HM" -le 2259 \]; then/);
+    expect(wf).toContain('21:00〜22:59 UTC（push 禁止時間帯）');
+    expect(wf).not.toMatch(/2230|22:30 UTC（push/);
   });
 });

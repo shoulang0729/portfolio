@@ -37,7 +37,7 @@ Worker 中継口の呼び出しは `lib/worker-client.mjs` 経由（`Origin` ヘ
 | モード | 起動 | 動作 |
 |---|---|---|
 | `report` | workflow_dispatch（既定） | 7 本を順に実行（`quality-us` → `quality-jp` → `etf-pe` → `target-gap` → `sector-median` → `jp-sector-median` → `hit-rate`）→ `diff-report.mjs` の差分をジョブサマリと artifact（`weekly-diff-<日付>`・30 日）に出して終了。**commit しない** |
-| `write` | schedule（毎週日曜 02:00 UTC・PR6 から）／workflow_dispatch で `mode=write` | `report` と同じ＋ `data/valuations.json` / `data/verdict-outcomes.json` を 1 回で commit → push（`pull --rebase`＋最大 3 回リトライ・21:00〜22:30 UTC は push しない）→ 同じジョブで `kv-resync.mjs --json` |
+| `write` | schedule（毎週日曜 02:00 UTC・PR6 から）／workflow_dispatch で `mode=write` | `report` と同じ＋ `data/valuations.json` / `data/verdict-outcomes.json` を 1 回で commit → push（`pull --rebase`＋最大 3 回リトライ・21:00〜22:59 UTC は push しない）→ 同じジョブで `kv-resync.mjs --json` |
 
 - 1 本が失敗しても残りは続け、最後にジョブを失敗にする。失敗時はラベル `weekly-batch-failed` の Issue を起票/更新し、成功で自動クローズ。
 - concurrency グループは `portfolio-data-batch`（毎日の PER などと共通・`cancel-in-progress: false`）。
@@ -98,13 +98,13 @@ node data/scheduler/diff-report.mjs
 | `watchlist-per.mjs` | `valuations` の全銘柄の実績PER を Worker `/yahoo` から取得し、バンド内%タイルと status を計算（原本＝Mulmo ワークスペース版の移植・計算は不変）。`--write` で銘柄の `perCurrent`/`percentile`/`status`/`asOf` とトップの `updated`/`asOf` を更新。`--out <file>` / 銘柄指定 |
 | `fund-per.mjs` | `fund-holdings.json`（ひふみ上位10・公開開示）の加重実績PER と coverage。`--write` でファンドエントリの `perCurrent`/`coverage`/`source`/`asOf`/`components` を追加マージ。`--out <file>` |
 | `fund-holdings.json` | ファンドの上位10銘柄（月次レポートの公開情報） |
-| `per-daily-gate.mjs` | ワークフローの判定 CLI：`mode`（開始 20:55〜22:30 UTC は計算のみ）／`push-ok`（21:00〜22:30 UTC は push しない）／`message <日付>`（コミットメッセージ）／`updated <file>`（ウォッチの更新件数・0 件で exit 4）／`check-diff`（許可フィールド以外の変更・書式の変化を検出） |
+| `per-daily-gate.mjs` | ワークフローの判定 CLI：`mode [--force]`（引け前（夏 20:00・冬 21:00 UTC より前・`--force` で書く）と 21:45〜22:59 UTC の開始は計算のみ）／`push-ok`（21:50〜22:59 UTC は push しない）／`message <日付>`（コミットメッセージ）／`updated <file>`（ウォッチの更新件数・0 件で exit 4）／`check-diff`（許可フィールド以外の変更・書式の変化を検出） |
 | `per-compare.mjs` | PR2 の突き合わせ CLI（ワークフローからは呼ばない・参考に残置） |
 | `lib/per-calc.mjs` / `lib/json-format.mjs` / `lib/per-daily.mjs` / `lib/per-compare.mjs` | 純関数（`tests/per-calc.test.js`・`tests/per-daily.test.js` ほか） |
 
 ジョブの流れ（`write` ジョブ・schedule／workflow_dispatch とも同じ）：
 
-1. 開始時刻が 20:55〜22:30 UTC なら**計算のみ**（書き込み・コミットしない。ジョブサマリと `::warning` で通知）。
+1. 開始時刻が米国の引け前（夏 20:00・冬 21:00 UTC より前。入力 `force=true` なら書く）か 21:45〜22:59 UTC（Mulmo の時間帯・`force` でも書かない）なら**計算のみ**（書き込み・コミットしない。ジョブサマリと `::warning` で通知・#708）。
 2. `watchlist-per.mjs --write` → `fund-per.mjs --write`（書式＝インデント・末尾改行は読み込んだファイルのまま）。
 3. `per-daily-gate.mjs check-diff`：`valuations.json` 以外のファイルの変更、許可フィールド以外の変更、書式の変化があれば失敗。
 4. commit：メッセージは**固定形式 `data: daily PER <YYYY-MM-DD>`**（日付＝書き込んだ `asOf`＝実行時の UTC 日付）、
@@ -112,7 +112,7 @@ node data/scheduler/diff-report.mjs
    Mulmo はこのコミットが main にあるかで「Actions が当日分を書いたか」を判定する（`valuations.json` 最上位の `asOf`/`updated` は Briefing の書き戻しでも変わるため判定に使わない）。
 5. push：`git fetch` → `git rebase --empty=keep --reapply-cherry-picks origin/main`（`git pull --rebase` 相当。
    判定用コミットが空・main と同内容でも落とさない）→ `git push`。最大 3 回リトライ（10 秒間隔）。
-   rebase が衝突したら force せずジョブを失敗させる（main 側を残す）。21:00〜22:30 UTC に入ったら push しない。
+   rebase が衝突したら force せずジョブを失敗させる（main 側を残す）。21:50〜22:59 UTC に入ったら push しない（Mulmo が PER を最長 21:52 UTC まで待ってから判断・書き戻す時間帯・#708）。
 6. push 後、同じジョブで `kv-resync.mjs --json`（GITHUB_TOKEN の push では `kv-resync.yml` の `on: push` が起動しないため）。
 
 - 計算のみに落ちた日・失敗した日はコミットしない（Mulmo は前日値で続行）。

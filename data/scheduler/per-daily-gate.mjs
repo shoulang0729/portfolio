@@ -4,8 +4,9 @@
 // 判定ロジックは lib/per-daily.mjs の純関数（tests/per-daily.test.js）。
 //
 // 使い方:
-//   node data/scheduler/per-daily-gate.mjs mode [--now <ISO>]      # write / compute-only を出力（20:55〜22:30 UTC 開始は compute-only）
-//   node data/scheduler/per-daily-gate.mjs push-ok [--now <ISO>]   # push 可なら exit 0、21:00〜22:30 UTC は exit 3
+//   node data/scheduler/per-daily-gate.mjs mode [--now <ISO>] [--force] # write / compute-only を出力（引け前・21:45〜22:59 UTC 開始は
+//                                                                  #   compute-only。--force なら引け前も write。21:45〜22:59 は --force でも compute-only）
+//   node data/scheduler/per-daily-gate.mjs push-ok [--now <ISO>]   # push 可なら exit 0、21:50〜22:59 UTC は exit 3
 //   node data/scheduler/per-daily-gate.mjs message <YYYY-MM-DD>    # コミットメッセージ `data: daily PER <日付>` を出力
 //   node data/scheduler/per-daily-gate.mjs updated <watchlist-per.json> # ウォッチの更新件数を出力。0 件なら exit 4（コミットしない）
 //   node data/scheduler/per-daily-gate.mjs check-diff              # HEAD と作業ツリーの data/valuations.json を比べ、
@@ -87,7 +88,7 @@ function alreadyWritten() {
 
 switch (cmd) {
   case 'mode':
-    console.log(runMode(nowArg()));
+    console.log(runMode(nowArg(), { force: rest.includes('--force') }));
     break;
   case 'push-ok':
     if (isPushBlocked(nowArg())) {

@@ -104,10 +104,10 @@ jobs:
         env:
           DATE: ${{ steps.mode.outputs.date }}
         run: |
-          # 21:00〜22:30 UTC は Mulmo が valuations.json を書く時間帯なので push しない（§2.3）。
+          # 21:00〜22:59 UTC は Mulmo が valuations.json を書く時間帯なので push しない（§2.3・#708 で 22:30→22:59。冬時間は Mulmo の push が 22:30 ごろまで延びる）。
           HM=$(date -u +%H%M)
-          if [ "$HM" -ge 2100 ] && [ "$HM" -le 2230 ]; then
-            echo "::warning::21:00〜22:30 UTC（push 禁止時間帯）のため commit/push しません"
+          if [ "$HM" -ge 2100 ] && [ "$HM" -le 2259 ]; then
+            echo "::warning::21:00〜22:59 UTC（push 禁止時間帯）のため commit/push しません"
             echo "pushed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
