@@ -48,6 +48,7 @@ const RATE_LIMITED_PATHS = [
   '/order-sheet',
   '/order-sheet/plan',
   '/order-sheet/events',
+  '/watchlist/resync',
 ];
 
 const NOT_RATE_LIMITED_PATHS = [
@@ -288,6 +289,13 @@ const ROUTE_CASES = [
   ['POST', '/watchlist', { body: [] }, 405],
   ['DELETE', '/watchlist', {}, 405],
   ['GET', '/watchlist', { kv: null }, 500],
+
+  // /watchlist/resync（POST のみ・認証なし・#715）。既定の上流は SHA を返さないので 502
+  ['POST', '/watchlist/resync', {}, 502],
+  ['GET', '/watchlist/resync', {}, 405],
+  ['PUT', '/watchlist/resync', { body: [syntheticWatchItem()] }, 405],
+  ['DELETE', '/watchlist/resync', {}, 405],
+  ['POST', '/watchlist/resync', { kv: null }, 500],
 
   // /positions（GET/PUT とも PIN 必須）
   ['GET', '/positions', { pin: null }, 401],
@@ -711,5 +719,151 @@ describe(`scheduled: ${PER_DAILY_CRON}（per-daily の workflow_dispatch）`, ()
     const env = cronEnv();
     await runCron({ cron: PER_DAILY_CRON }, env);
     expect(fetchedUrls()).toEqual(dispatched ? [DISPATCH_URL] : []);
+  });
+});
+
+// ══════════════════════════════════════════════════════════════
+// /watchlist/resync（#715 PR2・docs/handoff/2026-10-05-watchlist-resync-worker.md §4）
+// ══════════════════════════════════════════════════════════════
+
+const RESYNC_SHA = 'a'.repeat(40);
+const SHA_URL = 'https://api.github.com/repos/shoulang0729/portfolio/commits/main';
+const RAW_URL = `https://raw.githubusercontent.com/shoulang0729/portfolio/${RESYNC_SHA}/data/valuations.json`;
+const SOURCE_VAL = { perCurrent: 12.3, status: 'cheap', asOf: '2026-01-02', note: 'synthetic-note' };
+
+/** GitHub の代役: SHA と SHA 固定の valuations.json を返す。他は fakeUpstream。 */
+function githubUpstream({ sha = RESYNC_SHA, shaStatus = 200, rawStatus = 200, rawBody = undefined } = {}) {
+  const doc = rawBody ?? JSON.stringify({ valuations: { AAA: SOURCE_VAL } });
+  return async (url) => {
+    const u = String(url);
+    if (u === SHA_URL) return new Response(sha, { status: shaStatus });
+    if (u.startsWith('https://raw.githubusercontent.com/')) return new Response(doc, { status: rawStatus });
+    return fakeUpstream(url);
+  };
+}
+
+describe('fetch: POST /watchlist/resync', () => {
+  it('ズレありで resynced・もう一度で noop（KV は 1 回だけ書く）', async () => {
+    fetchMock.mockImplementation(githubUpstream());
+    const env = makeEnv();
+    const r1 = await call(req('/watchlist/resync', { method: 'POST' }), env);
+    expect(r1.status).toBe(200);
+    expectCors(r1);
+    expect(await r1.json()).toEqual({ ok: true, stage: 'resynced', drift: 1, symbols: ['AAA'], sha: RESYNC_SHA });
+    expect(JSON.parse(env.KV.store.get('watchlist'))).toEqual([{ ...syntheticWatchItem(), valuation: SOURCE_VAL }]);
+    const r2 = await call(req('/watchlist/resync', { method: 'POST' }), env);
+    expect(await r2.json()).toEqual({ ok: true, stage: 'noop', drift: 0, symbols: [], sha: RESYNC_SHA });
+    expect(env.KV.put).toHaveBeenCalledTimes(1);
+    expect(fetchedUrls()).toContain(RAW_URL);
+    expect(fetchedUrls().some((u) => u.includes('/main/'))).toBe(false);
+  });
+
+  it('本文・クエリに任意の値（銘柄を足した配列）を送っても本文なしと同じ', async () => {
+    fetchMock.mockImplementation(githubUpstream());
+    const env = makeEnv();
+    const body = [syntheticWatchItem(), { symbol: 'ZZZ', name: 'ZZZ', exchange: 'X', type: 'stock', cur: 'USD' }];
+    const res = await call(req('/watchlist/resync?symbol=ZZZ', { method: 'POST', body }), env);
+    expect(await res.json()).toEqual({ ok: true, stage: 'resynced', drift: 1, symbols: ['AAA'], sha: RESYNC_SHA });
+    expect(JSON.parse(env.KV.store.get('watchlist')).map((e) => e.symbol)).toEqual(['AAA']);
+  });
+
+  it('Origin なし（Actions・curl）は ACAO: *', async () => {
+    fetchMock.mockImplementation(githubUpstream());
+    const res = await call(req('/watchlist/resync', { method: 'POST', origin: null }), makeEnv());
+    expect(res.status).toBe(200);
+    expectCors(res, '*');
+  });
+
+  it.each([
+    ['SHA 取得失敗（404）', { shaStatus: 404 }, 'sha'],
+    ['SHA が 40 桁でない', { sha: 'not-a-sha' }, 'sha'],
+    ['正本 404', { rawStatus: 404 }, 'fetch'],
+    ['JSON 不正', { rawBody: '{not json' }, 'parse'],
+    ['valuations が配列', { rawBody: JSON.stringify({ valuations: [SOURCE_VAL] }) }, 'validate'],
+  ])('%s → 502 stage=%s・KV に書かない', async (_label, opts, stage) => {
+    fetchMock.mockImplementation(githubUpstream(opts));
+    const env = makeEnv();
+    const res = await call(req('/watchlist/resync', { method: 'POST' }), env);
+    expect(res.status).toBe(502);
+    expectCors(res);
+    expect(await res.json()).toEqual({ error: expect.any(String), stage });
+    expect(env.KV.put).not.toHaveBeenCalled();
+  });
+
+  it('RESYNC_LIMITER の超過で 429・GitHub に fetch しない・RATE_LIMITER は使わない', async () => {
+    const limit = vi.fn(async () => ({ success: false }));
+    const env = makeEnv({ env: { RESYNC_LIMITER: { limit } } });
+    const res = await call(req('/watchlist/resync', { method: 'POST' }), env);
+    expect(res.status).toBe(429);
+    expectCors(res);
+    expect(limit).toHaveBeenCalledWith({ key: '203.0.113.1' });
+    expect(env.RATE_LIMITER.limit).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('RESYNC_LIMITER も RATE_LIMITER も無ければ素通し', async () => {
+    fetchMock.mockImplementation(githubUpstream());
+    const res = await call(req('/watchlist/resync', { method: 'POST' }), makeEnv({ env: { RATE_LIMITER: undefined } }));
+    expect(res.status).toBe(200);
+  });
+
+  it('PUT /watchlist は従来どおり認証なしで保存できる（この PR では変えない）', async () => {
+    const res = await call(req('/watchlist', { method: 'PUT', body: [syntheticWatchItem()] }), makeEnv());
+    expect(res.status).toBe(200);
+  });
+});
+
+describe(`scheduled: ${PRICE_CRON} の KV watchlist 同期（#715）`, () => {
+  function resyncCronEnv(over = {}) {
+    const env = cronEnv(over);
+    env.KV.store.set('watchlist', JSON.stringify([syntheticWatchItem()]));
+    return env;
+  }
+  const at = { cron: PRICE_CRON, scheduledTime: Date.parse('2026-07-15T01:00:00Z') };
+
+  it('watchlist の valuation を main に同期し、価格キャッシュも続ける', async () => {
+    fetchMock.mockImplementation(githubUpstream());
+    const env = resyncCronEnv();
+    await runCron(at, env);
+    expect(fetchedUrls()).toContain(SHA_URL);
+    expect(fetchedUrls()).toContain(RAW_URL);
+    expect(JSON.parse(env.KV.store.get('watchlist'))[0].valuation).toEqual(SOURCE_VAL);
+    await expectPriceCacheRun(env);
+  });
+
+  it('同期が失敗（SHA 404）しても価格キャッシュ・約定確認は続き、watchlist は書かない', async () => {
+    fetchMock.mockImplementation(githubUpstream({ shaStatus: 404 }));
+    const env = resyncCronEnv();
+    await runCron(at, env);
+    expect(env.KV.put.mock.calls.some(([k]) => k === 'watchlist')).toBe(false);
+    await expectPriceCacheRun(env);
+  });
+
+  it('同期が例外を投げても価格キャッシュは続く', async () => {
+    fetchMock.mockImplementation(githubUpstream());
+    const env = resyncCronEnv();
+    const origGet = env.KV.get.getMockImplementation();
+    env.KV.get.mockImplementation(async (key, type) => {
+      if (key === 'watchlist') throw new Error('kv down');
+      return origGet(key, type);
+    });
+    await runCron(at, env);
+    await expectPriceCacheRun(env);
+  });
+
+  it('FINNHUB_API_KEY が無くても同期する', async () => {
+    fetchMock.mockImplementation(githubUpstream());
+    const env = resyncCronEnv({ FINNHUB_API_KEY: undefined });
+    await runCron(at, env);
+    expect(fetchedUrls()).toEqual([SHA_URL, RAW_URL]);
+    expect(JSON.parse(env.KV.store.get('watchlist'))[0].valuation).toEqual(SOURCE_VAL);
+  });
+
+  it(`${PER_DAILY_CRON} では同期しない`, async () => {
+    fetchMock.mockImplementation(githubUpstream());
+    const env = resyncCronEnv();
+    await runCron({ cron: PER_DAILY_CRON, scheduledTime: Date.parse('2026-07-15T20:20:00Z') }, env);
+    expect(fetchedUrls()).toEqual([DISPATCH_URL]);
+    expect(env.KV.put).not.toHaveBeenCalled();
   });
 });

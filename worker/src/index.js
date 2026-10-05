@@ -11,6 +11,8 @@
 //                                       現状はキャッシュが無ければ 404（etf-constituents.js・#305）
 //   GET  /watchlist                     ウォッチリスト取得（KV・公開）
 //   PUT  /watchlist                     ウォッチリスト保存（KV・認証なし＝kv-resync の Actions が使う）
+//   POST /watchlist/resync              公開 main の data/valuations.json（SHA 固定）を KV watchlist の valuation に写す
+//                                       （認証なし・本文/クエリは読まない・ズレ時のみ書く・RESYNC_LIMITER・#715）
 //   GET  /positions                     保有銘柄取得（KV・非公開・PIN認証必須・#714）
 //   PUT  /positions                     保有銘柄保存（KV・PIN認証必須）
 //   GET  /networth                      ネットワース機微データ取得（KV・非公開・PIN認証必須・#589 Phase2）
@@ -37,17 +39,19 @@
 //   FMP_API_KEY          /fmp
 //   EDINET_DB_API_KEY    /edinet-db
 //   SEC_USER_AGENT       /edgar（未設定時は既定の UA）
-//   GH_DISPATCH_TOKEN    per-daily.yml の起動（無ければ GITHUB_TOKEN）
+//   GH_DISPATCH_TOKEN    per-daily.yml の起動（無ければ GITHUB_TOKEN）・/watchlist/resync の main SHA 取得（読むだけ）
 //   GITHUB_TOKEN         同上のフォールバック
 //   ALLOWED_ORIGIN       CORS の許可 Origin（vars・未設定時は https://shoulang0729.github.io）
 //   （GEMINI/GROK/DEEPSEEK/ANTHROPIC/NOTION 系は #714 以降、OPENAI_API_KEY は #718 以降 Worker からは参照しない）
 // Binding:
 //   KV                   Cloudflare KV namespace
 //   RATE_LIMITER         Workers ネイティブ ratelimit（rate-limit.md・未設定時は素通し）
+//   RESYNC_LIMITER       /watchlist/resync 専用 ratelimit（10 req/60s・IP 単位・未設定時は RATE_LIMITER・#715）
 //
 // Cron（wrangler.toml）:
 //   0 1,8,15,22 * * *  — 1日4回、全保有銘柄の価格を取得してキャッシュ
 //                        ＋注文表の約定（mf の株数の増減）を order:plan に確定（変化時のみ書く・#672）
+//                        ＋KV watchlist の valuation を main に同期（ズレ時のみ書く・失敗しても他の処理は続ける・#715）
 //   20 20,21 * * *     — per-daily.yml を workflow_dispatch で起動（#708）。
 //                        米国東部の夏時間は 20:20 UTC、冬時間は 21:20 UTC の回だけ。他の処理はしない。
 //                        トークンは GH_DISPATCH_TOKEN || GITHUB_TOKEN（ログには名前だけ）
@@ -65,7 +69,7 @@ import {
   handlePricesCache,
   handleYahoo,
 } from './routes-market.js';
-import { handleNetworth, handlePositions, handleWatchlist } from './routes-kv.js';
+import { handleNetworth, handlePositions, handleWatchlist, handleWatchlistResync } from './routes-kv.js';
 import { handleOrderSheet, handleOrderSheetEvents, handleOrderSheetPlan } from './routes-order-sheet.js';
 import { DISABLED_PATHS, handleDisabledRoute, handlePortfolioSnapshot } from './routes.js';
 
@@ -120,6 +124,19 @@ export default {
         }
       }
     }
+    // /watchlist/resync: 専用 binding（RESYNC_LIMITER・10/60s）。無ければ RATE_LIMITER、どちらも無ければ素通し（#715）
+    if (path === '/watchlist/resync') {
+      const limiter = env.RESYNC_LIMITER || env.RATE_LIMITER;
+      if (limiter) {
+        try {
+          const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+          const { success } = await limiter.limit({ key: ip });
+          if (!success) return errRes('Too Many Requests', 429, org);
+        } catch {
+          /* fail-open */
+        }
+      }
+    }
     if (path === '/yahoo') return handleYahoo(url, env, org);
     if (path === '/finnhub') return handleFinnhub(url, env, org);
     if (path === '/fmp') return handleFmp(url, env, org);
@@ -128,6 +145,7 @@ export default {
     if (path === '/forex') return handleForex(url, env, org);
     if (path === '/etf/constituents') return handleEtfConstituents(url, env, org, ctx);
     if (path === '/watchlist') return handleWatchlist(request, env, org);
+    if (path === '/watchlist/resync') return handleWatchlistResync(request, env, org);
     if (path === '/positions') return handlePositions(request, env, org);
     if (path === '/networth') return handleNetworth(request, env, org);
     if (path === '/order-sheet') return handleOrderSheet(request, env, org);

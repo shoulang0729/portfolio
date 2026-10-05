@@ -41,13 +41,14 @@
 
 ## 3. Mulmo・Actions・Mac が呼ぶ Worker API
 
-Worker は `https://portfolio-proxy.shoulang.workers.dev`。ブラウザ以外の呼び出しも `Origin: https://shoulang0729.github.io` を付ける（`data/scheduler/lib/worker-client.mjs`）。Origin が付いていて許可外なら 403、Origin 無しは通る。レート制限は `/yahoo`・`/finnhub`・`/fmp`・`/edgar`・`/edinet-db`・`/etf/constituents`・`/forex`・`/order-sheet*` に IP 単位で掛かる（429・`worker/src/rate-limit.md`）。API キーは Worker の Secrets（`FINNHUB_API_KEY`・`FMP_API_KEY`・`EDINET_DB_API_KEY`・`SEC_USER_AGENT`）が付け、呼び出し側は持たない。
+Worker は `https://portfolio-proxy.shoulang.workers.dev`。ブラウザ以外の呼び出しも `Origin: https://shoulang0729.github.io` を付ける（`data/scheduler/lib/worker-client.mjs`）。Origin が付いていて許可外なら 403、Origin 無しは通る。レート制限は `/yahoo`・`/finnhub`・`/fmp`・`/edgar`・`/edinet-db`・`/etf/constituents`・`/forex`・`/order-sheet*` に IP 単位で掛かる（429・`worker/src/rate-limit.md`）。`/watchlist/resync` は専用の `RESYNC_LIMITER`（10 回/60 秒）。API キーは Worker の Secrets（`FINNHUB_API_KEY`・`FMP_API_KEY`・`EDINET_DB_API_KEY`・`SEC_USER_AGENT`）が付け、呼び出し側は持たない。
 
 | ルート | メソッド | 認証 | リクエスト／レスポンスの形（概要） | 呼び出し元 |
 |---|---|---|---|---|
 | `/yahoo?url=<encoded>` | GET | なし（Origin） | `url` は `https://query1|query2.finance.yahoo.com` のみ（他は 400）。Yahoo の応答をそのまま中継 | Mulmo（日次バッチの `market-snapshot.mjs` がマクロ表のハンセン `^HSI` と TOPIX 代理 `1308.T` の 1 年分の終値を取る。Origin 付き・#724 の Mulmo ワークスペース調査（2026-10-05））／Actions: `watchlist-per`・`fund-per`・`etf-pe`・`target-gap`・`jp-sector-median`・`hit-rate`／アプリ |
 | `/watchlist` | GET | なし（公開） | JSON 配列（各要素に `symbol`・`name`・`valuation` ほか） | Mulmo（日次バッチの PER ゲートの後に 1 回。PER ゲートの結果が無いときは収集の段が自前で `curl` するフォールバックあり・#724 の Mulmo ワークスペース調査（2026-10-05））／`kv-resync.mjs`（read-back を含む）／アプリ |
 | `/watchlist` | PUT | なし（Origin のみ・PIN 不要） | JSON 配列のみ（オブジェクトなら 400。各要素は `symbol`・`name` 必須） | `kv-resync.mjs`（`kv-resync.yml`・`per-daily.yml`・`weekly-valuations.yml`）／アプリ。Mulmo は呼ばない（2026-10-03〜・#724 の Mulmo ワークスペース調査（2026-10-05）） |
+| `/watchlist/resync` | POST | なし（Origin のみ。本文・クエリは読まない） | 公開 main の `data/valuations.json` を SHA 固定で取得し、KV `watchlist` の正本にある銘柄の `valuation` だけを差し替える（ズレが無ければ書かない・銘柄の追加削除なし）。応答 200 `{ ok, stage: 'noop'\|'resynced', drift, symbols, sha }`／429（専用 `RESYNC_LIMITER` 10 回/60 秒・IP 単位）／500 `KV 未設定`・`{ error, stage:'kv' }`／502 `{ error, stage }`（`sha`・`fetch`・`parse`・`validate`）。Worker Cron `0 1,8,15,22` でも同じ処理を実行（#715） | （PR3 以降）`kv-resync.mjs`／Worker Cron。Mulmo は呼ばない |
 | `/finnhub?path=<path>&…` | GET | なし（Origin） | Finnhub の応答を中継 | Actions: `sector-median`／アプリ・Cron |
 | `/fmp?path=<path>&…` | GET | なし（Origin） | FMP stable API の応答を中継（不正な `path` は 400） | Actions: `quality-us` |
 | `/edgar?path=<path>` | GET | なし（Origin） | SEC EDGAR（XBRL 系パスのみ）の応答を中継 | Actions: `quality-us`（フォールバック） |

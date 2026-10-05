@@ -1,4 +1,5 @@
 import { appendLog, detectFills, validatePlan } from './order-plan.js';
+import { resyncWatchlistFromMain } from './routes-kv.js';
 import { _workerToFinnhubSymbol } from './routes-market.js';
 import { ORDER_LOG_KEY, ORDER_PLAN_KEY, _kvJson } from './routes-order-sheet.js';
 import { isUsEasternDst } from './us-dst.js';
@@ -78,6 +79,19 @@ async function _dispatchPerDaily(env) {
   throw new Error(`per-daily dispatch failed: HTTP ${status}`);
 }
 
+// ── KV watchlist の同期（#715・docs/handoff/2026-10-05-watchlist-resync-worker.md §4.6） ──
+async function _cronResyncWatchlist(env) {
+  if (!env.KV) return;
+  const raw = await env.KV.get('watchlist');
+  if (!raw || raw.trim() === '[]') {
+    console.log('[cron watchlist-resync] skip (empty)');
+    return;
+  }
+  const r = await resyncWatchlistFromMain(env);
+  if (r.ok) console.log(`[cron watchlist-resync] ${r.stage} ${r.drift}`);
+  else console.warn(`[cron watchlist-resync] fail stage=${r.stage} http=${r.http}`);
+}
+
 async function _cronConfirmOrderFills(env) {
   if (!env.KV) return { written: false, fills: 0 };
   const [plan, networth] = await Promise.all([_kvJson(env, ORDER_PLAN_KEY), _kvJson(env, 'networth')]);
@@ -124,6 +138,14 @@ export async function scheduled(event, env, _ctx) {
     await _cronConfirmOrderFills(env);
   } catch (e) {
     console.warn('[cron order-fills]', e?.name);
+  }
+
+  // KV watchlist の valuation を main に同期（#715・§4.6）。他の処理と独立に実行し、失敗しても続ける。
+  // KV の watchlist が無い・空なら同期するものが無い（銘柄は足さない）ので GitHub に問い合わせない
+  try {
+    await _cronResyncWatchlist(env);
+  } catch (e) {
+    console.warn('[cron watchlist-resync]', e?.name);
   }
 
   if (!env.KV || !env.FINNHUB_API_KEY) return;

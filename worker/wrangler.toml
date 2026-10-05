@@ -19,7 +19,15 @@ type = "ratelimit"
 namespace_id = "1001"
 simple = { limit = 120, period = 60 }
 
-# 0 1,8,15,22: 価格キャッシュ・注文表の約定（JST 10:00(TSE開場中) / 17:00(TSE終了直後) / 0:00(NYSE開場中) / 7:00(NYSE終了直後)）
+# POST /watchlist/resync 専用（#715・docs/handoff/2026-10-05-watchlist-resync-worker.md §4.4）。
+# 1 回の呼び出しで GitHub API・raw を読むため、既存より厳しく 10 req/60s・IP 単位。namespace は既存（1001）と別。
+[[unsafe.bindings]]
+name = "RESYNC_LIMITER"
+type = "ratelimit"
+namespace_id = "1002"
+simple = { limit = 10, period = 60 }
+
+# 0 1,8,15,22: 価格キャッシュ・注文表の約定・KV watchlist の valuation 同期（JST 10:00(TSE開場中) / 17:00(TSE終了直後) / 0:00(NYSE開場中) / 7:00(NYSE終了直後)）
 # 20 20,21: per-daily.yml の起動（workflow_dispatch・#708）。米国の夏時間は 20:20、冬時間は 21:20 だけ起動（Worker 内で判定）
 [triggers]
 crons = ["0 1,8,15,22 * * *", "20 20,21 * * *"]
