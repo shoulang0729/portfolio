@@ -100,6 +100,12 @@ describe('書式', () => {
     expect(maskDollarText('基準価格から +6% 動いた', true)).toBe('基準価格から +6% 動いた');
     expect(maskDollarText('不足 $500', false)).toBe('不足 $500');
   });
+  it('maskDollarText: 注記中の指値は残し、金額だけ伏字にする（末尾の「.」は巻き込まない・#703）', () => {
+    expect(maskDollarText('指値 $368 で発注済み・不足 $1,200.', true)).toBe('指値 $368 で発注済み・不足 $*,***.');
+    expect(maskDollarText('次は $368×10・目標超過 $2,500', true)).toBe('次は $368×10・目標超過 $*,***');
+    expect(maskDollarText('小型株は $9.50 まで', true)).toBe('小型株は $9.50 まで');
+    expect(maskDollarText('不足 $500.', true)).toBe('不足 $***.');
+  });
 });
 
 describe('buildOrderRows（今出す注文の行）', () => {
@@ -334,6 +340,17 @@ describe('ガード・資金繰り・AI/テック・ストレス・はしご', (
     expect(masked).toContain('120 株');
     expect(masked).not.toContain('$5,000');
     expect(masked).not.toContain('$6,000');
+  });
+
+  it('資金繰り: 不足額が無い（数値でない）ときは「足りています」と出さない（#703）', () => {
+    const noShort = { ...sheet, funding: { ...sheet.funding, allStages: { buyTotal: 60000 } } };
+    const html = renderFunding(noShort, false);
+    expect(html).not.toContain('資金は足りています');
+    expect(html).toContain('計算できません');
+    const nullShort = { ...sheet, funding: { ...sheet.funding, allStages: { shortfallUsd: null } } };
+    expect(renderFunding(nullShort, false)).toContain('計算できません');
+    const zero = { ...sheet, funding: { ...sheet.funding, allStages: { shortfallUsd: 0 } } };
+    expect(renderFunding(zero, false)).toContain('資金は足りています');
   });
 
   it('AI/テック・ストレスは 3 時点を出し、超過セルに os-over', () => {

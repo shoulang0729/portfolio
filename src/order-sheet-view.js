@@ -57,13 +57,20 @@ export function fmtQty(q) {
 }
 
 /**
- * 文中の「$数字」だけを伏字にする（警告文・注記用。指値を含まない文に使う）
+ * 文中の金額（「$1,234」の形）だけを伏字にする（警告文・注記用）。
+ * - 金額は Worker の fmtUsd と同じ整数ドル（3 桁区切り）。小数つき（$9.50）は指値の形なので残す。
+ * - 「指値 $368」や「$368×10」のように指値と分かるものは残す（指値は常時表示・§7.2）。
+ * - 末尾の「.」「,」は文の区切りとして伏字の対象に含めない。
  * @param {string} text
  * @param {boolean} masked
  */
 export function maskDollarText(text, masked) {
   const s = String(text ?? '');
-  return masked ? s.replace(/\$[0-9][0-9,.]*/g, (m) => maskAmount(m)) : s;
+  if (!masked) return s;
+  return s.replace(/(指値\s*)?\$\d+(?:,\d{3})*(\.\d+)?/g, (m, limitWord, decimals, offset) => {
+    if (limitWord || decimals || s.charAt(offset + m.length) === '×') return m;
+    return maskAmount(m);
+  });
 }
 
 /** 状態ピルのラベル */
@@ -285,8 +292,9 @@ export function renderFunding(sheet, masked) {
   const capped = u.sweepCapped
     ? `<div class="os-warn">${sym} の保有株数まで売っても ${escapeHTML(fmtUsd(u.sweepShortUsd, masked))} 不足</div>`
     : '';
-  const short =
-    isNum(a.shortfallUsd) && a.shortfallUsd > 0
+  const short = !isNum(a.shortfallUsd)
+    ? '<div class="os-warn">全段の合計に対する資金の過不足を計算できません</div>'
+    : a.shortfallUsd > 0
       ? `<div class="os-warn">全段の合計に対し資金が ${escapeHTML(fmtUsd(a.shortfallUsd, masked))} 不足</div>`
       : '<div class="os-ok">全段の合計に対し資金は足りています</div>';
   const kv = (k, v) => `<div class="os-kv"><span>${k}</span><span>${v}</span></div>`;
