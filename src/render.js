@@ -47,7 +47,7 @@ export function renderStats() {
       </div>
       <div class="stat-sub-item">
         <span class="stat-sub-label">投資用キャッシュ</span>
-        <span class="stat-sub-value stat-fg">${amt(mf.dryPowder)}<span class="stat-sub-pct">${mf.cashRatio.toFixed(1)}%</span></span>
+        <span class="stat-sub-value stat-fg">${amt(mf.investCash)}<span class="stat-sub-pct">${mf.cashRatio.toFixed(1)}%</span></span>
       </div>
     </div>`;
   } else {

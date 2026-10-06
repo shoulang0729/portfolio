@@ -12,6 +12,13 @@ import {
   getAiTechConfig,
   getStressConfig,
   getOrderSheetConfig,
+  getConviction,
+  CASH_EQUIVALENTS_DEFAULT,
+  getCashEquivalents,
+  isCashEquivalent,
+  getDefensiveTargets,
+  computeDefensiveTier,
+  findMaxSinglePosition,
 } from '../src/target-allocation.js';
 
 /** Minimal config matching the real data/target-allocation.json schema */
@@ -205,7 +212,7 @@ describe('getAiTechConfig / getStressConfig / getOrderSheetConfig', () => {
     expect(getAiTechConfig()).toEqual({ themes: ['semiconductor', 'megatech'], capPct: 29 });
     expect(getStressConfig()).toEqual({
       tolerancePct: 20,
-      nonEquity: ['JPST', 'GLDM', 'SLV'],
+      nonEquity: ['JPST', 'SGOV', 'BIL', 'SHV', 'GLDM'],
       scenarios: DEFAULT_SCENARIOS,
     });
     expect(getOrderSheetConfig()).toEqual({ cashFloorPct: 12, rebaseMovePct: 5 });
@@ -228,7 +235,7 @@ describe('getAiTechConfig / getStressConfig / getOrderSheetConfig', () => {
     expect(getAiTechConfig()).toEqual({ themes: ['megatech'], capPct: 29 });
     expect(getStressConfig()).toEqual({
       tolerancePct: 15,
-      nonEquity: ['JPST', 'GLDM', 'SLV'],
+      nonEquity: ['JPST', 'SGOV', 'BIL', 'SHV', 'GLDM'],
       scenarios: [{ id: 's1', label: 'AAA −10%', shocks: [] }],
     });
     expect(getOrderSheetConfig()).toEqual({ cashFloorPct: 9, rebaseMovePct: 5 });
@@ -264,6 +271,117 @@ describe('getAiTechConfig / getStressConfig / getOrderSheetConfig', () => {
     expect(real.convictionPct).toEqual({ probe: 0.3, standard: 1.4, high: 3.0 });
     expect(real.themeCaps.semiconductor.cap).toBe(15);
     expect(real.themeCaps.megatech.cap).toBe(18);
+  });
+});
+
+// ── 現金同等 ETF・守り枠（#753・設計書 2026-10-06-defensive-tier-cash-equivalents §2.2 / §2.3） ──
+describe('cashEquivalents / 守り枠（#753）', () => {
+  // 合成 config: JPST を誤って tiers/override/theme に入れても目標%・確信度を持たないこと
+  const SYN = {
+    tiers: {
+      core: { targets: { AAA: 10 } },
+      defensive: { targets: { GLDM: 6, JPST: 4, cash: 12.5 } },
+    },
+    override: { SGOV: { targetPct: 3 } },
+    themeCaps: { synth: { cap: 10, members: ['BBB', 'BIL'] } },
+    convictionPct: { probe: 0.3, standard: 1.4, high: 3.0 },
+    conviction: { BIL: 'high' },
+    cashEquivalents: ['JPST', 'SGOV', 'BIL', 'SHV'],
+  };
+
+  it('config 未読込・キー欠落・型不正なら既定リスト', () => {
+    expect(CASH_EQUIVALENTS_DEFAULT).toEqual(['JPST', 'SGOV', 'BIL', 'SHV']);
+    __setConfig(null);
+    expect(getCashEquivalents()).toEqual(['JPST', 'SGOV', 'BIL', 'SHV']);
+    __setConfig({ tiers: {} });
+    expect(getCashEquivalents()).toEqual(['JPST', 'SGOV', 'BIL', 'SHV']);
+    __setConfig({ cashEquivalents: 'JPST' });
+    expect(getCashEquivalents()).toEqual(['JPST', 'SGOV', 'BIL', 'SHV']);
+  });
+
+  it('設定値があればそれを使う（大文字化したコピー）', () => {
+    __setConfig({ cashEquivalents: [' jpst ', 'XYZ'] });
+    const list = getCashEquivalents();
+    expect(list).toEqual(['JPST', 'XYZ']);
+    list.push('AAA');
+    expect(getCashEquivalents()).toEqual(['JPST', 'XYZ']);
+  });
+
+  it('isCashEquivalent は null/空で false・大文字化して照合', () => {
+    __setConfig(null);
+    expect(isCashEquivalent(null)).toBe(false);
+    expect(isCashEquivalent('')).toBe(false);
+    expect(isCashEquivalent('jpst')).toBe(true);
+    expect(isCashEquivalent(' SGOV ')).toBe(true);
+    expect(isCashEquivalent('GLDM')).toBe(false);
+  });
+
+  it('getTargetPct / getConviction は現金同等 ETF に null（tiers・override・テーマに入れた合成 config でも）', () => {
+    __setConfig(SYN);
+    expect(getTargetPct('JPST')).toBeNull();
+    expect(getTargetPct('SGOV')).toBeNull();
+    expect(getTargetPct('BIL')).toBeNull();
+    expect(getConviction('BIL')).toBeNull();
+    expect(getTargetPct('GLDM')).toBe(6);
+    expect(getTargetPct('BBB')).toBe(1.4);
+    expect(getConviction('BBB')).toBe('standard');
+  });
+
+  it('getDefensiveTargets は cash と cash 以外のキー（未読込なら空）', () => {
+    __setConfig(null);
+    expect(getDefensiveTargets()).toEqual({ cashPct: null, items: [] });
+    __setConfig({ tiers: { defensive: { targets: { GLDM: 6, cash: 12.5 } } } });
+    expect(getDefensiveTargets()).toEqual({ cashPct: 12.5, items: [{ symbol: 'GLDM', targetPct: 6 }] });
+  });
+
+  it('computeDefensiveTier: 現金枠 14.0 ＋ GLDM 6.0 ＝ 20.0（目標 12.5＋6＝18.5・§2.2 の例）', () => {
+    const r = computeDefensiveTier({
+      cashRatio: 14,
+      cashTargetPct: 12.5,
+      defensiveItems: [{ symbol: 'GLDM', curPct: 6, targetPct: 6 }],
+    });
+    expect(r.cash).toEqual({ curPct: 14, targetPct: 12.5 });
+    expect(r.items).toEqual([{ symbol: 'GLDM', curPct: 6, targetPct: 6 }]);
+    expect(r.total.curPct).toBeCloseTo(20, 10);
+    expect(r.total.targetPct).toBeCloseTo(18.5, 10);
+  });
+
+  it('computeDefensiveTier: 目標が欠けたら合計の目標は null・現金比率が無ければ合計の現在も null', () => {
+    const r = computeDefensiveTier({
+      cashRatio: null,
+      cashTargetPct: null,
+      defensiveItems: [{ symbol: 'GLDM', curPct: 6, targetPct: 6 }],
+    });
+    expect(r.total).toEqual({ curPct: null, targetPct: null });
+  });
+
+  it('findMaxSinglePosition: 現金同等 ETF は単一銘柄の最大に出ない（§2.3 の例）', () => {
+    __setConfig(null);
+    const list = [
+      { symbol: 'JPST', ySymbol: 'JPST', value: 90 },
+      { symbol: 'MSFT', ySymbol: 'MSFT', value: 40 },
+    ];
+    expect(findMaxSinglePosition(list, 1000)).toEqual({ symbol: 'MSFT', pct: 4 });
+  });
+
+  it('findMaxSinglePosition: 投信の proxy 行（isProxy）は除外しない・分母 0 なら null', () => {
+    __setConfig(null);
+    const list = [
+      { symbol: '合成短期債ファンド', ySymbol: 'JPST', isProxy: true, value: 90 },
+      { symbol: 'MSFT', ySymbol: 'MSFT', value: 40 },
+    ];
+    expect(findMaxSinglePosition(list, 1000)).toEqual({ symbol: '合成短期債ファンド', pct: 9 });
+    expect(findMaxSinglePosition(list, 0)).toBeNull();
+  });
+
+  it('実データに cashEquivalents があれば既定値と一致する（PR1 マージ前はキー無しで既定値）', () => {
+    const real = JSON.parse(readFileSync(new URL('../data/target-allocation.json', import.meta.url), 'utf8'));
+    if (real.cashEquivalents !== undefined) {
+      expect(real.cashEquivalents).toEqual([...CASH_EQUIVALENTS_DEFAULT]);
+    }
+    __setConfig(real);
+    expect(getCashEquivalents()).toEqual([...CASH_EQUIVALENTS_DEFAULT]);
+    expect(getTargetPct('JPST')).toBeNull();
   });
 });
 

@@ -7,6 +7,7 @@
 //   - 値動き（Heatmap/Historical/当日色）= positions.js のライブ価格（無改修）
 //   - 資産総額・現金・暗号資産 = ここ（Money Forward 実値・週次 Chrome 取込）
 //   - キャッシュ比率 = 投資用キャッシュ ÷ 運用資産
+//     投資用キャッシュ＝現金・預金−生活防衛資金（0 下止め）＋cashEquivalents の評価額（#753）
 //
 // 取得元（#589 Phase2）: 負債/実物資産等の機微データは Worker `/networth`
 // （KV・PIN認証と同方式）を優先して取得する。Worker 取得に失敗した場合
@@ -18,6 +19,7 @@
 import { WORKER_URL } from './config.js';
 import { fetchWithTimeout } from './data.js';
 import { _getActivePinHash } from './auth-pin.js';
+import { isCashEquivalent } from './target-allocation.js';
 
 const MF_URL = 'data/mf-holdings.json';
 /** 生活防衛資金（キャッシュ比率の分子・分母から除外）。2026/06 ユーザー決定 */
@@ -25,7 +27,7 @@ const EMERGENCY_FUND = 20_000_000;
 
 /**
  * @typedef {{institution:string, name:string, tag?:string, balance:number, rate?:number, rateType?:string, asOf?:string}} MfLiability
- * @type {{asOf?:string, totals?:{imported?:number, mfNetWorth?:number, liabilitiesTotal?:number, realAssetsTotal?:number, netWorthComputed?:number}, holdings?:Array<{cat:string,cur?:string,value:number}>, liabilities?:MfLiability[]}|null}
+ * @type {{asOf?:string, totals?:{imported?:number, mfNetWorth?:number, liabilitiesTotal?:number, realAssetsTotal?:number, netWorthComputed?:number}, holdings?:Array<{cat:string,cur?:string,value:number,ySymbol?:string}>, liabilities?:MfLiability[]}|null}
  */
 let _mf = null;
 
@@ -75,7 +77,7 @@ async function _loadFromPublicFile() {
 }
 
 /**
- * @param {(x:{cat:string,cur?:string,value:number})=>boolean} pred
+ * @param {(x:{cat:string,cur?:string,value:number,ySymbol?:string})=>boolean} pred
  * @returns {number}
  */
 function _sum(pred) {
@@ -94,7 +96,10 @@ export function getMfTotals() {
   const crypto = _sum((x) => x.cat === '暗号資産');
   const securities = imported - cash - crypto;
   const dryPowder = Math.max(0, cash - EMERGENCY_FUND);
-  const cashRatio = imported > 0 ? (dryPowder / imported) * 100 : 0;
+  // #753: 現金同等 ETF（JPST 等）の評価額。照合は mf の行の ySymbol だけ（positions の proxy は使わない）。
+  const cashEquivalents = _sum((x) => typeof x.ySymbol === 'string' && isCashEquivalent(x.ySymbol));
+  const investCash = dryPowder + cashEquivalents;
+  const cashRatio = imported > 0 ? (investCash / imported) * 100 : 0;
   // v5（#577）: 負債・実物資産・計算純資産。パイプラインが負債を取得できなかった場合は
   // undefined ＝呼び出し側は3層表示を出さない（v4 互換 degrade）。
   const t = _mf.totals || {};
@@ -105,6 +110,8 @@ export function getMfTotals() {
     crypto,
     securities,
     dryPowder,
+    cashEquivalents,
+    investCash,
     cashRatio,
     emergencyFund: EMERGENCY_FUND,
     asOf: _mf.asOf,
