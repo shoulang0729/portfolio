@@ -38,6 +38,10 @@ import {
   computeThemeUsage,
   computeGap,
   themeLabel,
+  getDefensiveTargets,
+  getOrderSheetConfig,
+  computeDefensiveTier,
+  findMaxSinglePosition,
 } from './target-allocation.js';
 import { computeTrueRegionExposure, japanHomeBias, REGION_LABELS } from './region-calc.js';
 
@@ -592,16 +596,14 @@ function buildRiskOverviewCard(japanTruePct) {
       maxMembers = (themeMembers[theme] || []).slice().sort((a, b) => b.pct - a.pct);
     }
   }
-  // 単銘柄が最大ならティッカーで
+  // 単銘柄が最大ならティッカーで（現金同等 ETF は株として数えない・#753）
   if (taAvailable) {
-    for (const p of positions) {
-      const pct = ((p.value || 0) / denom) * 100;
-      if (pct > maxPct) {
-        maxPct = pct;
-        maxTheme = null; // 単銘柄はテーマ cap 対象外 → 従来閾値へフォールバック
-        maxLabel = p.symbol || '';
-        maxMembers = [{ name: p.symbol || '', pct }];
-      }
+    const single = findMaxSinglePosition(positions, denom);
+    if (single && single.pct > maxPct) {
+      maxPct = single.pct;
+      maxTheme = null; // 単銘柄はテーマ cap 対象外 → 従来閾値へフォールバック
+      maxLabel = single.symbol;
+      maxMembers = [{ name: single.symbol, pct: single.pct }];
     }
   }
   // #544: 最大集中の判定を一律20%からテーマ別キャップ基準へ統一。
@@ -690,14 +692,58 @@ function buildRiskOverviewCard(japanTruePct) {
       ${chipsHTML ? `<div class="rholds">${chipsHTML}</div>` : ''}
     </div>`;
 
-  // ① 投資用キャッシュ比率
-  const cashSec = sec(
-    'i-coin',
-    '投資用キャッシュ比率',
-    cashOut ? 'warn' : 'ok',
-    cashOut ? '範囲外' : '適正',
-    entry('投資資産に対する現金', cashOut ? 'warn' : 'ok', cashVal, '適正レンジ 5–20%', '')
-  );
+  // ① 守り枠（#753 §2.2）＝現金枠＋守り枠の銘柄（GLDM 等）。
+  // 現金枠の判定（5–20%・cashOut・breach）は従来のまま。銘柄と合計は表示のみ（判定しない＝中立トーン）。
+  const defTargets = getDefensiveTargets();
+  const defItems = defTargets.items.map(({ symbol, targetPct }) => {
+    let curPct = 0;
+    for (const r of resolved) if (r.tkey === symbol) curPct += r.currentPct;
+    return { symbol, curPct, targetPct };
+  });
+  const defTier = computeDefensiveTier({
+    cashRatio: totals ? totals.cashRatio : null,
+    cashTargetPct: defTargets.cashPct,
+    defensiveItems: defItems,
+  });
+  const fmtT = (v) => `${Number(v.toFixed(2))}%`;
+  const cashSubBits = [];
+  if (defTier.cash.targetPct != null) {
+    cashSubBits.push(`目標 ${fmtT(defTier.cash.targetPct)}`);
+    cashSubBits.push(`下限 ${fmtT(getOrderSheetConfig().cashFloorPct)}`);
+  }
+  cashSubBits.push('適正レンジ 5–20%');
+  const defRows = [
+    entry(
+      '現金枠（現金・預金−生活防衛資金＋現金同等ETF）',
+      cashOut ? 'warn' : 'ok',
+      cashVal,
+      cashSubBits.join('・'),
+      ''
+    ),
+  ];
+  for (const it of defTier.items) {
+    defRows.push(
+      entry(
+        it.symbol,
+        'neu',
+        taAvailable ? `${it.curPct.toFixed(1)}%` : '—',
+        it.targetPct != null ? `目標 ${fmtT(it.targetPct)}` : '',
+        ''
+      )
+    );
+  }
+  if (defTier.items.length > 0) {
+    defRows.push(
+      entry(
+        '守り枠 合計',
+        'neu',
+        defTier.total.curPct != null ? `${defTier.total.curPct.toFixed(1)}%` : '—',
+        defTier.total.targetPct != null ? `目標 ${fmtT(defTier.total.targetPct)}` : '',
+        ''
+      )
+    );
+  }
+  const cashSec = sec('i-coin', '守り枠', cashOut ? 'warn' : 'ok', cashOut ? '範囲外' : '適正', defRows.join(''));
 
   // ② 過大ポジ（コンパクト1行×N・最大ズレ=先頭のみ強調）
   const overBody = overPos.length

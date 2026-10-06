@@ -11,6 +11,7 @@
 //   2. tiers.core.targets[symbol] または tiers.defensive.targets[symbol]
 //   3. symbol がテーマメンバー → convictionPct[ conviction[symbol] || 'standard' ]
 //   4. null
+// cashEquivalents（JPST 等・#753）は先頭で null（銘柄ごとの目標%・確信度を持たない）。
 // ══════════════════════════════════════════════════════════════
 
 const TARGET_ALLOC_URL = 'data/target-allocation.json';
@@ -39,6 +40,102 @@ export async function loadTargetAllocation() {
  */
 export function __setConfig(cfg) {
   _cfg = cfg;
+}
+
+// ── 現金同等 ETF（#753・設計書 2026-10-06-defensive-tier-cash-equivalents §2.3 / §4.2） ──
+
+/**
+ * cashEquivalents の既定値（data/target-allocation.json と同じ値）。
+ * config 未読込・キー欠落・型不正のときだけ使う（ORDER_STRATEGY_DEFAULTS と同じ考え方）。
+ */
+export const CASH_EQUIVALENTS_DEFAULT = Object.freeze(['JPST', 'SGOV', 'BIL', 'SHV']);
+
+/**
+ * 現金同等 ETF の一覧（大文字化したコピー）を返す。
+ * @returns {string[]}
+ */
+export function getCashEquivalents() {
+  const v = _cfg && _cfg.cashEquivalents;
+  const list = Array.isArray(v) ? v : CASH_EQUIVALENTS_DEFAULT;
+  return list
+    .filter((s) => typeof s === 'string')
+    .map((s) => s.trim().toUpperCase())
+    .filter(Boolean);
+}
+
+/**
+ * sym が現金同等 ETF か（null/空は false・前後空白除去＋大文字化して照合）。
+ * @param {unknown} sym
+ * @returns {boolean}
+ */
+export function isCashEquivalent(sym) {
+  if (sym == null) return false;
+  const k = String(sym).trim().toUpperCase();
+  if (!k) return false;
+  return getCashEquivalents().includes(k);
+}
+
+/**
+ * 守り枠の目標（tiers.defensive.targets）。`cash` は現金枠の目標%、それ以外のキーは銘柄の目標%。
+ * config 未読込なら { cashPct: null, items: [] }。
+ * @returns {{ cashPct: number|null, items: Array<{ symbol: string, targetPct: number }> }}
+ */
+export function getDefensiveTargets() {
+  const t = _cfg && _cfg.tiers && _cfg.tiers.defensive && _cfg.tiers.defensive.targets;
+  if (!t || typeof t !== 'object') return { cashPct: null, items: [] };
+  /** @type {Array<{ symbol: string, targetPct: number }>} */
+  const items = [];
+  for (const [symbol, pct] of Object.entries(t)) {
+    if (symbol === 'cash') continue;
+    if (typeof pct === 'number' && Number.isFinite(pct)) items.push({ symbol, targetPct: pct });
+  }
+  const cashPct = typeof t.cash === 'number' && Number.isFinite(t.cash) ? t.cash : null;
+  return { cashPct, items };
+}
+
+/**
+ * 守り枠の表示用の数値（純関数・#753 §2.2）。判定はしない。
+ * 守り枠の現在% ＝ 現金枠（cashRatio）＋ 銘柄の現在% の合計。
+ * 守り枠の目標% ＝ 現金枠の目標 ＋ 銘柄の目標の合計（どれかが欠けたら null）。
+ * @param {{ cashRatio: number|null, cashTargetPct: number|null, defensiveItems: Array<{ symbol: string, curPct: number, targetPct: number|null }> }} args
+ * @returns {{ cash: { curPct: number|null, targetPct: number|null }, items: Array<{ symbol: string, curPct: number, targetPct: number|null }>, total: { curPct: number|null, targetPct: number|null } }}
+ */
+export function computeDefensiveTier({ cashRatio, cashTargetPct, defensiveItems }) {
+  const cashCur = typeof cashRatio === 'number' && Number.isFinite(cashRatio) ? cashRatio : null;
+  const items = (defensiveItems || []).map((d) => ({
+    symbol: d.symbol,
+    curPct: Number(d.curPct) || 0,
+    targetPct: d.targetPct != null && Number.isFinite(d.targetPct) ? d.targetPct : null,
+  }));
+  const itemsCur = items.reduce((s, d) => s + d.curPct, 0);
+  const totalCur = cashCur != null ? cashCur + itemsCur : null;
+  const allTargets = cashTargetPct != null && items.every((d) => d.targetPct != null);
+  const totalTarget = allTargets
+    ? items.reduce((s, d) => s + /** @type {number} */ (d.targetPct), /** @type {number} */ (cashTargetPct))
+    : null;
+  return {
+    cash: { curPct: cashCur, targetPct: cashTargetPct != null ? cashTargetPct : null },
+    items,
+    total: { curPct: totalCur, targetPct: totalTarget },
+  };
+}
+
+/**
+ * 単一銘柄の最大（Risk ②・純関数）。現金同等 ETF（投信の proxy 行を除く）は飛ばす（#753 §2.3）。
+ * @param {Array<{ symbol?: string, ySymbol?: string, isProxy?: boolean, value?: number }>} list
+ * @param {number} denom
+ * @returns {{ symbol: string, pct: number }|null}
+ */
+export function findMaxSinglePosition(list, denom) {
+  if (!(denom > 0)) return null;
+  /** @type {{ symbol: string, pct: number }|null} */
+  let best = null;
+  for (const p of list) {
+    if (!p.isProxy && isCashEquivalent(p.ySymbol || p.symbol)) continue;
+    const pct = ((p.value || 0) / denom) * 100;
+    if (!best || pct > best.pct) best = { symbol: p.symbol || '', pct };
+  }
+  return best;
 }
 
 /**
@@ -85,6 +182,9 @@ export function getThemeOf(symbol) {
 export function getTargetPct(symbol) {
   if (!_cfg) return null;
 
+  // 0. 現金同等 ETF は目標%を持たない（#753・override/tiers より先）
+  if (isCashEquivalent(symbol)) return null;
+
   // 1. override
   if (_cfg.override && _cfg.override[symbol] != null) {
     const ov = _cfg.override[symbol];
@@ -129,6 +229,8 @@ export function getTargetPct(symbol) {
  */
 export function getConviction(symbol) {
   if (!_cfg) return null;
+  // 現金同等 ETF は確信度を持たない（#753）
+  if (isCashEquivalent(symbol)) return null;
   // 固定枠（override / core / defensive / テーマETF）は確信度の概念なし
   if (_cfg.override && _cfg.override[symbol] && _cfg.override[symbol].targetPct != null) return null;
   const tiers = _cfg.tiers || {};
@@ -201,7 +303,7 @@ export const ORDER_STRATEGY_DEFAULTS = Object.freeze({
   }),
   stress: Object.freeze({
     tolerancePct: 20,
-    nonEquity: Object.freeze(['JPST', 'GLDM', 'SLV']),
+    nonEquity: Object.freeze(['JPST', 'SGOV', 'BIL', 'SHV', 'GLDM']),
     scenarios: Object.freeze([
       Object.freeze({
         id: 'ai-crash',
