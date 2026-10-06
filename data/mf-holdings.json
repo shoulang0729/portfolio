@@ -1,8 +1,8 @@
 {
-  "asOf": "2026-10-06",
+  "asOf": "2026-10-07",
   "totals": {
-    "mfNetWorth": 575037815,
-    "imported": 529912404,
+    "mfNetWorth": 579594246,
+    "imported": 534383960,
     "excludedAccounts": []
   },
   "holdings": [
@@ -10,48 +10,48 @@
       "institution": "口座1",
       "cat": "日本株・ETF",
       "name": "NEXT FUNDS TOPIX連動型上場投信",
-      "value": 26308890,
+      "value": 26556120,
       "cur": "JPY",
-      "asOf": "2026-10-06",
+      "asOf": "2026-10-07",
       "ySymbol": "1306.T",
       "avgCost": 416.0,
-      "price": 436.0,
+      "price": 440.0,
       "qty": 60300.0
     },
     {
       "institution": "口座1",
       "cat": "日本株・ETF",
       "name": "NEXT FUNDS 東証銀行業株価指数連動型上場投信",
-      "value": 29413629,
+      "value": 30049845,
       "cur": "JPY",
-      "asOf": "2026-10-06",
+      "asOf": "2026-10-07",
       "ySymbol": "1615.T",
       "avgCost": 548.0,
-      "price": 777.0,
+      "price": 794.0,
       "qty": 37870.0
     },
     {
       "institution": "口座1",
       "cat": "日本株・ETF",
       "name": "NEXT FUNDS 商社・卸売(TOPIX-17)上場投信",
-      "value": 23861250,
+      "value": 23948750,
       "cur": "JPY",
-      "asOf": "2026-10-06",
+      "asOf": "2026-10-07",
       "ySymbol": "1629.T",
       "avgCost": 245.0,
-      "price": 273.0,
+      "price": 274.0,
       "qty": 87500.0
     },
     {
       "institution": "口座1",
       "cat": "米国株・ETF",
       "name": "NEXT FUNDS 日経半導体株指数連動型上場投信",
-      "value": 29366100,
+      "value": 29673630,
       "cur": "JPY",
-      "asOf": "2026-10-06",
+      "asOf": "2026-10-07",
       "ySymbol": "200A",
       "avgCost": 2645.0,
-      "price": 4870.0,
+      "price": 4921.0,
       "qty": 6030.0
     },
     {
@@ -60,7 +60,7 @@
       "name": "小松製作所",
       "value": 2333100,
       "cur": "JPY",
-      "asOf": "2026-10-06",
+      "asOf": "2026-10-07",
       "ySymbol": "6301.T",
       "avgCost": 3181.0,
       "price": 7777.0,
@@ -70,276 +70,240 @@
       "institution": "口座1",
       "cat": "日本株・ETF",
       "name": "セイコーグループ",
-      "value": 21920000,
+      "value": 22460000,
       "cur": "JPY",
-      "asOf": "2026-10-06",
+      "asOf": "2026-10-07",
       "ySymbol": "8050.T",
       "avgCost": 3451.0,
-      "price": 10960.0,
+      "price": 11230.0,
       "qty": 2000.0
     },
     {
       "institution": "口座1",
       "cat": "日本株・ETF",
       "name": "ファーストリテイリング",
-      "value": 14938000,
+      "value": 15118000,
       "cur": "JPY",
-      "asOf": "2026-10-06",
+      "asOf": "2026-10-07",
       "ySymbol": "9983.T",
       "avgCost": 43966.0,
-      "price": 74690.0,
+      "price": 75590.0,
       "qty": 200.0
     },
     {
       "institution": "口座1",
       "cat": "米国株・ETF",
       "name": "ファーストトラスト ナスダック サイバーセキュリティETF",
-      "value": 3626704,
+      "value": 3676745,
       "cur": "JPY",
-      "asOf": "2026-10-06",
+      "asOf": "2026-10-07",
       "ySymbol": "CIBR",
       "avgCost": 15070.0,
-      "price": 16485.0,
+      "price": 16712.0,
       "qty": 220.0
     },
     {
       "institution": "口座1",
       "cat": "米国株・ETF",
       "name": "グローバルX 銅ビジネス ETF",
-      "value": 4057959,
+      "value": 4082978,
       "cur": "JPY",
-      "asOf": "2026-10-06",
+      "asOf": "2026-10-07",
       "ySymbol": "COPX",
       "avgCost": 12693.0,
-      "price": 13527.0,
+      "price": 13610.0,
       "qty": 300.0
     },
     {
       "institution": "口座1",
       "cat": "米国株・ETF",
       "name": "グローバルXデータセンターリート&デジタルインフラETF",
-      "value": 6225810,
+      "value": 6263435,
       "cur": "JPY",
-      "asOf": "2026-10-06",
+      "asOf": "2026-10-07",
       "ySymbol": "DTCR",
       "avgCost": 4585.0,
-      "price": 4294.0,
+      "price": 4320.0,
       "qty": 1450.0
     },
     {
       "institution": "口座1",
       "cat": "米国株・ETF",
       "name": "SPDR ゴールド・ミニシェアーズ・トラスト",
-      "value": 32296932,
+      "value": 32278838,
       "cur": "JPY",
-      "asOf": "2026-10-06",
+      "asOf": "2026-10-07",
       "ySymbol": "GLDM",
       "avgCost": 13677.0,
-      "price": 12919.0,
+      "price": 12912.0,
       "qty": 2500.0
     },
     {
       "institution": "口座1",
       "cat": "米国株・ETF",
       "name": "ファーストトラスト ナスダック クリーンエッジ スマートグリッド インフラ指数ファンド",
-      "value": 3167910,
+      "value": 3158061,
       "cur": "JPY",
-      "asOf": "2026-10-06",
+      "asOf": "2026-10-07",
       "ySymbol": "GRID",
       "avgCost": 28852.0,
-      "price": 28799.0,
+      "price": 28710.0,
       "qty": 110.0
     },
     {
       "institution": "口座1",
       "cat": "米国株・ETF",
       "name": "iシェアーズ ラテンアメリカ 40 ETF",
-      "value": 5507601,
+      "value": 5968629,
       "cur": "JPY",
-      "asOf": "2026-10-06",
+      "asOf": "2026-10-07",
       "ySymbol": "ILF",
       "avgCost": 5023.0,
-      "price": 5508.0,
+      "price": 5969.0,
       "qty": 1000.0
     },
     {
       "institution": "口座1",
       "cat": "米国株・ETF",
       "name": "JPモルガン・ウルトラショート・インカムETF",
-      "value": 40033908,
+      "value": 40092741,
       "cur": "JPY",
-      "asOf": "2026-10-06",
+      "asOf": "2026-10-07",
       "ySymbol": "JPST",
-      "avgCost": 7930.0,
-      "price": 7909.0,
+      "avgCost": 7981.0,
+      "price": 7920.0,
       "qty": 5062.0
     },
     {
       "institution": "口座1",
       "cat": "米国株・ETF",
       "name": "ヴァンエック・ウラニウム・アンド原子力ETF",
-      "value": 5742627,
+      "value": 5805328,
       "cur": "JPY",
-      "asOf": "2026-10-06",
+      "asOf": "2026-10-07",
       "ySymbol": "NLR",
       "avgCost": 18902.0,
-      "price": 16176.0,
+      "price": 16353.0,
       "qty": 355.0
     },
     {
       "institution": "口座1",
       "cat": "米国株・ETF",
-      "name": "ヴァンエック・レアアース・アンド戦略的金属ETF",
-      "value": 4976208,
-      "cur": "JPY",
-      "asOf": "2026-10-06",
-      "ySymbol": "REMX",
-      "avgCost": 12681.0,
-      "price": 9952.0,
-      "qty": 500.0
-    },
-    {
-      "institution": "口座1",
-      "cat": "米国株・ETF",
-      "name": "iシェアーズ シルバー・トラスト",
-      "value": 6895051,
-      "cur": "JPY",
-      "asOf": "2026-10-06",
-      "ySymbol": "SLV",
-      "avgCost": 11181.0,
-      "price": 8619.0,
-      "qty": 800.0
-    },
-    {
-      "institution": "口座1",
-      "cat": "米国株・ETF",
       "name": "ヴァンエック半導体ETF",
-      "value": 26311313,
+      "value": 26482599,
       "cur": "JPY",
-      "asOf": "2026-10-06",
+      "asOf": "2026-10-07",
       "ySymbol": "SMH",
       "avgCost": 51582.0,
-      "price": 99288.0,
+      "price": 99934.0,
       "qty": 265.0
     },
     {
       "institution": "口座1",
       "cat": "米国株・ETF",
       "name": "ステート・ストリート エネルギー・セレクト・セクター SPDR ETF",
-      "value": 8407358,
+      "value": 8502459,
       "cur": "JPY",
-      "asOf": "2026-10-06",
+      "asOf": "2026-10-07",
       "ySymbol": "XLE",
       "avgCost": 9404.0,
-      "price": 9891.0,
+      "price": 10003.0,
       "qty": 850.0
     },
     {
       "institution": "口座1",
       "cat": "米国株・ETF",
       "name": "アップル",
-      "value": 8669016,
+      "value": 8659218,
       "cur": "JPY",
-      "asOf": "2026-10-06",
+      "asOf": "2026-10-07",
       "ySymbol": "AAPL",
       "avgCost": 30798.0,
-      "price": 52539.0,
+      "price": 52480.0,
       "qty": 165.0
     },
     {
       "institution": "口座1",
       "cat": "米国株・ETF",
       "name": "アマゾン・ドットコム",
-      "value": 7920365,
+      "value": 7926642,
       "cur": "JPY",
-      "asOf": "2026-10-06",
+      "asOf": "2026-10-07",
       "ySymbol": "AMZN",
       "avgCost": 34357.0,
-      "price": 39602.0,
+      "price": 39633.0,
       "qty": 200.0
     },
     {
       "institution": "口座1",
       "cat": "米国株・ETF",
       "name": "セレブラス・システムズ",
-      "value": 1310221,
+      "value": 1431068,
       "cur": "JPY",
-      "asOf": "2026-10-06",
+      "asOf": "2026-10-07",
       "ySymbol": "CBRS",
       "avgCost": 36772.0,
-      "price": 26204.0,
+      "price": 28621.0,
       "qty": 50.0
     },
     {
       "institution": "口座1",
       "cat": "米国株・ETF",
       "name": "アルファベット クラスA",
-      "value": 8112612,
+      "value": 8193150,
       "cur": "JPY",
-      "asOf": "2026-10-06",
+      "asOf": "2026-10-07",
       "ySymbol": "GOOGL",
       "avgCost": 29275.0,
-      "price": 54084.0,
+      "price": 54621.0,
       "qty": 150.0
     },
     {
       "institution": "口座1",
       "cat": "米国株・ETF",
-      "name": "MPマテリアルズ",
-      "value": 1479086,
-      "cur": "JPY",
-      "asOf": "2026-10-06",
-      "ySymbol": "MP",
-      "avgCost": 9195.0,
-      "price": 7395.0,
-      "qty": 200.0
-    },
-    {
-      "institution": "口座1",
-      "cat": "米国株・ETF",
       "name": "マイクロソフト",
-      "value": 16052565,
+      "value": 16310542,
       "cur": "JPY",
-      "asOf": "2026-10-06",
+      "asOf": "2026-10-07",
       "ySymbol": "MSFT",
       "avgCost": 64014.0,
-      "price": 81485.0,
+      "price": 82795.0,
       "qty": 197.0
     },
     {
       "institution": "口座1",
       "cat": "米国株・ETF",
       "name": "パランティア・テクノロジーズ",
-      "value": 11233664,
+      "value": 11286668,
       "cur": "JPY",
-      "asOf": "2026-10-06",
+      "asOf": "2026-10-07",
       "ySymbol": "PLTR",
       "avgCost": 21126.0,
-      "price": 29719.0,
+      "price": 29859.0,
       "qty": 378.0
     },
     {
       "institution": "口座1",
       "cat": "米国株・ETF",
       "name": "スペースX(スペース・エクスプロレーション・テクノロジーズ・コーポレーション)",
-      "value": 4755368,
+      "value": 5124745,
       "cur": "JPY",
-      "asOf": "2026-10-06",
+      "asOf": "2026-10-07",
       "ySymbol": "SPCX",
       "avgCost": 26511.0,
-      "price": 25028.0,
+      "price": 26972.0,
       "qty": 190.0
     },
     {
       "institution": "口座1",
       "cat": "米国株・ETF",
       "name": "テスラ",
-      "value": 7293675,
+      "value": 7463349,
       "cur": "JPY",
-      "asOf": "2026-10-06",
+      "asOf": "2026-10-07",
       "ySymbol": "TSLA",
       "avgCost": 49332.0,
-      "price": 58349.0,
+      "price": 59707.0,
       "qty": 125.0
     },
     {
@@ -348,7 +312,7 @@
       "name": "ひふみ投信",
       "value": 5971085,
       "cur": "JPY",
-      "asOf": "2026-10-06",
+      "asOf": "2026-10-07",
       "avgCost": 2933304.0,
       "price": 2960945.0,
       "qty": 1.0
@@ -359,7 +323,7 @@
       "name": "ひふみ投信",
       "value": 5971085,
       "cur": "JPY",
-      "asOf": "2026-10-06",
+      "asOf": "2026-10-07",
       "avgCost": 2933304.0,
       "price": 2960945.0,
       "qty": 1.0
@@ -370,7 +334,7 @@
       "name": "合計評価額",
       "value": 3978074,
       "cur": "JPY",
-      "asOf": "2026-10-06",
+      "asOf": "2026-10-07",
       "avgCost": 0.0,
       "price": 0.0,
       "qty": 1.0
@@ -379,11 +343,11 @@
       "institution": "口座1",
       "cat": "投資信託",
       "name": "eMAXIS Slim 全世界株式(オール・カントリー)",
-      "value": 63757563,
+      "value": 64092978,
       "cur": "JPY",
-      "asOf": "2026-10-06",
+      "asOf": "2026-10-07",
       "avgCost": 28072.0,
-      "price": 37827.0,
+      "price": 38026.0,
       "qty": 16855041.0
     },
     {
@@ -392,7 +356,7 @@
       "name": "ひふみ投信",
       "value": 28710790,
       "cur": "JPY",
-      "asOf": "2026-10-06",
+      "asOf": "2026-10-07",
       "avgCost": 79116.0,
       "price": 96589.0,
       "qty": 2972470.0
@@ -403,7 +367,7 @@
       "name": "ひふみ投信",
       "value": 28618905,
       "cur": "JPY",
-      "asOf": "2026-10-06",
+      "asOf": "2026-10-07",
       "avgCost": 79370.0,
       "price": 96589.0,
       "qty": 2962957.0
@@ -414,7 +378,7 @@
       "name": "ひふみマイクロスコープpro",
       "value": 1056342,
       "cur": "JPY",
-      "asOf": "2026-10-06",
+      "asOf": "2026-10-07",
       "avgCost": 10048.0,
       "price": 13267.0,
       "qty": 796218.0
@@ -425,7 +389,7 @@
       "name": "ひふみマイクロスコープpro",
       "value": 1056342,
       "cur": "JPY",
-      "asOf": "2026-10-06",
+      "asOf": "2026-10-07",
       "avgCost": 10048.0,
       "price": 13267.0,
       "qty": 796218.0
@@ -436,7 +400,7 @@
       "name": "ひふみクロスオーバーpro",
       "value": 960804,
       "cur": "JPY",
-      "asOf": "2026-10-06",
+      "asOf": "2026-10-07",
       "avgCost": 10178.0,
       "price": 13969.0,
       "qty": 687812.0
@@ -447,7 +411,7 @@
       "name": "ひふみクロスオーバーpro",
       "value": 960804,
       "cur": "JPY",
-      "asOf": "2026-10-06",
+      "asOf": "2026-10-07",
       "avgCost": 10178.0,
       "price": 13969.0,
       "qty": 687812.0
@@ -458,7 +422,7 @@
       "name": "現金・預金1",
       "value": 247,
       "cur": "JPY",
-      "asOf": "2026-10-06"
+      "asOf": "2026-10-07"
     },
     {
       "institution": "口座6",
@@ -466,7 +430,7 @@
       "name": "現金・預金2",
       "value": 265203,
       "cur": "JPY",
-      "asOf": "2026-10-06"
+      "asOf": "2026-10-07"
     },
     {
       "institution": "口座7",
@@ -474,7 +438,7 @@
       "name": "現金・預金3",
       "value": 823377,
       "cur": "JPY",
-      "asOf": "2026-10-06"
+      "asOf": "2026-10-07"
     },
     {
       "institution": "口座8",
@@ -482,7 +446,7 @@
       "name": "現金・預金4",
       "value": 596523,
       "cur": "JPY",
-      "asOf": "2026-10-06"
+      "asOf": "2026-10-07"
     },
     {
       "institution": "口座8",
@@ -490,7 +454,7 @@
       "name": "現金・預金5",
       "value": 50104,
       "cur": "JPY",
-      "asOf": "2026-10-06"
+      "asOf": "2026-10-07"
     },
     {
       "institution": "口座8",
@@ -498,7 +462,7 @@
       "name": "現金・預金6",
       "value": 900008,
       "cur": "JPY",
-      "asOf": "2026-10-06"
+      "asOf": "2026-10-07"
     },
     {
       "institution": "口座8",
@@ -506,7 +470,7 @@
       "name": "現金・預金7",
       "value": 900315,
       "cur": "JPY",
-      "asOf": "2026-10-06"
+      "asOf": "2026-10-07"
     },
     {
       "institution": "口座9",
@@ -514,7 +478,7 @@
       "name": "現金・預金8",
       "value": 37659,
       "cur": "JPY",
-      "asOf": "2026-10-06"
+      "asOf": "2026-10-07"
     },
     {
       "institution": "口座4",
@@ -522,7 +486,7 @@
       "name": "現金・預金9",
       "value": 2117464,
       "cur": "JPY",
-      "asOf": "2026-10-06"
+      "asOf": "2026-10-07"
     },
     {
       "institution": "口座4",
@@ -530,7 +494,7 @@
       "name": "現金・預金10",
       "value": 962978,
       "cur": "JPY",
-      "asOf": "2026-10-06"
+      "asOf": "2026-10-07"
     },
     {
       "institution": "口座4",
@@ -538,23 +502,23 @@
       "name": "現金・預金11",
       "value": 1421367,
       "cur": "JPY",
-      "asOf": "2026-10-06"
+      "asOf": "2026-10-07"
     },
     {
       "institution": "口座1",
       "cat": "現金・預金",
       "name": "現金・預金12",
-      "value": 922434,
+      "value": 978033,
       "cur": "JPY",
-      "asOf": "2026-10-06"
+      "asOf": "2026-10-07"
     },
     {
       "institution": "口座1",
       "cat": "現金・預金",
       "name": "現金・預金13",
-      "value": 13496437,
+      "value": 26977179,
       "cur": "JPY",
-      "asOf": "2026-10-06"
+      "asOf": "2026-10-07"
     },
     {
       "institution": "口座10",
@@ -562,23 +526,23 @@
       "name": "現金・預金14",
       "value": 62,
       "cur": "JPY",
-      "asOf": "2026-10-06"
+      "asOf": "2026-10-07"
     },
     {
       "institution": "口座10",
       "cat": "暗号資産",
       "name": "ビットコイン残高",
-      "value": 2038489,
+      "value": 2022713,
       "cur": "JPY",
-      "asOf": "2026-10-06"
+      "asOf": "2026-10-07"
     },
     {
       "institution": "口座10",
       "cat": "暗号資産",
       "name": "イーサリアム残高",
-      "value": 2121021,
+      "value": 2106879,
       "cur": "JPY",
-      "asOf": "2026-10-06"
+      "asOf": "2026-10-07"
     }
   ]
 }
