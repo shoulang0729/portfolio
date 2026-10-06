@@ -36,7 +36,7 @@ export const HOLDINGS_LAG_NOTE = 'MF の同期は寄付前のため、直近の�
 export const DEFAULT_AI_TECH = { themes: ['semiconductor', 'megatech'], capPct: 29 };
 export const DEFAULT_STRESS = {
   tolerancePct: 20,
-  nonEquity: ['JPST', 'GLDM', 'SLV'],
+  nonEquity: ['JPST', 'SGOV', 'BIL', 'SHV', 'GLDM'],
   scenarios: [
     {
       id: 'ai-crash',
@@ -49,6 +49,12 @@ export const DEFAULT_STRESS = {
     { id: 'semi-crash', label: '半導体 −50%', shocks: [{ group: 'theme:semiconductor', pct: -50 }] },
   ],
 };
+/**
+ * 現金同等 ETF（data/target-allocation.json の cashEquivalents が無い・型不正のときの既定値・#753）。
+ * 現金比率に数え、ストレスの株・単一銘柄の上限には数えない。src/target-allocation.js の
+ * CASH_EQUIVALENTS_DEFAULT と同じ値。
+ */
+export const DEFAULT_CASH_EQUIVALENTS = ['JPST', 'SGOV', 'BIL', 'SHV'];
 export const DEFAULT_ORDER_SHEET = { cashFloorPct: 12, rebaseMovePct: 5 };
 export const DEFAULT_CONVICTION_HIGH_PCT = 3;
 
@@ -102,7 +108,9 @@ function resolveStrategy(strategy, warnings) {
   const ai = strategy.aiTech || {};
   const st = strategy.stress || {};
   const os = strategy.orderSheet || {};
+  const ce = Array.isArray(strategy.cashEquivalents) ? strategy.cashEquivalents : DEFAULT_CASH_EQUIVALENTS;
   return {
+    cashEquivalents: ce.filter((x) => typeof x === 'string' && x.trim()).map((x) => normalizeYSymbol(x.toUpperCase())),
     themeCaps: strategy.themeCaps && typeof strategy.themeCaps === 'object' ? strategy.themeCaps : {},
     convictionHighPct: isNum(strategy.convictionPct?.high) ? strategy.convictionPct.high : DEFAULT_CONVICTION_HIGH_PCT,
     aiTech: {
@@ -236,9 +244,17 @@ export function buildOrderSheet(input) {
     return g ? toUsd(g.valueJpy) : 0;
   };
 
-  // §6.7 現金比率（生活資金控除・JPST 含めず・現時点）
+  // 現金同等 ETF（cashEquivalents・#753）。mf の行の ySymbol（正規化・大文字化）だけで照合する
+  const cashEqSet = new Set(cfg.cashEquivalents);
+  const isCashEquivalent = (key) => typeof key === 'string' && cashEqSet.has(key.toUpperCase());
+
+  // §6.7 現金比率（生活資金控除（0 下止め）＋cashEquivalents の評価額（mf の value）・現時点・#753）
+  // src/networth.js の getMfTotals().cashRatio と同じ式
   const cashJpy = rows.reduce((a, r) => a + (r?.cat === '現金・預金' ? Number(r.value) || 0 : 0), 0);
-  const cashPct = imported > 0 ? (Math.max(0, cashJpy - EMERGENCY_FUND_JPY) / imported) * 100 : 0;
+  let cashEquivJpy = 0;
+  for (const [key, g] of groups) if (!key.startsWith('#row') && isCashEquivalent(key)) cashEquivJpy += g.valueJpy;
+  const investCashJpy = Math.max(0, cashJpy - EMERGENCY_FUND_JPY) + cashEquivJpy;
+  const cashPct = imported > 0 ? (investCashJpy / imported) * 100 : 0;
   const guardActive = cashPct < cfg.orderSheet.cashFloorPct;
 
   // テーマの所属（themeCaps.members は正規化して照合）
@@ -259,7 +275,8 @@ export function buildOrderSheet(input) {
     return Array.isArray(m) ? m.map(normalizeYSymbol) : [];
   };
   const aiSet = new Set(cfg.aiTech.themes.flatMap(themeMembers));
-  const nonEquitySet = new Set(cfg.stress.nonEquity.map(normalizeYSymbol));
+  // ストレスで株に数えない銘柄 ＝ stress.nonEquity ∪ cashEquivalents（#753）
+  const nonEquitySet = new Set([...cfg.stress.nonEquity, ...cfg.cashEquivalents].map(normalizeYSymbol));
 
   // 現在の保有額（USD）を全照合キーで持つ（plan にだけある銘柄は 0 で追加）
   /** @type {Map<string, number>} */
@@ -373,8 +390,8 @@ export function buildOrderSheet(input) {
       }
     }
 
-    // §6.6 単一銘柄の上限（警告のみ）
-    if ((sc.tier === 'thick' || sc.tier === 'thin') && targetUsd != null && D > 0) {
+    // §6.6 単一銘柄の上限（警告のみ・cashEquivalents は対象外・#753）
+    if (!isCashEquivalent(key) && (sc.tier === 'thick' || sc.tier === 'thin') && targetUsd != null && D > 0) {
       const capUsd = (D * cfg.convictionHighPct) / 100;
       if (targetUsd > capUsd) {
         ladderFlags.push('targetOverConvictionCap');
@@ -632,7 +649,7 @@ export function buildOrderSheet(input) {
   // §6.9 ストレス
   const planKeys = new Set(planEntries.map(([sym]) => normalizeYSymbol(sym)));
   const isEquity = (key) => {
-    if (nonEquitySet.has(key)) return false;
+    if (nonEquitySet.has(key) || isCashEquivalent(key)) return false;
     const g = groups.get(key);
     if (g) return EQUITY_CATS.includes(g.cat);
     return planKeys.has(key); // plan にだけある銘柄（新規買い）は USD 建ての株とみなす

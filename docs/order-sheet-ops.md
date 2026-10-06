@@ -74,7 +74,7 @@ node scripts/order-plan.mjs get <file>        # GET /order-sheet/plan を <file>
 2. **検証**: `node scripts/order-plan.mjs validate ~/private/2026-10-03.order-plan.json` → `OK: 銘柄 N・段 M（working K）` を確認。エラーは場所を見て直す。
 3. **投入**: `node scripts/order-plan.mjs put ~/private/2026-10-03.order-plan.json` → `PUT OK … → rev 1` を確認。
 4. **照合**: アプリの「Order」タブで注文表を開き、10/3 の手計算（JPST の売却株数・全段の不足額・ストレスの落ち込み・AI/テック合計）と突き合わせる。
-   - 差があれば**非公開の場（対話）で**原因を確認する。定義差は設計書 §6 の既定と §12 の決定で吸収する（例: 分母は `totals.imported`、現金比率は生活資金 ¥20M 控除・JPST 含めず）。
+   - 差があれば**非公開の場（対話）で**原因を確認する。定義差は設計書 §6 の既定と §12 の決定で吸収する（例: 分母は `totals.imported`、現金比率は生活資金 ¥20M 控除（0 で下止め）・cashEquivalents（JPST 等）の評価額を含む（#753 以降））。
    - 照合結果を公開の場に書くときは「一致／差あり（定義差）」程度にし、数値は書かない。
 5. 設計書の実装ログ（「初期データ投入」のチェック）は architect / PM が更新する。
 
