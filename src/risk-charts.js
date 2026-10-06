@@ -737,7 +737,7 @@ function buildRiskOverviewCard(japanTruePct) {
       entry(
         '守り枠 合計',
         'neu',
-        defTier.total.curPct != null ? `${defTier.total.curPct.toFixed(1)}%` : '—',
+        taAvailable && defTier.total.curPct != null ? `${defTier.total.curPct.toFixed(1)}%` : '—',
         defTier.total.targetPct != null ? `目標 ${fmtT(defTier.total.targetPct)}` : '',
         ''
       )

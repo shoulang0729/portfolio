@@ -253,7 +253,11 @@ describe('getAiTechConfig / getStressConfig / getOrderSheetConfig', () => {
     const real = JSON.parse(readFileSync(new URL('../data/target-allocation.json', import.meta.url), 'utf8'));
     expect(real.aiTech).toMatchObject({ themes: ['semiconductor', 'megatech'], capPct: 33 });
     expect(typeof real.aiTech.note).toBe('string');
-    expect(real.stress).toEqual({ tolerancePct: 20, nonEquity: ['JPST', 'GLDM', 'SLV'], scenarios: DEFAULT_SCENARIOS });
+    expect(real.stress).toEqual({
+      tolerancePct: 20,
+      nonEquity: ['JPST', 'SGOV', 'BIL', 'SHV', 'GLDM'],
+      scenarios: DEFAULT_SCENARIOS,
+    });
     expect(real.orderSheet).toMatchObject({ cashFloorPct: 12, rebaseMovePct: 5 });
     expect(typeof real.orderSheet.note).toBe('string');
     __setConfig(real);
@@ -378,5 +382,39 @@ describe('cashEquivalents / 守り枠（#753）', () => {
     __setConfig(real);
     expect(getCashEquivalents()).toEqual([...CASH_EQUIVALENTS_DEFAULT]);
     expect(getTargetPct('JPST')).toBeNull();
+  });
+});
+
+// ── 実データ: 守り枠・現金同等 ETF（#753・2026-10-06 本人決定） ─────
+describe('data/target-allocation.json の守り枠・現金同等 ETF（#753）', () => {
+  const real = JSON.parse(readFileSync(new URL('../data/target-allocation.json', import.meta.url), 'utf8'));
+
+  it('GLDM の目標は 6（override.GLDM は無く、tiers から解決）', () => {
+    expect(real.override.GLDM).toBeUndefined();
+    __setConfig(real);
+    expect(getTargetPct('GLDM')).toBe(6);
+  });
+
+  it('守り枠の目標は { GLDM: 6, cash: 12.5 }（XLU なし）・rule は目安の帯', () => {
+    expect('XLU' in real.tiers.defensive.targets).toBe(false);
+    expect(real.tiers.defensive.targets).toEqual({ GLDM: 6, cash: 12.5 });
+    expect(real.tiers.defensive.rule).toBe('目安の帯（外れたら妥当性を見直す）');
+  });
+
+  it('cashEquivalents は 4 銘柄で、テーマ・themeEtfs・conviction のどれにも入らない', () => {
+    expect(real.cashEquivalents).toEqual(['JPST', 'SGOV', 'BIL', 'SHV']);
+    const themeMembers = Object.values(real.themeCaps).flatMap((t) => t.members);
+    for (const sym of real.cashEquivalents) {
+      expect(themeMembers).not.toContain(sym);
+      expect(real.themeEtfs).not.toContain(sym);
+      expect(Object.keys(real.conviction)).not.toContain(sym);
+    }
+  });
+
+  it('SLV は conviction・themeCaps・themeEtfs・stress.nonEquity から外れている（2026-10-05 全部売却）', () => {
+    expect(real.conviction.SLV).toBeUndefined();
+    expect(real.themeCaps.silver).toBeUndefined();
+    expect(real.themeEtfs).not.toContain('SLV');
+    expect(real.stress.nonEquity).not.toContain('SLV');
   });
 });
