@@ -297,6 +297,7 @@
 
 ### 6.7 現金比率
 - `cashPct = max(0, Σ「現金・預金」(JPY) − 20,000,000) ÷ totals.imported × 100`。アプリの `getMfTotals().cashRatio`（Risk タブ・統計バー）と同じ定義（JPST は含めない・要 Toshio 判断 #3）。判定は**現時点の値**で行う。
+- **2026-10-06 追記（#753）**: 現金比率に `data/target-allocation.json` の `cashEquivalents`（JPST 等）の評価額を含める定義に変える（アプリと Worker の両方）。設計は `docs/handoff/2026-10-06-defensive-tier-cash-equivalents.md` §2.1。
 
 ### 6.8 AI/テック合計とテーマ使用率
 - `aiTech.now = Σ_{theme ∈ aiTech.themes} Σ_{member} curPct(member)`。
