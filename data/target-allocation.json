@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-05",
+  "updated": "2026-10-06",
   "denominator": "managedAssets",
   "note": "適正サイズv1。target%=clip(convictionPct[確信度], テーマ上限の取り分)。コア/守りはtargets直接。乖離=現在%−target%。",
   "unitUSD": 50000,
@@ -20,14 +20,15 @@
       }
     },
     "defensive": {
-      "rule": "固定",
+      "rule": "目安の帯（外れたら妥当性を見直す）",
+      "note": "GLDM＝保険として保有を続ける。2026-09に縮小。全部売る予定はない。cash＝現金・預金−生活防衛資金＋cashEquivalents の評価額（GLDM は cash に数えない）。守り枠＝cash＋GLDM。",
       "targets": {
-        "GLDM": 8,
-        "cash": 12.5,
-        "XLU": 2
+        "GLDM": 6,
+        "cash": 12.5
       }
     }
   },
+  "cashEquivalents": ["JPST", "SGOV", "BIL", "SHV"],
   "themeCaps": {
     "semiconductor": {
       "cap": 15,
@@ -48,10 +49,6 @@
     "commodity_miner": {
       "cap": 5,
       "members": ["COPX", "REMX"]
-    },
-    "silver": {
-      "cap": 1.5,
-      "members": ["SLV"]
     },
     "space": {
       "cap": 3,
@@ -77,21 +74,16 @@
     "8050.T": "standard",
     "6301.T": "standard",
     "URA": "standard",
-    "SLV": "standard",
     "COPX": "standard",
     "REMX": "standard"
   },
   "override": {
-    "GLDM": {
-      "targetPct": 8,
-      "note": "保険・例外・固定"
-    },
     "AAPL": {
       "targetPct": 2.2,
       "note": "目標・薄め・2026-10-05"
     }
   },
-  "themeEtfs": ["SMH", "200A.T", "NLR", "DTCR", "URA", "1615.T", "1629.T", "COPX", "REMX", "SLV", "VGK", "XLE"],
+  "themeEtfs": ["SMH", "200A.T", "NLR", "DTCR", "URA", "1615.T", "1629.T", "COPX", "REMX", "VGK", "XLE"],
   "aiTech": {
     "themes": ["semiconductor", "megatech"],
     "capPct": 33,
@@ -99,7 +91,7 @@
   },
   "stress": {
     "tolerancePct": 20,
-    "nonEquity": ["JPST", "GLDM", "SLV"],
+    "nonEquity": ["JPST", "SGOV", "BIL", "SHV", "GLDM"],
     "scenarios": [
       {
         "id": "ai-crash",
