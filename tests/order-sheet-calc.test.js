@@ -333,6 +333,154 @@ describe('§6.4 出さない条件', () => {
   });
 });
 
+describe('§6.7 現金比率に cashEquivalents を含める（#753・設計書 §2.1 の前後比較例）', () => {
+  // 合成値。総資産 $1M（= 1 億円）・生活資金 ¥20M（= $200K）・現金・預金 $300K・JPST $80K・GLDM $120K
+  // 前（JPST 含めず）: (300K − 200K) / 1M = 10.0% → guardActive=true
+  // 後（#753）     : (300K − 200K + 80K) / 1M = 18.0% → guardActive=false
+  function cashNetworth({ cashUsd = 300000, jpstUsd = 80000, jpstSym = 'JPST' } = {}) {
+    const rows = [
+      { institution: 'BankY', cat: '現金・預金', name: '普通預金', value: usd(cashUsd), cur: 'JPY' },
+      { institution: 'BrokerX', cat: '米国株・ETF', name: 'GLDM', ySymbol: 'GLDM', value: usd(120000), cur: 'JPY' },
+      { institution: 'BrokerX', cat: '米国株・ETF', name: 'AAA', ySymbol: 'AAA', value: usd(60000), cur: 'JPY' },
+    ];
+    if (jpstUsd) {
+      rows.push({
+        institution: 'BrokerX',
+        cat: '米国株・ETF',
+        name: 'JPST',
+        ySymbol: jpstSym,
+        value: usd(jpstUsd),
+        cur: 'JPY',
+      });
+    }
+    const used = rows.reduce((a, r) => a + r.value, 0);
+    rows.push({
+      institution: 'BrokerX',
+      cat: '投資信託',
+      name: '合成ファンド',
+      value: usd(1_000_000) - used,
+      cur: 'JPY',
+    });
+    return { asOf: '2026-01-09', totals: { imported: usd(1_000_000) }, holdings: rows };
+  }
+  const prices = { AAA: 400, CSH: 50, JPST: 50, GLDM: 60 };
+
+  it('前: cashEquivalents を数えなければ 10.0% で現金ガード（参照: JPST 無し）', () => {
+    const s = build({ plan: basePlan({ AAA: aaa() }), nw: cashNetworth({ jpstUsd: 0 }), prices });
+    expect(s.cash).toEqual({ pct: 10, floorPct: 12, guardActive: true });
+    expect(ladderOf(s, 'AAA').stages.map((x) => x.suppressed)).toEqual([null, null, 'cashFloor']);
+  });
+
+  it('後: JPST の評価額を足すと 18.0% でガードが外れる（true → false）', () => {
+    // (max(0, 300K − 200K) + 80K) / 1M = 18%
+    const s = build({ plan: basePlan({ AAA: aaa() }), nw: cashNetworth(), prices });
+    expect(s.cash).toEqual({ pct: 18, floorPct: 12, guardActive: false });
+    expect(ladderOf(s, 'AAA').stages.every((x) => x.suppressed === null)).toBe(true);
+  });
+
+  it('境目: JPST $10K なら 11.0%（ガード）・$20K なら 12.0%（ガードしない）', () => {
+    const a = build({ plan: basePlan({ AAA: aaa() }), nw: cashNetworth({ jpstUsd: 10000 }), prices });
+    expect(a.cash).toEqual({ pct: 11, floorPct: 12, guardActive: true });
+    const b = build({ plan: basePlan({ AAA: aaa() }), nw: cashNetworth({ jpstUsd: 20000 }), prices });
+    expect(b.cash).toEqual({ pct: 12, floorPct: 12, guardActive: false });
+  });
+
+  it('GLDM は現金に数えない', () => {
+    const s = build({
+      plan: basePlan({ AAA: aaa() }),
+      nw: cashNetworth({ jpstUsd: 0 }),
+      prices,
+      strat: strategy({ cashEquivalents: ['JPST'] }),
+    });
+    expect(s.cash.pct).toBe(10);
+  });
+
+  it('現金・預金が生活防衛資金を下回るときは 0 で下止めしてから足す', () => {
+    // max(0, 100K − 200K) + 80K = 80K → 8.0%（下止めしないと −2.0%）
+    const s = build({ plan: basePlan({ AAA: aaa() }), nw: cashNetworth({ cashUsd: 100000 }), prices });
+    expect(s.cash).toEqual({ pct: 8, floorPct: 12, guardActive: true });
+  });
+
+  it('strategy に cashEquivalents が無ければ既定（JPST/SGOV/BIL/SHV）で数える', () => {
+    const strat = strategy();
+    expect(strat.cashEquivalents).toBeUndefined();
+    const s = build({ plan: basePlan({ AAA: aaa() }), nw: cashNetworth({ jpstSym: 'SGOV' }), prices, strat });
+    expect(s.cash.pct).toBe(18);
+  });
+
+  it('strategy の cashEquivalents を使う（リストに無い銘柄は数えない・小文字/前後空白も照合）', () => {
+    const only = build({
+      plan: basePlan({ AAA: aaa() }),
+      nw: cashNetworth(),
+      prices,
+      strat: strategy({ cashEquivalents: ['SGOV'] }),
+    });
+    expect(only.cash.pct).toBe(10);
+    const lower = build({
+      plan: basePlan({ AAA: aaa() }),
+      nw: cashNetworth(),
+      prices,
+      strat: strategy({ cashEquivalents: [' jpst '] }),
+    });
+    expect(lower.cash.pct).toBe(18);
+  });
+
+  it('ySymbol の無い行（投信・現金）は照合しない', () => {
+    const nw = cashNetworth({ jpstUsd: 0 });
+    nw.holdings.push({ institution: 'BrokerX', cat: '投資信託', name: 'JPST', value: usd(80000), cur: 'JPY' });
+    nw.holdings.find((h) => h.name === '合成ファンド').value -= usd(80000);
+    const s = build({ plan: basePlan({ AAA: aaa() }), nw, prices });
+    expect(s.cash.pct).toBe(10);
+  });
+});
+
+describe('#753 ストレス・単一銘柄の上限で cashEquivalents を株に数えない', () => {
+  function nwWithJpst() {
+    return {
+      asOf: '2026-01-09',
+      totals: { imported: usd(1_000_000) },
+      holdings: [
+        { cat: '米国株・ETF', name: 'AAA', ySymbol: 'AAA', value: usd(500000), cur: 'JPY' },
+        { cat: '米国株・ETF', name: 'JPST', ySymbol: 'JPST', value: usd(200000), cur: 'JPY' },
+        { cat: '米国株・ETF', name: 'CSH', ySymbol: 'CSH', value: usd(100000), cur: 'JPY' },
+        { cat: '現金・預金', name: '普通預金', value: usd(200000), cur: 'JPY' },
+      ],
+    };
+  }
+  const opts = (strat) => ({
+    plan: basePlan({}),
+    nw: nwWithJpst(),
+    prices: { AAA: 400, JPST: 50, CSH: 50 },
+    strat,
+  });
+
+  it('stress.nonEquity から JPST を抜いても JPST は株に入らない', () => {
+    const s = build(opts(strategy({ stress: { ...strategy().stress, nonEquity: ['CSH'] } })));
+    // 株 = AAA $500K のみ（JPST・CSH・現金は除外）
+    expect(s.stress.equityPct.now).toBe(50);
+  });
+
+  it('cashEquivalents が無い strategy でも既定で JPST を株に数えない', () => {
+    const s = build(opts(strategy({ stress: { ...strategy().stress, nonEquity: [] } })));
+    // CSH は株（$100K）・JPST は既定の cashEquivalents で除外
+    expect(s.stress.equityPct.now).toBe(60);
+  });
+
+  it('既定の stress.nonEquity は JPST/SGOV/BIL/SHV/GLDM', () => {
+    const s = build({ ...opts(null), nw: nwWithJpst() });
+    expect(s.stress.equityPct.now).toBe(60);
+  });
+
+  it('cashEquivalents の銘柄は単一銘柄の上限の警告対象外', () => {
+    const jpst = aaa({ targetUsd: 200000, basePrice: 50, stages: [stage({ id: 's1', amountUsd: 10000, limit: 50 })] });
+    const s = build({ ...opts(strategy()), plan: basePlan({ JPST: jpst }) });
+    expect(ladderOf(s, 'JPST').flags).not.toContain('targetOverConvictionCap');
+    // 比較: 同じ設定の株は警告される
+    const s2 = build({ ...opts(strategy()), plan: basePlan({ AAA: { ...jpst } }) });
+    expect(ladderOf(s2, 'AAA').flags).toContain('targetOverConvictionCap');
+  });
+});
+
 describe('§6.5 資金繰り（USD）', () => {
   it('不足分を sweep 銘柄の売却株数（ceil）で出す', () => {
     // buy $29,808・sell $0・米ドル預り金 $23,808・CSH $50 → need $6,000 → 120 株
