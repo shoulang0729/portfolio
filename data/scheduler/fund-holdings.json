@@ -2,58 +2,58 @@
  {
   "fund": "ひふみ投信",
   "fundSymbol": "ひふみ投信",
-  "asOf": "2026-08",
+  "asOf": "2026-09",
   "source": "rheos monthly report (上位10)",
   "top": [
    {
     "code": "8001.T",
     "name": "伊藤忠商事",
-    "weight": 0.0618
+    "weight": 0.0655
    },
    {
     "code": "8411.T",
     "name": "みずほフィナンシャルグループ",
-    "weight": 0.0464
+    "weight": 0.0483
    },
    {
     "code": "8002.T",
     "name": "丸紅",
-    "weight": 0.0406
+    "weight": 0.0403
    },
    {
     "code": "8306.T",
     "name": "三菱ＵＦＪフィナンシャル・グループ",
-    "weight": 0.0387
-   },
-   {
-    "code": "8802.T",
-    "name": "三菱地所",
-    "weight": 0.0336
+    "weight": 0.0394
    },
    {
     "code": "8766.T",
     "name": "東京海上ホールディングス",
-    "weight": 0.0321
+    "weight": 0.034
+   },
+   {
+    "code": "8802.T",
+    "name": "三菱地所",
+    "weight": 0.0323
    },
    {
     "code": "8031.T",
     "name": "三井物産",
-    "weight": 0.0321
+    "weight": 0.032
    },
    {
     "code": "6758.T",
     "name": "ソニーグループ",
-    "weight": 0.0314
+    "weight": 0.0298
+   },
+   {
+    "code": "5802.T",
+    "name": "住友電気工業",
+    "weight": 0.0296
    },
    {
     "code": "7012.T",
     "name": "川崎重工業",
-    "weight": 0.0301
-   },
-   {
-    "code": "4676.T",
-    "name": "フジ・メディア・ホールディングス",
-    "weight": 0.0282
+    "weight": 0.0279
    }
   ]
  },
